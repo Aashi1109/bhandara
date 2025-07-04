@@ -63,6 +63,10 @@ export const validatePassword = async (
   }
 };
 
+/**
+ * Decode a JWT token and return its payload.
+ * @param rawToken The token string prefixed with type.
+ */
 export const getJWTPayload = async (rawToken: string) => {
   const jwtPayload = <any>(
     jwt.verify(rawToken?.split(" ")[0], config.jwt.secret, { complete: true })
@@ -71,6 +75,9 @@ export const getJWTPayload = async (rawToken: string) => {
   return jwtPayload.payload;
 };
 
+/**
+ * Build a filter object containing only non-empty values.
+ */
 export const createFilterFromParams = (params: Record<string, any>) => {
   return Object.entries(params).reduce((acc, [key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -87,6 +94,9 @@ interface RetryConfig {
   silent?: boolean;
 }
 
+/**
+ * Wrap an async function with retry logic using exponential backoff.
+ */
 export const withRetry =
   <T, Args extends any[]>(config: RetryConfig = {}) =>
   (fn: (...args: Args) => Promise<T>) =>
@@ -125,6 +135,9 @@ export const withRetry =
 export * from "./validation";
 export { default as ajv } from "./validation";
 
+/**
+ * Retrieve geo location data for an IP address using ip2location.
+ */
 export const getGeoLocationData = async (ip: string) => {
   const skippedIps = ["127.0.0.1", "::1", "localhost"];
   // Return null for localhost IPs
@@ -151,12 +164,19 @@ export const getGeoLocationData = async (ip: string) => {
   };
 };
 
+/**
+ * Generate a random alphanumeric ID of the given size.
+ */
 export const getAlphaNumericId = (size: number = 21) => {
   return nanoid(size);
 };
 
+/** Return a new UUIDv7 value. */
 export const getUUIDv7 = () => uuidv7();
 
+/**
+ * Compute the distance in meters between two latitude/longitude pairs.
+ */
 export function getDistanceInMeters(
   lat1: number,
   lon1: number,

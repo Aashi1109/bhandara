@@ -11,7 +11,7 @@ import {
 import SupabaseService from "@supabase";
 import CloudinaryService from "@ccloudinary";
 import { validateMediaCreate, validateMediaUpdate } from "./validation";
-import { MEDIA_BUCKET_CONFIG } from "./constants";
+import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from "./constants";
 import { Media } from "./model";
 import { Event } from "../events/model";
 import { isEmpty, omit } from "@utils";
@@ -268,6 +268,20 @@ class MediaService {
         };
       })
     );
+  }
+
+  async getSignedUrlForPublicUpload({
+    path,
+  }: {
+    path: string;
+  }) {
+    const uniquePath = getUniqueFilename(path);
+    const signedUrl = await this._supabaseService.getSignedUrlForUpload({
+      bucket: MEDIA_PUBLIC_BUCKET_NAME,
+      path: uniquePath,
+    });
+    delete signedUrl.data.token;
+    return { path: uniquePath, ...signedUrl.data };
   }
 
   @MethodCacheSync<IMedia>()

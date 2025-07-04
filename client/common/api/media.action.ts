@@ -92,3 +92,19 @@ export const getMediaPublicURLs = async (mediaIds: string[]): Promise<IBaseRespo
   const response = await axiosClient.get(`/media/public-urls?${queryParams.toString()}`);
   return response.data;
 };
+
+export const getPublicUploadSignedURL = async (path: string, parentPath?: string) => {
+  const response = await axiosClient.post("/media/get-public-upload-url", {
+    path,
+    parentPath,
+  });
+  return response.data.data;
+};
+
+export const updateMedia = async (
+  id: string,
+  data: Partial<IMedia>
+): Promise<IBaseResponse<IMedia>> => {
+  const response = await axiosClient.patch(`/media/${id}`, data);
+  return response.data;
+};

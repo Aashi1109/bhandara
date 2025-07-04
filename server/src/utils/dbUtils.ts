@@ -8,6 +8,10 @@ export interface PaginatedResult<T> {
   items: T[];
   pagination: IPaginationParams;
 }
+
+/**
+ * Retrieve records with pagination, supporting both cursor and offset modes.
+ */
 export async function findAllWithPagination<T extends Model>(
   model: ModelStatic<T>,
   where: Record<string, any> = {},
@@ -88,6 +92,7 @@ export async function findAllWithPagination<T extends Model>(
   return { items, pagination: paginationResult };
 }
 
+/** Find a record by its primary key. */
 export async function findById<T extends Model>(
   model: ModelStatic<T>,
   id: string
@@ -96,6 +101,7 @@ export async function findById<T extends Model>(
   return (res as T) || null;
 }
 
+/** Create a single record and return the plain object. */
 export async function createRecord<T extends Model>(
   model: ModelStatic<T>,
   data: Partial<T>
@@ -104,6 +110,7 @@ export async function createRecord<T extends Model>(
   return row.toJSON() as T;
 }
 
+/** Update matching records and return the first updated row. */
 export async function updateRecord<T extends Model>(
   model: ModelStatic<T>,
   where: Record<string, any>,
@@ -125,6 +132,7 @@ export async function updateRecord<T extends Model>(
   return updatedResult[0];
 }
 
+/** Delete matching records and optionally return the deleted row. */
 export async function deleteRecord<T extends Model>(
   model: ModelStatic<T>,
   where: Record<string, any>,
@@ -141,6 +149,7 @@ export async function deleteRecord<T extends Model>(
   return row.toJSON() as any;
 }
 
+/** Run a callback within a database transaction. */
 export async function runTransaction<T>(cb: (t: Transaction) => Promise<T>) {
   const sequelize = getDBConnection();
   return sequelize.transaction(cb);

@@ -54,6 +54,21 @@ export const getSignedUploadUrl = async (
   return res.status(200).json({ data: responseSignedURL });
 };
 
+export const getPublicSignedUploadUrl = async (
+  req: ICustomRequest,
+  res: Response
+) => {
+  const { path, parentPath } = req.body;
+
+  const uploadPath = `${parentPath || req.user.id}/${path}`;
+
+  const responseSignedURL = await mediaService.getSignedUrlForPublicUpload({
+    path: uploadPath,
+  });
+
+  return res.status(200).json({ data: responseSignedURL });
+};
+
 export const createMediaData = async (req: ICustomRequest, res: Response) => {
   const { file, path, bucket, mimeType, provider, format, ...rest } = req.body;
 

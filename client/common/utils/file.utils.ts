@@ -1,8 +1,18 @@
 import { EVENT_MEDIA_BUCKET } from "@/constants/global";
-import { getMediaPublicURLs, IPickerAsset, uploadPickerAsset } from "../api/media.action";
+import {
+  getMediaPublicURLs,
+  IPickerAsset,
+  uploadPickerAsset,
+  getPublicUploadSignedURL,
+  updateMedia,
+} from "../api/media.action";
 import { isEmpty } from "@/utils";
 import { EMediaType } from "@/definitions/enums";
 import { IMedia } from "@/definitions/types";
+import {
+  generateImageVariants,
+  generateVideoThumbnails,
+} from "@/utils/compression";
 
 export interface IAttachedFile extends Omit<IPickerAsset, "uri"> {
   error?: string;
@@ -76,6 +86,47 @@ export const uploadFile = async (
         onProgress: handleProgress
       }
     );
+
+    const baseName = result.url.split("/").pop() || "";
+
+    if (type === EMediaType.VIDEO) {
+      generateVideoThumbnails(uri)
+        .then(async (thumbs) => {
+          await Promise.all(
+            thumbs.map(async (t) => {
+              const signed = await getPublicUploadSignedURL(
+                `${baseName}${t.suffix}.jpg`,
+                opts.pPath
+              );
+              await axios.put(signed.signedUrl, t.blob, {
+                headers: { "Content-Type": t.blob.type },
+              });
+            })
+          );
+          await updateMedia(result.id, {
+            thumbnail: `${opts.pPath}/${baseName}@2x.jpg`,
+          });
+        })
+        .catch((err) => console.error(err));
+    }
+
+    if (type === EMediaType.IMAGE) {
+      generateImageVariants(uri, mimeType)
+        .then(async (variants) => {
+          await Promise.all(
+            variants.map(async (v) => {
+              const signed = await getPublicUploadSignedURL(
+                `${baseName}${v.suffix}.jpg`,
+                opts.pPath
+              );
+              await axios.put(signed.signedUrl, v.blob, {
+                headers: { "Content-Type": v.blob.type },
+              });
+            })
+          );
+        })
+        .catch((err) => console.error(err));
+    }
 
     // Update with 100% when complete
     setAttachedFiles((prev) =>

@@ -1,6 +1,11 @@
+/** Stringify JSON without additional options. */
 export const jnstringify = (payload: any) => JSON.stringify(payload);
+/** Parse a JSON string returning the typed value. */
 export const jnparse = (payload: any) => JSON.parse(payload);
 
+/**
+ * Return a new object containing only the specified keys.
+ */
 export const pick = <T extends Record<string, any>, K extends keyof T>(
   obj: T,
   keys: K[]
@@ -13,6 +18,9 @@ export const pick = <T extends Record<string, any>, K extends keyof T>(
   }, {} as Pick<T, K>);
 };
 
+/**
+ * Return a new object without the specified keys.
+ */
 export const omit = <T extends Record<string, any>, K extends keyof T>(
   obj: T,
   keys: K[]
@@ -24,6 +32,7 @@ export const omit = <T extends Record<string, any>, K extends keyof T>(
   return newObj;
 };
 
+/** Check if a value is considered empty. */
 export const isEmpty = (value: any) => {
   if (value === null || value === undefined) return true;
   if (typeof value === "string") return value.trim() === "";
@@ -32,6 +41,7 @@ export const isEmpty = (value: any) => {
   return false;
 };
 
+/** Deep merge multiple objects. */
 export const merge = (...objects: any[]) => {
   const result: any = {};
 
@@ -54,6 +64,7 @@ export const merge = (...objects: any[]) => {
   return result;
 };
 
+/** Remove empty values from a query object. */
 export const cleanQueryObject = (query: Record<string, any>) => {
   const cleanedQuery: any = {};
   Object.keys(query).forEach((key) => {

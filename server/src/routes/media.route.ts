@@ -6,6 +6,7 @@ import {
   updateMedia,
   getMediaPublicUrl,
   getMediaPublicUrls,
+  getPublicSignedUploadUrl,
 } from "@features/media/controller";
 /**
  * @openapi
@@ -50,6 +51,10 @@ router.post("/upload", asyncHandler(uploadFile));
  *     summary: Get signed upload URL
  */
 router.post("/get-signed-upload-url", asyncHandler(getSignedUploadUrl));
+router.post(
+  "/get-public-upload-url",
+  asyncHandler(getPublicSignedUploadUrl)
+);
 router
   .route("/:mediaId")
   /**

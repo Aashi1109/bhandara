@@ -1,5 +1,8 @@
 import { v7, v4 } from "uuid";
 
+/**
+ * Debounce calls to the provided function.
+ */
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -12,8 +15,10 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
+/** Return a RFC4122 v7 UUID. */
 export const getUUIDv7 = () => v7();
 
+/** Return a RFC4122 v4 UUID. */
 export const getUUIDv4 = () => v4();
 
 /**

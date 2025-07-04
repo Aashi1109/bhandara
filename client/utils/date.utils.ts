@@ -1,3 +1,4 @@
+/** Convert a date into a long "January 1, 2024" style string. */
 export const formatDateToLongString = (date: string | Date) => {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
@@ -6,6 +7,7 @@ export const formatDateToLongString = (date: string | Date) => {
   });
 };
 
+/** Format a date with time, e.g. "January 1, 2024, 10:00 AM". */
 export const formatDateWithTimeString = (date: string | Date) => {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
@@ -17,6 +19,9 @@ export const formatDateWithTimeString = (date: string | Date) => {
   });
 };
 
+/**
+ * Convert a past date into a relative time string such as "2 hours ago".
+ */
 export const formatTimeAgo = (date: string | Date): string => {
   if (!date) {
     return "";

@@ -7,6 +7,9 @@ type UseDataLoaderProps<T> = {
   enabled?: boolean;
 };
 
+/**
+ * Convenience hook for loading data asynchronously.
+ */
 export const useDataLoader = <T>({ promiseFunction, onSuccess, onError, enabled = true }: UseDataLoaderProps<T>) => {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
