@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { CardWrapper } from "../ui/common-styles";
 import { XStack, ScrollView, View, YStack, Text } from "tamagui";
-import { Plus, RotateCw, SendHorizontal, X } from "@tamagui/lucide-icons";
+import { Plus, RotateCw, SendHorizontal, X, Lock } from "@tamagui/lucide-icons";
 import { FilledButton, OutlineButton } from "../ui/Buttons";
 import { TextareaField } from "../Form";
 import { Platform } from "react-native";
@@ -14,19 +14,25 @@ import CustomTooltip from "../CustomTooltip";
 import { EMediaType } from "@/definitions/enums";
 import { IAttachedFile } from "@/common/utils/file.utils";
 import { Badge } from "../ui/Badge";
+import { IBaseThread } from "@/definitions/types";
+import { isThreadLocked } from "@/utils/thread.utils";
 
 interface IProps {
   context: Record<string, any>;
   sendButtonCb: (data: Record<string, any>, onSuccess?: () => void) => void;
+  thread?: IBaseThread; // Add thread prop to check lock status
 }
 
-const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
+const MessageInputBar = ({ context, sendButtonCb, thread }: IProps) => {
   const [message, setMessage] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<IAttachedFile[]>([]);
   const textAreaRef = useRef<any>(null);
 
   const maxAttachmentLimit = context?.maxAttachments;
   const [height, setHeight] = useState(40);
+
+  // Check if thread is locked
+  const threadLocked = thread ? isThreadLocked(thread) : false;
 
   const handleMessageChange = (text: string) => {
     setMessage(text);
@@ -50,13 +56,29 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
             name: file.name,
             type: file.type as EMediaType,
             size: file.size,
-            data: file
+            uri: URL.createObjectURL(file),
+            mimeType: file.type
           });
         }
       }
     }
 
     if (fileItems.length > 0) {
+      // Check attachment limit before adding files
+      if (maxAttachmentLimit) {
+        const currentAssetsCount = attachedFiles.filter((f) => !f.error).length;
+        const availableSlots = maxAttachmentLimit - currentAssetsCount;
+        
+        if (availableSlots <= 0) {
+          // Prevent adding more files if limit is reached
+          e.preventDefault();
+          return;
+        }
+        
+        // Limit the number of files that can be pasted
+        fileItems.splice(availableSlots);
+      }
+      
       setAttachedFiles((prev) => [...prev, ...fileItems]);
       // Optional: prevent the default paste behavior for files
       // e.preventDefault();
@@ -118,37 +140,45 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
     return () => {
       // delete all the attached files when user has exited but not sent the message
       if (attachedFiles.length) {
-        new Promise(async (resolve, reject) => {
-          await Promise.all(
-            attachedFiles.map((f) => {
-              if (f?.uploadResult?.id) {
-                return deleteMedia(f.uploadResult.id);
-              } else {
-                return Promise.resolve(true);
-              }
-            })
-          );
-          setAttachedFiles([]);
-          setMessage("");
-          resolve("done");
-        });
+        const cleanup = async () => {
+          try {
+            await Promise.all(
+              attachedFiles.map((f) => {
+                if (f?.uploadResult?.id) {
+                  return deleteMedia(f.uploadResult.id);
+                } else {
+                  return Promise.resolve(true);
+                }
+              })
+            );
+          } catch (error) {
+            console.error("Error cleaning up attached files:", error);
+          }
+        };
+        cleanup();
       }
     };
-  }, []);
+  }, [attachedFiles]);
 
   const removeAttachedFile = async (index: number) => {
     try {
       const uploadResult = attachedFiles[index].uploadResult;
       if (uploadResult) {
-        attachedFiles[index].isDeleting = true;
-        setAttachedFiles(attachedFiles);
+        setAttachedFiles((prev) => 
+          prev.map((file, i) => 
+            i === index ? { ...file, isDeleting: true } : file
+          )
+        );
         await deleteMedia(uploadResult?.id);
       }
       setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
     } catch (error) {
       console.error("Error deleting file", error);
-      attachedFiles[index].isDeleting = false;
-      setAttachedFiles(attachedFiles);
+      setAttachedFiles((prev) => 
+        prev.map((file, i) => 
+          i === index ? { ...file, isDeleting: false } : file
+        )
+      );
     }
   };
 
@@ -173,8 +203,29 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
     });
   };
 
-  const hasValidFiles = attachedFiles.some((file) => !file.error);
-  const isAddButtonDisabled = !!maxAttachmentLimit ? maxAttachmentLimit <= attachedFiles.length : false;
+  const validFiles = attachedFiles.filter((file) => !file.error);
+  const hasValidFiles = validFiles.length > 0;
+  const validFilesCount = validFiles.length;
+  const isAddButtonDisabled = !!maxAttachmentLimit ? maxAttachmentLimit <= validFilesCount : false;
+
+  // If thread is locked, show a disabled state
+  if (threadLocked) {
+    return (
+      <CardWrapper
+        p={"$3"}
+        rounded={"$3"}
+        opacity={0.6}
+        backgroundColor="$color2"
+      >
+        <XStack gap="$3" alignItems="center" justifyContent="center">
+          <Lock size={16} color="$color8" />
+          <Text fontSize="$3" color="$color8" textAlign="center">
+            This thread is locked. No new messages can be added.
+          </Text>
+        </XStack>
+      </CardWrapper>
+    );
+  }
 
   return (
     <CardWrapper
@@ -193,9 +244,11 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
               const showPreview = !isUploading && !hasError && (file.uri || file.publicURL);
 
               return (
-                <YStack gap={"$2"}>
+                <YStack 
+                  key={`${file.name}-${index}`}
+                  gap={"$2"}
+                >
                   <XStack
-                    key={`${file.name}-${index}`}
                     position="relative"
                     group
                     cursor="pointer"
@@ -294,7 +347,16 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
         value={message}
         onKeyPress={(e) => {
           const { key } = e.nativeEvent;
-          if (key === "Enter") handleSendMessageClick();
+          if (key === "Enter") {
+            // For web, we can check if shift is pressed
+            if (Platform.OS === "web") {
+              const webEvent = e as any;
+              if (webEvent.shiftKey) {
+                return; // Allow new line
+              }
+            }
+            handleSendMessageClick();
+          }
         }}
         ref={textAreaRef}
         // For native platforms, check clipboard when focus is gained
@@ -329,7 +391,9 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
                 }
               >
                 <Badge>
-                  <Badge.Text fontSize={"$2"}>Max 3 files supported</Badge.Text>
+                  <Badge.Text fontSize={"$2"}>
+                    Max {maxAttachmentLimit} {maxAttachmentLimit === 1 ? "file" : "files"} supported
+                  </Badge.Text>
                 </Badge>
               </CustomTooltip>
             ) : (
@@ -356,7 +420,7 @@ const MessageInputBar = ({ context, sendButtonCb }: IProps) => {
           size={"$2"}
           height={30}
           width={30}
-          disabled={!message && !hasValidFiles}
+          disabled={!message.trim() && !hasValidFiles}
           onPress={handleSendMessageClick}
         />
       </XStack>

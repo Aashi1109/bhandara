@@ -12,6 +12,7 @@ import { useDebounce, View, YStack, YStackProps } from "tamagui";
 import MessageCard from "./MessageCard";
 import { FlatList } from "react-native";
 import { useToastController } from "@tamagui/toast";
+import { getThreadById } from "@/common/api/threads.action";
 
 enum ViewTypes {
   Thread = "thread",
@@ -44,6 +45,7 @@ interface IProps extends BaseCommonProps {
 const MessageView = memo(({ threadId, parentId, messageId, onBack, handleClick, style, eventId }: IProps) => {
   const toastController = useToastController();
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [threadData, setThreadData] = useState<IBaseThread | null>(null);
 
   const paginationRef = useRef<IPaginationResponse>({ limit: 30, next: null, page: 1 });
   const [currentView, setCurrentView] = useState(() => {
@@ -102,6 +104,19 @@ const MessageView = memo(({ threadId, parentId, messageId, onBack, handleClick, 
 
   const { data, loading, setData } = useDataLoader({ promiseFunction: () => methodExecutor(currentView) });
   const socket = useSocket();
+
+  // Fetch thread data when threadId is available
+  useEffect(() => {
+    if (threadId) {
+      getThreadById({ id: threadId })
+        .then((response) => {
+          setThreadData(response.data);
+        })
+        .catch((error) => {
+          console.error("Error fetching thread:", error);
+        });
+    }
+  }, [threadId]);
 
   useEffect(() => {
     socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, ({ data, error }: { data: AddMessageProp; error: any }) => {
@@ -191,7 +206,7 @@ const MessageView = memo(({ threadId, parentId, messageId, onBack, handleClick, 
             renderItem={({ item, index }) => (
               <MessageCard
                 isFirst={index === 0}
-                thread={{ id: threadId || "" }}
+                thread={{ id: threadId || "", ...threadData }}
                 message={item}
                 handleClick={handleClick}
               />

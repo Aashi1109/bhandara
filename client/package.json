@@ -35,6 +35,7 @@
     "browser-image-compression": "^2.0.2",
     "buffer": "^6.0.3",
     "burnt": "^0.13.0",
+    "date-fns": "^4.1.0",
     "expo": "~52.0.42",
     "expo-auth-session": "~6.0.3",
     "expo-blur": "~14.0.3",

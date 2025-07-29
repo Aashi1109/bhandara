@@ -30,12 +30,24 @@ const AddPopoverContents = ({ eventId, setAttachedFiles, attachedFiles, maxAttac
       try {
         setIsUploading(true);
         if (maxAttachmentLimit) {
-          const currentAssetsCount = +attachedFiles.filter((f) => !f.error).length;
-          file.assets = file.assets.slice(0, Math.max(file.assets.length, maxAttachmentLimit) - currentAssetsCount);
-          if (file.assets.length + currentAssetsCount > maxAttachmentLimit) {
+          const currentAssetsCount = attachedFiles.filter((f) => !f.error).length;
+          const availableSlots = maxAttachmentLimit - currentAssetsCount;
+          
+          if (availableSlots <= 0) {
             toastController.show(
               `You can only upload ${maxAttachmentLimit} ${maxAttachmentLimit === 1 ? "file" : "files"} at a time`
             );
+            return;
+          }
+          
+          // Limit the number of files that can be added
+          file.assets = file.assets.slice(0, availableSlots);
+          
+          if (file.assets.length === 0) {
+            toastController.show(
+              `You can only upload ${maxAttachmentLimit} ${maxAttachmentLimit === 1 ? "file" : "files"} at a time`
+            );
+            return;
           }
         }
 
