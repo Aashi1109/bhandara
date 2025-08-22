@@ -6,13 +6,15 @@ const CustomAvatar = ({
   src,
   alt,
   bordered = true,
-  fallbackGenerator
+  fallbackGenerator,
+  onPress
 }: {
   size?: number | string;
   src: string;
   alt: string;
   bordered?: boolean;
   fallbackGenerator?: (alt: string) => string;
+  onPress?: () => void;
 }) => {
   const extraStyles = bordered
     ? {
@@ -32,6 +34,8 @@ const CustomAvatar = ({
       height={size}
       z={10}
       {...(extraStyles as any)}
+      onPress={onPress}
+      cursor={onPress ? "pointer" : "default"}
     >
       <Avatar
         circular

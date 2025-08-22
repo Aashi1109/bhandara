@@ -19,7 +19,7 @@ import {
   deleteExplorePage,
   buildExploreSections,
 } from "@features";
-import { BadRequestError, NotFoundError } from "@exceptions";
+import { BadRequestError, NotFoundError, ForbiddenError } from "@exceptions";
 import { isEmpty } from "@utils";
 import { getDistanceInMeters } from "@helpers";
 import { setPlatformNamespace, emitSocketEvent } from "./emitter";
@@ -156,6 +156,22 @@ export function initializeSocket(server: http.Server) {
             if (isEmpty(responses[0]))
               throw new NotFoundError(`Reaction or Thread not found`);
 
+            // Check if the content is in a locked thread
+            if (contentPath === EAllowedReactionTables.Message) {
+              const message = responses[0];
+              if (message && message.threadId) {
+                const lockStatus = await threadService.isThreadChainLocked(message.threadId);
+                if (lockStatus.isLocked) {
+                  throw new ForbiddenError("Cannot add reactions to messages in a locked thread");
+                }
+              }
+            } else if (contentPath === EAllowedReactionTables.Thread) {
+              const lockStatus = await threadService.isThreadChainLocked(contentId);
+              if (lockStatus.isLocked) {
+                throw new ForbiddenError("Cannot add reactions to a locked thread");
+              }
+            }
+
             const creationData = {
               contentId: reactionContentId,
               emoji: reaction,
@@ -220,6 +236,21 @@ export function initializeSocket(server: http.Server) {
               throw new NotFoundError(
                 `Content not found with provided id:${contentId}`
               );
+
+            // Check if the content is in a locked thread
+            if (contentPath === EAllowedReactionTables.Message) {
+              if (content && content.threadId) {
+                const lockStatus = await threadService.isThreadChainLocked(content.threadId);
+                if (lockStatus.isLocked) {
+                  throw new ForbiddenError("Cannot update reactions on messages in a locked thread");
+                }
+              }
+            } else if (contentPath === EAllowedReactionTables.Thread) {
+              const lockStatus = await threadService.isThreadChainLocked(contentId);
+              if (lockStatus.isLocked) {
+                throw new ForbiddenError("Cannot update reactions on a locked thread");
+              }
+            }
 
             const previousReaction = responses[1]?.[0];
 
@@ -291,6 +322,21 @@ export function initializeSocket(server: http.Server) {
               throw new NotFoundError(
                 `Content not found with provided id:${contentId}`
               );
+
+            // Check if the content is in a locked thread
+            if (contentPath === EAllowedReactionTables.Message) {
+              if (content && content.threadId) {
+                const lockStatus = await threadService.isThreadChainLocked(content.threadId);
+                if (lockStatus.isLocked) {
+                  throw new ForbiddenError("Cannot delete reactions on messages in a locked thread");
+                }
+              }
+            } else if (contentPath === EAllowedReactionTables.Thread) {
+              const lockStatus = await threadService.isThreadChainLocked(contentId);
+              if (lockStatus.isLocked) {
+                throw new ForbiddenError("Cannot delete reactions on a locked thread");
+              }
+            }
 
             const previousReaction = responses[1]?.[0];
 
