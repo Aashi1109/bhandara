@@ -277,7 +277,7 @@ const NewEvent = () => {
         .filter((f) => f.size) // keep only files with size
         .filter((f, idx, arr) => arr.findIndex((_f) => _f.name === f.name) === idx); // remove duplicates by name
 
-      const { successCount, errorMessages } = await processPickedFiles({
+      const { successCount, errorCount } = await processPickedFiles({
         files,
         opts: { pPath: tEventId.current, bucket: EVENT_MEDIA_BUCKET },
         setAttachedFiles
@@ -286,9 +286,9 @@ const NewEvent = () => {
       if (successCount > 0) {
         toastController.show(`Uploaded ${successCount} ${successCount === 1 ? "file" : "files"} successfully`);
       }
-      errorMessages.forEach((error) => {
-        toastController.show(error);
-      });
+      if (errorCount > 0) {
+        toastController.show(`${errorCount} ${errorCount === 1 ? "file" : "files"} failed to upload. You can retry uploading them.`);
+      }
     } catch (error: any) {
       toastController.show(error?.message || "Something went wrong");
     }

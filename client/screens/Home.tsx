@@ -6,14 +6,14 @@ import { SpinningLoader } from "@/components/ui/Loaders";
 import ProfileAvatarPreview from "@/components/ui/ProfileAvatarPreview";
 import images from "@/constants/images";
 import { EMediaType } from "@/definitions/enums";
-import { IBaseUser, IEvent } from "@/definitions/types";
+import { IBaseUser, IEvent, ISearchFilters } from "@/definitions/types";
 import { useDataLoader } from "@/hooks";
 import useSocketListener from "@/hooks/useSocketListener";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import { Calendar, Check, Clock, MapPin } from "@tamagui/lucide-icons";
 import { useToastController } from "@tamagui/toast";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { H5, Image, ScrollView, Text, XStack, YStack } from "tamagui";
 
 import { View } from "tamagui";
@@ -240,6 +240,7 @@ const EventCard = ({ event }: { event: IEvent }) => {
 const HomeScreen = () => {
   const toastController = useToastController();
 
+
   const fetchEvents = async () => {
     try {
       const response = await getAllEvents();
@@ -300,25 +301,32 @@ const HomeScreen = () => {
   if (loading) return <FullSizeLoader />;
 
   return (
-    <ScrollView>
-      <YStack
-        bg="$background"
-        width="100%"
-        items={"center"}
-        p={"$4"}
-        gap={"$4"}
-        maxW={600}
-        scrollbarWidth="none"
-        mx={"auto"}
-      >
-        {paginatedEvents?.data?.items?.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-          />
-        ))}
-      </YStack>
-    </ScrollView>
+    <>
+      <ScrollView>
+        <YStack
+          bg="$background"
+          width="100%"
+          items={"center"}
+          p={"$4"}
+          gap={"$4"}
+          maxW={600}
+          scrollbarWidth="none"
+          mx={"auto"}
+        >
+          {/* Search Button */}
+          
+
+          {paginatedEvents?.data?.items?.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+            />
+          ))}
+        </YStack>
+      </ScrollView>
+
+      
+    </>
   );
 };
 

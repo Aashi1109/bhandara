@@ -41,6 +41,8 @@ import {
   getThread,
   getThreads,
   updateThread,
+  lockThread,
+  unlockThread,
 } from "@features/threads/controller";
 
 const router = Router();
@@ -77,6 +79,24 @@ router
   .get(asyncHandler(getThread))
   .put(asyncHandler(updateThread))
   .delete(asyncHandler(deleteThread));
+
+/**
+ * @openapi
+ * /threads/{threadId}/lock:
+ *   post:
+ *     tags: [Threads]
+ *     summary: Lock thread (author only)
+ */
+router.post("/:threadId/lock", asyncHandler(lockThread));
+
+/**
+ * @openapi
+ * /threads/{threadId}/unlock:
+ *   post:
+ *     tags: [Threads]
+ *     summary: Unlock thread (author only)
+ */
+router.post("/:threadId/unlock", asyncHandler(unlockThread));
 
 router.get(
   "/:threadId/messages",

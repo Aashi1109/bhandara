@@ -80,3 +80,45 @@ export const deleteThread = async (req: ICustomRequest, res: Response) => {
   });
   return res.status(200).json(thread);
 };
+
+export const lockThread = async (req: ICustomRequest, res: Response) => {
+  const { threadId } = req.params;
+  const userId = req.user.id;
+  
+  const thread = await threadsService.lockThread(threadId, userId);
+  
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_LOCKED, {
+    data: { 
+      id: threadId, 
+      lockHistory: thread.lockHistory,
+      lockedBy: userId 
+    },
+    error: null,
+  });
+  
+  return res.status(200).json({
+    data: thread,
+    error: null,
+  });
+};
+
+export const unlockThread = async (req: ICustomRequest, res: Response) => {
+  const { threadId } = req.params;
+  const userId = req.user.id;
+  
+  const thread = await threadsService.unlockThread(threadId, userId);
+  
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UNLOCKED, {
+    data: { 
+      id: threadId, 
+      lockHistory: thread.lockHistory,
+      unlockedBy: userId 
+    },
+    error: null,
+  });
+  
+  return res.status(200).json({
+    data: thread,
+    error: null,
+  });
+};
