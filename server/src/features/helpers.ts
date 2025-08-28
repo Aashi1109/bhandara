@@ -1,5 +1,5 @@
-import { EQueryOperator } from "@definitions/enums";
-import { SimpleFilter } from "@supabase";
+import { EQueryOperator } from "@/definitions/enums";
+import { SimpleFilter } from "@/supabase";
 
 export const formQueryFromObject = <T extends Record<string, any>>(
   obj: Record<string, any>,

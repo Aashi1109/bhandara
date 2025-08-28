@@ -1,6 +1,6 @@
-import { RedisCache } from "@features/cache";
-import { CACHE_NAMESPACE_CONFIG } from "@constants";
-import { IBaseUser, IEvent } from "@definitions/types";
+import { RedisCache } from "@/features/cache";
+import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { IBaseUser, IEvent } from "@/definitions/types";
 
 const eventCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Events.namespace,

@@ -1,4 +1,4 @@
-import config from "@config";
+import config from "@/config";
 import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
 
 import { NodeSDK } from "@opentelemetry/sdk-node";

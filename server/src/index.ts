@@ -1,9 +1,9 @@
-import createServer from "@app";
-import config from "@config";
-import { initializeTracing, shutdownTracing } from "@config/tracing.config";
-import logger from "@logger";
-import { initializeSocket } from "@socket";
-import { initializeMediaRealtime } from "@supabase/realtime";
+import createServer from "@/app";
+import config from "@/config";
+import { initializeTracing, shutdownTracing } from "@/config/tracing.config";
+import logger from "@/logger";
+import { initializeSocket } from "@/socket";
+import { initializeMediaRealtime } from "@/supabase/realtime";
 import http from "http";
 
 initializeTracing().then(() => {

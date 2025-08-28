@@ -4,20 +4,20 @@ import cookieparser from "cookie-parser";
 import swaggerUI from "swagger-ui-express";
 
 import helmet from "helmet";
-import config from "@config";
+import config from "@/config";
 import {
   errorHandler,
   morganLogger,
   requestContextMiddleware,
-} from "@middlewares";
-import appRoutes from "@routes";
-import { NotFoundError } from "@exceptions";
-import { swaggerSpec } from "@docs/swagger";
+} from "@/middlewares";
+import appRoutes from "@/routes";
+import { NotFoundError } from "@/exceptions";
+import { swaggerSpec } from "@/docs/swagger";
 import {
   httpRequestCounter,
   register,
   responseTimeHistogram,
-} from "@config/prometheus.config";
+} from "@/config/prometheus.config";
 
 const createServer = () => {
   const app = express();

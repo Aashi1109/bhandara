@@ -1,10 +1,10 @@
-import { ICustomRequest } from "@definitions/types";
+import { ICustomRequest } from "@/definitions/types";
 import { Response } from "express";
 import MediaService from "./service";
-import { BadRequestError, NotFoundError } from "@exceptions";
-import { isEmpty, pick } from "@utils";
-import { EMediaProvider } from "@definitions/enums";
-import logger from "@logger";
+import { BadRequestError, NotFoundError } from "@/exceptions";
+import { isEmpty, pick } from "@/utils";
+import { EMediaProvider } from "@/definitions/enums";
+import logger from "@/logger";
 import { addVideoJob } from "@/queues/video";
 
 const mediaService = new MediaService();

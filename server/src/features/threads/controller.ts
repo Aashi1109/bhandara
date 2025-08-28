@@ -1,13 +1,13 @@
-import { ICustomRequest, IRequestPagination } from "@definitions/types";
+import { ICustomRequest, IRequestPagination } from "@/definitions/types";
 import { Response } from "express";
 import ThreadsService from "./service";
-import { NotFoundError } from "@exceptions";
-import { isEmpty } from "@utils";
+import { NotFoundError } from "@/exceptions";
+import { isEmpty } from "@/utils";
 
-import { emitSocketEvent } from "@socket/emitter";
-import { PLATFORM_SOCKET_EVENTS } from "@constants";
-import EventService from "@features/events/service";
-import MessageService from "@features/messages/service";
+import { emitSocketEvent } from "@/socket/emitter";
+import { PLATFORM_SOCKET_EVENTS } from "@/constants";
+import EventService from "@/features/events/service";
+import MessageService from "@/features/messages/service";
 
 const threadsService = new ThreadsService();
 const eventService = new EventService();
@@ -27,7 +27,7 @@ export const createThread = async (req: ICustomRequest, res: Response) => {
     const event = await eventService.getById((thread as any).eventId);
     (thread as any).event = event;
   }
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, thread);
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, { data: thread });
   return res.status(201).json(thread);
 };
 
@@ -84,18 +84,18 @@ export const deleteThread = async (req: ICustomRequest, res: Response) => {
 export const lockThread = async (req: ICustomRequest, res: Response) => {
   const { threadId } = req.params;
   const userId = req.user.id;
-  
+
   const thread = await threadsService.lockThread(threadId, userId);
-  
+
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_LOCKED, {
-    data: { 
-      id: threadId, 
+    data: {
+      id: threadId,
       lockHistory: thread.lockHistory,
-      lockedBy: userId 
+      lockedBy: userId,
     },
     error: null,
   });
-  
+
   return res.status(200).json({
     data: thread,
     error: null,
@@ -105,18 +105,18 @@ export const lockThread = async (req: ICustomRequest, res: Response) => {
 export const unlockThread = async (req: ICustomRequest, res: Response) => {
   const { threadId } = req.params;
   const userId = req.user.id;
-  
+
   const thread = await threadsService.unlockThread(threadId, userId);
-  
+
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UNLOCKED, {
-    data: { 
-      id: threadId, 
+    data: {
+      id: threadId,
       lockHistory: thread.lockHistory,
-      unlockedBy: userId 
+      unlockedBy: userId,
     },
     error: null,
   });
-  
+
   return res.status(200).json({
     data: thread,
     error: null,

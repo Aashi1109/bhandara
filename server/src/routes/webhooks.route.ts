@@ -1,5 +1,5 @@
-import { onUploadComplete } from "@features/media/controller";
-import { asyncHandler } from "@middlewares";
+import { onUploadComplete } from "@/features/media/controller";
+import { asyncHandler } from "@/middlewares";
 import { Router } from "express";
 
 const router = Router();

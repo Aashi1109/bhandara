@@ -4,7 +4,7 @@ import {
   IPaginationParams,
   ITag,
 } from "@/definitions/types";
-import { findAllWithPagination, PaginatedResult } from "@utils/dbUtils";
+import { findAllWithPagination, PaginatedResult } from "@/utils/dbUtils";
 import { validateUserCreate, validateUserUpdate } from "./validation";
 import { User } from "./model";
 import {
@@ -24,10 +24,10 @@ import {
   setUserCacheByUsername,
   setUserInterestsCache,
 } from "./helpers";
-import { BadRequestError, NotFoundError } from "@exceptions";
-import { isEmpty } from "@utils";
-import TagService from "@features/tags/service";
-import MediaService from "@features/media/service";
+import { BadRequestError, NotFoundError } from "@/exceptions";
+import { isEmpty } from "@/utils";
+import TagService from "@/features/tags/service";
+import MediaService from "@/features/media/service";
 
 class UserService {
   private readonly getCache = getUserCache;

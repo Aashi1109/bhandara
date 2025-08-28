@@ -1,12 +1,12 @@
-import { getDBConnection } from "@connections/db";
+import { getDBConnection } from "@/connections/db";
 import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@helpers";
+import { getUUIDv7 } from "@/helpers";
 
 const sequelize = getDBConnection();
 
 export interface ISearchResult {
   id: string;
-  type: 'event' | 'user' | 'tag';
+  type: "event" | "user" | "tag";
   title: string;
   description?: string;
   imageUrl?: string;
@@ -18,7 +18,7 @@ export interface ISearchResult {
 
 export class SearchResult extends Model<ISearchResult> {
   declare id: string;
-  declare type: 'event' | 'user' | 'tag';
+  declare type: "event" | "user" | "tag";
   declare title: string;
   declare description?: string;
   declare imageUrl?: string;
@@ -38,7 +38,7 @@ SearchResult.init(
       defaultValue: () => getUUIDv7(),
     },
     type: {
-      type: DataTypes.ENUM('event', 'user', 'tag'),
+      type: DataTypes.ENUM("event", "user", "tag"),
       allowNull: false,
     },
     title: {

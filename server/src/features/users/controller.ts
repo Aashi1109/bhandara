@@ -1,14 +1,14 @@
-import { EQueryOperator } from "@definitions/enums";
+import { EQueryOperator } from "@/definitions/enums";
 import {
   IRequestPagination,
   ICustomRequest,
   IBaseUser,
-} from "@definitions/types";
+} from "@/definitions/types";
 import { getSafeUser } from "./helpers";
 import UserService from "./service";
 import { Response } from "express";
-import { isEmpty, omit } from "@utils";
-import { NotFoundError } from "@exceptions";
+import { isEmpty, omit } from "@/utils";
+import { NotFoundError } from "@/exceptions";
 
 const userService = new UserService();
 

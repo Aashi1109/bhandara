@@ -1,8 +1,8 @@
-import { ICustomRequest, IRequestPagination, ITag } from "@definitions/types";
+import { ICustomRequest, IRequestPagination, ITag } from "@/definitions/types";
 import { Response } from "express";
 import TagsService from "./service";
-import { pick } from "@utils";
-import { formQueryFromObject } from "@features/helpers";
+import { pick } from "@/utils";
+import { formQueryFromObject } from "@/features/helpers";
 
 const tagsService = new TagsService();
 

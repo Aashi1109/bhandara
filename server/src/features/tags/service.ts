@@ -1,5 +1,5 @@
 import { IEvent, IPaginationParams, ITag } from "@/definitions/types";
-import { findAllWithPagination } from "@utils/dbUtils";
+import { findAllWithPagination } from "@/utils/dbUtils";
 import { validateTagCreate, validateTagUpdate } from "./validation";
 import { Tag } from "./model";
 import { Event } from "../events/model";
@@ -14,7 +14,7 @@ import {
   setSubTagsCache,
   deleteSubTagsCache,
 } from "./helpers";
-import { NotFoundError } from "@exceptions";
+import { NotFoundError } from "@/exceptions";
 
 class TagService {
   private readonly getCache = getTagCache;

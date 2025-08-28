@@ -1,13 +1,13 @@
 import { IEvent, IMedia } from "@/definitions/types";
 import { EMediaProvider } from "@/definitions/enums";
-import { findAllWithPagination } from "@utils/dbUtils";
-import SupabaseService from "@supabase";
-import CloudinaryService from "@ccloudinary";
+import { findAllWithPagination } from "@/utils/dbUtils";
+import SupabaseService from "@/supabase";
+import CloudinaryService from "@/ccloudinary";
 import { validateMediaCreate, validateMediaUpdate } from "./validation";
 import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from "./constants";
 import { Media } from "./model";
 import { Event } from "../events/model";
-import { isEmpty, omit } from "@utils";
+import { isEmpty, omit } from "@/utils";
 import {
   deleteMediaCache,
   getEventMediaCache,
@@ -15,10 +15,10 @@ import {
   setMediaCache,
 } from "./helpers";
 import { getMediaCache } from "./helpers";
-import logger from "@logger";
+import logger from "@/logger";
 import { getUniqueFilename as getUniqueFilename } from "./utils";
-import { BadRequestError } from "@exceptions";
-import { CACHE_NAMESPACE_CONFIG } from "@constants";
+import { BadRequestError } from "@/exceptions";
+import { CACHE_NAMESPACE_CONFIG } from "@/constants";
 
 class MediaService {
   private readonly getCache = getMediaCache;

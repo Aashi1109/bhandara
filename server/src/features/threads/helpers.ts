@@ -1,6 +1,6 @@
-import { CACHE_NAMESPACE_CONFIG } from "@constants";
-import { IBaseThread } from "@definitions/types";
-import { RedisCache } from "@features/cache";
+import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { IBaseThread, ILockHistory } from "@/definitions/types";
+import { RedisCache } from "@/features/cache";
 
 const threadsCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Threads.namespace,
@@ -28,10 +28,10 @@ export const isThreadLocked = (thread: IBaseThread): boolean => {
   if (!thread.lockHistory || thread.lockHistory.length === 0) {
     return false;
   }
-  
+
   // Get the latest lock entry (assuming the array is chronologically ordered)
   const latestLock = thread.lockHistory[thread.lockHistory.length - 1];
-  
+
   // If there's a lock entry, the thread is locked
   return !!latestLock.lockedBy && !!latestLock.lockedAt;
 };
@@ -45,7 +45,7 @@ export const getThreadLockInfo = (thread: IBaseThread): ILockHistory | null => {
   if (!isThreadLocked(thread)) {
     return null;
   }
-  
+
   return thread.lockHistory[thread.lockHistory.length - 1];
 };
 
@@ -55,16 +55,19 @@ export const getThreadLockInfo = (thread: IBaseThread): ILockHistory | null => {
  * @param userId - The user ID to check permissions for
  * @returns boolean - true if the user can modify the thread, false otherwise
  */
-export const canUserModifyLockedThread = (thread: IBaseThread, userId: string): boolean => {
+export const canUserModifyLockedThread = (
+  thread: IBaseThread,
+  userId: string
+): boolean => {
   if (!isThreadLocked(thread)) {
     return true; // Not locked, anyone can modify
   }
-  
+
   const lockInfo = getThreadLockInfo(thread);
   if (!lockInfo) {
     return true;
   }
-  
+
   // User can modify if they are the locker or the thread creator
   return lockInfo.lockedBy === userId || thread.createdBy === userId;
 };
@@ -75,17 +78,20 @@ export const canUserModifyLockedThread = (thread: IBaseThread, userId: string): 
  * @param userId - The user ID who is locking the thread
  * @returns IBaseThread - the updated thread object
  */
-export const lockThread = (thread: IBaseThread, userId: string): IBaseThread => {
+export const lockThread = (
+  thread: IBaseThread,
+  userId: string
+): IBaseThread => {
   const lockEntry: ILockHistory = {
     lockedBy: userId,
     lockedAt: new Date(),
   };
-  
+
   const updatedThread = {
     ...thread,
     lockHistory: [...(thread.lockHistory || []), lockEntry],
   };
-  
+
   return updatedThread;
 };
 

@@ -4,9 +4,9 @@ import { Op } from "sequelize";
 import { emitSocketEvent } from "@/socket/emitter";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
 import logger from "@/logger";
-import { supabase } from "@connections";
-import { MEDIA_TABLE_NAME } from "@features/media/constants";
-import { IMedia } from "@definitions/types";
+import { supabase } from "@/connections";
+import { MEDIA_TABLE_NAME } from "@/features/media/constants";
+import { IMedia } from "@/definitions/types";
 
 const eventService = new EventService();
 export function initializeMediaRealtime() {

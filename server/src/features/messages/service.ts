@@ -3,14 +3,14 @@ import {
   IMessageContent,
   IPaginationParams,
 } from "@/definitions/types";
-import { findAllWithPagination } from "@utils/dbUtils";
+import { findAllWithPagination } from "@/utils/dbUtils";
 import { validateMessageCreate, validateMessageUpdate } from "./validation";
 import { Message } from "./model";
-import MediaService from "@features/media/service";
-import { isEmpty } from "@utils";
-import UserService from "@features/users/service";
-import { BadRequestError } from "@exceptions";
-import ReactionService from "@features/reactions/service";
+import MediaService from "@/features/media/service";
+import { isEmpty } from "@/utils";
+import UserService from "@/features/users/service";
+import { BadRequestError } from "@/exceptions";
+import ReactionService from "@/features/reactions/service";
 
 // Note: Thread data is intentionally not populated here to avoid
 // circular dependencies between services. Controllers should fetch

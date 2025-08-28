@@ -1,4 +1,4 @@
-import { validateSchema } from "@helpers";
+import { validateSchema } from "@/helpers";
 import { USER_TABLE_NAME } from "./constants";
 const createSchema = {
   type: "object",

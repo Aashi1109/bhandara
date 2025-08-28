@@ -1,4 +1,4 @@
-import { getDirectories, getRouteFiles } from "@helpers/file";
+import { getDirectories, getRouteFiles } from "@/helpers/file";
 import express from "express";
 const router = express.Router();
 

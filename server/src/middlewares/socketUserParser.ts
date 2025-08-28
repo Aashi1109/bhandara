@@ -1,5 +1,5 @@
-import config from "@config";
-import { BadRequestError, UnauthorizedError } from "@exceptions";
+import config from "@/config";
+import { BadRequestError, UnauthorizedError } from "@/exceptions";
 import sessionParser from "./sessionParser";
 import userParser from "./userParser";
 

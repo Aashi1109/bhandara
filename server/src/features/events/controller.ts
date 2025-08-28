@@ -1,12 +1,12 @@
-import { ICustomRequest, IRequestPagination } from "@definitions/types";
+import { ICustomRequest, IRequestPagination } from "@/definitions/types";
 import { Response } from "express";
 import EventService from "./service";
-import { BadRequestError, NotFoundError } from "@exceptions";
-import { isEmpty } from "@utils";
-import TagService from "@features/tags/service";
-import { emitSocketEvent } from "@socket/emitter";
-import { PLATFORM_SOCKET_EVENTS } from "@constants";
-import { EEventStatus } from "@definitions/enums";
+import { BadRequestError, NotFoundError } from "@/exceptions";
+import { isEmpty } from "@/utils";
+import TagService from "@/features/tags/service";
+import { emitSocketEvent } from "@/socket/emitter";
+import { PLATFORM_SOCKET_EVENTS } from "@/constants";
+import { EEventStatus } from "@/definitions/enums";
 
 const eventService = new EventService();
 const tagService = new TagService();

@@ -7,7 +7,6 @@ export { default as ThreadService } from "./threads/service";
 export { default as MediaService } from "./media/service";
 export { default as AuthService } from "./auth/service";
 export { default as ReactionService } from "./reactions/service";
-export * from "./reactions/helpers";
 export { RedisCache };
 
 export * from "./users/helpers";

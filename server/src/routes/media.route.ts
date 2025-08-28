@@ -7,7 +7,7 @@ import {
   getMediaPublicUrl,
   getMediaPublicUrls,
   getPublicSignedUploadUrl,
-} from "@features/media/controller";
+} from "@/features/media/controller";
 /**
  * @openapi
  * components:
@@ -20,7 +20,7 @@ import {
  *         url:
  *           type: string
  */
-import { asyncHandler, sessionParser, userParser } from "@middlewares";
+import { asyncHandler, sessionParser, userParser } from "@/middlewares";
 import { Router } from "express";
 
 const router = Router({ mergeParams: true });
@@ -51,10 +51,7 @@ router.post("/upload", asyncHandler(uploadFile));
  *     summary: Get signed upload URL
  */
 router.post("/get-signed-upload-url", asyncHandler(getSignedUploadUrl));
-router.post(
-  "/get-public-upload-url",
-  asyncHandler(getPublicSignedUploadUrl)
-);
+router.post("/get-public-upload-url", asyncHandler(getPublicSignedUploadUrl));
 router
   .route("/:mediaId")
   /**

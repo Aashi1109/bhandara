@@ -1,6 +1,6 @@
-import { getDBConnection } from "@connections/db";
-import { EEventStatus, EEventType } from "@definitions/enums";
-import { getUUIDv7 } from "@helpers";
+import { getDBConnection } from "@/connections/db";
+import { EEventStatus, EEventType } from "@/definitions/enums";
+import { getUUIDv7 } from "@/helpers";
 import { DataTypes, Model } from "sequelize";
 import {
   IEvent,
@@ -11,7 +11,7 @@ import {
   IVerifier,
   IBaseUser,
   IReaction,
-} from "@definitions/types";
+} from "@/definitions/types";
 
 const sequelize = getDBConnection();
 

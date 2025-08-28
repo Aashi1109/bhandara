@@ -26,7 +26,7 @@ import {
   sessionParser,
   userParser,
   validateParams,
-} from "@middlewares";
+} from "@/middlewares";
 
 import {
   updateEvent,
@@ -40,7 +40,7 @@ import {
   getEventThreads,
   deleteEvent,
   disassociateMediaFromEvent,
-} from "@features/events/controller";
+} from "@/features/events/controller";
 const router = Router();
 
 router.use([sessionParser, userParser]);

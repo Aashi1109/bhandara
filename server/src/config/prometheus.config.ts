@@ -1,4 +1,4 @@
-import config from "@config";
+import config from "@/config";
 import client from "prom-client";
 
 // Create a registry

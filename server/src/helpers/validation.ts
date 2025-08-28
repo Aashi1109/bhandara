@@ -1,7 +1,7 @@
 import Ajv, { ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
-import { BadRequestError } from "@exceptions";
+import { BadRequestError } from "@/exceptions";
 
 // Initialize AJV with options
 const ajv = new Ajv({

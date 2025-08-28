@@ -1,5 +1,5 @@
-import { ICustomRequest } from "@definitions/types";
-import { NotFoundError } from "@exceptions";
+import { ICustomRequest } from "@/definitions/types";
+import { NotFoundError } from "@/exceptions";
 import { NextFunction, Response } from "express";
 import asyncHandler from "./asyncHandler";
 
@@ -9,8 +9,8 @@ import {
   MediaService,
   setUserCache,
   UserService,
-} from "@features";
-import { isEmpty } from "@utils";
+} from "@/features";
+import { isEmpty } from "@/utils";
 
 const userService = new UserService();
 const mediaService = new MediaService();

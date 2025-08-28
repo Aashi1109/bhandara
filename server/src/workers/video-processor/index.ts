@@ -4,8 +4,8 @@ import { VIDEO_QUEUE_NAME } from "@/queues/video";
 import MediaService from "@/features/media/service";
 import logger from "@/logger";
 import { spawn } from "child_process";
-import { MEDIA_PUBLIC_BUCKET_NAME } from "@features/media/constants";
-import { EMediaProvider } from "@definitions/enums";
+import { MEDIA_PUBLIC_BUCKET_NAME } from "@/features/media/constants";
+import { EMediaProvider } from "@/definitions/enums";
 import crypto from "crypto";
 import fs from "fs/promises";
 import axios from "axios";
@@ -68,7 +68,7 @@ export const processor = async (job: Job) => {
     const tempPath = `./tmp/${crypto.randomUUID()}.${media.metadata?.format}`;
     await fs.writeFile(tempPath, buffer);
 
-    const sizes = { "@1x": 160, "@2x": 320, "@3x": 480 };
+    const sizes = { "@/1x": 160, "@/2x": 320, "@/3x": 480 };
     const thumbBuffers: Record<string, Buffer> = {};
 
     for (const [suffix, size] of Object.entries(sizes)) {
@@ -111,8 +111,8 @@ export const processor = async (job: Job) => {
 
     await mediaService.update(mediaId, {
       thumbnail:
-        "@2x" in mappedThumbs
-          ? mappedThumbs["@2x"].path
+        "@/2x" in mappedThumbs
+          ? mappedThumbs["@/2x"].path
           : Object.values(mappedThumbs)[0]?.path,
       metadata: {
         ...(media.metadata || {}),

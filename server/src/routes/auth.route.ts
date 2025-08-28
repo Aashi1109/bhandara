@@ -21,8 +21,8 @@ import {
   deleteSession,
   signUp,
   signInWithIdToken,
-} from "@features/auth/controller";
-import { sessionParser, userParser, asyncHandler } from "@middlewares";
+} from "@/features/auth/controller";
+import { sessionParser, userParser, asyncHandler } from "@/middlewares";
 
 const router = Router();
 

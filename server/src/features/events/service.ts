@@ -1,6 +1,6 @@
 import { IBaseUser, IEvent, IPaginationParams } from "@/definitions/types";
 import ThreadsService from "../threads/service";
-import { findAllWithPagination } from "@utils/dbUtils";
+import { findAllWithPagination } from "@/utils/dbUtils";
 import { Op } from "sequelize";
 import { EEventParticipantStatus, EEventStatus } from "@/definitions/enums";
 import TagService from "../tags/service";
@@ -15,11 +15,11 @@ import {
   setEventUsersCache,
 } from "./helpers";
 import { deleteEventCache } from "./helpers";
-import { isEmpty } from "@utils";
-import { BadRequestError, NotFoundError } from "@exceptions";
-import { getDistanceInMeters } from "@helpers";
+import { isEmpty } from "@/utils";
+import { BadRequestError, NotFoundError } from "@/exceptions";
+import { getDistanceInMeters } from "@/helpers";
 import { Event } from "./model";
-import MessageService from "@features/messages/service";
+import MessageService from "@/features/messages/service";
 
 class EventService {
   private readonly threadService: ThreadsService;

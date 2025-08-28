@@ -2,14 +2,14 @@ import { Op, Sequelize } from "sequelize";
 import { Event } from "../events/model";
 import { User } from "../users/model";
 import { Tag } from "../tags/model";
-import { IPaginationParams } from "@definitions/types";
-import { EEventStatus, EEventType } from "@definitions/enums";
-import { getDBConnection } from "@connections/db";
+import { IPaginationParams } from "@/definitions/types";
+import { EEventStatus, EEventType } from "@/definitions/enums";
+import { getDBConnection } from "@/connections/db";
 
 const sequelize = getDBConnection();
 
 export interface ISearchFilters {
-  types?: ('event' | 'user' | 'tag')[];
+  types?: ("event" | "user" | "tag")[];
   eventStatus?: EEventStatus[];
   eventType?: EEventType[];
   dateRange?: {
@@ -28,7 +28,7 @@ export interface ISearchFilters {
 
 export interface ISearchResult {
   id: string;
-  type: 'event' | 'user' | 'tag';
+  type: "event" | "user" | "tag";
   title: string;
   description?: string;
   imageUrl?: string;
@@ -56,26 +56,31 @@ class SearchService {
   }> {
     const limit = filters.limit || pagination.limit || 20;
     const offset = filters.offset || ((pagination.page || 1) - 1) * limit;
-    
+
     const results: ISearchResult[] = [];
     let totalCount = 0;
 
     // Search events
-    if (!filters.types || filters.types.includes('event')) {
-      const eventResults = await this.searchEvents(query, filters, limit, offset);
+    if (!filters.types || filters.types.includes("event")) {
+      const eventResults = await this.searchEvents(
+        query,
+        filters,
+        limit,
+        offset
+      );
       results.push(...eventResults.data);
       totalCount += eventResults.total;
     }
 
     // Search users
-    if (!filters.types || filters.types.includes('user')) {
+    if (!filters.types || filters.types.includes("user")) {
       const userResults = await this.searchUsers(query, filters, limit, offset);
       results.push(...userResults.data);
       totalCount += userResults.total;
     }
 
     // Search tags
-    if (!filters.types || filters.types.includes('tag')) {
+    if (!filters.types || filters.types.includes("tag")) {
       const tagResults = await this.searchTags(query, filters, limit, offset);
       results.push(...tagResults.data);
       totalCount += tagResults.total;
@@ -84,7 +89,9 @@ class SearchService {
     // Sort by relevance score and recency
     results.sort((a, b) => {
       if (Math.abs(a.relevanceScore - b.relevanceScore) < 0.1) {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       }
       return b.relevanceScore - a.relevanceScore;
     });
@@ -139,7 +146,7 @@ class SearchService {
     }
 
     if (filters.dateRange) {
-      whereClause['timings.startDate'] = {
+      whereClause["timings.startDate"] = {
         [Op.between]: [filters.dateRange.start, filters.dateRange.end],
       };
     }
@@ -147,16 +154,20 @@ class SearchService {
     if (filters.location) {
       // Add location-based filtering using PostGIS or similar
       // This is a simplified version - you might want to use proper geospatial queries
-      whereClause['location.latitude'] = {
+      whereClause["location.latitude"] = {
         [Op.between]: [
           filters.location.latitude - filters.location.radius / 111,
           filters.location.latitude + filters.location.radius / 111,
         ],
       };
-      whereClause['location.longitude'] = {
+      whereClause["location.longitude"] = {
         [Op.between]: [
-          filters.location.longitude - filters.location.radius / (111 * Math.cos(filters.location.latitude * Math.PI / 180)),
-          filters.location.longitude + filters.location.radius / (111 * Math.cos(filters.location.latitude * Math.PI / 180)),
+          filters.location.longitude -
+            filters.location.radius /
+              (111 * Math.cos((filters.location.latitude * Math.PI) / 180)),
+          filters.location.longitude +
+            filters.location.radius /
+              (111 * Math.cos((filters.location.latitude * Math.PI) / 180)),
         ],
       };
     }
@@ -166,30 +177,35 @@ class SearchService {
       limit,
       offset,
       order: [
-        [Sequelize.literal(`CASE 
+        [
+          Sequelize.literal(`CASE 
           WHEN name ILIKE '${query}%' THEN 1
           WHEN name ILIKE '%${query}%' THEN 2
           WHEN description ILIKE '%${query}%' THEN 3
           ELSE 4
-        END`), 'ASC'],
-        ['createdAt', 'DESC'],
+        END`),
+          "ASC",
+        ],
+        ["createdAt", "DESC"],
       ],
       include: [
         {
           model: sequelize.models.User,
-          as: 'creator',
-          attributes: ['id', 'username', 'avatar'],
+          as: "creator",
+          attributes: ["id", "username", "avatar"],
         },
       ],
     });
 
     const results: ISearchResult[] = rows.map((event) => {
       const relevanceScore = this.calculateEventRelevance(event, query);
-      const previewImage = event.media?.find((m: any) => m.type === 'image')?.publicUrl;
+      const previewImage = event.media?.find(
+        (m: any) => m.type === "image"
+      )?.publicUrl;
 
       return {
         id: event.id,
-        type: 'event' as const,
+        type: "event" as const,
         title: event.name,
         description: event.description,
         imageUrl: previewImage,
@@ -244,13 +260,16 @@ class SearchService {
       limit,
       offset,
       order: [
-        [Sequelize.literal(`CASE 
+        [
+          Sequelize.literal(`CASE 
           WHEN username ILIKE '${query}%' THEN 1
           WHEN username ILIKE '%${query}%' THEN 2
           WHEN full_name ILIKE '%${query}%' THEN 3
           ELSE 4
-        END`), 'ASC'],
-        ['createdAt', 'DESC'],
+        END`),
+          "ASC",
+        ],
+        ["createdAt", "DESC"],
       ],
     });
 
@@ -259,9 +278,9 @@ class SearchService {
 
       return {
         id: user.id,
-        type: 'user' as const,
+        type: "user" as const,
         title: user.username || user.name,
-        description: user.meta?.bio || '',
+        description: user.meta?.bio || "",
         imageUrl: user.profilePic?.url || null,
         metadata: {
           fullName: user.name,
@@ -307,12 +326,15 @@ class SearchService {
       limit,
       offset,
       order: [
-        [Sequelize.literal(`CASE 
+        [
+          Sequelize.literal(`CASE 
           WHEN name ILIKE '${query}%' THEN 1
           WHEN name ILIKE '%${query}%' THEN 2
           ELSE 3
-        END`), 'ASC'],
-        ['createdAt', 'DESC'],
+        END`),
+          "ASC",
+        ],
+        ["createdAt", "DESC"],
       ],
     });
 
@@ -321,7 +343,7 @@ class SearchService {
 
       return {
         id: tag.id,
-        type: 'tag' as const,
+        type: "tag" as const,
         title: tag.name,
         description: tag.description,
         imageUrl: tag.icon,
@@ -363,12 +385,16 @@ class SearchService {
     }
 
     // Tag match
-    if (event.tags?.some((tag: string) => tag.toLowerCase().includes(queryLower))) {
+    if (
+      event.tags?.some((tag: string) => tag.toLowerCase().includes(queryLower))
+    ) {
       score += 4;
     }
 
     // Recency bonus
-    const daysSinceCreation = (Date.now() - new Date(event.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    const daysSinceCreation =
+      (Date.now() - new Date(event.createdAt).getTime()) /
+      (1000 * 60 * 60 * 24);
     if (daysSinceCreation < 7) score += 2;
     else if (daysSinceCreation < 30) score += 1;
 
@@ -459,32 +485,34 @@ class SearchService {
 
     // Get popular event names
     const popularEvents = await Event.findAll({
-      attributes: ['name'],
-      order: [['createdAt', 'DESC']],
+      attributes: ["name"],
+      order: [["createdAt", "DESC"]],
       limit: Math.ceil(limit / 2),
     });
 
     // Get popular usernames
     const popularUsers = await User.findAll({
-      attributes: ['username'],
-      order: [['createdAt', 'DESC']],
+      attributes: ["username"],
+      order: [["createdAt", "DESC"]],
       limit: Math.ceil(limit / 2),
     });
 
     // Get popular tags
     const popularTags = await Tag.findAll({
-      attributes: ['name'],
-      order: [['usageCount', 'DESC']],
+      attributes: ["name"],
+      order: [["usageCount", "DESC"]],
       limit: Math.ceil(limit / 2),
     });
 
-    suggestions.push(...popularEvents.map(e => e.name));
-    suggestions.push(...popularUsers.map(u => u.username));
-    suggestions.push(...popularTags.map(t => t.name));
+    suggestions.push(...popularEvents.map((e) => e.name));
+    suggestions.push(...popularUsers.map((u) => u.username));
+    suggestions.push(...popularTags.map((t) => t.name));
 
     // Filter and return unique suggestions that match the query
     return [...new Set(suggestions)]
-      .filter(suggestion => suggestion.toLowerCase().includes(query.toLowerCase()))
+      .filter((suggestion) =>
+        suggestion.toLowerCase().includes(query.toLowerCase())
+      )
       .slice(0, limit);
   }
 }

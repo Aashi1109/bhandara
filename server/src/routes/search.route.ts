@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { SearchController } from "@features/search";
-import { validateSuggestionsRequest } from "@features/search/validation";
-import { validateRequest } from "@middlewares/validation";
+import { SearchController } from "@/features/search";
+import { validateSuggestionsRequest } from "@/features/search/validation";
+import { validateRequest } from "@/middlewares/validation";
 
 const router = Router();
 
@@ -17,7 +17,11 @@ router.get("/", SearchController.search);
  * @desc    Get search suggestions based on query
  * @access  Public
  */
-router.get("/suggestions", validateRequest(validateSuggestionsRequest), SearchController.getSuggestions);
+router.get(
+  "/suggestions",
+  validateRequest(validateSuggestionsRequest),
+  SearchController.getSuggestions
+);
 
 /**
  * @route   GET /api/search/options

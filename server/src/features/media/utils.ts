@@ -1,4 +1,4 @@
-import { get32BitMD5Hash, getAlphaNumericId } from "@helpers";
+import { get32BitMD5Hash, getAlphaNumericId } from "@/helpers";
 
 export function getUniqueFilename(path: string) {
   const match = path.match(/^(.*\/)([^/]+?)(\.[^.]+)?$/);

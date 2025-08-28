@@ -43,6 +43,7 @@ import { H6, Image, ScrollView, Text, View, XStack, YStack, Button, Sheet, Anima
 import ExploreAssetPreview from "@/components/ExploreAssetPreview";
 import { useDebounce } from "tamagui";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "expo-router";
 
 export enum EExploreComponents {
   TasteCalendar = "taste-calendar",
@@ -230,7 +231,15 @@ const CommonHeader = ({
   );
 };
 
-const TasteCalendar = ({ payload, filters, userLocation }: { payload: ITasteCalendarPayload[]; filters: string[]; userLocation: LocationObjectCoords | null }) => {
+const TasteCalendar = ({
+  payload,
+  filters,
+  userLocation
+}: {
+  payload: ITasteCalendarPayload[];
+  filters: string[];
+  userLocation: LocationObjectCoords | null;
+}) => {
   const iconMapping = {
     morning: <Sun size={16} />,
     evening: <CloudSun size={16} />,
@@ -264,7 +273,10 @@ const TasteCalendar = ({ payload, filters, userLocation }: { payload: ITasteCale
           flexDirection="row"
         >
           {filteredPayload.map((item) => (
-            <View key={item.id} width={140}>
+            <View
+              key={item.id}
+              width={140}
+            >
               <ExploreAssetPreview
                 media={item.media}
                 title={item.title}
@@ -318,7 +330,10 @@ const FoodieFeed = ({
     >
       <XStack gap={"$4"}>
         {payload.map((item) => (
-          <View key={item.id} width={150}>
+          <View
+            key={item.id}
+            width={150}
+          >
             <ExploreAssetPreview
               media={item.media}
               title={item.title}
@@ -344,7 +359,10 @@ const Reels = ({ payload, userLocation }: { payload: IReelsPayload[]; userLocati
     <ScrollView>
       <XStack gap={"$4"}>
         {payload.map((item) => (
-          <View key={item.id} width={160}>
+          <View
+            key={item.id}
+            width={160}
+          >
             <ExploreAssetPreview
               media={item.media}
               title={item.title}
@@ -398,12 +416,21 @@ const Collaborations = ({
   );
 };
 
-const Trending = ({ payload, userLocation }: { payload: ITrendingPayload[]; userLocation: LocationObjectCoords | null }) => {
+const Trending = ({
+  payload,
+  userLocation
+}: {
+  payload: ITrendingPayload[];
+  userLocation: LocationObjectCoords | null;
+}) => {
   return (
     <ScrollView>
       <XStack gap={"$4"}>
         {payload.map((item) => (
-          <View key={item.id} width={180}>
+          <View
+            key={item.id}
+            width={180}
+          >
             <ExploreAssetPreview
               media={item.media}
               title={item.title}
@@ -464,6 +491,7 @@ const explore = () => {
 
   const socket = useSocket();
   const searchQuery = watch("search");
+  const router = useRouter();
 
   // Search state
   const [searchResults, setSearchResults] = useState<ISearchResult[]>([]);
@@ -477,7 +505,7 @@ const explore = () => {
     total: 0,
     page: 1,
     limit: 20,
-    hasNext: false,
+    hasNext: false
   });
 
   const [currentUserLocation, setCurrentUserLocation] = useState<LocationObjectCoords | null>(null);
@@ -501,7 +529,7 @@ const explore = () => {
         setShowSearchModal(true);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error("Search error:", error);
       toastController.show("Search failed. Please try again.");
     } finally {
       setIsSearching(false);
@@ -523,7 +551,7 @@ const explore = () => {
         setShowSuggestions(true);
       }
     } catch (error) {
-      console.error('Suggestions error:', error);
+      console.error("Suggestions error:", error);
     }
   }, 300);
 
@@ -536,7 +564,7 @@ const explore = () => {
           setSearchOptions(response.data);
         }
       } catch (error) {
-        console.error('Error loading search options:', error);
+        console.error("Error loading search options:", error);
       }
     };
     loadSearchOptions();
@@ -579,17 +607,17 @@ const explore = () => {
   const handleResultClick = (result: ISearchResult) => {
     // Navigate to the appropriate screen based on result type
     switch (result.type) {
-      case 'event':
+      case "event":
         // Navigate to event details
-        console.log('Navigate to event:', result.id);
+        console.log("Navigate to event:", result.id);
         break;
-      case 'user':
+      case "user":
         // Navigate to user profile
         router.push(`/profile/${result.username || result.id}`);
         break;
-      case 'tag':
+      case "tag":
         // Navigate to tag page
-        console.log('Navigate to tag:', result.id);
+        console.log("Navigate to tag:", result.id);
         break;
     }
     setShowSearchModal(false);
@@ -597,12 +625,27 @@ const explore = () => {
 
   const getResultIcon = (type: string) => {
     switch (type) {
-      case 'event':
-        return <Calendar size={16} color="$blue10" />;
-      case 'user':
-        return <User size={16} color="$green10" />;
-      case 'tag':
-        return <Tag size={16} color="$orange10" />;
+      case "event":
+        return (
+          <Calendar
+            size={16}
+            color="$blue10"
+          />
+        );
+      case "user":
+        return (
+          <User
+            size={16}
+            color="$green10"
+          />
+        );
+      case "tag":
+        return (
+          <Tag
+            size={16}
+            color="$color10"
+          />
+        );
       default:
         return null;
     }
@@ -610,14 +653,14 @@ const explore = () => {
 
   const getResultBadgeColor = (type: string) => {
     switch (type) {
-      case 'event':
-        return '$blue5';
-      case 'user':
-        return '$green5';
-      case 'tag':
-        return '$orange5';
+      case "event":
+        return "$blue5";
+      case "user":
+        return "$green5";
+      case "tag":
+        return "$orange5";
       default:
-        return '$gray5';
+        return "$gray5";
     }
   };
 
@@ -702,19 +745,19 @@ const explore = () => {
                   <Button
                     size="$2"
                     circular
-                    backgroundColor="transparent"
+                    bg="transparent"
                     onPress={handleClearSearch}
                     icon={X}
-                    color="$gray10"
+                    color="$color10"
                   />
                 )}
                 <Button
                   size="$2"
                   circular
-                  backgroundColor={Object.keys(searchFilters).length > 0 ? "$blue10" : "transparent"}
+                  bg={Object.keys(searchFilters).length > 0 ? "$blue10" : "transparent"}
                   onPress={handleFilterPress}
                   icon={Filter}
-                  color={Object.keys(searchFilters).length > 0 ? "white" : "$gray10"}
+                  color={Object.keys(searchFilters).length > 0 ? "white" : "$color10"}
                 />
               </XStack>
             }
@@ -756,15 +799,15 @@ const explore = () => {
                 {searchSuggestions.map((suggestion, index) => (
                   <Button
                     key={index}
-                    backgroundColor="transparent"
+                    bg="transparent"
                     borderWidth={0}
-                    borderRadius={0}
-                    paddingHorizontal="$3"
-                    paddingVertical="$2"
-                    justifyContent="flex-start"
+                    rounded={0}
+                    px="$3"
+                    py="$2"
+                    justify="flex-start"
                     onPress={() => handleSuggestionClick(suggestion)}
-                    hoverStyle={{ backgroundColor: "$gray5" }}
-                    pressStyle={{ backgroundColor: "$gray6" }}
+                    hoverStyle={{ bg: "$color02" }}
+                    pressStyle={{ bg: "$color02" }}
                   >
                     <Text
                       fontSize="$3"
@@ -832,35 +875,58 @@ const explore = () => {
           exitStyle={{ opacity: 0 }}
         />
         <Sheet.Frame
-          padding="$4"
-          justifyContent="flex-start"
-          alignItems="center"
-          space="$4"
+          p="$4"
+          justify="flex-start"
+          items="center"
+          gap="$4"
         >
           <Sheet.Handle />
 
-          <XStack width="100%" alignItems="center" justifyContent="space-between">
+          <XStack
+            width="100%"
+            items="center"
+            justify="space-between"
+          >
             <H6>Search Results</H6>
             <Button
               size="$2"
               circular
-              backgroundColor="transparent"
+              bg="transparent"
               onPress={() => setShowSearchModal(false)}
               icon={X}
-              color="$gray10"
+              color="$color10"
             />
           </XStack>
 
-          <ScrollView width="100%" flex={1}>
+          <ScrollView
+            width="100%"
+            flex={1}
+          >
             {isSearching ? (
-              <YStack alignItems="center" justifyContent="center" padding="$8">
+              <YStack
+                items="center"
+                justify="center"
+                p="$8"
+              >
                 <SpinningLoader />
-                <Text marginTop="$3" color="$gray10">Searching...</Text>
+                <Text
+                  mt="$3"
+                  color="$color10"
+                >
+                  Searching...
+                </Text>
               </YStack>
             ) : searchResults.length > 0 ? (
               <YStack gap="$1">
-                <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4">
-                  <Text fontSize="$3" color="$gray10">
+                <XStack
+                  items="center"
+                  justify="space-between"
+                  px="$4"
+                >
+                  <Text
+                    fontSize="$3"
+                    color="$color10"
+                  >
                     {searchPagination.total} results found
                   </Text>
                 </XStack>
@@ -868,16 +934,25 @@ const explore = () => {
                 {searchResults.map((result) => (
                   <Button
                     key={`${result.type}-${result.id}`}
-                    backgroundColor="transparent"
+                    bg="transparent"
                     borderWidth={0}
-                    paddingHorizontal="$4"
-                    paddingVertical="$3"
+                    px="$4"
+                    py="$3"
                     onPress={() => handleResultClick(result)}
-                    hoverStyle={{ backgroundColor: "$gray5" }}
-                    pressStyle={{ backgroundColor: "$gray6" }}
+                    hoverStyle={{ bg: "$color02" }}
+                    pressStyle={{ bg: "$color02" }}
                   >
-                    <XStack gap="$3" alignItems="center" width="100%">
-                      <YStack width={50} height={50} borderRadius="$3" overflow="hidden">
+                    <XStack
+                      gap="$3"
+                      items="center"
+                      width="100%"
+                    >
+                      <YStack
+                        width={50}
+                        height={50}
+                        rounded="$3"
+                        overflow="hidden"
+                      >
                         {result.imageUrl ? (
                           <Image
                             source={{ uri: result.imageUrl }}
@@ -889,23 +964,36 @@ const explore = () => {
                           <YStack
                             width="100%"
                             height="100%"
-                            backgroundColor="$gray5"
-                            alignItems="center"
-                            justifyContent="center"
+                            bg="$color10"
+                            items="center"
+                            justify="center"
                           >
                             {getResultIcon(result.type)}
                           </YStack>
                         )}
                       </YStack>
 
-                      <YStack flex={1} gap="$1">
-                        <XStack alignItems="center" gap="$2">
-                          <Badge backgroundColor={getResultBadgeColor(result.type)}>
-                            <Badge.Text fontSize="$2" textTransform="capitalize">
+                      <YStack
+                        flex={1}
+                        gap="$1"
+                      >
+                        <XStack
+                          items="center"
+                          gap="$2"
+                        >
+                          <Badge bg={getResultBadgeColor(result.type) as any}>
+                            <Badge.Text
+                              fontSize="$2"
+                              textTransform="capitalize"
+                            >
                               {result.type}
                             </Badge.Text>
                           </Badge>
-                          <H6 flex={1} numberOfLines={1} ellipsizeMode="tail">
+                          <H6
+                            flex={1}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
                             {result.title}
                           </H6>
                         </XStack>
@@ -913,7 +1001,7 @@ const explore = () => {
                         {result.description && (
                           <Text
                             fontSize="$3"
-                            color="$gray10"
+                            color="$color10"
                             numberOfLines={2}
                             ellipsizeMode="tail"
                           >
@@ -921,24 +1009,48 @@ const explore = () => {
                           </Text>
                         )}
 
-                        <XStack gap="$3" alignItems="center">
-                          <Text fontSize="$2" color="$gray8">
+                        <XStack
+                          gap="$3"
+                          items="center"
+                        >
+                          <Text
+                            fontSize="$2"
+                            color="$color10"
+                          >
                             {formatDistanceToNow(new Date(result.createdAt), { addSuffix: true })}
                           </Text>
 
-                          {result.type === 'event' && result.metadata?.location && (
-                            <XStack alignItems="center" gap="$1">
-                              <MapPin size={12} color="$gray8" />
-                              <Text fontSize="$2" color="$gray8">
+                          {result.type === "event" && result.metadata?.location && (
+                            <XStack
+                              items="center"
+                              gap="$1"
+                            >
+                              <MapPin
+                                size={12}
+                                color="$color10"
+                              />
+                              <Text
+                                fontSize="$2"
+                                color="$color10"
+                              >
                                 {result.metadata.location.city || result.metadata.location.place}
                               </Text>
                             </XStack>
                           )}
 
-                          {result.type === 'event' && result.metadata?.participants && (
-                            <XStack alignItems="center" gap="$1">
-                              <Users size={12} color="$gray8" />
-                              <Text fontSize="$2" color="$gray8">
+                          {result.type === "event" && result.metadata?.participants && (
+                            <XStack
+                              items="center"
+                              gap="$1"
+                            >
+                              <Users
+                                size={12}
+                                color="$color10"
+                              />
+                              <Text
+                                fontSize="$2"
+                                color="$color10"
+                              >
                                 {result.metadata.participants} participants
                               </Text>
                             </XStack>
@@ -950,17 +1062,36 @@ const explore = () => {
                 ))}
               </YStack>
             ) : searchQuery ? (
-              <YStack alignItems="center" justifyContent="center" padding="$8">
-                <Text color="$gray10" textAlign="center">
+              <YStack
+                items="center"
+                justify="center"
+                p="$8"
+              >
+                <Text
+                  color="$color10"
+                  text="center"
+                >
                   No results found for "{searchQuery}"
                 </Text>
-                <Text fontSize="$3" color="$gray8" textAlign="center" marginTop="$2">
+                <Text
+                  fontSize="$3"
+                  color="$color10"
+                  text="center"
+                  mt="$2"
+                >
                   Try adjusting your search terms or filters
                 </Text>
               </YStack>
             ) : (
-              <YStack alignItems="center" justifyContent="center" padding="$8">
-                <Text color="$gray10" textAlign="center">
+              <YStack
+                items="center"
+                justify="center"
+                p="$8"
+              >
+                <Text
+                  color="$color10"
+                  text="center"
+                >
                   Start typing to search for events, users, and tags
                 </Text>
               </YStack>

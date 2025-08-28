@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
-import { DB_CONNECTION_NAMES } from "@constants";
+import { DB_CONNECTION_NAMES } from "@/constants";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

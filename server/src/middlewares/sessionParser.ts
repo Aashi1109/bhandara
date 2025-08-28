@@ -1,12 +1,12 @@
-import config from "@config";
-import { RequestContext } from "@contexts";
-import { ICustomRequest } from "@definitions/types";
-import { UnauthorizedError } from "@exceptions";
+import config from "@/config";
+import { RequestContext } from "@/contexts";
+import { ICustomRequest } from "@/definitions/types";
+import { UnauthorizedError } from "@/exceptions";
 import {
   AuthService,
   getUserSessionCache,
   updateUserSessionCache,
-} from "@features";
+} from "@/features";
 import { NextFunction, Request, Response } from "express";
 
 const authService = new AuthService();

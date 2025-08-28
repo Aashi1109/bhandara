@@ -22,7 +22,7 @@ import {
   paginationParser,
   sessionParser,
   userParser,
-} from "@middlewares";
+} from "@/middlewares";
 import { Router } from "express";
 import {
   getAllUser,
@@ -31,7 +31,7 @@ import {
   updateUser,
   getUserByQuery,
   getUserInterests,
-} from "@features/users/controller";
+} from "@/features/users/controller";
 
 const router = Router();
 

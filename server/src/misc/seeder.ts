@@ -10,12 +10,12 @@ import {
   EEventStatus,
   EEventType,
   EThreadType,
-} from "@definitions/enums";
-import { getUUIDv7 } from "@helpers";
+} from "@/definitions/enums";
+import { getUUIDv7 } from "@/helpers";
 import { fileURLToPath } from "url";
-import { MediaService } from "@features";
-import { MEDIA_FILE_BUCKET_NAME } from "@features/media/constants";
-import { TAG_TABLE_NAME } from "@features/tags/constants";
+import { MediaService } from "@/features";
+import { MEDIA_FILE_BUCKET_NAME } from "@/features/media/constants";
+import { TAG_TABLE_NAME } from "@/features/tags/constants";
 
 dotenv.config();
 

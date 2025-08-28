@@ -1,7 +1,7 @@
-import config from "@config";
-import { IBaseUser } from "@definitions/types";
-import logger from "@logger";
-import { jnstringify } from "@utils";
+import config from "@/config";
+import { IBaseUser } from "@/definitions/types";
+import logger from "@/logger";
+import { jnstringify } from "@/utils";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";

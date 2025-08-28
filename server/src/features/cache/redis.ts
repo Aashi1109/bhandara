@@ -1,6 +1,6 @@
 import { redis } from "@/connections";
 // import { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
-import { jnparse, jnstringify } from "@utils";
+import { jnparse, jnstringify } from "@/utils";
 import Redis from "ioredis";
 
 interface RedisCacheConfig {

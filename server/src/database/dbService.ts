@@ -6,7 +6,7 @@ import {
   Sequelize,
   Transaction,
 } from "sequelize";
-import { getDBConnection } from "@connections/db";
+import { getDBConnection } from "@/connections/db";
 import { EQueryOperator } from "@/definitions/enums";
 
 type SimpleFilter = { column: string; operator: EQueryOperator; value: any };
@@ -84,10 +84,7 @@ export default class DBService {
     return { data: data as T[], count: null };
   }
 
-  async insert<T extends Model>(
-    model: ModelStatic<T>,
-    data: any
-  ): Promise<T> {
+  async insert<T extends Model>(model: ModelStatic<T>, data: any): Promise<T> {
     const res = await model.create(data as any);
     return res.toJSON() as T;
   }

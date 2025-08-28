@@ -1,5 +1,5 @@
-import { RedisCache } from "@features/cache";
-import { CACHE_NAMESPACE_CONFIG } from "@constants";
+import { RedisCache } from "@/features/cache";
+import { CACHE_NAMESPACE_CONFIG } from "@/constants";
 
 const exploreCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Explore.namespace,

@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import config from "@/config";
-import { RequestContext } from "@contexts";
-import { UnauthorizedError } from "@exceptions";
+import { RequestContext } from "@/contexts";
 
 const sessionIgnorePaths = ["/auth/.*"];
 

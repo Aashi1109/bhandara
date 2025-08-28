@@ -1,5 +1,5 @@
-import { apiClient } from "./apiClient";
 import { ISearchFilters, ISearchResult } from "@/definitions/types";
+import axiosClient from "./base";
 
 export interface ISearchResponse {
   success: boolean;
@@ -38,50 +38,47 @@ export const search = async (
   const params = new URLSearchParams({
     query,
     page: page.toString(),
-    limit: limit.toString(),
+    limit: limit.toString()
   });
 
   if (filters) {
     if (filters.types?.length) {
-      filters.types.forEach(type => params.append('filters[types][]', type));
+      filters.types.forEach((type) => params.append("filters[types][]", type));
     }
     if (filters.eventStatus?.length) {
-      filters.eventStatus.forEach(status => params.append('filters[eventStatus][]', status));
+      filters.eventStatus.forEach((status) => params.append("filters[eventStatus][]", status));
     }
     if (filters.eventType?.length) {
-      filters.eventType.forEach(type => params.append('filters[eventType][]', type));
+      filters.eventType.forEach((type) => params.append("filters[eventType][]", type));
     }
     if (filters.dateRange) {
-      params.append('filters[dateRange][start]', filters.dateRange.start.toISOString());
-      params.append('filters[dateRange][end]', filters.dateRange.end.toISOString());
+      params.append("filters[dateRange][start]", filters.dateRange.start.toISOString());
+      params.append("filters[dateRange][end]", filters.dateRange.end.toISOString());
     }
     if (filters.location) {
-      params.append('filters[location][latitude]', filters.location.latitude.toString());
-      params.append('filters[location][longitude]', filters.location.longitude.toString());
-      params.append('filters[location][radius]', filters.location.radius.toString());
+      params.append("filters[location][latitude]", filters.location.latitude.toString());
+      params.append("filters[location][longitude]", filters.location.longitude.toString());
+      params.append("filters[location][radius]", filters.location.radius.toString());
     }
     if (filters.tags?.length) {
-      filters.tags.forEach(tag => params.append('filters[tags][]', tag));
+      filters.tags.forEach((tag) => params.append("filters[tags][]", tag));
     }
   }
 
-  const response = await apiClient.get(`/search?${params.toString()}`);
+  const response = await axiosClient.get(`/search?${params.toString()}`);
   return response.data;
 };
 
 /**
  * Get search suggestions
  */
-export const getSearchSuggestions = async (
-  query: string,
-  limit: number = 5
-): Promise<ISuggestionsResponse> => {
+export const getSearchSuggestions = async (query: string, limit: number = 5): Promise<ISuggestionsResponse> => {
   const params = new URLSearchParams({
     query,
-    limit: limit.toString(),
+    limit: limit.toString()
   });
 
-  const response = await apiClient.get(`/search/suggestions?${params.toString()}`);
+  const response = await axiosClient.get(`/search/suggestions?${params.toString()}`);
   return response.data;
 };
 
@@ -89,6 +86,6 @@ export const getSearchSuggestions = async (
  * Get search options and filters
  */
 export const getSearchOptions = async (): Promise<ISearchOptionsResponse> => {
-  const response = await apiClient.get('/search/options');
+  const response = await axiosClient.get("/search/options");
   return response.data;
 };

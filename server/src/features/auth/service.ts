@@ -1,14 +1,14 @@
-import { supabase } from "@connections";
-import { RequestContext } from "@contexts";
-import { EAuthProvider } from "@definitions/enums";
-import { IBaseUser } from "@definitions/types";
+import { supabase } from "@/connections";
+import { RequestContext } from "@/contexts";
+import { EAuthProvider } from "@/definitions/enums";
+import { IBaseUser } from "@/definitions/types";
 import {
   getSafeUser,
   setUserCache,
   setUserSessionCache,
-} from "@features/users/helpers";
-import UserService from "@features/users/service";
-import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from "@helpers";
+} from "@/features/users/helpers";
+import UserService from "@/features/users/service";
+import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from "@/helpers";
 import { AuthResponse } from "@supabase/supabase-js";
 import { Request } from "express";
 import { UAParser } from "ua-parser-js";

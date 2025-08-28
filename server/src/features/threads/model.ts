@@ -1,8 +1,8 @@
-import { getDBConnection } from "@connections/db";
+import { getDBConnection } from "@/connections/db";
 import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@helpers";
+import { getUUIDv7 } from "@/helpers";
 import { THREAD_TABLE_NAME } from "./constants";
-import { EThreadType, EAccessLevel } from "@definitions/enums";
+import { EThreadType, EAccessLevel } from "@/definitions/enums";
 import { IBaseThread, ILockHistory } from "@/definitions/types";
 
 type ThreadAttributes = Omit<

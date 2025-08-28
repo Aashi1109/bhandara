@@ -1,7 +1,7 @@
 import { Sequelize } from "sequelize";
 import config from "@/config";
-import logger from "@logger";
-import { DB_CONNECTION_NAMES } from "@constants";
+import logger from "@/logger";
+import { DB_CONNECTION_NAMES } from "@/constants";
 
 const postgresConnection = {};
 export const getConnections = () => {

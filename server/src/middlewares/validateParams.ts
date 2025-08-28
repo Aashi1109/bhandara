@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { BadRequestError } from "@exceptions";
+import { BadRequestError } from "@/exceptions";
 
 const validateParams = (paramNames: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {

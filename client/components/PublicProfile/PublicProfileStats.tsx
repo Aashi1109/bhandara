@@ -20,37 +20,45 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
       icon: Calendar,
       value: stats.eventsHosted,
       label: "Events",
-      color: "$purple10",
-      bgColor: "$purple3"
+      color: "$color12",
+      bgColor: "$color3"
     },
     {
       icon: Clock,
       value: `${stats.totalHours}h`,
       label: "Hours",
-      color: "$blue10",
-      bgColor: "$blue3"
+      color: "$color12",
+      bgColor: "$color3"
     },
     {
       icon: Star,
       value: stats.reviews,
       label: "Reviews",
-      color: "$orange10",
-      bgColor: "$orange3"
+      color: "$color12",
+      bgColor: "$color3"
     },
-    ...(stats.followers ? [{
-      icon: Users,
-      value: formatNumber(stats.followers),
-      label: "Followers",
-      color: "$green10",
-      bgColor: "$green3"
-    }] : []),
-    ...(stats.likes ? [{
-      icon: Heart,
-      value: formatNumber(stats.likes),
-      label: "Likes",
-      color: "$red10",
-      bgColor: "$red3"
-    }] : [])
+    ...(stats.followers
+      ? [
+          {
+            icon: Users,
+            value: formatNumber(stats.followers),
+            label: "Followers",
+            color: "$color12",
+            bgColor: "$color3"
+          }
+        ]
+      : []),
+    ...(stats.likes
+      ? [
+          {
+            icon: Heart,
+            value: formatNumber(stats.likes),
+            label: "Likes",
+            color: "$red10",
+            bgColor: "$red3"
+          }
+        ]
+      : [])
   ];
 
   if (detailed) {
@@ -68,13 +76,32 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
               pressStyle={{ scale: 0.98 }}
               animation="quick"
             >
-              <XStack alignItems="center" space="$4">
-                <Circle size="$5" backgroundColor={stat.bgColor}>
-                  <Icon size={24} color={stat.color} />
+              <XStack
+                items="center"
+                space="$4"
+              >
+                <Circle
+                  size="$5"
+                  background={stat.bgColor}
+                >
+                  <Icon
+                    size={24}
+                    color={stat.color}
+                  />
                 </Circle>
                 <YStack flex={1}>
-                  <H4 color="$color12" fontWeight="700">{stat.value}</H4>
-                  <Text color="$color11" fontSize="$3">{stat.label}</Text>
+                  <H4
+                    color="$color12"
+                    fontWeight="700"
+                  >
+                    {stat.value}
+                  </H4>
+                  <Text
+                    color="$color11"
+                    fontSize="$3"
+                  >
+                    {stat.label}
+                  </Text>
                 </YStack>
               </XStack>
             </Card>
@@ -85,8 +112,8 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
   }
 
   return (
-    <ScrollView 
-      horizontal 
+    <ScrollView
+      horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
     >
@@ -96,23 +123,33 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
           return (
             <YStack
               key={index}
-              alignItems="center"
-              space="$2"
+              items="center"
+              gap="$2"
               pressStyle={{ scale: 0.95 }}
               animation="quick"
             >
               <Circle
                 size="$6"
-                backgroundColor={stat.bgColor}
+                bg={stat.bgColor}
                 pressStyle={{ scale: 0.9 }}
                 animation="quick"
               >
-                <Icon size={24} color={stat.color} />
+                <Icon
+                  size={24}
+                  color={stat.color}
+                />
               </Circle>
-              <Text fontSize="$5" fontWeight="700" color="$color12">
+              <Text
+                fontSize="$5"
+                fontWeight="700"
+                color="$color12"
+              >
                 {stat.value}
               </Text>
-              <Text fontSize="$2" color="$color11">
+              <Text
+                fontSize="$2"
+                color="$color11"
+              >
                 {stat.label}
               </Text>
             </YStack>

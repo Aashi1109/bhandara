@@ -1,5 +1,5 @@
-import { NotFoundError, UnauthorizedError } from "@exceptions";
-import { isEmpty } from "@utils";
+import { NotFoundError, UnauthorizedError } from "@/exceptions";
+import { isEmpty } from "@/utils";
 
 /**
  * @deprecated This decorator is no longer maintained. Use the

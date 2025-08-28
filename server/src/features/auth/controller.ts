@@ -1,15 +1,15 @@
-import config from "@config";
-import { supabase } from "@connections";
-import { EAuthProvider } from "@definitions/enums";
-import { ICustomRequest } from "@definitions/types";
-import { BadRequestError, NotFoundError } from "@exceptions";
-import { AuthService } from "@features";
+import config from "@/config";
+import { supabase } from "@/connections";
+import { EAuthProvider } from "@/definitions/enums";
+import { ICustomRequest } from "@/definitions/types";
+import { BadRequestError, NotFoundError } from "@/exceptions";
+import { AuthService } from "@/features";
 import {
   deleteUserSessionCache,
   getUserSessionCacheList,
-} from "@features/users/helpers";
-import UserService from "@features/users/service";
-import { isEmpty, merge } from "@utils";
+} from "@/features/users/helpers";
+import UserService from "@/features/users/service";
+import { isEmpty, merge } from "@/utils";
 import { Request, Response } from "express";
 
 const authService = new AuthService();
@@ -152,13 +152,10 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
   queryParams.set("code_verifier", req.body.codeVerifier);
   queryParams.set("redirect_uri", req.body.redirectUri);
 
-  const tokenRequest = await fetch(
-    "https://www.googleapis.com/oauth2/v4/token",
-    {
-      method: "POST",
-      body: queryParams,
-    }
-  );
+  const tokenRequest = await fetch("https://www.googleapis.com/oaut@/token", {
+    method: "POST",
+    body: queryParams,
+  });
 
   const tokenResponse = await tokenRequest.json();
 

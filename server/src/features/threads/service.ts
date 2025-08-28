@@ -2,12 +2,20 @@ import { validateThreadCreate, validateThreadUpdate } from "./validation";
 import { Thread } from "./model";
 
 import { IPaginationParams, IMessage } from "@/definitions/types";
-import { findAllWithPagination } from "@utils/dbUtils";
-import { getThreadCache, setThreadCache, deleteThreadCache, isThreadLocked, canUserModifyLockedThread, lockThread, unlockThread } from "./helpers";
-import { IBaseThread } from "@definitions/types";
-import { BadRequestError, ForbiddenError } from "@exceptions";
+import { findAllWithPagination } from "@/utils/dbUtils";
+import {
+  getThreadCache,
+  setThreadCache,
+  deleteThreadCache,
+  isThreadLocked,
+  canUserModifyLockedThread,
+  lockThread,
+  unlockThread,
+} from "./helpers";
+import { IBaseThread } from "@/definitions/types";
+import { BadRequestError, ForbiddenError } from "@/exceptions";
 
-import MessageService from "@features/messages/service";
+import MessageService from "@/features/messages/service";
 
 class ThreadsService {
   private readonly getCache = getThreadCache;
@@ -157,9 +165,11 @@ class ThreadsService {
     }
 
     const lockedThread = lockThread(thread, userId);
-    
-    const updated = await this.update(threadId, { lockHistory: lockedThread.lockHistory });
-    
+
+    const updated = await this.update(threadId, {
+      lockHistory: lockedThread.lockHistory,
+    });
+
     return updated;
   }
 
@@ -185,9 +195,11 @@ class ThreadsService {
     }
 
     const unlockedThread = unlockThread(thread);
-    
-    const updated = await this.update(threadId, { lockHistory: unlockedThread.lockHistory });
-    
+
+    const updated = await this.update(threadId, {
+      lockHistory: unlockedThread.lockHistory,
+    });
+
     return updated;
   }
 
@@ -196,7 +208,9 @@ class ThreadsService {
    * @param threadId - The ID of the thread to check
    * @returns Promise<{isLocked: boolean, lockedThreadId?: string}> - Lock status and which thread is locked
    */
-  async isThreadChainLocked(threadId: string): Promise<{isLocked: boolean, lockedThreadId?: string}> {
+  async isThreadChainLocked(
+    threadId: string
+  ): Promise<{ isLocked: boolean; lockedThreadId?: string }> {
     const thread = await this.getById(threadId);
     if (!thread) {
       return { isLocked: false };

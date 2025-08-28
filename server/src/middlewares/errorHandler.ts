@@ -1,5 +1,5 @@
 import logger from "@/logger";
-import CustomError from "@exceptions/CustomError";
+import CustomError from "@/exceptions/CustomError";
 import { NextFunction, Request, Response } from "express";
 
 /**

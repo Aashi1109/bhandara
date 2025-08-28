@@ -13,7 +13,7 @@
  *           type: string
  */
 import { Router } from "express";
-import { sessionParser, userParser, asyncHandler } from "@middlewares";
+import { sessionParser, userParser, asyncHandler } from "@/middlewares";
 import {
   createTag,
   deleteTag,
@@ -21,7 +21,7 @@ import {
   getTagById,
   getTags,
   updateTag,
-} from "@features/tags/controller";
+} from "@/features/tags/controller";
 
 const router = Router();
 

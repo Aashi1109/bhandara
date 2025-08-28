@@ -4,8 +4,8 @@ import {
   EEventParticipantStatus,
   EEventStatus,
   EEventType,
-} from "@definitions/enums";
-import { BadRequestError } from "@exceptions";
+} from "@/definitions/enums";
+import { BadRequestError } from "@/exceptions";
 
 const locationSchema = {
   type: "object",

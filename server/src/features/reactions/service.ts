@@ -1,11 +1,11 @@
 import { IReaction, IPaginationParams } from "@/definitions/types";
-import { findAllWithPagination } from "@utils/dbUtils";
+import { findAllWithPagination } from "@/utils/dbUtils";
 import { Reaction } from "./model";
 import { validateReactionCreate, validateReactionUpdate } from "./validation";
 
-import UserService from "@features/users/service";
-import { isEmpty } from "@utils";
-import logger from "@logger";
+import UserService from "@/features/users/service";
+import { isEmpty } from "@/utils";
+import logger from "@/logger";
 
 class ReactionService {
   private readonly userService: UserService;
@@ -27,7 +27,9 @@ class ReactionService {
     return findAllWithPagination(Reaction, where, pagination, select);
   }
 
-  async create<U extends Partial<Omit<IReaction, "id" | "updatedAt">>>(data: U) {
+  async create<U extends Partial<Omit<IReaction, "id" | "updatedAt">>>(
+    data: U
+  ) {
     const res = await validateReactionCreate(data, async (validData) => {
       const row = await Reaction.create(validData as Partial<IReaction>);
       return row.toJSON() as IReaction;
@@ -35,7 +37,10 @@ class ReactionService {
     return res as IReaction;
   }
 
-  async update<U extends Partial<IReaction>>(id: string, data: U): Promise<IReaction> {
+  async update<U extends Partial<IReaction>>(
+    id: string,
+    data: U
+  ): Promise<IReaction> {
     const res = await validateReactionUpdate(data, async (validData) => {
       const row = await Reaction.findByPk(id);
       if (!row) throw new Error("Reaction not found");
@@ -45,7 +50,10 @@ class ReactionService {
     return res as IReaction;
   }
 
-  async delete(id: string, skipGet = false): Promise<IReaction | number | null> {
+  async delete(
+    id: string,
+    skipGet = false
+  ): Promise<IReaction | number | null> {
     if (skipGet) {
       return Reaction.destroy({ where: { id } });
     }

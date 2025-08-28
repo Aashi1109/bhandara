@@ -1,7 +1,7 @@
-import { IMedia } from "@definitions/types";
-import { RedisCache } from "@features/cache";
-import { CACHE_NAMESPACE_CONFIG } from "@constants";
-import { jnstringify } from "@utils";
+import { IMedia } from "@/definitions/types";
+import { RedisCache } from "@/features/cache";
+import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { jnstringify } from "@/utils";
 
 const mediaCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Media.namespace,

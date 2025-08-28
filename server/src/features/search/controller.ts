@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import SearchService, { ISearchFilters } from "./service";
 import { validateSearchRequest } from "./validation";
-import logger from "@logger";
+import logger from "@/logger";
 
 class SearchController {
   /**
@@ -31,15 +31,19 @@ class SearchController {
         types: filters?.types,
         eventStatus: filters?.eventStatus,
         eventType: filters?.eventType,
-        dateRange: filters?.dateRange ? {
-          start: new Date(filters.dateRange.start),
-          end: new Date(filters.dateRange.end),
-        } : undefined,
-        location: filters?.location ? {
-          latitude: parseFloat(filters.location.latitude),
-          longitude: parseFloat(filters.location.longitude),
-          radius: parseFloat(filters.location.radius),
-        } : undefined,
+        dateRange: filters?.dateRange
+          ? {
+              start: new Date(filters.dateRange.start),
+              end: new Date(filters.dateRange.end),
+            }
+          : undefined,
+        location: filters?.location
+          ? {
+              latitude: parseFloat(filters.location.latitude),
+              longitude: parseFloat(filters.location.longitude),
+              radius: parseFloat(filters.location.radius),
+            }
+          : undefined,
         tags: filters?.tags,
         limit: parseInt(limit),
         offset: (parseInt(page) - 1) * parseInt(limit),
@@ -50,7 +54,9 @@ class SearchController {
         limit: parseInt(limit),
       });
 
-      logger.info(`Search performed: "${query}" returned ${result.data.length} results`);
+      logger.info(
+        `Search performed: "${query}" returned ${result.data.length} results`
+      );
 
       return res.status(200).json({
         success: true,
@@ -62,7 +68,8 @@ class SearchController {
       return res.status(500).json({
         success: false,
         message: "An error occurred while performing the search",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -95,7 +102,8 @@ class SearchController {
       return res.status(500).json({
         success: false,
         message: "An error occurred while getting suggestions",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
@@ -138,7 +146,8 @@ class SearchController {
       return res.status(500).json({
         success: false,
         message: "An error occurred while getting search options",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }

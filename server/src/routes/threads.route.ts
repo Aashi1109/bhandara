@@ -25,7 +25,7 @@ import {
   paginationParser,
   sessionParser,
   userParser,
-} from "@middlewares";
+} from "@/middlewares";
 
 import {
   getMessages,
@@ -34,7 +34,7 @@ import {
   updateMessage,
   deleteMessage,
   getChildMessages,
-} from "@features/messages/controller";
+} from "@/features/messages/controller";
 import {
   createThread,
   deleteThread,
@@ -43,7 +43,7 @@ import {
   updateThread,
   lockThread,
   unlockThread,
-} from "@features/threads/controller";
+} from "@/features/threads/controller";
 
 const router = Router();
 
