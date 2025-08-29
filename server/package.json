@@ -5,9 +5,11 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.build.json -s ./src -o ./dist",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && tscpaths -p tsconfig.build.json -s ./src -o ./dist",
     "start": "node dist/index.js",
+    "start:worker": "node dist/src/workers/video-processor/worker.js",
     "dev": "nodemon --watch src --ext ts --exec \"tsx -r tsconfig-paths/register\" src/index.ts",
+    "dev:worker": "nodemon --watch src --ext ts --exec \"tsx -r tsconfig-paths/register\" src/workers/video-processor/worker.ts",
     "seed": "tsx -r tsconfig-paths/register src/misc/seeder.ts",
     "video-worker": "tsx -r tsconfig-paths/register src/workers/video-processor"
   },

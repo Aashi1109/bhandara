@@ -10,7 +10,7 @@ export const swaggerOptions = {
     },
     servers: [{ url: "/api" }],
   },
-  apis: [path.join(__dirname, "../rout@/*.ts")],
+  apis: [path.join(__dirname, "../routes/*.route*")],
 };
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions);

@@ -8,6 +8,11 @@ import Redis from "ioredis";
 //   token: config.redis.token,
 // });
 
-const redis = new Redis({ maxRetriesPerRequest: null });
+const redis = new Redis({
+  maxRetriesPerRequest: null,
+  host: config.redis.host,
+  port: +config.redis.port,
+  password: config.redis.password,
+});
 
 export default redis;

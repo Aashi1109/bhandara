@@ -10,6 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+    env_file:
+      - ./server/src/.env.docker
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -19,6 +21,28 @@ services:
     networks:
       - bhandara-network
 
+  video-worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.worker
+    image: bhandara-video-worker
+    container_name: bhandara-video-worker
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./server/src/.env.docker
+    restart: unless-stopped
+    # Health check is defined in Dockerfile.worker
+    networks:
+      - bhandara-network
+    volumes:
+      - video-temp:/app/tmp
+    depends_on:
+      - server
+
 networks:
   bhandara-network:
     driver: bridge
+
+volumes:
+  video-temp:

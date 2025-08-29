@@ -43,6 +43,9 @@ const config = {
   redis: {
     url: process.env.UPSTASH_REDIS_REST_URL || "",
     token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+    host: process.env.REDIS_HOST || "",
+    port: +process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASSWORD || "",
   },
   ip2location: {
     apiKey: process.env.IP2LOCATION_API_KEY || "",

@@ -1,9 +1,19 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "sourceMap": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": "src",
     "paths": {
       "*": ["node_modules/*"],
-      "@/": ["./*"]
-    }
-  }
+      "@/*": ["./*"]
+    },
+    "experimentalDecorators": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
