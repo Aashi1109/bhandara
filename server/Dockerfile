@@ -35,13 +35,13 @@ WORKDIR /app
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 server
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl ffmpeg
 
 COPY --from=builder /app/dist/ ./
 COPY --from=builder /app/package.json ./package.json
 COPY --from=deps /app/node_modules ./node_modules
 
-RUN mkdir -p /app/logs && chown -R server:nodejs /app
+RUN mkdir -p /app/logs /app/tmp && chown -R server:nodejs /app
 
 USER server
 

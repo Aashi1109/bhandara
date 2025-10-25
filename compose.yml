@@ -24,15 +24,16 @@ services:
   video-worker:
     build:
       context: ./server
-      dockerfile: Dockerfile.worker
-    image: bhandara-video-worker
+      dockerfile: Dockerfile
+    image: bhandara-server
     container_name: bhandara-video-worker
     environment:
       - NODE_ENV=production
+      - WORKER_TYPE=video-processor
     env_file:
       - ./server/src/.env.docker
     restart: unless-stopped
-    # Health check is defined in Dockerfile.worker
+    command: ["node", "workers/index.js"]
     networks:
       - bhandara-network
     volumes:
