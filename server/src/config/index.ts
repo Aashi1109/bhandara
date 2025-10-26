@@ -1,14 +1,17 @@
 import * as dotenv from "dotenv";
-import path, { dirname } from "path";
+import path from "path";
 import { DB_CONNECTION_NAMES } from "@/constants";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
 const config = {
+  baseUrl:
+    process.env.CLOUD_RUN_SERVICE_URL ||
+    `http://localhost:${process.env.PORT || 3001}`,
   port: process.env.PORT || 3001,
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: "30d",
+    expiresIn: process.env.JWT_EXPIRES_IN || "30d",
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
@@ -19,12 +22,12 @@ const config = {
     uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
   },
   dbUrl: process.env.DATABASE_URL,
-  saltRounds: 10,
+  saltRounds: +(process.env.SALT_ROUNDS || 10),
   express: {
-    fileSizeLimit: "20mb",
+    fileSizeLimit: process.env.EXPRESS_FILE_SIZE_LIMIT || "20mb",
   },
   corsOptions: {
-    origin: [
+    origin: process.env.CORS_ORIGIN?.split(",") || [
       "http://localhost:8081",
       "https://editor.swagger.io",
       "https://brave-wren-big.ngrok-free.app",
@@ -33,8 +36,8 @@ const config = {
     credentials: true,
   },
   log: {
-    allLogsPath: "./logs/server.log",
-    errorLogsPath: "./logs/error.log",
+    allLogsPath: process.env.LOG_ALL_LOGS_PATH || "./logs/server.log",
+    errorLogsPath: process.env.LOG_ERROR_LOGS_PATH || "./logs/error.log",
   },
   supabase: {
     url: process.env.SUPABASE_URL || "",
@@ -52,7 +55,7 @@ const config = {
   },
   sessionCookie: {
     keyName: "bh_session",
-    maxAge: 1000 * 60 * 60 * 24 * 30,
+    maxAge: +(process.env.SESSION_COOKIE_MAX_AGE || 1000 * 60 * 60 * 24 * 30),
   },
   google: {
     webClientId: process.env.GOOGLE_WEB_CLIENT_ID || "",
