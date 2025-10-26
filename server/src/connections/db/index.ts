@@ -3,13 +3,11 @@ import config from "@/config";
 import logger from "@/logger";
 import { DB_CONNECTION_NAMES } from "@/constants";
 
-const postgresConnection = {};
-export const getConnections = () => {
-  return postgresConnection;
-};
+const postgresConnection: Partial<Record<DB_CONNECTION_NAMES, Sequelize>> = {};
+export const getConnections = () => postgresConnection;
 
 const connect = (name: DB_CONNECTION_NAMES) => {
-  return new Sequelize(config.db[name], {
+  const sequelize = new Sequelize(config.db[name], {
     logging: (msg, duration) =>
       logger.debug({
         message: msg,
@@ -40,6 +38,19 @@ const connect = (name: DB_CONNECTION_NAMES) => {
       fallback_application_name: "Bhandara",
     },
   });
+
+  // Add ping method to the sequelize instance
+  sequelize.ping = async () => {
+    try {
+      await sequelize.query("SELECT 1");
+      return true;
+    } catch (error) {
+      logger.error("Database ping failed:", error);
+      throw error;
+    }
+  };
+
+  return sequelize;
 };
 
 export async function disconnect() {

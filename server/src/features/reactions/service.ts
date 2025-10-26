@@ -24,7 +24,7 @@ class ReactionService {
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(Reaction, where, pagination, select);
+    return findAllWithPagination(Reaction, { where }, pagination, select);
   }
 
   async create<U extends Partial<Omit<IReaction, "id" | "updatedAt">>>(
@@ -66,9 +66,13 @@ class ReactionService {
   async getReactions(contentId: string, userId?: string) {
     const where: any = { contentId };
     if (userId) where.userId = userId;
-    const data = await findAllWithPagination(Reaction, where, {
-      limit: 1000,
-    });
+    const data = await findAllWithPagination(
+      Reaction,
+      { where },
+      {
+        limit: 1000,
+      }
+    );
     let reactions = data.items || [];
     if (!isEmpty(reactions)) {
       reactions = await this.userService.getAndPopulateUserProfiles({

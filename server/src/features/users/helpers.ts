@@ -97,19 +97,6 @@ export const getUserSessionCacheList = async (userId: string) => {
 
   const results = await pipeline.exec();
 
-  // TODO: TO be used with upstash redis
-  // Extract actual session data from results
-  // const sessions = results
-  //   .map((result: Record<string, any>) => {
-  //     return {
-  //       device: result.userAgent,
-  //       createdAt: result.createdAt,
-  //       location: result.location,
-  //     };
-  //   })
-  //   .filter(Boolean);
-
-  // TODO: TO be used with ioredis
   const sessions = results.map(
     ([, result]: [Error, Record<string, any>], index: number) => {
       result = jnparse(result);
@@ -197,12 +184,16 @@ export const deleteUserInterestsCache = (userId: string) => {
 export const bulkSetUserCache = async (users: IBaseUser[]): Promise<"OK"> => {
   const pipeline = userCache.getPipeline();
   users.forEach((user) => {
-    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user));
-    pipeline.set(`${userCacheNamespace}:${user.email}`, user.id);
-    pipeline.expire(`${userCacheNamespace}:${user.email}`, userCacheTTL);
-    pipeline.set(`${userCacheNamespace}:${user.username}`, user.id);
-    pipeline.expire(`${userCacheNamespace}:${user.username}`, userCacheTTL);
-    pipeline.expire(`${userCacheNamespace}:${user.id}`, userCacheTTL);
+    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), {
+      ex: userCacheTTL,
+    });
+    pipeline.set(`${userCacheNamespace}:${user.email}`, user.id, {
+      ex: userCacheTTL,
+    });
+    if (user.username)
+      pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, {
+        ex: userCacheTTL,
+      });
   });
   await pipeline.exec();
   return "OK";
@@ -213,10 +204,13 @@ export const bulkGetUserCache = async (ids: string[]): Promise<IBaseUser[]> => {
   ids.forEach((id) => {
     pipeline.get(`${userCacheNamespace}:${id}`);
   });
-  const results = await pipeline.exec();
+  const results = (await pipeline.exec()) as (IBaseUser | null)[];
 
-  const users = results.reduce((acc, [_, result]) => {
-    const user = jnparse(result);
+  const users = results.reduce((acc, result) => {
+    const user =
+      typeof result === "string"
+        ? (jnparse(result) as IBaseUser)
+        : (result as IBaseUser | null);
     if (!user) return acc;
     acc.push(user);
     return acc;

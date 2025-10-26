@@ -132,7 +132,7 @@ class ThreadsService {
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(Thread, where, pagination, select);
+    return findAllWithPagination(Thread, { where }, pagination, select);
   }
 
   async delete(id: string) {

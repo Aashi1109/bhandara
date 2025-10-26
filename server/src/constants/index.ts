@@ -47,6 +47,10 @@ export enum DB_CONNECTION_NAMES {
   Default = "default",
 }
 
+export enum REDIS_CONNECTION_NAMES {
+  Default = "default",
+}
+
 export const PLATFORM_SOCKET_EVENTS = {
   CONNECT: "connect",
   DISCONNECT: "disconnect",

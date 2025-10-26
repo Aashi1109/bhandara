@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { DB_CONNECTION_NAMES } from "@/constants";
+import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from "@/constants";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -44,11 +44,10 @@ const config = {
     key: process.env.SUPABASE_ANON_KEY || "",
   },
   redis: {
-    url: process.env.UPSTASH_REDIS_REST_URL || "",
-    token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-    host: process.env.REDIS_HOST || "",
-    port: +process.env.REDIS_PORT || 6379,
-    password: process.env.REDIS_PASSWORD || "",
+    [REDIS_CONNECTION_NAMES.Default]: {
+      url: process.env.UPSTASH_REDIS_REST_URL || "",
+      token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+    },
   },
   ip2location: {
     apiKey: process.env.IP2LOCATION_API_KEY || "",

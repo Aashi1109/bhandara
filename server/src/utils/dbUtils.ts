@@ -8,10 +8,11 @@ export interface PaginatedResult<T> {
 
 /**
  * Retrieve records with pagination, supporting both cursor and offset modes.
+ * Now accepts full Sequelize FindOptions for maximum flexibility.
  */
 export async function findAllWithPagination<T extends Model>(
   model: ModelStatic<T>,
-  where: Record<string, any> = {},
+  findOptions: FindOptions = {},
   pagination: Partial<IPaginationParams> = {},
   select?: string,
   modifyOptions?: (opts: FindOptions) => FindOptions
@@ -33,13 +34,15 @@ export async function findAllWithPagination<T extends Model>(
   };
 
   const isCursorMode = !!next;
-  const effectiveLimit = limit + 1;
 
+  // Start with the provided findOptions and merge pagination logic
   const options: FindOptions = {
     raw: true,
-    where: { ...where },
-    order: [[_pagination.sortBy, _pagination.sortOrder.toUpperCase()]],
-    limit: effectiveLimit,
+    ...findOptions, // Spread the provided options first
+    order: findOptions.order || [
+      [_pagination.sortBy, _pagination.sortOrder.toUpperCase()],
+    ],
+    limit: limit,
   };
 
   // Select specific fields
@@ -49,9 +52,20 @@ export async function findAllWithPagination<T extends Model>(
 
   // Cursor-based pagination
   if (isCursorMode) {
-    (options.where as any)[_pagination.sortBy] = {
-      [_pagination.sortOrder === "asc" ? Op.gt : Op.lt]: _pagination.next,
+    // Merge cursor condition with existing where clause
+    const cursorCondition = {
+      [_pagination.sortBy]: {
+        [_pagination.sortOrder === "asc" ? Op.gt : Op.lt]: _pagination.next,
+      },
     };
+
+    if (findOptions.where) {
+      options.where = {
+        [Op.and]: [findOptions.where, cursorCondition],
+      };
+    } else {
+      options.where = cursorCondition;
+    }
   } else {
     // Offset-based pagination
     options.offset = (_pagination.page - 1) * _pagination.limit;
@@ -64,27 +78,30 @@ export async function findAllWithPagination<T extends Model>(
 
   const { rows, count } = await model.findAndCountAll(options);
 
-  const hasNext = rows.length > _pagination.limit;
-  const items = hasNext
-    ? (rows.slice(0, _pagination.limit) as T[])
-    : (rows as T[]);
-
   const paginationResult = {
     limit,
     total: count,
   } as IPaginationParams;
 
   if (isCursorMode) {
+    // For cursor pagination, check if we got exactly the limit (indicating more results)
+    const hasNext = rows.length === _pagination.limit;
     paginationResult.next = hasNext
-      ? rows[_pagination.limit][_pagination.sortBy]
+      ? rows[rows.length - 1][_pagination.sortBy]
       : null;
   } else {
+    // For offset pagination, calculate hasNext based on total count and current page
+    const totalPages = Math.ceil(count / _pagination.limit);
+    const hasNext = _pagination.page < totalPages;
+
     paginationResult.page = _pagination.page;
     paginationResult.hasNext = hasNext;
     paginationResult.next = hasNext
-      ? rows[_pagination.limit - 1][_pagination.sortBy]
+      ? rows[rows.length - 1][_pagination.sortBy]
       : null;
   }
+
+  const items = rows as T[];
 
   return { items, pagination: paginationResult };
 }

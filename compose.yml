@@ -41,6 +41,15 @@ services:
     depends_on:
       - server
 
+  serverless-redis-http:
+    ports:
+      - "8079:80"
+    image: hiett/serverless-redis-http:latest
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: example_token
+      SRH_CONNECTION_STRING: "redis://host.docker.internal:6379"
+
 networks:
   bhandara-network:
     driver: bridge

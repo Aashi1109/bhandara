@@ -36,7 +36,7 @@ class TagService {
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(Tag, where, pagination, select);
+    return findAllWithPagination(Tag, { where }, pagination, select);
   }
 
   async _getByIdNoCache(id: string): Promise<ITag | null> {
@@ -66,7 +66,7 @@ class TagService {
 
     const data = await findAllWithPagination(
       Tag,
-      { id: tagIds },
+      { where: { id: tagIds } },
       { limit: tagIds.length }
     );
 
@@ -126,7 +126,7 @@ class TagService {
     if (cached) return cached;
     const res = await findAllWithPagination(
       Tag,
-      { parentId: tagId },
+      { where: { parentId: tagId } },
       limit ? { limit } : {}
     );
     if (res.items) await setSubTagsCache(tagId, res.items as ITag[]);

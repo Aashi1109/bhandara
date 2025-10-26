@@ -1,7 +1,6 @@
-import { redis } from "@/connections";
-// import { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
+import { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
 import { jnparse, jnstringify } from "@/utils";
-import Redis from "ioredis";
+import { getRedisConnection } from "@/connections";
 
 interface RedisCacheConfig {
   redisClient?: Redis;
@@ -22,7 +21,7 @@ class RedisCache {
   private readonly defaultTTLSeconds: number;
 
   constructor(config: RedisCacheConfig) {
-    this.redisClient = redis;
+    this.redisClient = getRedisConnection();
     this.cacheNamespace = config.namespace;
     this.defaultTTLSeconds = config.defaultTTLSeconds || 3600;
   }
@@ -121,18 +120,15 @@ class RedisCache {
     // return this.redisClient.set(namespacedKey, jnstringify(value), {
     //   ex: ttl || this.defaultTTLSeconds,
     // }); // TODO: Uncomment on prod
-    return this.redisClient.set(
-      namespacedKey,
-      jnstringify(value),
-      "EX",
-      ttl || this.defaultTTLSeconds
-    );
+    return this.redisClient.set(namespacedKey, jnstringify(value), {
+      ex: ttl || this.defaultTTLSeconds,
+    });
   }
 
   async getItem<T>(key: string): Promise<T | null> {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
     const result = await this.redisClient.get(namespacedKey);
-    return result ? jnparse(result) : null;
+    return result === "string" ? jnparse(result) : (result as T | null);
   }
 
   setHKey(key: string, field: string, value: any, ttl?: number) {
@@ -219,7 +215,9 @@ class RedisCache {
 
   updateValue(key: string, newValue: any) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
-    return redis.set(namespacedKey, jnstringify(newValue), "KEEPTTL");
+    return this.redisClient.set(namespacedKey, jnstringify(newValue), {
+      keepTtl: true,
+    });
   }
 
   getTTL(key: string) {

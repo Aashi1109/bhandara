@@ -181,7 +181,7 @@ class EventService {
       where.status = { [Op.in]: where.status };
     }
 
-    const data = await findAllWithPagination(Event, where, pagination);
+    const data = await findAllWithPagination(Event, { where }, pagination);
     if (data.items) {
       await Promise.all(
         data.items.map(async (event) => {
@@ -250,7 +250,7 @@ class EventService {
     if (cached) return { users: cached, type, eventId };
 
     const { items } = await this.userService.getAll(
-      { id: userIds },
+      { where: { id: userIds } },
       { limit: 1000 },
       "id,name,email,deletedAt"
     );

@@ -1,14 +1,14 @@
-import { EQueryOperator } from "@/definitions/enums";
 import {
   IRequestPagination,
   ICustomRequest,
   IBaseUser,
 } from "@/definitions/types";
-import { getSafeUser } from "./helpers";
+import { bulkSetUserCache, getSafeUser } from "./helpers";
 import UserService from "./service";
 import { Response } from "express";
 import { isEmpty, omit } from "@/utils";
 import { NotFoundError } from "@/exceptions";
+import { Op } from "sequelize";
 
 const userService = new UserService();
 
@@ -18,21 +18,21 @@ export const getAllUser = async (
 ) => {
   const { self = "false", email } = req.query;
 
-  let query = [];
+  let where = [];
   if (self !== "true") {
-    query = [
-      { column: "id", operator: EQueryOperator.Neq, value: req.user.id },
-    ];
+    where = [{ id: { [Op.ne]: req.user.id } }];
   }
 
   if (email) {
-    query = [{ column: "email", operator: EQueryOperator.Eq, value: email }];
+    where = [{ email }];
   }
 
   const { items, pagination: dataPagination } = await userService.getAll(
-    { query },
+    { where },
     req.pagination
   );
+
+  bulkSetUserCache(items);
 
   const safeUsers = items?.map((user) => getSafeUser(user));
   return res.status(200).json({

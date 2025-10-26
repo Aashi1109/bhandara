@@ -11,6 +11,7 @@ import { isEmpty } from "@/utils";
 import UserService from "@/features/users/service";
 import { BadRequestError } from "@/exceptions";
 import ReactionService from "@/features/reactions/service";
+import { Op } from "sequelize";
 
 // Note: Thread data is intentionally not populated here to avoid
 // circular dependencies between services. Controllers should fetch
@@ -79,7 +80,7 @@ class MessageService {
     const { items: parentItems, pagination: parentPagination } =
       await findAllWithPagination(
         Message,
-        { ...where, parentId: null },
+        { where: { ...where, parentId: { [Op.eq]: null } } },
         pagination
       );
 
@@ -133,7 +134,7 @@ class MessageService {
   ) {
     const data = await findAllWithPagination(
       Message,
-      { threadId, parentId },
+      { where: { threadId, parentId } },
       pagination
     );
     if (!isEmpty(data.items)) {

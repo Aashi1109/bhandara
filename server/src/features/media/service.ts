@@ -347,7 +347,7 @@ class MediaService {
 
     const res = await findAllWithPagination(
       Media,
-      { id: Array.from(filteredIds) },
+      { where: { id: Array.from(filteredIds) } },
       { limit: filteredIds.size }
     );
     const mediaData = { data: res.items } as { data: IMedia[] };

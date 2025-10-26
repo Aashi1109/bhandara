@@ -14,7 +14,6 @@ import {
   deleteUserCache,
   deleteUserInterestsCache,
   getSafeUser,
-  getLeanUser,
   getUserCache,
   getUserCacheByEmail,
   getUserCacheByUsername,
@@ -28,6 +27,7 @@ import { BadRequestError, NotFoundError } from "@/exceptions";
 import { isEmpty } from "@/utils";
 import TagService from "@/features/tags/service";
 import MediaService from "@/features/media/service";
+import { FindOptions } from "sequelize";
 
 class UserService {
   private readonly getCache = getUserCache;
@@ -48,11 +48,11 @@ class UserService {
   }
 
   async getAll(
-    where: Record<string, any> = {},
+    options: FindOptions = {},
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(User, where, pagination, select);
+    return findAllWithPagination(User, options, pagination, select);
   }
 
   async create(data: Partial<IBaseUser>): Promise<IBaseUser | null> {
@@ -161,7 +161,11 @@ class UserService {
   async getUserByEmail(email: string) {
     const cached = await getUserCacheByEmail(email);
     if (cached) return cached;
-    const data = await findAllWithPagination(User, { email }, { limit: 1 });
+    const data = await findAllWithPagination(
+      User,
+      { where: { email } },
+      { limit: 1 }
+    );
     if (data.items.length === 0) return null;
     const user = data.items[0];
     if (user.mediaId) {
@@ -181,7 +185,11 @@ class UserService {
         items: [cached],
         pagination: null,
       } as PaginatedResult<IBaseUser>;
-    const data = await findAllWithPagination(User, { username }, { limit: 1 });
+    const data = await findAllWithPagination(
+      User,
+      { where: { username } },
+      { limit: 1 }
+    );
     if (!isEmpty(data.items)) {
       await setUserCacheByUsername(username, data.items[0]);
     }
@@ -227,7 +235,7 @@ class UserService {
       const toFetchIds = Array.from(usersToFetch);
 
       const { items: users } = await this.getAll(
-        { id: toFetchIds },
+        { where: { id: toFetchIds } },
         { limit: toFetchIds.length }
       );
       await bulkSetUserCache(users);
