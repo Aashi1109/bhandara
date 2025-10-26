@@ -1,15 +1,10 @@
-import config from "@/config";
+import { WORKER_CONNECTION_CONFIG } from "@/config";
 import { Queue } from "bullmq";
 
 export const VIDEO_QUEUE_NAME = "video-processing";
 
 export const videoQueue = new Queue(VIDEO_QUEUE_NAME, {
-  connection: {
-    host: config.redis.default.url.replace("https://", ""),
-    password: config.redis.default.token,
-    tls: {},
-    port: 6379,
-  },
+  connection: WORKER_CONNECTION_CONFIG,
 });
 
 export const addVideoJob = async (mediaId: string, eventId: string) => {

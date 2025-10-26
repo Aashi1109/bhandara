@@ -8,7 +8,7 @@ import { EMediaProvider } from "@/definitions/enums";
 import crypto from "crypto";
 import fs from "fs/promises";
 import axios from "axios";
-import config from "@/config";
+import { WORKER_CONNECTION_CONFIG } from "@/config";
 
 const mediaService = new MediaService();
 
@@ -130,10 +130,5 @@ export const processor = async (job: Job) => {
 };
 
 export default new Worker(VIDEO_QUEUE_NAME, processor, {
-  connection: {
-    host: config.redis.default.url.replace("https://", ""),
-    password: config.redis.default.token,
-    tls: {},
-    port: 6379,
-  },
+  connection: WORKER_CONNECTION_CONFIG,
 });

@@ -91,8 +91,7 @@ const session = (req: ICustomRequest, res: Response) => {
 };
 
 const googleAuth = async (req: Request, res: Response) => {
-  const origin = config.baseUrl;
-  const redirectUrl = `${origin}/api/auth/google/callback`;
+  const redirectUrl = `${config.baseUrl}/api/auth/google/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",

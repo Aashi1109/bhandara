@@ -77,4 +77,11 @@ const config = {
   },
 };
 
+export const WORKER_CONNECTION_CONFIG = {
+  host: config.redis.default.url.replace("https://", ""),
+  password: config.redis.default.token,
+  tls: {},
+  port: 6379,
+};
+
 export default config;
