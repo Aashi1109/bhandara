@@ -2,7 +2,6 @@ import { ICustomRequest, IRequestPagination, ITag } from "@/definitions/types";
 import { Response } from "express";
 import TagsService from "./service";
 import { pick } from "@/utils";
-import { formQueryFromObject } from "@/features/helpers";
 
 const tagsService = new TagsService();
 
@@ -17,9 +16,11 @@ export const getTags = async (
     return res.status(200).json({ data: rootTags });
   }
 
-  const query = formQueryFromObject<ITag>({ eventId, createdBy });
+  const where: Record<string, string> = {};
+  if (eventId) where.eventId = eventId as string;
+  if (createdBy) where.createdBy = createdBy as string;
 
-  const tags = await tagsService.getAll({ query }, req.pagination);
+  const tags = await tagsService.getAll({ where }, req.pagination);
   return res.status(200).json({ data: tags });
 };
 

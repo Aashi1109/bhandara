@@ -2,21 +2,9 @@
 // Postgrest types kept for backwards compatibility with old DB service
 import { PostgrestError } from "@supabase/supabase-js";
 
-import { EQueryOperator } from "@/definitions/enums";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "../connections";
 import { SupabaseCustomError } from "@/exceptions";
-
-export type SimpleFilter = {
-  column: string;
-  operator: EQueryOperator;
-  value: string | number | boolean | null | Array<string | number | boolean>;
-};
-
-export type QueryFilter =
-  | SimpleFilter
-  | { And: QueryFilter[] }
-  | { Or: QueryFilter[] };
 
 const throwSupabaseError = (res: any) => {
   throw new SupabaseCustomError(

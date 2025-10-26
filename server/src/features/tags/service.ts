@@ -15,6 +15,7 @@ import {
   deleteSubTagsCache,
 } from "./helpers";
 import { NotFoundError } from "@/exceptions";
+import { FindOptions } from "sequelize";
 
 class TagService {
   private readonly getCache = getTagCache;
@@ -32,11 +33,11 @@ class TagService {
   }
 
   async getAll(
-    where: Record<string, any> = {},
+    options: FindOptions<ITag> = {},
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(Tag, { where }, pagination, select);
+    return findAllWithPagination(Tag, options, pagination, select);
   }
 
   async _getByIdNoCache(id: string): Promise<ITag | null> {

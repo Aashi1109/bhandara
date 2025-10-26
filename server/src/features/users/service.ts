@@ -214,7 +214,7 @@ class UserService {
 
     if (isEmpty(interests)) return [];
 
-    const tags = await this.tagService.getAll({ id: interests });
+    const tags = await this.tagService.getAll({ where: { id: interests } });
     await setUserInterestsCache(id, tags.items as ITag[]);
     return tags.items;
   }
@@ -283,6 +283,7 @@ class UserService {
     populateKey?: keyof T;
     transformerFunction?: (user: IBaseUser) => Record<string, any>;
   }): Promise<Array<T>> {
+    if (isEmpty(data)) return data;
     const ids = data.map((item) => item[searchKey]);
     const users = await this.getUserProfiles(ids, transformerFunction);
 

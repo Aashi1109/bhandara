@@ -2,7 +2,7 @@ import { ITag } from "@/definitions/types";
 import { RedisCache } from "@/features/cache";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
 import logger from "@/logger";
-import { isEmpty, jnstringify } from "@/utils";
+import { jnstringify } from "@/utils";
 
 const tagCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Tags.namespace,
@@ -41,11 +41,11 @@ export const setEventTagsCache = async (
 };
 
 export const getEventTagsCache = async (eventId: string) => {
-  const tags = await eventTagsCache.getHKeys(`${eventId}:tags`);
-  const formattedTags = Object.keys(tags).map(
-    (tag) => JSON.parse(tags[tag]) as ITag
-  );
-  return isEmpty(formattedTags) ? null : formattedTags;
+  const tags = (await eventTagsCache.getHKeys(`${eventId}:tags`)) as Record<
+    string,
+    ITag
+  >;
+  return Object.values(tags || {});
 };
 
 export const deleteEventTagsCache = (eventId: string) =>

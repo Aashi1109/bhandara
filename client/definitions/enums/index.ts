@@ -43,19 +43,6 @@ export enum EAccessLevel {
   Restricted = "restricted"
 }
 
-export enum EQueryOperator {
-  Eq = "eq",
-  Neq = "neq",
-  Gt = "gt",
-  Gte = "gte",
-  Lt = "lt",
-  Lte = "lte",
-  Like = "like",
-  ILike = "ilike",
-  In = "in",
-  Is = "is"
-}
-
 export enum ESocialLoginProvider {
   Google = "google"
 }
