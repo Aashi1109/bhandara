@@ -1,10 +1,11 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from "@/constants";
+import { AppConfig } from "@/types/config";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const config = {
+const config: AppConfig = {
   baseUrl:
     process.env.CLOUD_RUN_SERVICE_URL ||
     `http://localhost:${process.env.PORT || 3001}`,
@@ -67,6 +68,7 @@ const config = {
   },
   infrastructure: {
     appName: "bhandara",
+    serviceName: "bhandara-main-server",
   },
   serviceability: {
     loki: {
@@ -74,6 +76,29 @@ const config = {
       batchSize: +(process.env.LOKI_BATCH_SIZE || 2),
       flushInterval: +(process.env.LOKI_FLUSH_INTERVAL || 1000),
     },
+  },
+  grafanaCloud: {
+    prometheusRemoteWriteUrl:
+      process.env.GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL || "",
+    prometheusUsername: process.env.GRAFANA_CLOUD_PROMETHEUS_USERNAME || "",
+    prometheusPassword: process.env.GRAFANA_CLOUD_PROMETHEUS_PASSWORD || "",
+  },
+  sentry: {
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    release: process.env.npm_package_version || "0.0.0",
+  },
+  otel: {
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "",
+    headers: process.env.OTEL_EXPORTER_OTLP_HEADERS.split(",").reduce(
+      (acc, curr) => {
+        const idx = curr.indexOf("=");
+        if (idx === -1) acc[curr] = "";
+        else acc[curr.slice(0, idx)] = curr.slice(idx + 1);
+        return acc;
+      },
+      {} as Record<string, string>
+    ),
   },
 };
 

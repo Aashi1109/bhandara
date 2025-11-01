@@ -2,13 +2,21 @@ import config from "@/config";
 import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
 
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+  resourceFromAttributes,
+  detectResources,
+  envDetector,
+  hostDetector,
+  osDetector,
+} from "@opentelemetry/resources";
 
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 
 // 🐞 Enable OpenTelemetry debug logging
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
@@ -21,14 +29,32 @@ const SKIPPED_URLS = [
   config.serviceability.loki.url,
 ];
 
-const resource = resourceFromAttributes({
-  [ATTR_SERVICE_NAME]: config.infrastructure.appName,
-});
+const _detectResources = detectResources({
+  detectors: [envDetector, hostDetector, osDetector],
+}).merge(
+  resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: config.infrastructure.serviceName,
+    "service.namespace": config.infrastructure.appName,
+    "deployment.environment": process.env.NODE_ENV || "development",
+  })
+);
+
+const getOtelHeaders = () => {
+  return { ...config.otel.headers };
+};
 
 // 🧠 SDK setup — main telemetry engine
 const sdk = new NodeSDK({
+  resource: _detectResources,
   traceExporter: new OTLPTraceExporter({
-    url: "http://localhost:4318/v1/traces",
+    url: `${config.otel.url}/v1/traces`,
+    headers: getOtelHeaders(),
+  }),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter({
+      url: `${config.otel.url}/v1/metrics`,
+      headers: getOtelHeaders(),
+    }),
   }),
   instrumentations: [
     getNodeAutoInstrumentations(),
@@ -39,11 +65,10 @@ const sdk = new NodeSDK({
     }),
     new ExpressInstrumentation(),
   ],
-  resource,
 });
 
 // 🟢 Initialize and start tracing
-export const initializeTracing = async (): Promise<void> => {
+export const initializeTracing = () => {
   try {
     sdk.start();
     console.log("OpenTelemetry tracing initialized");

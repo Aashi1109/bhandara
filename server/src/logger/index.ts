@@ -39,7 +39,7 @@ const errorLogsTransport = new transports.DailyRotateFile({
 });
 
 const logger = createLogger({
-  level: env === "production" ? "info" : "debug",
+  level: "info",
   defaultMeta: { service: "Backend Server" },
   format: format.combine(
     format.splat(),

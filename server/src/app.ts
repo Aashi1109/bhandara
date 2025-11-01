@@ -19,6 +19,8 @@ import {
   responseTimeHistogram,
 } from "@/config/prometheus.config";
 
+import Sentry from "@sentry/node";
+
 const createServer = () => {
   const app = express();
 
@@ -78,6 +80,8 @@ const createServer = () => {
   app.use(requestContextMiddleware);
 
   app.use("/api", appRoutes);
+
+  Sentry.setupExpressErrorHandler(app);
 
   app.use((req, res, next) => {
     next(new NotFoundError(`path not found: ${req.originalUrl}`));
