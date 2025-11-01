@@ -1,17 +1,16 @@
 import { initializeTracing, shutdownTracing } from "@/config/tracing.config";
 import logger from "@/logger";
 
-const workerType = process.env.WORKER_TYPE || "video-processor";
+const workerType = process.env.WORKER_TYPE;
 
+initializeTracing();
 async function startWorker() {
   try {
     // Initialize tracing
-    await initializeTracing();
 
     logger.info(`Starting worker: ${workerType}`);
 
-    // Dynamically import the worker
-    const workerModule = await import(`./${workerType}/worker`);
+    await import(`./${workerType}/worker`);
 
     logger.info(`${workerType} worker started and listening for jobs`);
   } catch (error) {
