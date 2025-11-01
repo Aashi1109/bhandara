@@ -31,7 +31,7 @@ services:
       - NODE_ENV=production
       - WORKER_TYPE=video-processor
     env_file:
-      - ./server/src/.env.docker
+      - ./server/src/.env
     restart: unless-stopped
     command: ["node", "workers/index.js"]
     networks:
