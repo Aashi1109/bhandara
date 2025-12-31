@@ -10,7 +10,7 @@ async function startWorker() {
 
     logger.info(`Starting worker: ${workerType}`);
 
-    await import(`./${workerType}/worker`);
+    await import(`./${workerType}`);
 
     logger.info(`${workerType} worker started and listening for jobs`);
   } catch (error) {

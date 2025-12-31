@@ -19,7 +19,7 @@ import {
   responseTimeHistogram,
 } from "@/config/prometheus.config";
 
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 
 const createServer = () => {
   const app = express();

@@ -1,5 +1,5 @@
 # Base stage
-FROM node:20-alpine as base
+FROM node:22-alpine as base
 
 # Install stage
 FROM base as deps

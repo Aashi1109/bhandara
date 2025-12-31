@@ -4,6 +4,13 @@ module.exports = function (api) {
     presets: ["babel-preset-expo"],
     plugins: [
       [
+        "@babel/plugin-transform-runtime",
+        {
+          helpers: false,
+          regenerator: true
+        }
+      ],
+      [
         "@tamagui/babel-plugin",
         {
           components: ["tamagui"],

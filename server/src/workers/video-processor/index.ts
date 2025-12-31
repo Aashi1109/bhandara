@@ -132,3 +132,5 @@ export const processor = async (job: Job) => {
 export default new Worker(VIDEO_QUEUE_NAME, processor, {
   connection: WORKER_CONNECTION_CONFIG,
 });
+
+console.log("first", { connection: WORKER_CONNECTION_CONFIG });

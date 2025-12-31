@@ -3,7 +3,7 @@ import path from "path";
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from "@/constants";
 import { AppConfig } from "@/types/config";
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({});
 
 const config: AppConfig = {
   baseUrl:

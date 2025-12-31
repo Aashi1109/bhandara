@@ -1,7 +1,7 @@
 // Only import what's needed for tracing initialization
 import "@/instrument";
 import { initializeTracing, shutdownTracing } from "@/config/tracing.config";
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 
 async function startServer() {
   try {

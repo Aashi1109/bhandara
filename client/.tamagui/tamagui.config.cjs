@@ -361,9 +361,9 @@ var require_isWebColor = __commonJS({
   }
 });
 
-// node_modules/@react-native/normalize-colors/index.js
+// node_modules/react-native-web/node_modules/@react-native/normalize-colors/index.js
 var require_normalize_colors = __commonJS({
-  "node_modules/@react-native/normalize-colors/index.js"(exports2, module2) {
+  "node_modules/react-native-web/node_modules/@react-native/normalize-colors/index.js"(exports2, module2) {
     "use strict";
     function normalizeColor(color) {
       if (typeof color === "number") {
@@ -10006,9 +10006,9 @@ var require_VirtualizedList = __commonJS({
   }
 });
 
-// node_modules/memoize-one/dist/memoize-one.cjs.js
+// node_modules/react-native-web/node_modules/memoize-one/dist/memoize-one.cjs.js
 var require_memoize_one_cjs = __commonJS({
-  "node_modules/memoize-one/dist/memoize-one.cjs.js"(exports2, module2) {
+  "node_modules/react-native-web/node_modules/memoize-one/dist/memoize-one.cjs.js"(exports2, module2) {
     "use strict";
     var safeIsNaN = Number.isNaN || /* @__PURE__ */ __name(function ponyfill(value) {
       return typeof value === "number" && value !== value;

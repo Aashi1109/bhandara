@@ -5,15 +5,15 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "build": "rm -rf dist && tsc --project tsconfig.build.json && tscpaths -p tsconfig.build.json -s ./src -o ./dist",
-    "start": "node dist/index.js",
-    "start:worker": "node dist/src/workers/index.js",
-    "start:worker:video": "WORKER_TYPE=video-processor node dist/src/workers/index.js",
-    "dev": "nodemon --watch src --ext ts --exec \"tsx -r tsconfig-paths/register\" src/index.ts",
-    "dev:worker": "tsx -r tsconfig-paths/register src/workers/index.ts",
-    "dev:worker:video": "WORKER_TYPE=video-processor tsx -r tsconfig-paths/register src/workers/index.ts",
-    "seed": "tsx -r tsconfig-paths/register src/misc/seeder.ts",
-    "video-worker": "tsx -r tsconfig-paths/register src/workers/video-processor"
+    "build": "nvm use && rm -rf dist && tsc --project tsconfig.build.json && tscpaths -p tsconfig.build.json -s ./src -o ./dist",
+    "start": "nvm use && node dist/index.js",
+    "start:worker": "nvm use && node dist/src/workers/index.js",
+    "start:worker:video": "nvm use && WORKER_TYPE=video-processor node dist/src/workers/index.js",
+    "dev": "nvm use && nodemon --watch src --ext ts --exec \"tsx -r tsconfig-paths/register\" src/index.ts",
+    "dev:worker": "nvm use && tsx -r tsconfig-paths/register src/workers/index.ts",
+    "dev:worker:video": "nvm use && WORKER_TYPE=video-processor tsx -r tsconfig-paths/register src/workers/index.ts",
+    "seed": "nvm use && tsx -r tsconfig-paths/register src/misc/seeder.ts",
+    "video-worker": "nvm use && tsx -r tsconfig-paths/register src/workers/video-processor"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
