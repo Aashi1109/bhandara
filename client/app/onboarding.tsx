@@ -1,6 +1,6 @@
 import OnBoarding from "@/screens/OnBoarding";
 import React from "react";
 
-const onboarding = () => <OnBoarding />;
+const Onboarding = () => <OnBoarding />;
 
-export default onboarding;
+export default Onboarding;

@@ -2,7 +2,7 @@ import { getDBConnection } from "@/connections/db";
 import { DataTypes, Model } from "sequelize";
 import { getUUIDv7 } from "@/helpers";
 import { USER_TABLE_NAME } from "./constants";
-import { IBaseUser } from "@/definitions/types";
+import type { IBaseUser } from "@/definitions/types";
 
 const sequelize = getDBConnection();
 type UserAttributes = Omit<

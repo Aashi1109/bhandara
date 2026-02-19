@@ -1,8 +1,7 @@
 import React from "react";
 import AvatarSelection from "./AvatarSelection";
-import { FieldErrors, UseFormSetError, UseFormSetValue } from "react-hook-form";
-import { IFormData } from "./type";
-import { Control } from "react-hook-form";
+import type { FieldErrors, UseFormSetError, UseFormSetValue , Control } from "react-hook-form";
+import type { IFormData } from "./type";
 
 import GenderSelection from "./GenderSelection";
 import LocationInput from "@/components/LocationInput";

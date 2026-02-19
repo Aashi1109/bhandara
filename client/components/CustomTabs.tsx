@@ -1,7 +1,6 @@
-import { ScrollView, SizableText, XStack } from "tamagui";
+import { ScrollView, SizableText, XStack , Tabs } from "tamagui";
 
 import { kebabCase } from "@/utils";
-import { Tabs } from "tamagui";
 import React from "react";
 
 interface IProps {

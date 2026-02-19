@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { AnimatePresence, styled, useTheme, View, ViewProps } from "tamagui";
+import { type ViewProps, AnimatePresence, styled, useTheme, View } from "tamagui";
 import { CircleBgWrapper } from "./ui/common-styles";
 import { ChevronLeft, ChevronRight } from "@tamagui/lucide-icons";
-import { IMedia } from "@/definitions/types";
+import type { IMedia } from "@/definitions/types";
 
 const GalleryItem = styled(View, {
   position: "absolute",

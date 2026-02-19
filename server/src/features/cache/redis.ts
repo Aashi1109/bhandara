@@ -1,4 +1,4 @@
-import { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
+import type { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
 import { jnparse, jnstringify } from "@/utils";
 import { getRedisConnection } from "@/connections";
 
@@ -43,10 +43,10 @@ class RedisCache {
    * }
    *
    */
-  withCache(methodOptions: MethodCacheOptions = {}): Function {
+  withCache(methodOptions: MethodCacheOptions = {}): (...args: unknown[]) => unknown {
     // Capture redis instance variables in closure
-    const redisClient = this.redisClient;
-    const cacheNamespace = this.cacheNamespace;
+    const {redisClient} = this;
+    const {cacheNamespace} = this;
     const defaultTTL = this.defaultTTLSeconds;
 
     return function (
@@ -187,15 +187,19 @@ class RedisCache {
     // const cacheNamespace = this.cacheNamespace;
     // const defaultTTL = this.defaultTTLSeconds;
 
-    return async function (...args: Parameters<T>): Promise<ReturnType<T>> {
+    // eslint-disable-next-line no-invalid-this
+    return async function (this: any, ...args: Parameters<T>): Promise<ReturnType<T>> {
       const keyPart = options.customKeyGenerator
         ? options.customKeyGenerator(args)
         : `${fn.name}:${JSON.stringify(args)}`;
+      // eslint-disable-next-line no-invalid-this
       const cacheKey = `${this.cacheNamespace}:${keyPart}`;
+      // eslint-disable-next-line no-invalid-this
       const ttl = options.timeToLiveSeconds || this.defaultTTLSeconds;
 
       try {
         if (!options.skipCacheGet) {
+          // eslint-disable-next-line no-invalid-this
           const cachedResult = await this.getItem(cacheKey);
           if (cachedResult) return cachedResult;
         }
@@ -203,6 +207,7 @@ class RedisCache {
         const result = await fn(...args);
 
         if (!options.skipCacheSet && result && !result.error) {
+          // eslint-disable-next-line no-invalid-this
           await this.setItem(cacheKey, result, ttl);
         }
 

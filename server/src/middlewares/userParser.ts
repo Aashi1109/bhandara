@@ -1,6 +1,6 @@
-import { ICustomRequest } from "@/definitions/types";
+import type { ICustomRequest } from "@/definitions/types";
 import { NotFoundError } from "@/exceptions";
-import { NextFunction, Response } from "express";
+import type { NextFunction, Response } from "express";
 import asyncHandler from "./asyncHandler";
 
 import {

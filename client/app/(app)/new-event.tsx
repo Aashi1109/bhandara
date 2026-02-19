@@ -7,11 +7,11 @@ import {
   InputField,
   InputErrorText
 } from "@/components/Form";
-import { IAddress, ITag } from "@/definitions/types";
+import type { IAddress, ITag } from "@/definitions/types";
 import { Camera, CloudUpload, Image as ImageIcon, Minus, Plus, RotateCw, X } from "@tamagui/lucide-icons";
 import React, { useEffect, useRef, useState } from "react";
-import { Control, Controller, useForm } from "react-hook-form";
-import { Label, ScrollView, Separator, SizeTokens, Switch, View, XStack, YStack } from "tamagui";
+import { type Control, Controller, useForm } from "react-hook-form";
+import { type SizeTokens, Label, ScrollView, Separator, Switch, View, XStack, YStack, Text } from "tamagui";
 
 import { FilledButton, OutlineButton } from "@/components/ui/Buttons";
 import DateRangePicker from "@/components/DatePicker";
@@ -19,18 +19,17 @@ import { BackButtonHeader, TagListing } from "@/components/ui/common-components"
 import { useDialog } from "@/hooks/useModal";
 import LocationInput from "@/components/LocationInput";
 import { formatDateWithTimeString } from "@/utils/date.utils";
-import { IAttachedFile, processPickedFiles } from "@/common/utils/file.utils";
+import { type IAttachedFile, processPickedFiles } from "@/common/utils/file.utils";
 import { CircularProgressLoader, SpinningLoader } from "@/components/ui/Loaders";
 import AssetPreview from "@/components/MessageInputBar/AssetPreview";
-import { deleteMedia, IPickerAsset } from "@/common/api/media.action";
+import { type IPickerAsset, deleteMedia } from "@/common/api/media.action";
 import { CardWrapper, CircleBgWrapper } from "@/components/ui/common-styles";
-import { Text } from "tamagui";
 import * as DocumentPicker from "expo-document-picker";
 import { useToastController } from "@tamagui/toast";
 import { getUUIDv7 } from "@/helpers";
-import { GestureResponderEvent } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { EEventStatus, EEventType, EMediaType } from "@/definitions/enums";
+import { type EMediaType, EEventStatus, EEventType } from "@/definitions/enums";
 import { isEmpty, startCase } from "@/utils";
 import AssetPreviewDialog from "@/screens/EventDetails/AssetPreviewDialog";
 import { useAuth } from "@/contexts/AuthContext";

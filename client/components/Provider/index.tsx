@@ -1,5 +1,5 @@
 import { useColorScheme } from "react-native";
-import { TamaguiProvider, TamaguiProviderProps } from "tamagui";
+import { type TamaguiProviderProps, TamaguiProvider } from "tamagui";
 import { PortalProvider } from "@tamagui/portal";
 
 const tamaguiConfig = require("@/tamagui.config").default;

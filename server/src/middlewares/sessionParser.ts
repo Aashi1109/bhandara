@@ -1,13 +1,13 @@
 import config from "@/config";
 import { RequestContext } from "@/contexts";
-import { ICustomRequest } from "@/definitions/types";
+import type { ICustomRequest } from "@/definitions/types";
 import { UnauthorizedError } from "@/exceptions";
 import {
   AuthService,
   getUserSessionCache,
   updateUserSessionCache,
 } from "@/features";
-import { NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 const authService = new AuthService();
 
@@ -18,7 +18,7 @@ const sessionParser = async (
 ) => {
   const jwtCookie = req.cookies?.[config.sessionCookie.keyName];
 
-  if (!Boolean(jwtCookie))
+  if (!jwtCookie)
     throw new UnauthorizedError(`Missing or invalid token`);
 
   const session = await getUserSessionCache(jwtCookie);
@@ -36,8 +36,8 @@ const sessionParser = async (
     ).toISOString();
     session.expiresIn = newSession.session.expires_in;
 
-    const res = await updateUserSessionCache(jwtCookie, session);
-    if (res !== "OK")
+    const cacheUpdateResult = await updateUserSessionCache(jwtCookie, session);
+    if (cacheUpdateResult !== "OK")
       throw new UnauthorizedError(
         `Failed to refresh session, please login again`
       );

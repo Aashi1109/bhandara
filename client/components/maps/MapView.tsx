@@ -7,7 +7,7 @@ import Mapbox, {
   UserLocation
 } from "@rnmapbox/maps";
 import config from "@/config";
-import { RefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 Mapbox.setAccessToken(config.mapbox.accessToken);
 

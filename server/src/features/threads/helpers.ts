@@ -1,5 +1,5 @@
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
-import { IBaseThread, ILockHistory } from "@/definitions/types";
+import type { IBaseThread, ILockHistory } from "@/definitions/types";
 import { RedisCache } from "@/features/cache";
 
 const threadsCache = new RedisCache({

@@ -1,8 +1,8 @@
 import { getAllTags, getSubTags } from "@/common/api/tags.action";
-import { ITag } from "@/definitions/types";
+import type { ITag } from "@/definitions/types";
 import { useDataLoader } from "@/hooks";
 import React, { Fragment, useEffect, useRef, useState } from "react";
-import { Text, View, XStack, XStackProps } from "tamagui";
+import { type XStackProps, Text, View, XStack } from "tamagui";
 import { ChevronRight } from "@tamagui/lucide-icons";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import { useToastController } from "@tamagui/toast";

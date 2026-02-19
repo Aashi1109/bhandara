@@ -1,5 +1,5 @@
-import { ICustomRequest } from "@/definitions/types";
-import { Response } from "express";
+import type { ICustomRequest } from "@/definitions/types";
+import type { Response } from "express";
 import MediaService from "./service";
 import { BadRequestError, NotFoundError } from "@/exceptions";
 import { isEmpty, pick } from "@/utils";
@@ -32,8 +32,8 @@ export const getSignedUploadUrl = async (
   req: ICustomRequest,
   res: Response
 ) => {
-  let { path, bucket, mimeType, provider, parentPath, format, ...rest } =
-    req.body;
+  const { path, bucket, mimeType, parentPath, format, ...rest } = req.body;
+  let provider = req.body.provider as string | undefined;
   provider ??= EMediaProvider.Supabase;
 
   const uploadPath = `${parentPath || req.user.id}/${path}`;

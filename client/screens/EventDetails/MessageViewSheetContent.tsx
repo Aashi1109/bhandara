@@ -1,5 +1,5 @@
-import React, { Dispatch, memo, Ref, RefObject, SetStateAction, useEffect, useState } from "react";
-import MessageView, { IMessageViewAddMessageProp, IMessageViewBaseProps } from "./MessageView";
+import React, { memo, Ref, useEffect, useState, type Dispatch, type RefObject, type SetStateAction } from "react";
+import MessageView, { type IMessageViewAddMessageProp, type IMessageViewBaseProps } from "./MessageView";
 import { View } from "tamagui";
 import MessageInputBar from "@/components/MessageInputBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ import { useToastController } from "@tamagui/toast";
 import { useLocalSearchParams } from "expo-router";
 import { useSocket } from "@/contexts/Socket";
 import { getThreadById } from "@/common/api/threads.action";
-import { IBaseThread } from "@/definitions/types";
+import type { IBaseThread } from "@/definitions/types";
 import ThreadLockIndicator from "@/components/ThreadLockIndicator";
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
   messageViewRef: RefObject<any>;
   handleSheetBack: () => void;
   handleClick: (data: Record<string, any>) => void;
-  sheetStack: Array<IMessageViewBaseProps>;
+  sheetStack: IMessageViewBaseProps[];
 }
 
 const MessageViewSheetContent = ({ handleClick, handleSheetBack, sheetStack }: Props) => {

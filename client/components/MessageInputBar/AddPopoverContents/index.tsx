@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { CircleBgWrapper, PopoverContent } from "../../ui/common-styles";
-import { Popover, Text, Theme } from "tamagui";
-import { XStack } from "tamagui";
+import { Popover, Text, Theme , XStack } from "tamagui";
 import { Plus } from "@tamagui/lucide-icons";
 import * as DocumentPicker from "expo-document-picker";
 
 import { useToastController } from "@tamagui/toast";
-import { IAttachedFile, processPickedFiles } from "@/common/utils/file.utils";
+import { type IAttachedFile, processPickedFiles } from "@/common/utils/file.utils";
 import { EVENT_MEDIA_BUCKET } from "@/constants/global";
 
 interface IProps {

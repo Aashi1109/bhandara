@@ -1,5 +1,5 @@
 import React from "react";
-import { PopoverContentTypeProps, Theme, Tooltip, TooltipProps } from "tamagui";
+import { type PopoverContentTypeProps, type TooltipProps, Theme, Tooltip } from "tamagui";
 
 const CustomTooltip = ({
   children,

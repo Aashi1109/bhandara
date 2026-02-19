@@ -1,6 +1,6 @@
 import logger from "@/logger";
 import CustomError from "@/exceptions/CustomError";
-import { NextFunction, Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 /**
  * Handles errors and sends appropriate HTTP responses.
@@ -31,7 +31,7 @@ const errorHandler = (
     });
   } else {
     const customError = err as CustomError;
-    let response = { message: customError.message } as {
+    const response = { message: customError.message } as {
       message: string;
       additionalInfo?: any;
       type?: string;

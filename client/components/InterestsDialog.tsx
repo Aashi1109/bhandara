@@ -1,6 +1,6 @@
 import { updateUser } from "@/common/api/user.action";
 import { useAuth } from "@/contexts/AuthContext";
-import { ITag } from "@/definitions/types";
+import type { ITag } from "@/definitions/types";
 import InterestSelection from "@/screens/OnBoarding/InterestSelection";
 import { isEmpty } from "@/utils";
 import { useToastController } from "@tamagui/toast";

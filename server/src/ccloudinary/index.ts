@@ -1,9 +1,5 @@
-import {
-  v2 as cloudinary,
-  UploadApiResponse,
-  UploadApiOptions,
-} from "cloudinary";
-import config from "@/config";
+import { type UploadApiResponse, type UploadApiOptions, v2 as cloudinary } from 'cloudinary';
+import config from '@/config';
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloudName,
@@ -34,7 +30,7 @@ class CloudinaryService {
     const res = await cloudinary.uploader.upload(fileData, {
       folder: bucket,
       public_id: path,
-      resource_type: "image",
+      resource_type: 'image',
       ...options,
     });
     return res;
@@ -71,13 +67,10 @@ class CloudinaryService {
       timestamp,
       folder: `${this.baseFolderPath}${bucket}`,
       public_id: path,
-      upload_preset: "bhandara",
+      upload_preset: 'bhandara',
       context: `rid=${rid}`,
     };
-    const signature = cloudinary.utils.api_sign_request(
-      paramsToSign,
-      config.cloudinary.apiSecret
-    );
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret);
 
     const url = `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/${resourceType}/upload`;
 

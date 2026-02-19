@@ -13,34 +13,31 @@ import ActivityTabContent from "./tabs/Activity";
 
 import * as ImagePicker from "expo-image-picker";
 import { useToastController } from "@tamagui/toast";
-import { AVATAR_BUCKET } from "@/constants/global";
+import { AVATAR_BUCKET , PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import { updateUser } from "@/common/api/user.action";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import { formatDateToLongString } from "@/utils/date.utils";
 import useSocketListener from "@/hooks/useSocketListener";
-import { PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import { uploadFile, validateFileSize } from "@/common/utils/file.utils";
-import { EMediaType } from "@/definitions/enums";
+import type { EMediaType } from "@/definitions/enums";
 import { CustomSafeAreaView } from "@/components/ui/common-components";
 
 const Profile = () => {
   const { user, updateUser: updateUserContext } = useAuth();
   const router = useRouter();
   const toastController = useToastController();
+  const { tab } = useLocalSearchParams();
+  const defaultTab = tab || "info";
+  const [isUploading, setIsUploading] = useState(false);
+
+  useSocketListener(PLATFORM_SOCKET_EVENTS.USER_UPDATED, ({ data }) => {
+    if (!data || !user || data.id !== user.id) return;
+    updateUserContext(data);
+  });
 
   if (!user) {
     return <Redirect href="/onboarding" />;
   }
-
-  const { tab } = useLocalSearchParams();
-  const defaultTab = tab || "info";
-
-  const [isUploading, setIsUploading] = useState(false);
-
-  useSocketListener(PLATFORM_SOCKET_EVENTS.USER_UPDATED, ({ data }) => {
-    if (!data || data.id !== user.id) return;
-    updateUserContext(data);
-  });
 
   const tabs = [
     {

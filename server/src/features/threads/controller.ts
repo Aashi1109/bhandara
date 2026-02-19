@@ -1,5 +1,5 @@
-import { ICustomRequest, IRequestPagination } from "@/definitions/types";
-import { Response } from "express";
+import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
+import type { Response } from "express";
 import ThreadsService from "./service";
 import { NotFoundError } from "@/exceptions";
 import { isEmpty } from "@/utils";
@@ -50,7 +50,7 @@ export const getThread = async (req: ICustomRequest, res: Response) => {
   if (parsedIncludeMessages) {
     const messages = await messageService.getAll(
       {
-        threadId: threadId,
+        threadId,
       },
       { limit: parsedIncludeMessages }
     );

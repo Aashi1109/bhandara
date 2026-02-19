@@ -1,5 +1,5 @@
 import config from "@/config";
-import { IAddress } from "@/definitions/types";
+import type { IAddress } from "@/definitions/types";
 import axios from "axios";
 
 export const suggestSearchResults = async ({
@@ -114,9 +114,9 @@ export const getStaticMapImageUrl = ({
 
   // Construct the Mapbox Static Images API URL
   const baseUrl =
-    `https://api.mapbox.com/styles/v1/mapbox/${theme || _defaults.theme}/static/` +
-    (markerConfig ? `pin-${markerConfig.size}+${markerConfig.color}(${longitude},${latitude})/` : "") + // Include pin only if requested
-    `${longitude || 0},${latitude || 0},${zoom || _defaults.zoom},${pitch || _defaults.pitch},${bearing || _defaults.bearing}/` +
+    `https://api.mapbox.com/styles/v1/mapbox/${theme || _defaults.theme}/static/${ 
+    markerConfig ? `pin-${markerConfig.size}+${markerConfig.color}(${longitude},${latitude})/` : ""  // Include pin only if requested
+    }${longitude || 0},${latitude || 0},${zoom || _defaults.zoom},${pitch || _defaults.pitch},${bearing || _defaults.bearing}/` +
     `${width || _defaults.width}x${height || _defaults.height}` +
     `?access_token=${config.mapbox.accessToken}`;
 

@@ -3,14 +3,14 @@ import { EEventStatus, EEventType } from "@/definitions/enums";
 import { getUUIDv7 } from "@/helpers";
 import { DataTypes, Model } from "sequelize";
 import {
-  IEvent,
-  ILocation,
+  type IEvent,
+  type ILocation,
+  type IMedia,
+  type IParticipant,
+  type IVerifier,
+  type IBaseUser,
+  type IReaction,
   ITag,
-  IMedia,
-  IParticipant,
-  IVerifier,
-  IBaseUser,
-  IReaction,
 } from "@/definitions/types";
 
 const sequelize = getDBConnection();

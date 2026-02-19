@@ -1,5 +1,5 @@
-import { FindOptions, Model, ModelStatic, Op } from "sequelize";
-import { IPaginationParams } from "@/definitions/types";
+import { type FindOptions, type Model, type ModelStatic, Op } from "sequelize";
+import type { IPaginationParams } from "@/definitions/types";
 
 export interface PaginatedResult<T> {
   items: T[];
@@ -42,7 +42,7 @@ export async function findAllWithPagination<T extends Model>(
     order: findOptions.order || [
       [_pagination.sortBy, _pagination.sortOrder.toUpperCase()],
     ],
-    limit: limit,
+    limit,
   };
 
   // Select specific fields

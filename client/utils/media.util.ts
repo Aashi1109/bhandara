@@ -32,7 +32,7 @@ export async function generateThumbnailFromVideo(fileOrUrl: string, seekTime = 1
     });
 
     video.addEventListener("error", (e) => {
-      reject(new Error("Error loading video: " + e.message));
+      reject(new Error(`Error loading video: ${  e.message}`));
     });
   });
 }

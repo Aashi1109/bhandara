@@ -1,10 +1,10 @@
-import {
+import type {
   IBaseUser,
   IMedia,
   IPaginationParams,
   ITag,
 } from "@/definitions/types";
-import { findAllWithPagination, PaginatedResult } from "@/utils/dbUtils";
+import { type PaginatedResult, findAllWithPagination } from "@/utils/dbUtils";
 import { validateUserCreate, validateUserUpdate } from "./validation";
 import { User } from "./model";
 import {
@@ -27,7 +27,7 @@ import { BadRequestError, NotFoundError } from "@/exceptions";
 import { isEmpty } from "@/utils";
 import TagService from "@/features/tags/service";
 import MediaService from "@/features/media/service";
-import { FindOptions } from "sequelize";
+import type { FindOptions } from "sequelize";
 
 class UserService {
   private readonly getCache = getUserCache;
@@ -131,7 +131,7 @@ class UserService {
         mediaId: rest.mediaId as string,
       } as Partial<IBaseUser>);
 
-      let updatedUser = row.toJSON() as IBaseUser;
+      const updatedUser = row.toJSON() as IBaseUser;
       if (rest.mediaId) {
         updatedUser.media = await this.mediaService.getById(
           rest.mediaId as string

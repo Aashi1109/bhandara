@@ -2,7 +2,7 @@ import React from "react";
 import { XStack, YStack, Text, View } from "tamagui";
 import { Lock, Unlock } from "@tamagui/lucide-icons";
 import { Badge } from "./ui/Badge";
-import { IBaseThread } from "@/definitions/types";
+import type { IBaseThread } from "@/definitions/types";
 import { isThreadLocked, getThreadLockStatusMessage, canUserLockThread } from "@/utils/thread.utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { OutlineButton } from "./ui/Buttons";

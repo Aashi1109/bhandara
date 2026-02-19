@@ -1,5 +1,5 @@
 import axios from "axios";
-import TransportStream, { TransportStreamOptions } from "winston-transport";
+import TransportStream, { type TransportStreamOptions } from "winston-transport";
 
 interface LokiTransportOptions extends TransportStreamOptions {
   lokiUrl?: string;

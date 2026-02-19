@@ -1,5 +1,9 @@
-import { ICustomRequest, IRequestPagination, ITag } from "@/definitions/types";
-import { Response } from "express";
+import {
+  type ICustomRequest,
+  type IRequestPagination,
+  ITag,
+} from "@/definitions/types";
+import type { Response } from "express";
 import TagsService from "./service";
 import { pick } from "@/utils";
 

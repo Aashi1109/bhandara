@@ -1,6 +1,6 @@
 import { EOnboardingStages } from "@/definitions/enums";
 import { EApplicableStage } from "./enum";
-import { IFormData } from "./type";
+import type { IFormData } from "./type";
 
 export const GET_STARTED_TABS = [
   {

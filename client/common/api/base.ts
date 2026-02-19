@@ -31,7 +31,7 @@ axiosClient.interceptors.response.use(
       await AsyncStorage.removeItem("sessionId");
       // Possibly trigger logout or redirect logic
     }
-    let errorData = error?.response?.data;
+    const errorData = error?.response?.data;
 
     return Promise.reject(errorData?.error || errorData);
   }

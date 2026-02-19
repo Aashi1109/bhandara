@@ -1,7 +1,7 @@
 import { supabase } from "@/connections";
 import { RequestContext } from "@/contexts";
 import { EAuthProvider } from "@/definitions/enums";
-import { IBaseUser } from "@/definitions/types";
+import type { IBaseUser } from "@/definitions/types";
 import {
   getSafeUser,
   setUserCache,
@@ -9,8 +9,8 @@ import {
 } from "@/features/users/helpers";
 import UserService from "@/features/users/service";
 import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from "@/helpers";
-import { AuthResponse } from "@supabase/supabase-js";
-import { Request } from "express";
+import type { AuthResponse } from "@supabase/supabase-js";
+import type { Request } from "express";
 import { UAParser } from "ua-parser-js";
 
 class Auth {
@@ -126,7 +126,7 @@ class Auth {
       req.socket.remoteAddress;
     const rawUserAgent = req.headers["user-agent"] as string;
 
-    let geoLocationData = await getGeoLocationData(ip);
+    const geoLocationData = await getGeoLocationData(ip);
 
     if (!existingUser) {
       // create new user

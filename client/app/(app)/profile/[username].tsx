@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams , useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -42,7 +42,6 @@ import PublicProfileTabs from "@/components/PublicProfile/PublicProfileTabs";
 import PublicProfileGallery from "@/components/PublicProfile/PublicProfileGallery";
 import PublicProfileSchedule from "@/components/PublicProfile/PublicProfileSchedule";
 import PublicProfileFriends from "@/components/PublicProfile/PublicProfileFriends";
-import { useRouter } from "expo-router";
 import { getUserByUsername } from "@/common/api/user.action";
 import { SpinningLoader } from "@/components/ui/Loaders";
 

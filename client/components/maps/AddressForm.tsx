@@ -1,8 +1,8 @@
-import { IAddress } from "@/definitions/types";
-import React, { RefObject, useEffect, useImperativeHandle, useState } from "react";
+import type { IAddress } from "@/definitions/types";
+import React, { useEffect, useImperativeHandle, useState, type RefObject } from "react";
 import { Text, useDebounce, View, XStack, YStack } from "tamagui";
 import { InputGroup } from "../Form";
-import { FieldError, useForm } from "react-hook-form";
+import { type FieldError, useForm } from "react-hook-form";
 import { isEmpty, startCase } from "@/utils";
 import { FilledButton } from "../ui/Buttons";
 import { MapPin } from "@tamagui/lucide-icons";

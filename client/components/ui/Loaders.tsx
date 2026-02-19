@@ -1,5 +1,4 @@
-import { Spinner } from "tamagui";
-import { View } from "tamagui";
+import { Spinner , View } from "tamagui";
 import React from "react";
 import { useTheme } from "@tamagui/core";
 
@@ -33,7 +32,7 @@ export const CircularProgressLoader = ({
   trackColor = "$color4",
   children
 }: CircularProgressLoaderProps) => {
-  if (progress < 0 || progress > 100) return null;
+  const theme = useTheme();
 
   const radius = size / 2;
   const strokeWidth = 4;
@@ -41,7 +40,7 @@ export const CircularProgressLoader = ({
   const circumference = 2 * Math.PI * adjustedRadius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  const theme = useTheme();
+  if (progress < 0 || progress > 100) return null;
 
   const resolvedColor = theme[color]?.get();
   const resolvedTrackColor = theme[trackColor]?.get();

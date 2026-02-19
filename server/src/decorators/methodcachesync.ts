@@ -72,9 +72,9 @@ const checkAndThrowRLSError = <T>(result: any, existingData: T | null) => {
  */
 function MethodCacheSync<T = any>(
   options?: CacheDecoratorOptions<T>
-): Function {
+): (...args: unknown[]) => unknown {
   return function <M extends (...args: any[]) => Promise<any>>(
-    target: Object,
+    target: object,
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<M>
   ): TypedPropertyDescriptor<M> {

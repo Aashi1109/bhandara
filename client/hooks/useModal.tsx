@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { Adapt, AnimatePresence, DialogContentProps, Sheet, Unspaced } from "tamagui";
-import { Dialog } from "tamagui";
+import { type DialogContentProps, Adapt, AnimatePresence, Sheet, Unspaced, Dialog } from "tamagui";
 import { DialogContent as StandardDialogContent } from "@/components/ui/common-styles";
 import { X } from "@tamagui/lucide-icons";
 import { OutlineButton } from "@/components/ui/Buttons";

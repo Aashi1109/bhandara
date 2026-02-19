@@ -1,4 +1,4 @@
-import { IBaseUser } from "@/definitions/types";
+import type { IBaseUser } from "@/definitions/types";
 import React from "react";
 import { YStack, XStack, Text, Card, Separator, Theme, Popover } from "tamagui";
 import CustomAvatar from "../CustomAvatar";

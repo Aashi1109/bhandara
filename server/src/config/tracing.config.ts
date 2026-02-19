@@ -43,19 +43,29 @@ const getOtelHeaders = () => {
   return { ...config.otel.headers };
 };
 
-// 🧠 SDK setup — main telemetry engine
+const isOtelEndpointConfigured = () => {
+  const u = config.otel.url?.trim();
+  return typeof u === "string" && u.length > 0 && (u.startsWith("http://") || u.startsWith("https://"));
+};
+
+// 🧠 SDK setup — only when OTEL endpoint URL is configured (full URL required)
+const baseUrl = isOtelEndpointConfigured() ? config.otel.url!.replace(/\/$/, "") : "";
 const sdk = new NodeSDK({
   resource: _detectResources,
-  traceExporter: new OTLPTraceExporter({
-    url: `${config.otel.url}/v1/traces`,
-    headers: getOtelHeaders(),
-  }),
-  metricReader: new PeriodicExportingMetricReader({
-    exporter: new OTLPMetricExporter({
-      url: `${config.otel.url}/v1/metrics`,
-      headers: getOtelHeaders(),
-    }),
-  }),
+  ...(isOtelEndpointConfigured() && baseUrl
+    ? {
+        traceExporter: new OTLPTraceExporter({
+          url: `${baseUrl}/v1/traces`,
+          headers: getOtelHeaders(),
+        }),
+        metricReader: new PeriodicExportingMetricReader({
+          exporter: new OTLPMetricExporter({
+            url: `${baseUrl}/v1/metrics`,
+            headers: getOtelHeaders(),
+          }),
+        }),
+      }
+    : {}),
   instrumentations: [
     getNodeAutoInstrumentations(),
     new HttpInstrumentation({
@@ -67,9 +77,12 @@ const sdk = new NodeSDK({
   ],
 });
 
-// 🟢 Initialize and start tracing
+// 🟢 Initialize and start tracing (no-op if OTEL endpoint not configured)
 export const initializeTracing = () => {
   try {
+    if (!isOtelEndpointConfigured()) {
+      return;
+    }
     sdk.start();
     console.log("OpenTelemetry tracing initialized");
   } catch (error) {
@@ -81,8 +94,10 @@ export const initializeTracing = () => {
 // 🔴 Shutdown tracing gracefully (optional on app close)
 export const shutdownTracing = async (): Promise<void> => {
   try {
-    await sdk.shutdown();
-    console.log("OpenTelemetry tracing terminated");
+    if (isOtelEndpointConfigured()) {
+      await sdk.shutdown();
+      console.log("OpenTelemetry tracing terminated");
+    }
   } catch (error) {
     console.error("Error terminating OpenTelemetry:", error);
   }
@@ -90,6 +105,10 @@ export const shutdownTracing = async (): Promise<void> => {
 
 // 🚪 Handle SIGTERM for clean exit in Docker/k8s/etc.
 process.on("SIGTERM", () => {
+  if (!isOtelEndpointConfigured()) {
+    process.exit(0);
+    return;
+  }
   sdk
     .shutdown()
     .then(() => console.log("OpenTelemetry tracing terminated"))

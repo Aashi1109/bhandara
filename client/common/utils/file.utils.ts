@@ -1,9 +1,9 @@
-import { getMediaPublicURLs, IPickerAsset, uploadPickerAsset, getPublicUploadSignedURL } from "../api/media.action";
+import { type IPickerAsset, getMediaPublicURLs, uploadPickerAsset, getPublicUploadSignedURL } from "../api/media.action";
 import axiosClient from "../api/base";
 
 import { isEmpty } from "@/utils";
 import { EMediaType } from "@/definitions/enums";
-import { IMedia } from "@/definitions/types";
+import type { IMedia } from "@/definitions/types";
 import { generateImageVariants } from "@/utils/compression";
 import axios from "axios";
 import { MEDIA_BUCKET_CONFIG } from "@/constants/media";
@@ -136,7 +136,7 @@ export const uploadFile = async (
 type HandleFilePickProps = {
   opts: { bucket: string; pPath: string };
   setAttachedFiles: React.Dispatch<React.SetStateAction<IAttachedFile[]>>;
-  files: Array<any>;
+  files: any[];
 };
 
 export const processPickedFiles = async ({
@@ -145,8 +145,8 @@ export const processPickedFiles = async ({
   opts
 }: HandleFilePickProps): Promise<{ successCount: number; errorCount: number }> => {
   const promises = [];
-  const errorMessages: Array<string> = [];
-  const successCountFiles: Array<IMedia> = [];
+  const errorMessages: string[] = [];
+  const successCountFiles: IMedia[] = [];
 
   for (const _file of files) {
     const { name = "", size } = _file;

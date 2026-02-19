@@ -7,13 +7,12 @@ import { getUserByEmail, updateUser } from "@/common/api/user.action";
 
 import { useToastController } from "@tamagui/toast";
 
-import { IAddress } from "@/definitions/types";
+import type { IAddress } from "@/definitions/types";
 import InterestSelection from "./InterestSelection";
 import OvalCardStack from "./OvalCard";
 
 import { InputGroup } from "@/components/Form";
-import { useRouter } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useRouter , useLocalSearchParams } from "expo-router";
 import { isEmpty } from "@/utils";
 import { getNavState } from "@/lib/navigationStore";
 import { SpinningLoader } from "@/components/ui/Loaders";
@@ -22,7 +21,7 @@ import { loginWithEmailAndPassword, signupWithEmailAndPassword } from "@/common/
 import { EGender, EOnboardingStages } from "@/definitions/enums";
 import AuthOptions from "../Auth/AuthOptions";
 import { APPLICABLE_STAGES_MAP, getStageLevelFields, ONBOARDING_STAGES_TEXT } from "./constants";
-import { IFormData } from "./type";
+import type { IFormData } from "./type";
 import ProfileSetup from "./ProfileSetup";
 import PreGetStartedContent from "./PreGetStartedContent";
 import { EApplicableStage } from "./enum";

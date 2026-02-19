@@ -11,9 +11,9 @@ const customFormat = format.printf(
     const logMessage = {
       asctime: timestamp,
       level: level.toUpperCase(),
-      service: service,
-      message: message,
-      stack: stack,
+      service,
+      message,
+      stack,
     };
     return JSON.stringify(logMessage);
   }

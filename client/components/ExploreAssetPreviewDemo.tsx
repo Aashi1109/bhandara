@@ -2,7 +2,7 @@ import React from "react";
 import { YStack, Text, H4 } from "tamagui";
 import ExploreAssetPreview from "./ExploreAssetPreview";
 import { EMediaType } from "@/definitions/enums";
-import { IBaseUser } from "@/definitions/types";
+import type { IBaseUser } from "@/definitions/types";
 
 // Sample data for demonstration
 const sampleCreator: IBaseUser = {

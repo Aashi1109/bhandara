@@ -1,5 +1,5 @@
 import config from "@/config";
-import { IBaseUser } from "@/definitions/types";
+import type { IBaseUser } from "@/definitions/types";
 import logger from "@/logger";
 import { jnstringify } from "@/utils";
 import * as bcrypt from "bcrypt";
@@ -98,10 +98,10 @@ interface RetryConfig {
  * Wrap an async function with retry logic using exponential backoff.
  */
 export const withRetry =
-  <T, Args extends any[]>(config: RetryConfig = {}) =>
+  <T, Args extends any[]>(retryConfig: RetryConfig = {}) =>
   (fn: (...args: Args) => Promise<T>) =>
   async (...args: Args): Promise<T> => {
-    const { maxAttempts = 3, delayMs = 1000, maxDelayMs = 10000 } = config;
+    const { maxAttempts = 3, delayMs = 1000, maxDelayMs = 10000 } = retryConfig;
 
     let attempt = 1;
 

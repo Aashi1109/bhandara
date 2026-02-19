@@ -1,4 +1,4 @@
-import { IBaseThread, ILockHistory } from "@/definitions/types";
+import type { IBaseThread, ILockHistory } from "@/definitions/types";
 
 /**
  * Check if a thread is currently locked

@@ -1,5 +1,4 @@
-import { ITag, IUserSession } from "@/definitions/types";
-import { IBaseUser } from "@/definitions/types";
+import type { ITag, IUserSession, IBaseUser } from "@/definitions/types";
 import { RedisCache } from "@/features/cache";
 import { jnparse, jnstringify } from "@/utils";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";

@@ -2,7 +2,7 @@ import { getDBConnection } from "@/connections/db";
 import { DataTypes, Model } from "sequelize";
 import { getUUIDv7 } from "@/helpers";
 import { REACTION_TABLE_NAME } from "./constants";
-import { IBaseUser, IReaction } from "@/definitions/types";
+import type { IBaseUser, IReaction } from "@/definitions/types";
 type ReactionAttributes = Omit<
   IReaction,
   "createdAt" | "updatedAt" | "deletedAt"

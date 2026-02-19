@@ -1,4 +1,4 @@
-import { Image, StackProps, XStack, YStack } from "tamagui";
+import { type StackProps, Image, XStack, YStack } from "tamagui";
 
 const OvalCard = ({ image, width, height }: { image: string; width: number; height?: number }) => {
   return (

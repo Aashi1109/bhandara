@@ -1,10 +1,10 @@
 import { CustomSafeAreaView } from "@/components/ui/common-components";
 import EventDetails from "@/screens/EventDetails";
 
-const index = () => (
+const EventPage = () => (
   <CustomSafeAreaView>
     <EventDetails />
   </CustomSafeAreaView>
 );
 
-export default index;
+export default EventPage;

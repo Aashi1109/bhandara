@@ -1,6 +1,6 @@
-import { Response } from "express";
+import type { Response } from "express";
 import MessageService from "./service";
-import { ICustomRequest, IRequestPagination } from "@/definitions/types";
+import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
 import { cleanQueryObject, isEmpty, pick } from "@/utils";
 import { NotFoundError, ForbiddenError } from "@/exceptions";
 import { emitSocketEvent } from "@/socket/emitter";

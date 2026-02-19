@@ -1,0 +1,12 @@
+node_modules
+.expo
+dist
+android
+ios
+coverage
+*.d.ts
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+.tamagui
+tamagui-web.css

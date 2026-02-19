@@ -4,11 +4,11 @@ import { SpinningLoader } from "@/components/ui/Loaders";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSocket } from "@/contexts/Socket";
-import { IBaseThread, IBaseUser, IEvent, IMessage, IPaginationResponse } from "@/definitions/types";
+import type { IBaseThread, IBaseUser, IEvent, IMessage, IPaginationResponse } from "@/definitions/types";
 import { useDataLoader } from "@/hooks";
 import useSocketListener from "@/hooks/useSocketListener";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { useDebounce, View, YStack, YStackProps } from "tamagui";
+import { type YStackProps, useDebounce, View, YStack } from "tamagui";
 import MessageCard from "./MessageCard";
 import { FlatList } from "react-native";
 import { useToastController } from "@tamagui/toast";
@@ -84,7 +84,7 @@ const MessageView = memo(({ threadId, parentId, messageId, onBack, handleClick, 
       paginationRef.current = _data?.pagination;
       return _data?.items || [];
     }
-    if (currentView == ViewTypes.Message) {
+    if (currentView === ViewTypes.Message) {
       return _data;
     }
     if (currentView === ViewTypes.Thread) {

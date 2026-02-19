@@ -1,4 +1,4 @@
-import { IEvent, IMedia } from "@/definitions/types";
+import type { IEvent, IMedia } from "@/definitions/types";
 import { EMediaProvider } from "@/definitions/enums";
 import { findAllWithPagination } from "@/utils/dbUtils";
 import SupabaseService from "@/supabase";
@@ -13,8 +13,8 @@ import {
   getEventMediaCache,
   setEventMediaCache,
   setMediaCache,
+  getMediaCache,
 } from "./helpers";
-import { getMediaCache } from "./helpers";
 import logger from "@/logger";
 import { getUniqueFilename as getUniqueFilename } from "./utils";
 import { BadRequestError } from "@/exceptions";
@@ -131,14 +131,15 @@ class MediaService {
     };
     return validateMediaCreate(dataWithProvider, (validatedData) =>
       Media.sequelize!.transaction(async (tx) => {
-        let {
+        const {
           name: fileName,
           format,
           metadata,
-          ...restOptions
+          ...initialRestOptions
         } = validatedData.options || {};
+        let restOptions = initialRestOptions;
 
-        const bucket = validatedData.bucket;
+        const {bucket} = validatedData;
 
         const bucketConfig = MEDIA_BUCKET_CONFIG[validatedData.bucket];
         if (!bucketConfig) throw new Error("Bucket not found");

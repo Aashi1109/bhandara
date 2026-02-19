@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import { type Socket, io } from "socket.io-client";
 import config from "@/config";
 
 export type EventHandler = (...args: any[]) => void;

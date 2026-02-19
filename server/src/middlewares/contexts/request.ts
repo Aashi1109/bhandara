@@ -1,8 +1,8 @@
-import { IRequestContext, RequestContext } from "@/contexts";
+import { type IRequestContext, RequestContext } from "@/contexts";
 import { getAlphaNumericId } from "@/helpers";
 import logger from "@/logger";
 import { AsyncLocalStorage } from "async_hooks";
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 
 const asyncLocalStorage = new AsyncLocalStorage<IRequestContext>();
 

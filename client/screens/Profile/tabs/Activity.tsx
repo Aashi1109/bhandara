@@ -3,7 +3,7 @@ import { Text, XStack, YStack, View, Button, ScrollView, Image } from "tamagui";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDataLoader } from "@/hooks";
 import { getUserEvents } from "@/common/api/events.action";
-import { IEvent } from "@/definitions/types";
+import type { IEvent } from "@/definitions/types";
 import { Badge } from "@/components/ui/Badge";
 import { EEventStatus } from "@/definitions/enums";
 import { Search, MapPin, Share2, QrCode, Clock, Calendar } from "@tamagui/lucide-icons";
@@ -593,7 +593,7 @@ const ActivityTabContent = () => {
                 color="$color10"
                 text="center"
               >
-                You haven't created any events yet
+                {`You haven't created any events yet`}
               </Text>
             </YStack>
           )}

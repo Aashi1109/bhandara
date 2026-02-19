@@ -1,4 +1,4 @@
-import { Job, Worker } from "bullmq";
+import { type Job, Worker } from "bullmq";
 import { VIDEO_QUEUE_NAME } from "@/queues/video";
 import MediaService from "@/features/media/service";
 import logger from "@/logger";
@@ -87,11 +87,11 @@ export const processor = async (job: Job) => {
     await fs.unlink(tempPath);
 
     const uploaded = await Promise.all(
-      Object.entries(thumbBuffers).map(([suffix, buffer]) =>
+      Object.entries(thumbBuffers).map(([suffix, thumbBuffer]) =>
         mediaService.uploadFile({
           bucket: MEDIA_PUBLIC_BUCKET_NAME,
           path: `${eventId}/${mediaId}${suffix}.webp`,
-          file: buffer.toString("base64"),
+          file: thumbBuffer.toString("base64"),
           mimeType: "image/webp",
           provider: EMediaProvider.Supabase,
           options: {},

@@ -1,5 +1,5 @@
-import { Control, Controller } from "react-hook-form";
-import { Input, Paragraph, Text, YStack, XStack, View, styled } from "tamagui";
+import { type Control, Controller } from "react-hook-form";
+import { type YStack, Input, Paragraph, Text, XStack, View, styled } from "tamagui";
 import React from "react";
 
 export const StyledInput = styled(Input, {

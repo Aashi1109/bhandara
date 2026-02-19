@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { IEvent, IBaseUser } from "@/definitions/types";
+import type { IEvent, IBaseUser } from "@/definitions/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { OutlineButton, FilledButton } from "@/components/ui/Buttons";
 import { CardWrapper, DialogContent, DialogTitle } from "@/components/ui/common-styles";
-import { ButtonProps, Dialog, H6, Text, View, ViewProps, YStackProps } from "tamagui";
+import { type ButtonProps, type YStackProps, Dialog, H6, Text, View, ViewProps } from "tamagui";
 import { useDialog } from "@/hooks/useModal";
 import VerificationMap from "@/components/maps/VerificationMap";
 import { EVENT_VERIFY_RADIUS_M } from "@/constants/global";
@@ -38,8 +38,6 @@ const VerifyEvent = ({
   const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (isCreator) return null;
-
   const distanceBetweenUserAndEvent = useMemo(
     () =>
       userCoords &&
@@ -49,6 +47,8 @@ const VerifyEvent = ({
       ),
     [userCoords, event.location.latitude, event.location.longitude]
   );
+
+  if (isCreator) return null;
 
   const canVerify = (distanceBetweenUserAndEvent || 0) <= EVENT_VERIFY_RADIUS_M;
 

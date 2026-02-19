@@ -1,4 +1,4 @@
-import { ITag } from "@/definitions/types";
+import type { ITag } from "@/definitions/types";
 import { RedisCache } from "@/features/cache";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
 import logger from "@/logger";

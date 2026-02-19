@@ -1,7 +1,7 @@
 import { CardWrapper } from "@/components/ui/common-styles";
 import React, { useRef } from "react";
 import { Image, View } from "tamagui";
-import Video, { VideoRef } from "react-native-video";
+import Video, { type VideoRef } from "react-native-video";
 import { EMediaType } from "@/definitions/enums";
 
 interface IProps {
@@ -12,7 +12,9 @@ interface IProps {
 }
 
 const AssetPreview = ({ type, file, publicLink, size = 50 }: IProps) => {
-  const renderPreview = () => {
+  const videoRef = useRef<VideoRef>(null);
+
+  const RenderPreview = () => {
     switch (type) {
       case EMediaType.Image:
         if (!file && !publicLink) return null;
@@ -25,13 +27,9 @@ const AssetPreview = ({ type, file, publicLink, size = 50 }: IProps) => {
         );
       case EMediaType.Video:
         if (!publicLink) return null;
-        const videoRef = useRef<VideoRef>(null);
-        const handlePress = () => {};
         return (
           <Video
-            // Can be a URL or a local file.
             source={{ uri: publicLink }}
-            // Store reference
             ref={videoRef}
             style={{
               width: size - 1,
@@ -50,7 +48,7 @@ const AssetPreview = ({ type, file, publicLink, size = 50 }: IProps) => {
       height={size}
       width={size}
     >
-      {renderPreview()}
+      {RenderPreview()}
     </CardWrapper>
   );
 };

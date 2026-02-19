@@ -1,4 +1,4 @@
-import Ajv, { ValidateFunction } from "ajv";
+import Ajv, { type ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import { BadRequestError } from "@/exceptions";
@@ -51,7 +51,7 @@ export const validateSchema = (schemaName: string, schema: object) => {
       const errors = (validate.errors || [])
         .map((err) => {
           const path = err.instancePath || "/";
-          const keyword = err.keyword;
+          const {keyword} = err;
           const msg = err.message || "Validation error";
 
           switch (keyword) {

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { InputGroup } from "./Form";
 import { debounce, View } from "tamagui";
-import { Control, FieldErrors, UseFormSetError } from "react-hook-form";
+import { type Control, type UseFormSetError, FieldErrors } from "react-hook-form";
 import { getUserByUsername } from "@/common/api/user.action";
 import { SpinningLoader } from "./ui/Loaders";
 import { CircleCheck } from "@tamagui/lucide-icons";

@@ -2,8 +2,8 @@ import { Platform } from "react-native";
 import axiosClient from "./base";
 import { base64ToBlob, uriToBlob, compressFile } from "@/utils";
 import axios from "axios";
-import { IBaseResponse, IMedia } from "@/definitions/types";
-import { EMediaType } from "@/definitions/enums";
+import type { IBaseResponse, IMedia } from "@/definitions/types";
+import type { EMediaType } from "@/definitions/enums";
 
 export interface IPickerAsset {
   uri: string;

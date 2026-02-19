@@ -1,4 +1,4 @@
-import { IEvent, IPaginationParams, ITag } from "@/definitions/types";
+import type { IEvent, IPaginationParams, ITag } from "@/definitions/types";
 import { findAllWithPagination } from "@/utils/dbUtils";
 import { validateTagCreate, validateTagUpdate } from "./validation";
 import { Tag } from "./model";
@@ -15,7 +15,7 @@ import {
   deleteSubTagsCache,
 } from "./helpers";
 import { NotFoundError } from "@/exceptions";
-import { FindOptions } from "sequelize";
+import type { FindOptions } from "sequelize";
 
 class TagService {
   private readonly getCache = getTagCache;
@@ -71,7 +71,7 @@ class TagService {
       { limit: tagIds.length }
     );
 
-    const items = data.items;
+    const {items} = data;
     if (cacheKey && items) {
       await setEventTagsCache(cacheKey, items);
     }

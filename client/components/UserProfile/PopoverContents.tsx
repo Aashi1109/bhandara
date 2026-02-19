@@ -1,6 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, LogOut, Settings } from "@tamagui/lucide-icons";
-import { User } from "@tamagui/lucide-icons";
+import { Calendar, LogOut, Settings , User } from "@tamagui/lucide-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback } from "react";
 

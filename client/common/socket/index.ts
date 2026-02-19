@@ -1,5 +1,5 @@
 import config from "@/config";
-import { io, Socket } from "socket.io-client";
+import { type Socket, io } from "socket.io-client";
 
 type EventCallback = (...args: any[]) => void;
 

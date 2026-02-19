@@ -1,6 +1,5 @@
-import { Toast } from "@tamagui/toast";
+import { Toast , useToastState } from "@tamagui/toast";
 
-import { useToastState } from "@tamagui/toast";
 import { YStack } from "tamagui";
 
 const CurrentToast = () => {

@@ -1,7 +1,7 @@
 import config from "@/config";
 import { supabase } from "@/connections";
 import { EAuthProvider } from "@/definitions/enums";
-import { ICustomRequest } from "@/definitions/types";
+import type { ICustomRequest } from "@/definitions/types";
 import { BadRequestError, NotFoundError } from "@/exceptions";
 import { AuthService } from "@/features";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/features/users/helpers";
 import UserService from "@/features/users/service";
 import { isEmpty, merge } from "@/utils";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 
 const authService = new AuthService();
 const userService = new UserService();
@@ -59,7 +59,7 @@ const login = async (req: Request, res: Response) => {
 
   const { sessionId, user } = await authService.createPlatformUser({
     req,
-    sessionData: sessionData,
+    sessionData,
     existingUser,
   });
 

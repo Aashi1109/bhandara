@@ -1,4 +1,4 @@
-import { ISearchFilters, ISearchResult } from "@/definitions/types";
+import type { ISearchFilters, ISearchResult } from "@/definitions/types";
 import axiosClient from "./base";
 
 export interface ISearchResponse {
@@ -15,9 +15,9 @@ export interface ISearchResponse {
 export interface ISearchOptionsResponse {
   success: boolean;
   data: {
-    types: Array<{ value: string; label: string }>;
-    eventStatus: Array<{ value: string; label: string }>;
-    eventType: Array<{ value: string; label: string }>;
+    types: { value: string; label: string }[];
+    eventStatus: { value: string; label: string }[];
+    eventType: { value: string; label: string }[];
   };
 }
 

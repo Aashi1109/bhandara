@@ -1,7 +1,7 @@
 import CustomAvatar from "@/components/CustomAvatar";
 import { CardWrapper } from "@/components/ui/common-styles";
 import { EMediaType } from "@/definitions/enums";
-import { IBaseUser, IMedia } from "@/definitions/types";
+import type { IBaseUser, IMedia } from "@/definitions/types";
 import { formatTimeAgo } from "@/utils/date.utils";
 import { CloudDownload, ExternalLink, Minus, Plus, RotateCw, X } from "@tamagui/lucide-icons";
 import React, { useState } from "react";

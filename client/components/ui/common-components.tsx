@@ -1,5 +1,5 @@
-import { IBaseUser, ITag } from "@/definitions/types";
-import { H4, Text, Theme, useTheme, View, XStack, XStackProps, YStack } from "tamagui";
+import type { IBaseUser, ITag } from "@/definitions/types";
+import { type XStackProps, H4, Text, Theme, useTheme, View, XStack, YStack } from "tamagui";
 import CustomAvatar from "../CustomAvatar";
 import ProfileAvatarPreview from "./ProfileAvatarPreview";
 import { Fragment } from "react";

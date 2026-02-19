@@ -10,7 +10,7 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return <AuthProvider>{children}</AuthProvider>;
 };
 
-function _Layout() {
+function AppInnerLayout() {
   const { isLoading, user, session } = useAuth();
 
   if (isLoading) {
@@ -65,7 +65,7 @@ function _Layout() {
 export default function Layout() {
   return (
     <AuthLayout>
-      <_Layout />
+      <AppInnerLayout />
     </AuthLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { IBaseUser, IEvent, IPaginationParams } from "@/definitions/types";
+import type { IBaseUser, IEvent, IPaginationParams } from "@/definitions/types";
 import ThreadsService from "../threads/service";
 import { findAllWithPagination } from "@/utils/dbUtils";
 import { Op } from "sequelize";
@@ -13,8 +13,8 @@ import {
   getEventUsersCache,
   setEventCache,
   setEventUsersCache,
+  deleteEventCache,
 } from "./helpers";
-import { deleteEventCache } from "./helpers";
 import { isEmpty } from "@/utils";
 import { BadRequestError, NotFoundError } from "@/exceptions";
 import { getDistanceInMeters } from "@/helpers";
@@ -370,7 +370,7 @@ class EventService {
   async getThreads(eventId: string, pagination: IPaginationParams) {
     const { items, pagination: threadPagination } =
       await this.threadService.getAll({ eventId }, pagination);
-    let threads = items;
+    const threads = items;
     if (!isEmpty(threads)) {
       await Promise.all(
         threads.map(async (t) => {

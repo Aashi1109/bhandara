@@ -2,8 +2,8 @@ import { Op, Sequelize } from "sequelize";
 import { Event } from "../events/model";
 import { User } from "../users/model";
 import { Tag } from "../tags/model";
-import { IPaginationParams } from "@/definitions/types";
-import { EEventStatus, EEventType } from "@/definitions/enums";
+import type { IPaginationParams } from "@/definitions/types";
+import type { EEventStatus, EEventType } from "@/definitions/enums";
 import { getDBConnection } from "@/connections/db";
 
 const sequelize = getDBConnection();

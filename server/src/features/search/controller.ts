@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import SearchService, { ISearchFilters } from "./service";
+import type { Request, Response } from "express";
+import SearchService, { type ISearchFilters } from "./service";
 import { validateSearchRequest } from "./validation";
 import logger from "@/logger";
 

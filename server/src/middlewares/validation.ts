@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { BadRequestError } from "@/exceptions";
 
 export const validateRequest = (schema: any) => {

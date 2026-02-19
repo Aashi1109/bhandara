@@ -1,5 +1,5 @@
-import { ICustomRequest, IRequestPagination } from "@/definitions/types";
-import { Response } from "express";
+import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
+import type { Response } from "express";
 import EventService from "./service";
 import { BadRequestError, NotFoundError } from "@/exceptions";
 import { isEmpty } from "@/utils";

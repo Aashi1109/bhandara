@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet } from "react-native";
-import { Easing } from "react-native";
+import { Animated, StyleSheet , Easing } from "react-native";
 import { View } from "tamagui";
 
 const PulsatingDot = ({ size = 16, color = "$accent1", pulseScale = 2.5, duration = 1200 }) => {

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { getEventById, getEventThreads } from "@/common/api/events.action";
+import { getEventById, getEventThreads , updateEvent } from "@/common/api/events.action";
 import { BackButtonHeader, IdentityCard, TagListing, UserCluster } from "@/components/ui/common-components";
 import { CardWrapper, CircleBgWrapper, PopoverContent } from "@/components/ui/common-styles";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import ProfileAvatarPreview from "@/components/ui/ProfileAvatarPreview";
-import { EEventType, EMediaType } from "@/definitions/enums";
-import { IBaseThread, IBaseUser, IEvent } from "@/definitions/types";
+import { EEventType, EMediaType , EEventStatus } from "@/definitions/enums";
+import type { IBaseThread, IBaseUser, IEvent } from "@/definitions/types";
 import { useDataLoader } from "@/hooks";
 import { ChevronRight, Plus, Share2, MoreVertical, Edit3, X, Calendar, RotateCcw } from "@tamagui/lucide-icons";
 import { useToastController } from "@tamagui/toast";
@@ -15,8 +15,6 @@ import { H4, H6, ScrollView, Sheet, Text, View, XStack, YStack } from "tamagui";
 import { formatDateRange, formatDateWithTimeString } from "@/utils/date.utils";
 import { omit, shareLink } from "@/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { updateEvent } from "@/common/api/events.action";
-import { EEventStatus } from "@/definitions/enums";
 import { PopoverWrapper } from "@/components/PopoverWrapper";
 import config from "@/config";
 
@@ -24,11 +22,11 @@ import { PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import MapPreviewCard from "@/components/MapPreviewCard";
 import VerifyEvent from "@/components/VerifyEvent";
 import MessageCard from "./MessageView/MessageCard";
-import { IMessageViewAddMessageProp, IMessageViewBaseProps } from "./MessageView";
+import type { IMessageViewAddMessageProp, IMessageViewBaseProps } from "./MessageView";
 import MessageViewSheetContent from "./MessageViewSheetContent";
 import { FilledButton, OutlineButton } from "@/components/ui/Buttons";
 import PopoverMenuList from "@/components/PopoverMenuList";
-import { GestureResponderEvent } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { useDialog } from "@/hooks/useModal";
 import { Badge } from "@/components/ui/Badge";
@@ -209,7 +207,7 @@ const EventDetails: React.FC = () => {
     });
   }, []);
 
-  const [sheetStack, setSheetStack] = useState<Array<IMessageViewBaseProps>>([]);
+  const [sheetStack, setSheetStack] = useState<IMessageViewBaseProps[]>([]);
 
   const handleClick = useCallback(
     ({
@@ -371,7 +369,7 @@ const EventDetails: React.FC = () => {
                   <ProfileAvatarPreview user={createdBy}>
                     <IdentityCard
                       imageUrl={createdBy?.profilePic?.url || ""}
-                      title={(isOrganized ? "Organized by" : "Hosted by") + " " + createdBy?.name}
+                      title={`${isOrganized ? "Organized by" : "Hosted by"  } ${  createdBy?.name}`}
                       subtitle={createdBy?.username ? `@${createdBy.username}` : ""}
                       imageAlt={createdBy?.name}
                     />

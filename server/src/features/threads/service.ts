@@ -1,7 +1,11 @@
 import { validateThreadCreate, validateThreadUpdate } from "./validation";
 import { Thread } from "./model";
 
-import { IPaginationParams, IMessage } from "@/definitions/types";
+import {
+  type IPaginationParams,
+  type IBaseThread,
+  IMessage,
+} from "@/definitions/types";
 import { findAllWithPagination } from "@/utils/dbUtils";
 import {
   getThreadCache,
@@ -12,7 +16,6 @@ import {
   lockThread,
   unlockThread,
 } from "./helpers";
-import { IBaseThread } from "@/definitions/types";
 import { BadRequestError, ForbiddenError } from "@/exceptions";
 
 import MessageService from "@/features/messages/service";

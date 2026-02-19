@@ -1,12 +1,12 @@
-import { Namespace, Server, Socket } from "socket.io";
+import { type Namespace, type Socket, Server } from "socket.io";
 import config from "@/config";
 import logger from "@/logger";
 import { requestContextMiddleware, socketUserParser } from "@/middlewares";
-import { DefaultEventsMap } from "socket.io/dist/typed-events";
-import { IncomingMessage } from "http";
-import { IBaseUser } from "@/definitions/types";
+import type { DefaultEventsMap } from "socket.io/dist/typed-events";
+import type { IncomingMessage } from "http";
+import type { IBaseUser } from "@/definitions/types";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
-import http from "http";
+import type http from "http";
 import {
   EventService,
   getSafeUser,
@@ -110,6 +110,7 @@ export function initializeSocket(server: http.Server) {
 
       socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, async (request, cb) => {
         try {
+          // TODO: implement message update handling
         } catch (error) {
           logger.error(`Error updating message`, error);
           cb?.({ error: error?.message || "Something went wrong" });

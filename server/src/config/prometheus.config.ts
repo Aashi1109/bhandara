@@ -20,7 +20,7 @@ const remoteWriteConfig = {
 // Default system metrics
 client.collectDefaultMetrics({
   register,
-  prefix: config.infrastructure.appName + "_",
+  prefix: `${config.infrastructure.appName  }_`,
 });
 
 // Custom metrics

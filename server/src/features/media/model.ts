@@ -3,7 +3,7 @@ import { DataTypes, Model } from "sequelize";
 import { getUUIDv7 } from "@/helpers";
 import { MEDIA_TABLE_NAME } from "./constants";
 import { EMediaType, EAccessLevel } from "@/definitions/enums";
-import { IMedia } from "@/definitions/types";
+import type { IMedia } from "@/definitions/types";
 
 type MediaAttributes = Omit<
   IMedia,

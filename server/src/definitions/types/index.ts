@@ -1,5 +1,5 @@
-import { Request } from "express";
-import {
+import type { Request } from "express";
+import type {
   EAccessLevel,
   EEventParticipantStatus,
   EEventStatus,

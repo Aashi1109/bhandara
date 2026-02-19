@@ -1,4 +1,4 @@
-import { IPaginationParams } from "@/definitions/types";
+import type { IPaginationParams } from "@/definitions/types";
 import axiosClient from "./base";
 import { formTruthyValues } from "@/utils";
 

@@ -1,6 +1,6 @@
 // Deprecated: Supabase service retained for legacy support
 // Postgrest types kept for backwards compatibility with old DB service
-import { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 import { decode } from "base64-arraybuffer";
 import { supabase } from "../connections";

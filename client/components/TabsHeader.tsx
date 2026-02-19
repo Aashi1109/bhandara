@@ -1,5 +1,5 @@
 import React from "react";
-import { BottomTabHeaderProps } from "@react-navigation/bottom-tabs";
+import type { BottomTabHeaderProps } from "@react-navigation/bottom-tabs";
 import { Avatar, H3, H4, Text, View, XStack, YStack } from "tamagui";
 import { Bell } from "@tamagui/lucide-icons";
 import { useAuth } from "@/contexts/AuthContext";

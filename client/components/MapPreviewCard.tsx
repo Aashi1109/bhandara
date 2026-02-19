@@ -1,8 +1,8 @@
-import { IAddress } from "@/definitions/types";
+import type { IAddress } from "@/definitions/types";
 import { askForLocation, haversineDistanceInM } from "@/utils/location";
 import { useToastController } from "@tamagui/toast";
 import { useEffect, useState } from "react";
-import * as Location from "expo-location";
+import type * as Location from "expo-location";
 import { getStaticMapImageUrl } from "@/common/api/mapbox";
 import { CardWrapper, CircleBgWrapper } from "./ui/common-styles";
 import { Image, Text, XStack, YStack } from "tamagui";

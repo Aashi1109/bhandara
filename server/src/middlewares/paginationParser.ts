@@ -1,6 +1,6 @@
-import { IRequestPagination } from "@/definitions/types";
+import type { IRequestPagination } from "@/definitions/types";
 import logger from "@/logger";
-import { NextFunction, Response } from "express";
+import type { NextFunction, Response } from "express";
 
 const paginationParser = (
   req: IRequestPagination,

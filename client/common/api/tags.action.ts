@@ -1,4 +1,4 @@
-import { ITag } from "@/definitions/types";
+import type { ITag } from "@/definitions/types";
 import axiosClient from "./base";
 
 export const getAllTags = async (): Promise<{

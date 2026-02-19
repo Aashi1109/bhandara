@@ -13,7 +13,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key, {
   },
   global: {
     fetch: (input: string, init: RequestInit) => {
-      const pathname = new URL(input).pathname;
+      const {pathname} = new URL(input);
       const isSessionIgnorePath = sessionIgnorePaths.some((path) =>
         new RegExp(path).test(pathname)
       );
@@ -26,8 +26,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key, {
       if (!session?.accessToken) return fetch(input, init);
 
       const defaultHeaders: Record<string, string> = {};
-      // @ts-ignore
-      for (let [key, value] of init.headers.entries()) {
+      // @ts-expect-error — init.headers may not have .entries() in all type definitions
+      for (const [key, value] of init.headers.entries()) {
         defaultHeaders[key] = value;
       }
 

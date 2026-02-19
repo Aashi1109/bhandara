@@ -1,4 +1,4 @@
-import { IBaseResponse, IEvent, IPaginationParams } from "@/definitions/types";
+import type { IBaseResponse, IEvent, IPaginationParams } from "@/definitions/types";
 import { EEventStatus } from "@/definitions/enums";
 import axiosClient from "./base";
 import { formTruthyValues } from "@/utils";

@@ -8,7 +8,7 @@ import { CardWrapper } from "@/components/ui/common-styles";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import UsernameInput from "@/components/UsernameInput";
 import { useAuth } from "@/contexts/AuthContext";
-import { IAddress, ITag } from "@/definitions/types";
+import type { IAddress, ITag } from "@/definitions/types";
 import { useDataLoader } from "@/hooks";
 import { useDialog } from "@/hooks/useModal";
 import GenderSelection from "@/screens/OnBoarding/GenderSelection";

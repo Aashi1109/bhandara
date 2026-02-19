@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { IBaseUser, IMedia } from "@/definitions/types";
+import type { IBaseUser, IMedia } from "@/definitions/types";
 import { getUserSession, logout as logoutApi } from "@/common/api/auth.action";
 import { jnstringify } from "@/utils";
 

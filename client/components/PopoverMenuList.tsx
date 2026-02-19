@@ -2,7 +2,7 @@ import React, { Fragment, memo } from "react";
 import { PopoverContent } from "./ui/common-styles";
 import { Popover, Separator, Text, XStack, YStack } from "tamagui";
 import { kebabCase } from "@/utils";
-import { GestureResponderEvent } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 
 interface IPopoverMenuList {
   groups: {
@@ -31,9 +31,8 @@ const PopoverMenuList = ({ groups, handleActionClick }: IPopoverMenuList) => {
               gap={"$3"}
             >
               {group.tabs.map((tab) => (
-                <Popover.Close asChild>
+                <Popover.Close key={tab.label} asChild>
                   <XStack
-                    key={tab.label}
                     gap={"$3"}
                     items={"center"}
                     cursor={"pointer"}

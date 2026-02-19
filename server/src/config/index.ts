@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from "@/constants";
-import { AppConfig } from "@/types/config";
+import type { AppConfig } from "@/types/config";
 
 dotenv.config({});
 
@@ -90,7 +90,7 @@ const config: AppConfig = {
   },
   otel: {
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "",
-    headers: process.env.OTEL_EXPORTER_OTLP_HEADERS.split(",").reduce(
+    headers: (process.env.OTEL_EXPORTER_OTLP_HEADERS || "").split(",").reduce(
       (acc, curr) => {
         const idx = curr.indexOf("=");
         if (idx === -1) acc[curr] = "";

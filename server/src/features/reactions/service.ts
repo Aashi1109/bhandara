@@ -1,4 +1,4 @@
-import { IReaction, IPaginationParams } from "@/definitions/types";
+import type { IReaction, IPaginationParams } from "@/definitions/types";
 import { findAllWithPagination } from "@/utils/dbUtils";
 import { Reaction } from "./model";
 import { validateReactionCreate, validateReactionUpdate } from "./validation";

@@ -1,7 +1,7 @@
 import AddressForm from "@/components/maps/AddressForm";
 import MapViewComponent from "@/components/maps/MapView";
 import Search from "@/components/maps/Search";
-import { IAddress } from "@/definitions/types";
+import type { IAddress } from "@/definitions/types";
 import { getUUIDv4 } from "@/helpers";
 import { getNavState } from "@/lib/navigationStore";
 import { ArrowLeft } from "@tamagui/lucide-icons";

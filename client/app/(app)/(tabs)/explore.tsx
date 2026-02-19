@@ -9,7 +9,7 @@ import { CardWrapper, CircleBgWrapper } from "@/components/ui/common-styles";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants/global";
 import { useSocket } from "@/contexts/Socket";
-import { IAddress, IBaseUser, ITag, ISearchResult, ISearchFilters } from "@/definitions/types";
+import type { IAddress, IBaseUser, ITag, ISearchResult, ISearchFilters } from "@/definitions/types";
 import { formatDistance } from "@/helpers";
 import { isEmpty, kebabCase, startCase } from "@/utils";
 import { formatDateWithTimeString } from "@/utils/date.utils";
@@ -36,12 +36,11 @@ import {
   Tag
 } from "@tamagui/lucide-icons";
 import { useToastController } from "@tamagui/toast";
-import { LocationObjectCoords } from "expo-location";
+import type { LocationObjectCoords } from "expo-location";
 import React, { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
-import { H6, Image, ScrollView, Text, View, XStack, YStack, Button, Sheet, AnimatePresence, Input } from "tamagui";
+import { H6, Image, ScrollView, Text, View, XStack, YStack, Button, Sheet, AnimatePresence, Input, useDebounce } from "tamagui";
 import ExploreAssetPreview from "@/components/ExploreAssetPreview";
-import { useDebounce } from "tamagui";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "expo-router";
 
@@ -481,7 +480,7 @@ const mapping = {
   }
 };
 
-const explore = () => {
+const Explore = () => {
   const {
     control,
     formState: { errors },
@@ -839,7 +838,7 @@ const explore = () => {
                 if (section.component in mapping) {
                   const Component = mapping[section.component].component;
                   return (
-                    <YStack gap={"$3"}>
+                    <YStack key={section.component} gap={"$3"}>
                       <CommonHeader
                         heading={section.title}
                         subHeading={section.subtitle}
@@ -1071,7 +1070,9 @@ const explore = () => {
                   color="$color10"
                   text="center"
                 >
-                  No results found for "{searchQuery}"
+                  {'No results found for "'}
+                  {searchQuery}
+                  {'"'}
                 </Text>
                 <Text
                   fontSize="$3"
@@ -1103,4 +1104,4 @@ const explore = () => {
   );
 };
 
-export default explore;
+export default Explore;

@@ -1,6 +1,5 @@
-import React, { forwardRef } from "react";
-import { useRef } from "react";
-import { Adapt, Popover, PopoverProps } from "tamagui";
+import React, { forwardRef , useRef } from "react";
+import { type PopoverProps, Adapt, Popover } from "tamagui";
 
 interface IProps extends PopoverProps {
   children?: React.ReactNode;

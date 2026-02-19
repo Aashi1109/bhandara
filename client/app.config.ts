@@ -1,4 +1,4 @@
-import "ts-node/register"; // Add this to import TypeScript files
+import "tsx/cjs"; // Add this to import TypeScript files
 import { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
@@ -8,8 +8,8 @@ const config: ExpoConfig = {
     [
       "@rnmapbox/maps",
       {
-        RNMapboxMapsDownloadToken: ""
-      }
+        RNMapboxMapsDownloadToken: "",
+      },
     ],
     "react-native-video",
     "expo-router",
@@ -21,53 +21,55 @@ const config: ExpoConfig = {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#ffffff"
-      }
+        backgroundColor: "#ffffff",
+      },
     ],
     [
       "expo-image-picker",
       {
         photosPermission: "Allow $(PRODUCT_NAME) to access your photos.",
-        cameraPermission: "Allow $(PRODUCT_NAME) to access your camera."
-      }
+        cameraPermission: "Allow $(PRODUCT_NAME) to access your camera.",
+      },
     ],
     [
       "expo-location",
       {
         locationAlwaysAndWhenInUsePermission: "Allow $(PRODUCT_NAME) to use your location.",
-        isAndroidBackgroundLocationEnabled: true
-      }
+        isAndroidBackgroundLocationEnabled: true,
+      },
     ],
-    "react-native-compressor"
+    "react-native-compressor",
+    "@react-native-community/datetimepicker",
+    "expo-build-properties",
   ],
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff"
+      backgroundColor: "#ffffff",
     },
-    package: "com.anonymous.bhandara"
+    package: "com.anonymous.bhandara",
   },
   scheme: "com.anonymous.bhandara",
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "com.anonymous.bhandara"
+    bundleIdentifier: "com.anonymous.bhandara",
   },
   web: {
     bundler: "metro",
     output: "static",
-    favicon: "./assets/images/favicon.png"
+    favicon: "./assets/images/favicon.png",
   },
   experiments: {
-    typedRoutes: true
+    typedRoutes: true,
+    reactCompiler: true,
   },
   icon: "./assets/images/icon.png",
   extra: {
     eas: {
-      projectId: "259f5464-f305-47f9-bb02-abf41276e4f7"
-    }
-  }
+      projectId: "259f5464-f305-47f9-bb02-abf41276e4f7",
+    },
+  },
 };
 
 export default config;

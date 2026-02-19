@@ -2,7 +2,7 @@ import config from "@/config";
 import mapboxgl from "mapbox-gl";
 
 import "mapbox-gl/dist/mapbox-gl.css";
-import { RefObject, useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { View } from "tamagui";
 
 const MapViewComponent = ({

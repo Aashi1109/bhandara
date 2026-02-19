@@ -1,6 +1,5 @@
-import { XStack } from "tamagui";
+import { XStack , Dialog } from "tamagui";
 import React, { useState } from "react";
-import { Dialog } from "tamagui";
 import { FilledButton, OutlineButton } from "./ui/Buttons";
 import { SpinningLoader } from "./ui/Loaders";
 import { DialogContent, DialogTitle } from "./ui/common-styles";

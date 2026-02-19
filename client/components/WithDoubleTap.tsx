@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Pressable, GestureResponderEvent } from "react-native";
+import { type GestureResponderEvent, Pressable } from "react-native";
 
 type DoubleTapProps = {
   onDoubleTap: () => void;

@@ -3,12 +3,12 @@ import {
   Animated,
   Platform,
   PanResponder,
-  NativeSyntheticEvent,
-  NativeTouchEvent,
-  PanResponderGestureState,
-  View as RNView
+  type NativeSyntheticEvent,
+  type NativeTouchEvent,
+  type PanResponderGestureState,
+  type View as RNView
 } from "react-native";
-import { View, Image, ImageProps, ViewProps } from "tamagui";
+import { type ImageProps, type ViewProps, View, Image } from "tamagui";
 
 interface ZoomableImageProps {
   uri: string;

@@ -1,4 +1,4 @@
-import { IAddress, ITag } from "@/definitions/types";
+import type { IAddress, ITag } from "@/definitions/types";
 
 export interface IFormData {
   firstName: string;

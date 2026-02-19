@@ -1,11 +1,11 @@
-import {
+import type {
   IRequestPagination,
   ICustomRequest,
   IBaseUser,
 } from "@/definitions/types";
 import { bulkSetUserCache, getSafeUser } from "./helpers";
 import UserService from "./service";
-import { Response } from "express";
+import type { Response } from "express";
 import { isEmpty, omit } from "@/utils";
 import { NotFoundError } from "@/exceptions";
 import { Op } from "sequelize";

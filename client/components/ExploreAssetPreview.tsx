@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useDialog } from "@/hooks/useModal";
 import { AssetPreviewDialog } from "@/screens/EventDetails/AssetPreviewDialog";
-import { IMedia, IBaseUser } from "@/definitions/types";
+import type { IMedia, IBaseUser } from "@/definitions/types";
 import { EMediaType } from "@/definitions/enums";
 import { Image, View, Text, XStack, YStack } from "tamagui";
 import { Heart, MessageCircle, MapPin, Clock, Users } from "@tamagui/lucide-icons";
 import { formatDistance } from "@/helpers";
 import { haversineDistanceInM } from "@/utils/location";
-import { LocationObjectCoords } from "expo-location";
+import type { LocationObjectCoords } from "expo-location";
 import { formatDateWithTimeString } from "@/utils/date.utils";
 import OptimizedMediaLoader from "./OptimizedMediaLoader";
 

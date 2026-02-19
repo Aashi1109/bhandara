@@ -1,4 +1,4 @@
-import { IMedia } from "@/definitions/types";
+import type { IMedia } from "@/definitions/types";
 import { RedisCache } from "@/features/cache";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
 import { jnstringify } from "@/utils";

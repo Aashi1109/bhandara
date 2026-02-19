@@ -7,11 +7,11 @@ const { width: screenWidth } = Dimensions.get("window");
 const imageSize = (screenWidth - 48) / 2; // 2 columns with padding
 
 interface PublicProfileGalleryProps {
-  gallery: Array<{
+  gallery: {
     id: string;
     url: string;
     type: "image" | "video";
-  }>;
+  }[];
   onImagePress: (image: any) => void;
 }
 

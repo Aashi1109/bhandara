@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
-import { IBaseUser } from "@/definitions/types";
-import React from "react";
+import type { IBaseUser } from "@/definitions/types";
 import { useToastController } from "@tamagui/toast";
 import config from "@/config";
 import { useRouter } from "expo-router";

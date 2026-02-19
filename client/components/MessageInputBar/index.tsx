@@ -11,10 +11,10 @@ import { deleteMedia } from "@/common/api/media.action";
 import AssetPreview from "./AssetPreview";
 import { CircularProgressLoader, SpinningLoader } from "../ui/Loaders";
 import CustomTooltip from "../CustomTooltip";
-import { EMediaType } from "@/definitions/enums";
-import { IAttachedFile } from "@/common/utils/file.utils";
+import type { EMediaType } from "@/definitions/enums";
+import type { IAttachedFile } from "@/common/utils/file.utils";
 import { Badge } from "../ui/Badge";
-import { IBaseThread } from "@/definitions/types";
+import type { IBaseThread } from "@/definitions/types";
 import { isThreadLocked } from "@/utils/thread.utils";
 
 interface IProps {
