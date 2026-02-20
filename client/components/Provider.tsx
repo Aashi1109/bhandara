@@ -6,7 +6,12 @@ export default function Provider({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaProvider>
       <PortalProvider shouldAddRootHost>
-        <TamaguiProvider config={config}>{children}</TamaguiProvider>
+        <TamaguiProvider
+          defaultTheme="dark"
+          config={config}
+        >
+          {children}
+        </TamaguiProvider>
       </PortalProvider>
     </SafeAreaProvider>
   );

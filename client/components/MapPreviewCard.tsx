@@ -87,7 +87,7 @@ const MapPreviewCard = (location: IAddress) => {
         width={"100%"}
       >
         <Image
-          source={{ uri: staticMapURL }}
+          src={staticMapURL}
           width={130}
           height={130}
           rounded={"$4"}

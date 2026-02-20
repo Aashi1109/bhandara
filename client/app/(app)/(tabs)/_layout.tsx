@@ -1,5 +1,4 @@
 import TabsHeader from "@/components/TabsHeader";
-import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { House, Plus, UserRound } from "@tamagui/lucide-icons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
@@ -31,7 +30,7 @@ export default function TabLayout() {
           width: 320,
           marginHorizontal: "auto",
           marginBottom,
-          position: "absolute"
+          position: "absolute",
         },
         tabBarBackground: () => {
           return (
@@ -42,63 +41,42 @@ export default function TabLayout() {
                 borderTopLeftRadius: 20,
                 borderTopRightRadius: 20,
                 overflow: "hidden",
-                position: "absolute"
+                position: "absolute",
               }}
             />
           );
-        }
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <House
-              size={16}
-              color={color as any}
-            />
-          )
+          tabBarIcon: ({ color }) => <House size={16} color={color as any} />,
         }}
       />
       <Tabs.Screen
         name="_new-event"
         options={{
           tabBarLabelStyle: {
-            display: "none"
+            display: "none",
           },
           tabBarIconStyle: {
-            height: "100%"
+            height: "100%",
           },
           href: "/(app)/new-event",
           tabBarIcon: ({}) => (
-            <View
-              width={40}
-              height={40}
-              bg={"$color12"}
-              display="flex"
-              justify="center"
-              items="center"
-              rounded={"$4"}
-            >
-              <Plus
-                size={20}
-                color={theme.color1.val as any}
-              />
+            <View width={40} height={40} bg={"$color12"} display="flex" justify="center" items="center" rounded={"$4"}>
+              <Plus size={20} color={theme.color1.val as any} />
             </View>
-          )
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <UserRound
-              size={16}
-              color={color as any}
-            />
-          )
+          tabBarIcon: ({ color }) => <UserRound size={16} color={color as any} />,
         }}
       />
     </Tabs>

@@ -17,7 +17,7 @@ function Auth({ isLogin }: { isLogin?: boolean }) {
       m="auto"
       p="$4"
       gap="$5"
-      animation="bouncy"
+      transition="bouncy"
       enterStyle={{ height: 0 }}
       animateOnly={["height"]}
       background={"#111111"}
@@ -27,82 +27,39 @@ function Auth({ isLogin }: { isLogin?: boolean }) {
     >
       {/* Header */}
       <YStack gap="$2">
-        <H2
-          text="center"
-          animation="quick"
-          enterStyle={{ opacity: 0, scale: 0.9 }}
-          exitStyle={{ opacity: 0, scale: 0.9 }}
-        >
+        <H2 text="center" transition="quick" enterStyle={{ opacity: 0, scale: 0.9 }} exitStyle={{ opacity: 0, scale: 0.9 }}>
           {isSignUp ? "Create your account" : "Sign in"}
         </H2>
-        <Paragraph
-          text="center"
-          color="$color10"
-          animation="quick"
-          enterStyle={{ opacity: 0, y: -10 }}
-          exitStyle={{ opacity: 0, y: 10 }}
-        >
-          {isSignUp
-            ? "Welcome! Please fill in the details to get started."
-            : "Welcome back! Please sign in to continue"}
+        <Paragraph text="center" color="$color10" transition="quick" enterStyle={{ opacity: 0, y: -10 }} exitStyle={{ opacity: 0, y: 10 }}>
+          {isSignUp ? "Welcome! Please fill in the details to get started." : "Welcome back! Please sign in to continue"}
         </Paragraph>
       </YStack>
 
       {/* Social Login */}
       <XStack gap="$2">
-        <Button
-          flex={1}
-          icon={<Github size="$1" />}
-          borderWidth={1}
-        >
+        <Button flex={1} icon={<Github size="$1" />} borderWidth={1}>
           GitHub
         </Button>
-        <Button
-          flex={1}
-          icon={<GoogleIcon />}
-          borderWidth={1}
-        >
+        <Button flex={1} icon={<GoogleIcon />} borderWidth={1}>
           Google
         </Button>
       </XStack>
 
-      <XStack
-        items="center"
-        gap="$2"
-      >
+      <XStack items="center" gap="$2">
         <Separator />
-        <Paragraph
-          size="$2"
-          color="$color8"
-        >
+        <Paragraph size="$2" color="$color8">
           or
         </Paragraph>
         <Separator />
       </XStack>
 
       {/* Form Fields */}
-      <AuthForm
-        isSignUp={isSignUp}
-        cb={() => {}}
-      />
+      <AuthForm isSignUp={isSignUp} cb={() => {}} />
 
       {/* Form Toggle */}
-      <XStack
-        justify="center"
-        gap="$2"
-        animation="quick"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-      >
+      <XStack justify="center" gap="$2" transition="quick" enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }}>
         <Paragraph color="$color10">{isSignUp ? "Already have an account?" : "Don't have an account?"}</Paragraph>
-        <Paragraph
-          unstyled
-          cursor="pointer"
-          color="$blue10"
-          textDecorationLine="underline"
-          hoverStyle={{ opacity: 0.9 }}
-          onPress={() => setIsSignUp(!isSignUp)}
-        >
+        <Paragraph unstyled cursor="pointer" color="$blue10" textDecorationLine="underline" hoverStyle={{ opacity: 0.9 }} onPress={() => setIsSignUp(!isSignUp)}>
           {isSignUp ? "Sign in" : "Sign up"}
         </Paragraph>
       </XStack>

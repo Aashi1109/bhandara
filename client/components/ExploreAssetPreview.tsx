@@ -48,22 +48,25 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
   tags = [],
   onPress,
   showPreviewButton = true,
-  previewButtonText = "Preview"
+  previewButtonText = "Preview",
 }) => {
   const { open, close, RenderContent } = useDialog();
-  
+
   // Convert the media object to IMedia format for AssetPreviewDialog
-  const mediaForPreview: IMedia = useMemo(() => ({
-    id: `preview-${Date.now()}`,
-    type: media.type as EMediaType,
-    publicUrl: media.url,
-    thumbnailUrl: media.thumbnailUrl,
-    name: title,
-    createdAt,
-    updatedAt: createdAt,
-    size: 0,
-    mimeType: media.type === EMediaType.Image ? 'image/jpeg' : 'video/mp4'
-  }), [media, title, createdAt]);
+  const mediaForPreview: IMedia = useMemo(
+    () => ({
+      id: `preview-${Date.now()}`,
+      type: media.type as EMediaType,
+      publicUrl: media.url,
+      thumbnailUrl: media.thumbnailUrl,
+      name: title,
+      createdAt,
+      updatedAt: createdAt,
+      size: 0,
+      mimeType: media.type === EMediaType.Image ? "image/jpeg" : "video/mp4",
+    }),
+    [media, title, createdAt],
+  );
 
   const handlePreviewPress = useCallback(() => {
     open();
@@ -80,11 +83,8 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
   // Calculate distance if user location is available
   const distanceAway = useMemo(() => {
     if (!userLocation || !location?.latitude || !location?.longitude) return null;
-    
-    return haversineDistanceInM(
-      { latitude: userLocation.latitude, longitude: userLocation.longitude },
-      { latitude: location.latitude, longitude: location.longitude }
-    );
+
+    return haversineDistanceInM({ latitude: userLocation.latitude, longitude: userLocation.longitude }, { latitude: location.latitude, longitude: location.longitude });
   }, [userLocation, location]);
 
   const distanceLabel = distanceAway ? formatDistance(distanceAway) : null;
@@ -92,33 +92,24 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
   // Format time range
   const timeRange = useMemo(() => {
     if (!startTime || !endTime) return null;
-    
-    const start = new Date(startTime).toLocaleTimeString([], { 
-      hour: "2-digit", 
-      minute: "2-digit" 
+
+    const start = new Date(startTime).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
     });
-    const end = new Date(endTime).toLocaleTimeString([], { 
-      hour: "2-digit", 
-      minute: "2-digit" 
+    const end = new Date(endTime).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
     });
-    
+
     return `${start} - ${end}`;
   }, [startTime, endTime]);
 
   return (
     <>
-      <View
-        position="relative"
-        cursor="pointer"
-        onPress={handleCardPress}
-        group
-      >
+      <View position="relative" cursor="pointer" onPress={handleCardPress} group>
         {/* Media Container */}
-        <View
-          position="relative"
-          overflow="hidden"
-          borderRadius="$4"
-        >
+        <View position="relative" overflow="hidden" rounded="$4">
           <OptimizedMediaLoader
             uri={media.url}
             thumbnailUri={media.thumbnailUrl}
@@ -130,7 +121,7 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
             showPlayButton={media.type === EMediaType.Video}
             onPress={handlePreviewPress}
           />
-          
+
           {/* Overlay with info */}
           <YStack
             position="absolute"
@@ -141,18 +132,12 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
             background="linear-gradient(transparent, rgba(0,0,0,0.7))"
             opacity={0}
             $group-hover={{ opacity: 1 }}
-            animation="quick"
+            transition="quick"
           >
-            <Text
-              color="white"
-              fontSize="$4"
-              fontWeight="600"
-              numberOfLines={2}
-              marginBottom="$2"
-            >
+            <Text color="white" fontSize="$4" fontWeight="600" numberOfLines={2} marginBottom="$2">
               {title}
             </Text>
-            
+
             <XStack gap="$3" alignItems="center" marginBottom="$2">
               <XStack gap="$1" alignItems="center">
                 <MapPin size={14} color="white" />
@@ -160,14 +145,14 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
                   {location?.city} {location?.country}
                 </Text>
               </XStack>
-              
+
               {distanceLabel && (
                 <Text color="white" fontSize="$2">
                   {distanceLabel} away
                 </Text>
               )}
             </XStack>
-            
+
             {timeRange && (
               <XStack gap="$1" alignItems="center" marginBottom="$2">
                 <Clock size={14} color="white" />
@@ -176,31 +161,37 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
                 </Text>
               </XStack>
             )}
-            
+
             <XStack gap="$4" alignItems="center">
               {likes > 0 && (
                 <XStack gap="$1" alignItems="center">
                   <Heart size={14} color="white" />
-                  <Text color="white" fontSize="$2">{likes}</Text>
+                  <Text color="white" fontSize="$2">
+                    {likes}
+                  </Text>
                 </XStack>
               )}
-              
+
               {comments > 0 && (
                 <XStack gap="$1" alignItems="center">
                   <MessageCircle size={14} color="white" />
-                  <Text color="white" fontSize="$2">{comments}</Text>
+                  <Text color="white" fontSize="$2">
+                    {comments}
+                  </Text>
                 </XStack>
               )}
-              
+
               {going > 0 && (
                 <XStack gap="$1" alignItems="center">
                   <Users size={14} color="white" />
-                  <Text color="white" fontSize="$2">{going} going</Text>
+                  <Text color="white" fontSize="$2">
+                    {going} going
+                  </Text>
                 </XStack>
               )}
             </XStack>
           </YStack>
-          
+
           {/* Preview button overlay */}
           {showPreviewButton && (
             <View
@@ -213,7 +204,7 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
               borderRadius="$2"
               opacity={0}
               $group-hover={{ opacity: 1 }}
-              animation="quick"
+              transition="quick"
             >
               <Text color="white" fontSize="$2" fontWeight="500">
                 {previewButtonText}
@@ -221,17 +212,11 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
             </View>
           )}
         </View>
-        
+
         {/* Creator info below media */}
         <YStack padding="$3" gap="$2">
           <XStack gap="$2" alignItems="center">
-            <Image
-              source={{ uri: creator?.profilePic?.url || "" }}
-              width={32}
-              height={32}
-              borderRadius="$6"
-              objectFit="cover"
-            />
+            <Image src={creator?.profilePic?.url || ""} width={32} height={32} borderRadius="$6" objectFit="cover" />
             <YStack flex={1}>
               <Text fontSize="$3" fontWeight="500">
                 {creator?.name}
@@ -241,18 +226,12 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
               </Text>
             </YStack>
           </XStack>
-          
+
           {/* Tags */}
           {tags.length > 0 && (
             <XStack gap="$1" flexWrap="wrap">
               {tags.slice(0, 3).map((tag, index) => (
-                <View
-                  key={index}
-                  backgroundColor="$color5"
-                  paddingHorizontal="$2"
-                  paddingVertical="$1"
-                  borderRadius="$2"
-                >
+                <View key={index} backgroundColor="$color5" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$2">
                   <Text fontSize="$1" color="$color11">
                     #{tag.name}
                   </Text>
@@ -270,11 +249,7 @@ const ExploreAssetPreview: React.FC<ExploreAssetPreviewProps> = ({
 
       {/* Full-size preview modal */}
       <RenderContent>
-        <AssetPreviewDialog
-          medias={[mediaForPreview]}
-          currentSelectedMediaId={mediaForPreview.id}
-          close={close}
-        />
+        <AssetPreviewDialog medias={[mediaForPreview]} currentSelectedMediaId={mediaForPreview.id} close={close} />
       </RenderContent>
     </>
   );

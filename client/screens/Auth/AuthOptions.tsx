@@ -7,28 +7,20 @@ import config from "@/config";
 import { useRouter } from "expo-router";
 import { Platform } from "react-native";
 import { signInWithIdToken } from "@/common/api/auth.action";
-import { H3, Text } from "tamagui";
+import { Button, H3, Text } from "tamagui";
 import { FilledButton, OutlineButton } from "@/components/ui/Buttons";
 import GoogleIcon from "@/assets/svg/GoogleIcon";
 import { SpinningLoader } from "@/components/ui/Loaders";
 import { Mail } from "@tamagui/lucide-icons";
 import { EApplicableStage } from "../OnBoarding/enum";
-import { jnstringify } from "@/utils";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const AuthOptions = ({
   setExistingAuthData,
-  setApplicableStages
+  setApplicableStages,
 }: {
-  setExistingAuthData: ({
-    isUserComingFromSocialAuth,
-    user
-  }: {
-    isUserComingFromSocialAuth: boolean;
-    user?: IBaseUser;
-    hasOnboarded?: boolean;
-  }) => void;
+  setExistingAuthData: (data: { isUserComingFromSocialAuth: boolean; user?: IBaseUser; hasOnboarded?: boolean }) => void;
   setApplicableStages: (formStage: EApplicableStage) => void;
 }) => {
   const toastController = useToastController();
@@ -37,14 +29,14 @@ const AuthOptions = ({
 
   const discovery = {
     authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-    tokenEndpoint: "https://oauth2.googleapis.com/token"
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
   };
 
   const redirectUri = makeRedirectUri({});
   const clientIds = {
     web: config.google.webClientId,
     ios: config.google.iosClientId,
-    android: config.google.androidClientId
+    android: config.google.androidClientId,
   };
 
   const clientId = clientIds[Platform.OS as keyof typeof clientIds] || config.google.webClientId;
@@ -53,9 +45,9 @@ const AuthOptions = ({
     {
       clientId,
       scopes: ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-      redirectUri: redirectUri
+      redirectUri: redirectUri,
     },
-    discovery
+    discovery,
   );
 
   useEffect(() => {
@@ -93,11 +85,7 @@ const AuthOptions = ({
   return (
     <>
       <H3>Get Started</H3>
-      <Text
-        fontSize={"$2"}
-        fontWeight={"100"}
-        color={"$accent9"}
-      >
+      <Text fontSize={"$2"} fontWeight={"normal"} color={"$color9"}>
         Discover, book, and track events seamlessly with calendar integration and personalized event curation
       </Text>
 
@@ -112,10 +100,7 @@ const AuthOptions = ({
         }}
         iconAfter={isSocialAuthenticationInProgress ? <SpinningLoader /> : undefined}
       >
-        <Text
-          fontSize={"$2"}
-          color={"$accent12"}
-        >
+        <Text fontSize={"$2"} color={"$accent12"}>
           Sign up with Google
         </Text>
       </FilledButton>
@@ -132,7 +117,7 @@ const AuthOptions = ({
 
       <Text
         fontSize={"$2"}
-        fontWeight={"100"}
+        fontWeight={100}
         color={"$accent9"}
         mt={"$6"}
         mx={"auto"}

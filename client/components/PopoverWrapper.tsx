@@ -1,5 +1,5 @@
 import React, { forwardRef , useRef } from "react";
-import { type PopoverProps, Adapt, Popover } from "tamagui";
+import { type PopoverProps, Adapt, Popover, Sheet } from "tamagui";
 
 interface IProps extends PopoverProps {
   children?: React.ReactNode;
@@ -27,21 +27,21 @@ export const PopoverWrapper = forwardRef<any, IProps>(({ children, shouldAdapt, 
           when="gtMd"
           platform="touch"
         >
-          <Popover.Sheet
-            animation="quick"
+          <Sheet
+            transition="quick"
             modal
             dismissOnSnapToBottom
           >
-            <Popover.Sheet.Frame>
+            <Sheet.Frame>
               <Adapt.Contents />
-            </Popover.Sheet.Frame>
-            <Popover.Sheet.Overlay
+            </Sheet.Frame>
+            <Sheet.Overlay
               bg="$shadowColor"
-              animation="lazy"
+              transition="lazy"
               enterStyle={{ opacity: 0 }}
               exitStyle={{ opacity: 0 }}
             />
-          </Popover.Sheet>
+          </Sheet>
         </Adapt>
       )}
 

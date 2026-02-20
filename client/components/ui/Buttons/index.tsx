@@ -1,58 +1,56 @@
 import { Button, styled } from "tamagui";
 
-const ButtonBase = styled(Button, {
-  animation: "lazy",
-  animationDuration: "100ms",
+const baseButtonConfig = {
+  transition: "lazy",
+  transitionDuration: "100ms",
+  rounded: "$12",
+  pt: "$2.5",
+  pb: "$2.5",
   variants: {
     danger: {
       true: {
         bg: "$red6",
         color: "$red11",
-        hoverStyle: { bg: "$red7", borderColor: "$red7" }
-      }
+        hoverStyle: { bg: "$red7", borderColor: "$red7" },
+      },
     },
     disabled: {
       true: {
         opacity: 0.5,
-        cursor: "not-allowed"
+        cursor: "not-allowed",
       },
       false: {
         opacity: 1,
-        cursor: "pointer"
-      }
+        cursor: "pointer",
+      },
     },
     size: {
       medium: {
         fontSize: "$4",
         px: "$3",
         py: "$1.5",
-        height: "min-content"
+        height: "min-content",
       },
       small: {
         fontSize: "$3",
         px: "$2",
         py: "$0",
-        height: "min-content"
-      }
-    }
-  } as const
-});
+        height: "min-content",
+      },
+    },
+  } as const,
+} as const;
 
-export const FilledButton = styled(ButtonBase, {
-  bg: "$accent1",
-  rounded: 1000,
-  color: "$accent12",
+// Tamagui Button styled config type omits `color`/`rounded`; they work at runtime.
+export const FilledButton = styled(Button, {
+  name: "FilledButton",
   hoverStyle: { bg: "$accent2", borderColor: "$accent2" },
   height: "auto",
-  pt: "$2.5",
-  pb: "$2.5",
-  width: "100%"
-});
+  width: "100%",
+} as const);
 
-export const OutlineButton = styled(ButtonBase, {
-  rounded: 1000,
-  height: "auto",
-  pt: "$2.5",
-  pb: "$2.5",
-  borderColor: "$color8"
-});
+export const OutlineButton = styled(Button, {
+  ...baseButtonConfig,
+  name: "OutlinedButton",
+  variant: "outlined",
+} as const);

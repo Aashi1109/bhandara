@@ -205,10 +205,10 @@ const ActivityTabContent = () => {
                 >
                   <View position="relative">
                     <Image
-                      source={{ uri: getEventImage(event) }}
+                      src={getEventImage(event)}
                       width="100%"
                       height={200}
-                      resizeMode="cover"
+                      objectFit="cover"
                     />
                     <View
                       position="absolute"
@@ -329,7 +329,7 @@ const ActivityTabContent = () => {
                   >
                     <View position="relative">
                       <Image
-                        source={{ uri: getEventImage(event) }}
+                        src={getEventImage(event)}
                         width={80}
                         height={80}
                         rounded="$3"
@@ -470,7 +470,7 @@ const ActivityTabContent = () => {
                   >
                     <View position="relative">
                       <Image
-                        source={{ uri: getEventImage(event) }}
+                        src={getEventImage(event)}
                         width={80}
                         height={80}
                         rounded="$3"

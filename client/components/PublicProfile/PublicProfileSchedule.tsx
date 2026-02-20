@@ -25,10 +25,10 @@ export default function PublicProfileSchedule({ schedule }: PublicProfileSchedul
   const selectedDayData = schedule.find(day => day.id === selectedDay);
 
   return (
-    <YStack space="$4">
+    <YStack gap="$4">
       {/* Day Selector */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <XStack space="$2" px="$4">
+        <XStack gap="$2" px="$4">
           {schedule.map((day) => {
             const isSelected = day.id === selectedDay;
             const hasActivities = day.activities.length > 0;
@@ -42,10 +42,10 @@ export default function PublicProfileSchedule({ schedule }: PublicProfileSchedul
                 borderRadius="$4"
                 borderWidth={0}
                 pressStyle={{ scale: 0.95 }}
-                animation="quick"
+                transition="quick"
                 minWidth="$8"
               >
-                <YStack alignItems="center" space="$1">
+                <YStack alignItems="center" gap="$1">
                   <Text 
                     fontSize="$5" 
                     fontWeight={isSelected ? "700" : "500"}
@@ -69,7 +69,7 @@ export default function PublicProfileSchedule({ schedule }: PublicProfileSchedul
       </ScrollView>
 
       {/* Activities */}
-      <YStack space="$3" minHeight={200}>
+      <YStack gap="$3" minHeight={200}>
         {selectedDayData?.activities.length === 0 ? (
           <View flex={1} alignItems="center" justifyContent="center">
             <Text color="$color11" fontSize="$4">No activities scheduled</Text>
@@ -83,9 +83,9 @@ export default function PublicProfileSchedule({ schedule }: PublicProfileSchedul
               padding="$4"
               backgroundColor="$color2"
               pressStyle={{ scale: 0.98 }}
-              animation="quick"
+              transition="quick"
             >
-              <XStack space="$3" alignItems="center">
+              <XStack gap="$3" alignItems="center">
                 {/* Activity Icon */}
                 <View
                   width="$5"
@@ -99,20 +99,20 @@ export default function PublicProfileSchedule({ schedule }: PublicProfileSchedul
                 </View>
 
                 {/* Activity Details */}
-                <YStack flex={1} space="$1">
+                <YStack flex={1} gap="$1">
                   <Text fontSize="$4" fontWeight="600" color="$color12">
                     {activity.type}
                   </Text>
                   
-                  <XStack space="$3">
-                    <XStack space="$1" alignItems="center">
+                  <XStack gap="$3">
+                    <XStack gap="$1" alignItems="center">
                       <Clock size={14} color="$color11" />
                       <Text fontSize="$2" color="$color11">
                         {activity.time}
                       </Text>
                     </XStack>
                     
-                    <XStack space="$1" alignItems="center">
+                    <XStack gap="$1" alignItems="center">
                       <MapPin size={14} color="$color11" />
                       <Text fontSize="$2" color="$color11">
                         {activity.location}

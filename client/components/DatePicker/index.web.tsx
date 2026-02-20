@@ -161,7 +161,7 @@ export default function DateRangePicker({
     <CalendarContainer>
       <View
         position="relative"
-        animation={"quick"}
+        transition={"quick"}
         width={showSidebar ? 120 : 0}
       >
         <OutlineButton
@@ -179,7 +179,7 @@ export default function DateRangePicker({
           <YStack
             gap="$2"
             mt={"$6"}
-            animation={"quick"}
+            transition={"quick"}
             width={120}
           >
             {QUICK_RANGES.map(({ label, range }) => (

@@ -52,7 +52,7 @@ const UsernameInput = ({ control, currentValue, error, setError, isViewOnly }: I
           <View
             items="flex-end"
             justify="center"
-            animation={"quick"}
+            transition={"quick"}
             enterStyle={{ opacity: 0, scale: 0.5 }}
             exitStyle={{ opacity: 0, scale: 0.5 }}
           >

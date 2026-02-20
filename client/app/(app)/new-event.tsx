@@ -94,7 +94,7 @@ export function SwitchWithLabel(props: {
             onCheckedChange={onChange}
             checked={value}
           >
-            <Switch.Thumb animation="quicker" />
+            <Switch.Thumb transition="quicker" />
           </Switch>
         </XStack>
       )}

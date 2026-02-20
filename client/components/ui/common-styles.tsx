@@ -14,7 +14,7 @@ export const DialogContent = styled(Dialog.Content, {
   display: "flex",
   gap: "$4",
   animateOnly: ["transform", "opacity"],
-  animation: [
+  transition: [
     "quicker",
     {
       opacity: {
@@ -47,7 +47,7 @@ export const PopoverContent = styled(Popover.Content, {
   overflow: "hidden",
   p: "$4",
   gap: "$2",
-  animation: [
+  transition: [
     "quick",
     {
       opacity: {

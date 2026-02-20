@@ -82,7 +82,7 @@ const Map = () => {
         modal={true}
         open={true}
         zIndex={100_000}
-        animation={"quickest"}
+        transition={"quickest"}
         dismissOnOverlayPress={false}
         dismissOnSnapToBottom={false}
         snapPoints={snapPoints}

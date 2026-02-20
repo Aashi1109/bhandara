@@ -30,7 +30,7 @@ export default function PublicProfileHeader({ user, onBack }: PublicProfileHeade
         }}
         blurRadius={20}
       >
-        {/* <LinearGradient
+        <LinearGradient
           colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.7)"]}
           start={[0, 0]}
           end={[0, 1]}
@@ -41,7 +41,7 @@ export default function PublicProfileHeader({ user, onBack }: PublicProfileHeade
             top: 0,
             b: 0
           }}
-        /> */}
+        />
       </ImageBackground>
 
       {/* Top Navigation */}
@@ -61,7 +61,7 @@ export default function PublicProfileHeader({ user, onBack }: PublicProfileHeade
           borderWidth={0}
           onPress={onBack}
           pressStyle={{ scale: 0.9 }}
-          animation="quick"
+          transition="quick"
         >
           <ChevronLeft
             size={24}
@@ -75,7 +75,7 @@ export default function PublicProfileHeader({ user, onBack }: PublicProfileHeade
           bg="rgba(255,255,255,0.2)"
           borderWidth={0}
           pressStyle={{ scale: 0.9 }}
-          animation="quick"
+          transition="quick"
         >
           <MoreHorizontal
             size={24}
@@ -106,10 +106,10 @@ export default function PublicProfileHeader({ user, onBack }: PublicProfileHeade
             bg="rgba(255,255,255,0.1)"
           >
             <Image
-              source={{ uri: user.profilePic }}
+              src={user.profilePic}
               width="100%"
               height="100%"
-              resizeMode="cover"
+              objectFit="cover"
             />
           </Circle>
 

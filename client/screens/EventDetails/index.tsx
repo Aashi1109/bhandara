@@ -528,7 +528,7 @@ const EventDetails: React.FC = () => {
         defaultOpen={false}
         open={isSheetOpen}
         zIndex={20}
-        animation={"quick"}
+        transition={"quick"}
         dismissOnOverlayPress={false}
         dismissOnSnapToBottom={false}
         snapPoints={[80]}

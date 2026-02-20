@@ -49,18 +49,18 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
   loadingComponent,
   errorComponent,
   style,
-  containerStyle
+  containerStyle,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(autoPlay);
   const [imageLoaded, setImageLoaded] = useState(false);
   const videoRef = useRef<Video>(null);
-  
+
   // Use media optimization hook
   const { loadMedia, getMediaStatus } = useMediaOptimization({
     preloadCount: 2,
-    enableProgressiveLoading: true
+    enableProgressiveLoading: true,
   });
 
   // Reset states when URI changes
@@ -69,21 +69,23 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
     setHasError(false);
     setImageLoaded(false);
     setIsVideoPlaying(autoPlay);
-    
+
     // Preload media using optimization hook
     if (uri) {
       loadMedia({
         id: uri,
         uri,
         thumbnailUri,
-        type
-      }).then(() => {
-        setIsLoading(false);
-        onLoad?.();
-      }).catch((error) => {
-        setHasError(true);
-        onError?.(error);
-      });
+        type,
+      })
+        .then(() => {
+          setIsLoading(false);
+          onLoad?.();
+        })
+        .catch((error) => {
+          setHasError(true);
+          onError?.(error);
+        });
     }
   }, [uri, autoPlay, loadMedia, thumbnailUri, type, onLoad, onError]);
 
@@ -93,11 +95,14 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
     onLoad?.();
   }, [onLoad]);
 
-  const handleError = useCallback((error: any) => {
-    setIsLoading(false);
-    setHasError(true);
-    onError?.(error);
-  }, [onError]);
+  const handleError = useCallback(
+    (error: any) => {
+      setIsLoading(false);
+      setHasError(true);
+      onError?.(error);
+    },
+    [onError],
+  );
 
   const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
@@ -128,13 +133,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
 
   // Default loading component
   const defaultLoadingComponent = (
-    <YStack
-      flex={1}
-      justifyContent="center"
-      alignItems="center"
-      backgroundColor="$color5"
-      borderRadius={borderRadius}
-    >
+    <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$color5" borderRadius={borderRadius}>
       <SpinningLoader size="large" />
       <Text fontSize="$2" color="$color10" marginTop="$2">
         Loading...
@@ -144,13 +143,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
 
   // Default error component
   const defaultErrorComponent = (
-    <YStack
-      flex={1}
-      justifyContent="center"
-      alignItems="center"
-      backgroundColor="$color5"
-      borderRadius={borderRadius}
-    >
+    <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$color5" borderRadius={borderRadius}>
       <ImageOff size={48} color="$color8" />
       <Text fontSize="$2" color="$color10" marginTop="$2">
         Failed to load media
@@ -160,13 +153,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
 
   // Default fallback component
   const defaultFallbackComponent = (
-    <YStack
-      flex={1}
-      justifyContent="center"
-      alignItems="center"
-      backgroundColor="$color5"
-      borderRadius={borderRadius}
-    >
+    <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$color5" borderRadius={borderRadius}>
       <Text fontSize="$2" color="$color10">
         {placeholder || "No media available"}
       </Text>
@@ -175,13 +162,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
 
   if (hasError) {
     return (
-      <View
-        width={width}
-        height={height}
-        style={containerStyle}
-        onPress={onPress}
-        cursor={onPress ? "pointer" : "default"}
-      >
+      <View width={width} height={height} style={containerStyle} onPress={onPress} cursor={onPress ? "pointer" : "default"}>
         {errorComponent || defaultErrorComponent}
       </View>
     );
@@ -189,11 +170,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
 
   if (!uri) {
     return (
-      <View
-        width={width}
-        height={height}
-        style={containerStyle}
-      >
+      <View width={width} height={height} style={containerStyle}>
         {fallbackComponent || defaultFallbackComponent}
       </View>
     );
@@ -211,38 +188,26 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
       {type === EMediaType.Image ? (
         <>
           {/* Show thumbnail while main image loads */}
-          {thumbnailUri && !imageLoaded && (
-            <Image
-              source={{ uri: thumbnailUri }}
-              width={width}
-              height={height}
-              objectFit={objectFit}
-              borderRadius={borderRadius}
-              style={style}
-            />
-          )}
-          
+          {thumbnailUri && !imageLoaded && <Image src={thumbnailUri} width={width} height={height} objectFit={objectFit} borderRadius={borderRadius} style={style} />}
+
           {/* Main image */}
           <Image
-            source={{ 
+            source={{
               uri,
-              cache: 'force-cache',
-              priority: 'high'
+              cache: "force-cache",
+              priority: "high",
             }}
             width={width}
             height={height}
             objectFit={objectFit}
             borderRadius={borderRadius}
-            style={[
-              style,
-              thumbnailUri && !imageLoaded && { opacity: 0 }
-            ]}
+            style={[style, thumbnailUri && !imageLoaded && { opacity: 0 }]}
             onLoad={handleImageLoad}
             onError={handleError}
             placeholder="blur"
             placeholderBlurhash="L6PZ0Si_?.D%%-9IpJM{_j]j@j@"
           />
-          
+
           {/* Loading overlay */}
           {isLoading && (
             <View
@@ -263,33 +228,24 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
       ) : type === EMediaType.Video ? (
         <>
           {/* Video thumbnail */}
-          {thumbnailUri && (
-            <Image
-              source={{ uri: thumbnailUri }}
-              width={width}
-              height={height}
-              objectFit={objectFit}
-              borderRadius={borderRadius}
-              style={style}
-            />
-          )}
-          
+          {thumbnailUri && <Image src={thumbnailUri} width={width} height={height} objectFit={objectFit} borderRadius={borderRadius} style={style} />}
+
           {/* Video component */}
           <Video
             ref={videoRef}
-            source={{ 
+            source={{
               uri,
-              cache: 'force-cache'
+              cache: "force-cache",
             }}
             style={[
               {
                 width,
                 height,
-                borderRadius: typeof borderRadius === 'number' ? borderRadius : 0
+                borderRadius: typeof borderRadius === "number" ? borderRadius : 0,
               },
-              style
+              style,
             ]}
-            resizeMode={objectFit === 'cover' ? 'cover' : 'contain'}
+            resizeMode={objectFit === "cover" ? "cover" : "contain"}
             paused={!isVideoPlaying}
             muted={muted}
             loop={loop}
@@ -299,7 +255,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
             onPlay={() => setIsVideoPlaying(true)}
             onPause={() => setIsVideoPlaying(false)}
           />
-          
+
           {/* Loading overlay */}
           {isLoading && (
             <View
@@ -316,7 +272,7 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
               {loadingComponent || defaultLoadingComponent}
             </View>
           )}
-          
+
           {/* Play/Pause button overlay */}
           {showPlayButton && (
             <View
@@ -330,21 +286,13 @@ const OptimizedMediaLoader: React.FC<OptimizedMediaLoaderProps> = ({
               onPress={toggleVideoPlayback}
               cursor="pointer"
             >
-              {isVideoPlaying ? (
-                <Pause size={24} color="white" />
-              ) : (
-                <Play size={24} color="white" />
-              )}
+              {isVideoPlaying ? <Pause size={24} color="white" /> : <Play size={24} color="white" />}
             </View>
           )}
         </>
       ) : (
         // Fallback for unknown media types
-        <View
-          width={width}
-          height={height}
-          style={containerStyle}
-        >
+        <View width={width} height={height} style={containerStyle}>
           {fallbackComponent || defaultFallbackComponent}
         </View>
       )}

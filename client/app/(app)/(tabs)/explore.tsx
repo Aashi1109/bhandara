@@ -128,7 +128,7 @@ const EventCard = ({ event, width = 140, children }: { event: any; width?: numbe
         bg="$color10"
       >
         <Image
-          source={{ uri: event.image }}
+          src={event.image}
           style={{ width: "100%", height: "100%" }}
           objectFit="cover"
         />
@@ -220,7 +220,7 @@ const CommonHeader = ({
         <ArrowRight
           cursor="pointer"
           size={16}
-          animation={"quick"}
+          transition={"quick"}
           $group-hover={{
             transform: [{ translateX: 2 }]
           }}
@@ -793,7 +793,7 @@ const Explore = () => {
                 overflow="hidden"
                 enterStyle={{ opacity: 0, scale: 0.95, y: -10 }}
                 exitStyle={{ opacity: 0, scale: 0.95, y: -10 }}
-                animation="quick"
+                transition="quick"
               >
                 {searchSuggestions.map((suggestion, index) => (
                   <Button
@@ -869,7 +869,7 @@ const Explore = () => {
         dismissOnSnapToBottom
       >
         <Sheet.Overlay
-          animation="lazy"
+          transition="lazy"
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
         />
@@ -954,10 +954,10 @@ const Explore = () => {
                       >
                         {result.imageUrl ? (
                           <Image
-                            source={{ uri: result.imageUrl }}
+                            src={result.imageUrl}
                             width="100%"
                             height="100%"
-                            resizeMode="cover"
+                            objectFit="cover"
                           />
                         ) : (
                           <YStack

@@ -12,7 +12,7 @@ import InterestSelection from "./InterestSelection";
 import OvalCardStack from "./OvalCard";
 
 import { InputGroup } from "@/components/Form";
-import { useRouter , useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { isEmpty } from "@/utils";
 import { getNavState } from "@/lib/navigationStore";
 import { SpinningLoader } from "@/components/ui/Loaders";
@@ -26,13 +26,7 @@ import ProfileSetup from "./ProfileSetup";
 import PreGetStartedContent from "./PreGetStartedContent";
 import { EApplicableStage } from "./enum";
 
-const GetStartedContents = ({
-  setPosition,
-  position
-}: {
-  setPosition: (position: number) => void;
-  position: number;
-}) => {
+const GetStartedContents = ({ setPosition, position }: { setPosition: (position: number) => void; position: number }) => {
   const { type } = useLocalSearchParams();
   const [showAuthOptions, setShowAuthOptions] = useState(() => type !== "new");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,9 +43,9 @@ const GetStartedContents = ({
     formState: { errors },
     setError,
     setValue,
-    reset
+    reset,
   } = useForm<IFormData>({
-    mode: "all"
+    mode: "all",
   });
 
   const allValues = watch();
@@ -60,9 +54,7 @@ const GetStartedContents = ({
   const [isUserComingFromSocialAuth, setIsUserComingFromSocialAuth] = useState<boolean>(false);
   const [applicableStage, setApplicableStage] = useState<EApplicableStage>(EApplicableStage.EmailExists);
 
-  const showMiniProgressBars =
-    [EApplicableStage.NewUser, EApplicableStage.NotOnboarded].includes(applicableStage) &&
-    authStage !== EOnboardingStages.EmailVerification;
+  const showMiniProgressBars = [EApplicableStage.NewUser, EApplicableStage.NotOnboarded].includes(applicableStage) && authStage !== EOnboardingStages.EmailVerification;
 
   const stageFields = getStageLevelFields(authStage, isUserComingFromSocialAuth);
 
@@ -104,7 +96,7 @@ const GetStartedContents = ({
           const res = await signupWithEmailAndPassword({
             name: `${data.firstName} ${data.lastName}`,
             email: data.email,
-            password: data.password
+            password: data.password,
           });
           if (isEmpty(res.data.user)) {
             toastController.show("Not able to create user");
@@ -129,7 +121,7 @@ const GetStartedContents = ({
           profilePic: data.profilePic,
           interests: { added: data.interests?.map((tag) => tag.id) },
           gender: data.gender,
-          hasOnboarded: true
+          hasOnboarded: true,
         };
         await updateUser(newUser.id, updateData);
         toastController.show("Onboarding completed successfully");
@@ -137,7 +129,7 @@ const GetStartedContents = ({
       } catch (error: any) {
         toastController.show(error?.error?.message || "Error saving data");
       }
-    }
+    },
   };
 
   const stageHandler = useMemo(() => debounce(stageHandlers[authStage], 300), [authStage]);
@@ -152,25 +144,14 @@ const GetStartedContents = ({
     }
   };
 
-  const isContinueButtonDisabled =
-    !!Object.keys(errors).length ||
-    isLoading ||
-    !stageFields?.every((field: string) => !!allValues[field as keyof IFormData]);
+  const isContinueButtonDisabled = !!Object.keys(errors).length || isLoading || !stageFields?.every((field: string) => !!allValues[field as keyof IFormData]);
 
   const { stages, skippableStages } = APPLICABLE_STAGES_MAP[applicableStage];
 
   const isFirstStage = stages[0] === authStage;
   const isCurrentStageSkippable = (skippableStages as EOnboardingStages[]).includes(authStage);
 
-  const handleSetExistingDataAuth = ({
-    isUserComingFromSocialAuth,
-    user,
-    hasOnboarded
-  }: {
-    isUserComingFromSocialAuth?: boolean;
-    user?: any;
-    hasOnboarded?: boolean;
-  }) => {
+  const handleSetExistingDataAuth = ({ isUserComingFromSocialAuth, user, hasOnboarded }: { isUserComingFromSocialAuth?: boolean; user?: any; hasOnboarded?: boolean }) => {
     if (user) {
       setNewUser(user);
     }
@@ -191,7 +172,7 @@ const GetStartedContents = ({
           _location: address?.address,
           location: address as IAddress,
           email,
-          username
+          username,
         };
 
         if (gender && [EGender.Male, EGender.Female].includes(gender as EGender)) resetObj.gender = gender;
@@ -205,11 +186,7 @@ const GetStartedContents = ({
 
   if (showForm)
     return (
-      <YStack
-        gap={"$4"}
-        width={"100%"}
-        flex={1}
-      >
+      <YStack gap={"$4"} width={"100%"} flex={1}>
         {(isFirstStage ? !newUser : true) && (
           <ArrowLeft
             size={24}
@@ -229,31 +206,19 @@ const GetStartedContents = ({
         )}
         <YStack gap={"$2"}>
           <H3>{ONBOARDING_STAGES_TEXT[authStage]?.title}</H3>
-          <Text
-            fontSize={"$2"}
-            fontWeight={"100"}
-            color={"$accent9"}
-          >
+          <Text fontSize={"$2"} fontWeight={"100"} color={"$accent9"}>
             {ONBOARDING_STAGES_TEXT[authStage]?.description}
           </Text>
         </YStack>
 
         {authStage === EOnboardingStages.BasicInfo && (
-          <XStack
-            gap="$4"
-            animation={"quick"}
-            enterStyle={{ opacity: 0, y: 15 }}
-            exitStyle={{ opacity: 0, y: -15 }}
-            key="signup-fields"
-            width="100%"
-            height={"auto"}
-          >
+          <XStack gap="$4" transition={"quick"} enterStyle={{ opacity: 0, y: 15 }} exitStyle={{ opacity: 0, y: -15 }} key="signup-fields" width="100%" height={"auto"}>
             <InputGroup
               control={control}
               rules={{
                 required: "First name is required",
                 minLength: { value: 2, message: "First name must be at least 2 characters" },
-                pattern: { value: /^[A-Za-z]+$/, message: "Please enter valid characters" }
+                pattern: { value: /^[A-Za-z]+$/, message: "Please enter valid characters" },
               }}
               error={errors.firstName}
               placeHolder="First name"
@@ -266,7 +231,7 @@ const GetStartedContents = ({
               rules={{
                 required: "Last name is required",
                 minLength: { value: 2, message: "Last name must be at least 2 characters" },
-                pattern: { value: /^[A-Za-z]+$/, message: "Please enter valid characters" }
+                pattern: { value: /^[A-Za-z]+$/, message: "Please enter valid characters" },
               }}
               error={errors.lastName}
               placeHolder="Last name"
@@ -277,9 +242,7 @@ const GetStartedContents = ({
           </XStack>
         )}
 
-        {[EOnboardingStages.EmailVerification, EOnboardingStages.BasicInfo, EOnboardingStages.Login].includes(
-          authStage
-        ) && (
+        {[EOnboardingStages.EmailVerification, EOnboardingStages.BasicInfo, EOnboardingStages.Login].includes(authStage) && (
           <>
             <InputGroup
               control={control}
@@ -288,8 +251,8 @@ const GetStartedContents = ({
                 required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "Please enter a valid email address"
-                }
+                  message: "Please enter a valid email address",
+                },
               }}
               error={errors.email}
               placeHolder="Email address"
@@ -297,7 +260,7 @@ const GetStartedContents = ({
               rightLabel="Required"
               inputProps={{
                 keyboardType: "email-address",
-                disabled: authStage !== EOnboardingStages.EmailVerification
+                disabled: authStage !== EOnboardingStages.EmailVerification,
               }}
             />
           </>
@@ -311,19 +274,19 @@ const GetStartedContents = ({
               required: "Password is required",
               minLength: {
                 value: 8,
-                message: "Password must be at least 8 characters"
+                message: "Password must be at least 8 characters",
               },
               pattern: {
                 value: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/,
-                message: "Password must contain at least one letter and one number"
-              }
+                message: "Password must contain at least one letter and one number",
+              },
             }}
             error={errors.password}
             placeHolder="Password"
             label="Password"
             rightLabel="Required"
             inputProps={{
-              secureTextEntry: true
+              secureTextEntry: true,
             }}
           />
         )}
@@ -338,7 +301,7 @@ const GetStartedContents = ({
                   return "Passwords do not match";
                 }
                 return true;
-              }
+              },
             }}
             error={errors.verifyPassword}
             placeHolder="Re-enter your password"
@@ -347,15 +310,7 @@ const GetStartedContents = ({
           />
         )}
 
-        {authStage === EOnboardingStages.ProfileSetup && (
-          <ProfileSetup
-            allValues={allValues}
-            setValue={setValue}
-            control={control}
-            errors={errors}
-            setError={setError}
-          />
-        )}
+        {authStage === EOnboardingStages.ProfileSetup && <ProfileSetup allValues={allValues} setValue={setValue} control={control} errors={errors} setError={setError} />}
 
         {authStage === EOnboardingStages.InterestSelection && (
           <InterestSelection
@@ -365,12 +320,7 @@ const GetStartedContents = ({
           />
         )}
 
-        <XStack
-          mt={"auto"}
-          width={"100%"}
-          justify={"space-between"}
-          items={"center"}
-        >
+        <XStack mt={"auto"} width={"100%"} justify={"space-between"} items={"center"}>
           {showMiniProgressBars && (
             <XStack gap={"$2"}>
               {stages.map((stage, i) => {
@@ -384,7 +334,7 @@ const GetStartedContents = ({
                     width={authStage === stage ? "$3" : "$0.75"}
                     height={"$0.75"}
                     cursor={"pointer"}
-                    animation={"quick"}
+                    transition={"quick"}
                   />
                 );
               })}
@@ -392,7 +342,7 @@ const GetStartedContents = ({
           )}
           <FilledButton
             onPress={handleSubmit(handleContinueClick)}
-            animation="quick"
+            transition="quick"
             disabled={isContinueButtonDisabled}
             opacity={isContinueButtonDisabled ? 0.5 : 1}
             cursor={isContinueButtonDisabled ? "not-allowed" : "pointer"}
@@ -408,13 +358,7 @@ const GetStartedContents = ({
     );
 
   return (
-    <YStack
-      gap={"$3"}
-      width={"100%"}
-      maxW={350}
-      justify={"space-between"}
-      height={250}
-    >
+    <YStack gap={"$3"} width={"100%"} maxW={350} justify={"space-between"} height={250}>
       {showAuthOptions ? (
         <AuthOptions
           setExistingAuthData={handleSetExistingDataAuth}
@@ -432,12 +376,7 @@ const GetStartedContents = ({
 
 const SheetContents = memo(({ setPosition, position }: any) => {
   return (
-    <YStack
-      gap="$2"
-      items={"center"}
-      width={"100%"}
-      flex={1}
-    >
+    <YStack gap="$2" items={"center"} width={"100%"} flex={1}>
       <GetStartedContents {...{ setPosition, position }} />
     </YStack>
   );
@@ -453,7 +392,7 @@ const OnBoarding = () => {
         modal={false}
         open={true}
         zIndex={100_000}
-        animation={"quick"}
+        transition={"quick"}
         dismissOnOverlayPress={false}
         dismissOnSnapToBottom={false}
         snapPoints={["90%", 300]}
@@ -462,23 +401,9 @@ const OnBoarding = () => {
         snapPointsMode="mixed"
         disableDrag={true}
       >
-        <Sheet.Overlay
-          animation="quick"
-          enterStyle={{ opacity: 0 }}
-          exitStyle={{ opacity: 0 }}
-          bg={"transparent"}
-        />
+        <Sheet.Overlay transition="quick" enterStyle={{ opacity: 0 }} exitStyle={{ opacity: 0 }} bg={"transparent"} />
 
-        <Sheet.Frame
-          p="$4"
-          py={"$6"}
-          justify="flex-start"
-          items="center"
-          gap="$5"
-          bg={"$accent12"}
-          width={"100%"}
-          mx={"auto"}
-        >
+        <Sheet.Frame p="$4" py={"$6"} justify="flex-start" items="center" gap="$5" bg={"$color2"} width={"100%"} mx={"auto"}>
           <SheetContents {...{ setPosition, position }} />
         </Sheet.Frame>
       </Sheet>

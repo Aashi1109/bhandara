@@ -45,7 +45,7 @@ const CustomAvatar = ({
         <Avatar.Image
           height={_size}
           width={_size}
-          accessibilityLabel={alt}
+          aria-label={alt}
           src={src}
           $group-hover={{
             scale: 1.05

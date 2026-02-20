@@ -165,7 +165,7 @@ const Search = forwardRef(
                 z={100}
                 height={"100%"}
                 onPress={() => setSearch("")}
-                animation={"quick"}
+                transition={"quick"}
                 cursor={"pointer"}
               >
                 <X
@@ -194,7 +194,7 @@ const Search = forwardRef(
             gap={"$3"}
             p={"$3"}
             overflowY={"auto"}
-            animation={"quick"}
+            transition={"quick"}
           >
             {isLoading ? (
               <View
@@ -227,7 +227,6 @@ const Search = forwardRef(
                   <Text
                     fontSize={"$1"}
                     numberOfLines={1}
-                    ellipse
                     fontWeight={300}
                     color={"$color06"}
                   >
@@ -284,7 +283,7 @@ const Search = forwardRef(
             z={100}
             enterStyle={{ y: -10, opacity: 1 }}
             exitStyle={{ y: 10, opacity: 1 }}
-            animation={"quicker"}
+            transition={"quicker"}
           >
             <PulsatingDot
               size={10}
@@ -297,7 +296,6 @@ const Search = forwardRef(
               <Text
                 fontSize={"$3"}
                 numberOfLines={1}
-                ellipse
                 color={"$color"}
               >
                 {currentRetrievedCachedResults.current[currentMinimizedSearchId.current].properties.name}
@@ -305,7 +303,6 @@ const Search = forwardRef(
               <Text
                 fontSize={"$1"}
                 numberOfLines={1}
-                ellipse
                 fontWeight={300}
                 color={"$color06"}
               >

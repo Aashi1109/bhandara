@@ -21,9 +21,9 @@ export default function PublicProfileFriends({ friends }: PublicProfileFriendsPr
   return (
     <View px="$4" py="$4">
       <Card elevate bordered padding="$4" backgroundColor="$color2">
-        <YStack space="$3">
+        <YStack gap="$3">
           <XStack alignItems="center" justifyContent="space-between">
-            <XStack alignItems="center" space="$2">
+            <XStack alignItems="center" gap="$2">
               <Users size={20} color="$color11" />
               <H3>Collaborators</H3>
             </XStack>
@@ -33,14 +33,14 @@ export default function PublicProfileFriends({ friends }: PublicProfileFriendsPr
           </XStack>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <XStack space="$3">
+            <XStack gap="$3">
               {friends.map((friend) => (
                 <YStack
                   key={friend.id}
                   alignItems="center"
-                  space="$2"
+                  gap="$2"
                   pressStyle={{ scale: 0.95 }}
-                  animation="quick"
+                  transition="quick"
                 >
                   <Circle
                     size="$6"
@@ -49,10 +49,10 @@ export default function PublicProfileFriends({ friends }: PublicProfileFriendsPr
                     borderColor="$color5"
                   >
                     <Image
-                      source={{ uri: friend.avatar }}
+                      src={friend.avatar}
                       width="100%"
                       height="100%"
-                      resizeMode="cover"
+                      objectFit="cover"
                     />
                   </Circle>
                   <Text fontSize="$1" color="$color11" numberOfLines={1}>
@@ -64,9 +64,9 @@ export default function PublicProfileFriends({ friends }: PublicProfileFriendsPr
               {/* Add Collaborator Button */}
               <YStack
                 alignItems="center"
-                space="$2"
+                gap="$2"
                 pressStyle={{ scale: 0.95 }}
-                animation="quick"
+                transition="quick"
               >
                 <Circle
                   size="$6"

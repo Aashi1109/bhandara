@@ -41,7 +41,7 @@ const createDialogContent = (
           platform="touch"
         >
           <Sheet
-            animation="quick"
+            transition="quick"
             modal
             dismissOnSnapToBottom
           >
@@ -54,7 +54,7 @@ const createDialogContent = (
             </Sheet.Frame>
             <Sheet.Overlay
               bg="$shadow6"
-              animation="lazy"
+              transition="lazy"
               enterStyle={{ opacity: 0 }}
               exitStyle={{ opacity: 0 }}
               z={199}
@@ -68,7 +68,7 @@ const createDialogContent = (
           key="overlay"
           bg="$shadow6"
           animateOnly={["transform", "opacity"]}
-          animation={[
+          transition={[
             "quicker",
             {
               opacity: {

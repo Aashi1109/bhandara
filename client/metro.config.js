@@ -10,9 +10,7 @@ const config = getDefaultConfig(__dirname, {
 // Add mjs extension support
 config.resolver.sourceExts.push('mjs');
 
-// Enable Tamagui and add web support with optimizing compiler + CSS extraction
 module.exports = withTamagui(config, {
   components: ['tamagui'],
   config: './tamagui.config.ts',
-  outputCSS: './tamagui-web.css',
 });

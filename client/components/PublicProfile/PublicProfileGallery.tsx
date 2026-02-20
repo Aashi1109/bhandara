@@ -39,13 +39,13 @@ export default function PublicProfileGallery({ gallery, onImagePress }: PublicPr
           position="relative"
           backgroundColor="$color3"
           pressStyle={{ scale: 0.95 }}
-          animation="quick"
+          transition="quick"
         >
           <Image
-            source={{ uri: item.url }}
+            src={item.url}
             width="100%"
             height="100%"
-            resizeMode="cover"
+            objectFit="cover"
           />
           
           {/* Video overlay */}

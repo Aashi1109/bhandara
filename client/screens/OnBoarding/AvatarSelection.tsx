@@ -42,7 +42,7 @@ const AvatarSelection = ({ cb, preSelectedAvatar }: { cb: (avatar: string) => vo
             overflow="hidden"
           >
             <Image
-              source={{ uri: avatar }}
+              src={avatar}
               width={"$10"}
               height={"$10"}
             />
@@ -54,7 +54,7 @@ const AvatarSelection = ({ cb, preSelectedAvatar }: { cb: (avatar: string) => vo
                 r={"$2"}
                 enterStyle={{ opacity: 0, scale: 0.9 }}
                 exitStyle={{ opacity: 0, scale: 0.9 }}
-                animation={"quick"}
+                transition={"quick"}
               >
                 <CircleCheck size={20} />
               </View>

@@ -1,13 +1,11 @@
-import { type StackProps, Image, XStack, YStack } from "tamagui";
+import { type ViewProps, Image, XStack, YStack } from "tamagui";
 
 const OvalCard = ({ image, width, height }: { image: string; width: number; height?: number }) => {
   return (
     <Image
-      source={{
-        uri: image,
-        width: width,
-        height: height ? height : width * 1.3
-      }}
+      src={image}
+      width={width}
+      height={height ? height : width * 1.3}
       rounded={10000}
       overflow={"hidden"}
     />
@@ -88,10 +86,10 @@ type OvalCardConfig = {
 
 export type OnBoardingConfig = {
   stacks: {
-    gap?: StackProps["gap"];
+    gap?: ViewProps["gap"];
     flexDirection?: "column" | "column-reverse";
-    items?: StackProps["items"];
-    justify?: StackProps["justify"];
+    items?: ViewProps["items"];
+    justify?: ViewProps["justify"];
     cards: OvalCardConfig[];
   }[];
 };

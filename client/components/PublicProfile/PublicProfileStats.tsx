@@ -63,7 +63,7 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
 
   if (detailed) {
     return (
-      <YStack space="$3">
+      <YStack gap="$3">
         {statItems.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -74,11 +74,11 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
               padding="$4"
               backgroundColor="$color2"
               pressStyle={{ scale: 0.98 }}
-              animation="quick"
+              transition="quick"
             >
               <XStack
                 items="center"
-                space="$4"
+                gap="$4"
               >
                 <Circle
                   size="$5"
@@ -117,7 +117,7 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
     >
-      <XStack space="$3">
+      <XStack gap="$3">
         {statItems.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -126,13 +126,13 @@ export default function PublicProfileStats({ stats, detailed = false }: PublicPr
               items="center"
               gap="$2"
               pressStyle={{ scale: 0.95 }}
-              animation="quick"
+              transition="quick"
             >
               <Circle
                 size="$6"
                 bg={stat.bgColor}
                 pressStyle={{ scale: 0.9 }}
-                animation="quick"
+                transition="quick"
               >
                 <Icon
                   size={24}

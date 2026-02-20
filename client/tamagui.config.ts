@@ -1,41 +1,39 @@
 import { createTamagui } from "tamagui";
-import { defaultConfig } from "@tamagui/config/v4";
+import { defaultConfig } from "@tamagui/config/v5";
 import { createInterFont } from "@tamagui/font-inter";
 import { animations } from "./animations";
+import { themes } from "./theme";
 
 const headingFont = createInterFont({
   weight: {
-    regular: "400",
-    medium: "500",
-    bold: "700"
-  }
+    regular: 400,
+    medium: 500,
+    bold: 700,
+  },
 });
 
 const bodyFont = createInterFont({
   weight: {
-    regular: "400",
-    medium: "500",
-    bold: "700"
-  }
+    regular: 400,
+    medium: 500,
+    bold: 700,
+  },
 });
 
 const config = createTamagui({
   ...defaultConfig,
   animations,
-  defaultTheme: "dark",
-  shouldAddPrefersColorThemes: false,
-  themeClassNameOnRoot: false,
   fonts: {
     heading: headingFont,
-    body: bodyFont
+    body: bodyFont,
   },
   defaultProps: {
     Label: {
-      lineHeight: "auto"
+      lineHeight: "auto",
     },
     Paragraph: {
-      lineHeight: "auto"
-    }
+      lineHeight: "auto",
+    },
   },
   media: {
     xs: { maxWidth: 660 },
@@ -51,8 +49,13 @@ const config = createTamagui({
     short: { maxHeight: 820 },
     tall: { minHeight: 820 },
     hoverNone: { hover: "none" },
-    pointerCoarse: { pointer: "coarse" }
-  }
+    pointerCoarse: { pointer: "coarse" },
+  },
+  settings: {
+    ...defaultConfig.settings,
+    shouldAddPrefersColorThemes: false,
+  },
+  ...themes,
 });
 
 export type AppConfig = typeof config;

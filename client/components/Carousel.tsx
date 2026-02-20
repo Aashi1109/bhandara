@@ -78,7 +78,7 @@ const Carousel = ({ medias, currentSelectedMediaId, renderMedia, styles, onMedia
           flexDirection="row"
           justify={"center"}
           key={mediaIndex}
-          animation="quicker"
+          transition="quicker"
           going={going}
           width={_width}
           height={_height}
@@ -97,7 +97,7 @@ const Carousel = ({ medias, currentSelectedMediaId, renderMedia, styles, onMedia
         display="none"
         hoverStyle={{ x: -5, bg: "$accent10" }}
         $group-hover={{ display: isLeftButtonDisabled ? "none" : "flex" }}
-        animation={"medium"}
+        transition={"medium"}
         cursor={"pointer"}
         onPress={() => paginate(-1)}
         z={10}
@@ -113,7 +113,7 @@ const Carousel = ({ medias, currentSelectedMediaId, renderMedia, styles, onMedia
         display="none"
         hoverStyle={{ x: 5, bg: "$accent10" }}
         $group-hover={{ display: isRightButtonDisabled ? "none" : "flex" }}
-        animation={"medium"}
+        transition={"medium"}
         cursor={"pointer"}
         onPress={() => paginate(1)}
         z={10}

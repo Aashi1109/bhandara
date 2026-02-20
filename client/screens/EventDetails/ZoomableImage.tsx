@@ -186,7 +186,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
           }}
         >
           <Image
-            source={{ uri }}
+            src={uri}
             width={layout.width}
             height={layout.height}
             objectFit="contain"

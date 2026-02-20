@@ -156,8 +156,8 @@ function MessageCard({ thread, message, handleClick, isFirst = false }: ThreadCa
           py={"$2"}
           position="relative"
           hoverStyle={{ bg: "$color3" }}
-          onHoverIn={handleHoverIn}
-          onHoverOut={handleHoverOut}
+          onPointerEnter={handleHoverIn}
+          onPointerLeave={handleHoverOut}
           flex={1}
           width={"100%"}
           onLayout={(e) => {
@@ -289,8 +289,8 @@ function MessageCard({ thread, message, handleClick, isFirst = false }: ThreadCa
                 width={"auto"}
                 exitStyle={{ y: 10, opacity: 0 }}
                 enterStyle={{ y: -10, opacity: 1 }}
-                animation={"quick"}
-                onHoverIn={(e) => e.stopPropagation()}
+                transition={"quick"}
+                onPointerEnter={(e) => e.stopPropagation()}
                 mt={"$0.5"}
               >
                 {reactions.map((e) => (
@@ -321,7 +321,7 @@ function MessageCard({ thread, message, handleClick, isFirst = false }: ThreadCa
                 width={"auto"}
                 exitStyle={{ y: 10, opacity: 0 }}
                 enterStyle={{ y: -10, opacity: 1 }}
-                animation={"quick"}
+                transition={"quick"}
               >
                 {COMMON_EMOJIS.map((e) => (
                   <Text

@@ -66,7 +66,7 @@ const AssetPreviewDialog = ({ medias, currentSelectedMediaId, close }: Props) =>
                 fontSize={"$2"}
                 color={"$color10"}
                 overflow="hidden"
-                ellipse
+                numberOfLines={1}
               >
                 {`${timeAgo} - ${currentSelectedMedia?.name}`}
               </Text>
@@ -118,7 +118,7 @@ const AssetPreviewDialog = ({ medias, currentSelectedMediaId, close }: Props) =>
           key={"image-controls"}
           enterStyle={{ y: -10, opacity: 0.5 }}
           exitStyle={{ y: 10, opacity: 0.5 }}
-          animation={"quickest"}
+          transition={"quickest"}
         >
           <XStack gap={"$2"}>
             <IconWrapperCard onPress={() => setZoomValue(0)}>

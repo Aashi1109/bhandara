@@ -18,7 +18,6 @@ import {
   H3,
   H4,
   Paragraph,
-  Stack,
   Circle
 } from "tamagui";
 import {
@@ -193,10 +192,10 @@ export default function PublicProfileScreen() {
         <AnimatePresence>
           {activeTab === "hello" && (
             <View
-              animation="quicker"
+              transition="quicker"
               p="$4"
             >
-              <YStack space="$4">
+              <YStack gap="$4">
                 <Card
                   elevate
                   bordered
@@ -248,7 +247,7 @@ export default function PublicProfileScreen() {
 
           {activeTab === "stats" && (
             <View
-              animation="quicker"
+              transition="quicker"
               p="$4"
             >
               <PublicProfileStats
@@ -259,7 +258,7 @@ export default function PublicProfileScreen() {
           )}
 
           {activeTab === "photos" && (
-            <View animation="quicker">
+            <View transition="quicker">
               <PublicProfileGallery
                 gallery={user.gallery}
                 onImagePress={(image) => {
@@ -272,7 +271,7 @@ export default function PublicProfileScreen() {
 
           {activeTab === "schedule" && (
             <View
-              animation="quicker"
+              transition="quicker"
               p="$4"
             >
               <PublicProfileSchedule schedule={user.schedule} />
@@ -299,7 +298,7 @@ export default function PublicProfileScreen() {
           rounded="$10"
           flex={1}
           pressStyle={{ scale: 0.95 }}
-          animation="quick"
+          transition="quick"
         >
           <MessageCircle
             size={20}
@@ -312,7 +311,7 @@ export default function PublicProfileScreen() {
           bg="$color5"
           rounded="$10"
           pressStyle={{ scale: 0.95 }}
-          animation="quick"
+          transition="quick"
         >
           <Heart size={20} />
         </Button>
@@ -321,7 +320,7 @@ export default function PublicProfileScreen() {
           bg="$color5"
           rounded="$10"
           pressStyle={{ scale: 0.95 }}
-          animation="quick"
+          transition="quick"
         >
           <Share2 size={20} />
         </Button>
@@ -345,10 +344,10 @@ export default function PublicProfileScreen() {
           >
             {selectedImage && (
               <Image
-                source={{ uri: selectedImage.url }}
+                src={selectedImage.url}
                 width={screenWidth}
                 height={screenWidth}
-                resizeMode="contain"
+                objectFit="contain"
               />
             )}
           </View>

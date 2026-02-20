@@ -43,7 +43,7 @@ const AuthForm = ({ isSignUp = false, cb }: { isSignUp?: boolean; cb: (data: For
         {isSignUp ? (
           <XStack
             gap="$4"
-            animation={"quick"}
+            transition={"quick"}
             enterStyle={{ opacity: 0, y: 15 }}
             exitStyle={{ opacity: 0, y: -15 }}
             key="signup-fields"
@@ -220,7 +220,7 @@ const AuthForm = ({ isSignUp = false, cb }: { isSignUp?: boolean; cb: (data: For
       {/* Submit Button */}
       <OutlineButton
         onPress={handleSubmit(onSubmit)}
-        animation="quick"
+        transition="quick"
         enterStyle={{ opacity: 0, scale: 0.9 }}
         exitStyle={{ opacity: 0, scale: 0.9 }}
       >

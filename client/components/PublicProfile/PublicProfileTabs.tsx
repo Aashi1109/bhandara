@@ -18,7 +18,7 @@ export default function PublicProfileTabs({ activeTab, onTabChange }: PublicProf
   return (
     <View px="$4" py="$2">
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <XStack space="$2">
+        <XStack gap="$2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -31,10 +31,10 @@ export default function PublicProfileTabs({ activeTab, onTabChange }: PublicProf
                 backgroundColor={isActive ? "$color12" : "$color4"}
                 borderRadius="$10"
                 pressStyle={{ scale: 0.95 }}
-                animation="quick"
+                transition="quick"
                 borderWidth={0}
               >
-                <XStack alignItems="center" space="$2">
+                <XStack alignItems="center" gap="$2">
                   <Icon 
                     size={18} 
                     color={isActive ? "$color1" : "$color11"}

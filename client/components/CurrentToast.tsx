@@ -9,7 +9,7 @@ const CurrentToast = () => {
 
   return (
     <Toast
-      animation="quick"
+      transition="quick"
       key={currentToast.id}
       duration={currentToast.duration}
       enterStyle={{ opacity: 0, transform: [{ translateY: 100 }] }}
