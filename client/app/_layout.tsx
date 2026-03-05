@@ -18,19 +18,6 @@ import Provider from "@/components/Provider";
 import SafeAreaToastViewport from "@/components/SafeAreaToastViewport";
 import CurrentToast from "@/components/CurrentToast";
 
-// React 19 does not allow style arrays on DOM nodes (CSSStyleDeclaration indexed setter).
-// Flatten style arrays when creating host elements on web so Tamagui (and similar) work.
-if (Platform.OS === "web") {
-  const originalCreateElement = React.createElement.bind(React);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (React.createElement as any) = function (type: any, props: any, ...args: any[]) {
-    if (typeof type === "string" && props?.style != null && Array.isArray(props.style)) {
-      props = { ...props, style: StyleSheet.flatten(props.style) };
-    }
-    return originalCreateElement(type, props, ...args);
-  };
-}
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
