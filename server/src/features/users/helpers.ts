@@ -1,7 +1,8 @@
-import type { ITag, IUserSession, IBaseUser } from "@/definitions/types";
-import { RedisCache } from "@/features/cache";
-import { jnparse, jnstringify } from "@/utils";
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import type { ITag, IUserSession, IBaseUser } from '@/definitions/types';
+import { RedisCache } from '@/features/cache';
+import { jnparse, jnstringify } from '@/utils';
+import { CACHE_NAMESPACE_CONFIG } from '@/constants';
+import logger from '@/logger';
 
 const userCacheNamespace = CACHE_NAMESPACE_CONFIG.Users.namespace;
 const userCacheTTL = CACHE_NAMESPACE_CONFIG.Users.ttl;
@@ -20,11 +21,7 @@ export const getUserCache = async (userId: string) => {
   return userCache.getItem<IBaseUser>(userId);
 };
 
-export const setUserCache = async (
-  userId: string,
-  user: IBaseUser,
-  ttl = userCacheTTL
-) => {
+export const setUserCache = async (userId: string, user: IBaseUser, ttl = userCacheTTL) => {
   return userCache.setItem(userId, user, ttl);
 };
 
@@ -56,11 +53,7 @@ export const getUserCacheByEmail = async (email: string) => {
   return userCache.getItem<IBaseUser>(id);
 };
 
-export const setUserCacheByEmail = async (
-  email: string,
-  user: IBaseUser,
-  ttl = userCacheTTL
-) => {
+export const setUserCacheByEmail = async (email: string, user: IBaseUser, ttl = userCacheTTL) => {
   return userCache.setItem(email, user.id, ttl);
 };
 
@@ -70,11 +63,7 @@ export const getUserCacheByUsername = async (username: string) => {
   return userCache.getItem<IBaseUser>(id);
 };
 
-export const setUserCacheByUsername = async (
-  username: string,
-  user: IBaseUser,
-  ttl = userCacheTTL
-) => {
+export const setUserCacheByUsername = async (username: string, user: IBaseUser, ttl = userCacheTTL) => {
   return userCache.setItem(username, user.id, ttl);
 };
 
@@ -96,20 +85,37 @@ export const getUserSessionCacheList = async (userId: string) => {
 
   const results = await pipeline.exec();
 
-  const sessions = results.map(
-    ([, result]: [Error, Record<string, any>], index: number) => {
-      result = jnparse(result);
-      if (!result) return null;
-      return {
+  const sessions = [];
+  const staleSessionIds = [];
+
+  results.forEach(([, rawResult]: [Error | null, unknown], index: number) => {
+    const result = jnparse(rawResult);
+    if (!result) {
+      // Mark for lazy cleanup
+      staleSessionIds.push(sessionIds[index]);
+    } else {
+      sessions.push({
         id: sessionIds[index],
         device: result.userAgent,
         createdAt: result.createdAt,
         location: result.location,
-      };
+      });
     }
-  );
+  });
 
-  return sessions.filter(Boolean);
+  // Step 3: Lazy cleanup of stale session IDs from the hash
+  if (staleSessionIds.length > 0) {
+    const cleanupPipeline = userCache.getPipeline();
+    staleSessionIds.forEach((sessionId) => {
+      cleanupPipeline.hdel(`${userCacheNamespace}:${userId}:sessions`, sessionId);
+    });
+    // Fire and forget cleanup
+    cleanupPipeline.exec().catch((err) => {
+      logger.error('Failed to clean up stale session IDs:', err);
+    });
+  }
+
+  return sessions;
 };
 
 export const setUserSessionCache = async ({
@@ -124,35 +130,21 @@ export const setUserSessionCache = async ({
   ttl?: number;
 }) => {
   const expiration = new Date(Date.now() + ttl * 1000);
-  await userCache.setHKey(
-    `${userId}:sessions`,
-    sessionId,
-    expiration.toISOString()
-  );
+  // sliding expiration for the main session hash
+  await userCache.setHKey(`${userId}:sessions`, sessionId, expiration.toISOString(), ttl);
   return sessionCache.setItem(sessionId, data, ttl);
 };
 
-export const getUserSessionCache = async (
-  sessionId: string
-): Promise<IUserSession | null> => {
+export const getUserSessionCache = async (sessionId: string): Promise<IUserSession | null> => {
   return sessionCache.getItem(sessionId);
 };
 
-export const updateUserSessionCache = async (
-  sessionId: string,
-  data: IUserSession
-) => {
+export const updateUserSessionCache = async (sessionId: string, data: IUserSession) => {
   return sessionCache.updateValue(sessionId, data);
 };
 
-export const deleteUserSessionCache = async (
-  userId: string,
-  sessionId: string
-) => {
-  return Promise.all([
-    sessionCache.deleteItem(sessionId),
-    userCache.deleteHKey(`${userId}:sessions`, sessionId),
-  ]);
+export const deleteUserSessionCache = async (userId: string, sessionId: string) => {
+  return Promise.all([sessionCache.deleteItem(sessionId), userCache.deleteHKey(`${userId}:sessions`, sessionId)]);
 };
 
 export const getSafeUser = (user: IBaseUser) => {
@@ -180,7 +172,7 @@ export const deleteUserInterestsCache = (userId: string) => {
   return userCache.deleteItem(`${userId}:interests`);
 };
 
-export const bulkSetUserCache = async (users: IBaseUser[]): Promise<"OK"> => {
+export const bulkSetUserCache = async (users: IBaseUser[]): Promise<'OK'> => {
   const pipeline = userCache.getPipeline();
   users.forEach((user) => {
     pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), {
@@ -195,7 +187,7 @@ export const bulkSetUserCache = async (users: IBaseUser[]): Promise<"OK"> => {
       });
   });
   await pipeline.exec();
-  return "OK";
+  return 'OK';
 };
 
 export const bulkGetUserCache = async (ids: string[]): Promise<IBaseUser[]> => {
@@ -206,10 +198,7 @@ export const bulkGetUserCache = async (ids: string[]): Promise<IBaseUser[]> => {
   const results = (await pipeline.exec()) as (IBaseUser | null)[];
 
   const users = results.reduce((acc, result) => {
-    const user =
-      typeof result === "string"
-        ? (jnparse(result) as IBaseUser)
-        : (result as IBaseUser | null);
+    const user = typeof result === 'string' ? (jnparse(result) as IBaseUser) : (result as IBaseUser | null);
     if (!user) return acc;
     acc.push(user);
     return acc;
