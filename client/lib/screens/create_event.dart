@@ -14,8 +14,8 @@ import 'explore.dart';
 import 'success.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
-  static const String routePath = '/create';
   const CreateEventScreen({super.key});
+  static const String routePath = '/create';
 
   @override
   ConsumerState<CreateEventScreen> createState() => _CreateEventScreenState();
@@ -465,8 +465,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                                   color: AppColors.muted,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Row(
-                                  children: const [
+                                child: const Row(
+                                  children: [
                                     Expanded(
                                       child: Text(
                                         'Select Category',
@@ -578,8 +578,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Text(
                               'Launch Event',
                               style: TextStyle(

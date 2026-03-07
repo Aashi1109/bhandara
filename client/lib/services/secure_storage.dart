@@ -1,10 +1,9 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
+  SecureStorage({this.namespace});
   final String? namespace;
   final _storage = const FlutterSecureStorage();
-
-  SecureStorage({this.namespace});
 
   AndroidOptions get _androidOptions =>
       const AndroidOptions(encryptedSharedPreferences: true);
@@ -20,7 +19,7 @@ class SecureStorage {
   }
 
   Future<String?> read(String key) async {
-    return await _storage.read(key: _buildKey(key), aOptions: _androidOptions);
+    return _storage.read(key: _buildKey(key), aOptions: _androidOptions);
   }
 
   Future<void> delete(String key) async {

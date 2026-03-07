@@ -8,8 +8,8 @@ import '../widgets/card.dart';
 import 'explore.dart';
 
 class SuccessScreen extends StatelessWidget {
-  static const String routePath = '/success';
   const SuccessScreen({super.key});
+  static const String routePath = '/success';
 
   @override
   Widget build(BuildContext context) {
@@ -140,8 +140,8 @@ class SuccessScreen extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Row(
-                                      children: const [
+                                    const Row(
+                                      children: [
                                         Icon(
                                           LucideIcons.mapPin,
                                           size: 14,
@@ -174,8 +174,8 @@ class SuccessScreen extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: const [
+                                const Row(
+                                  children: [
                                     Icon(
                                       LucideIcons.clock,
                                       size: 16,

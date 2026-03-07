@@ -12,9 +12,9 @@ import '../services/socket.dart';
 import 'chat.dart';
 
 class ThreadScreen extends StatefulWidget {
+  const ThreadScreen({super.key, required this.id});
   static const String routePath = '/thread/:id';
   final String id;
-  const ThreadScreen({super.key, required this.id});
 
   @override
   State<ThreadScreen> createState() => _ThreadScreenState();

@@ -12,9 +12,9 @@ import '../models/chat.dart';
 import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key, required this.id});
   static const String routePath = '/chat/:id';
   final String id;
-  const ChatScreen({super.key, required this.id});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -235,7 +235,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 Row(
                   children: [
-                    Text(
+                    const Text(
                       'LIVE DISCUSSION',
                       style: TextStyle(
                         fontSize: 10,
@@ -329,7 +329,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: Text(
           text.toUpperCase(),
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -444,7 +444,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Text(
                     time,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: AppColors.mutedForeground,
@@ -456,10 +456,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       onTap: () => context.push(
                         ThreadScreen.routePath.replaceAll(':id', '1'),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
+                          Text(
                             'Reply to thread',
                             style: TextStyle(
                               fontSize: 10,
@@ -467,8 +467,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: AppColors.primary,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
+                          SizedBox(width: 4),
+                          Icon(
                             LucideIcons.messageSquare,
                             size: 12,
                             color: AppColors.primary,
@@ -506,7 +506,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -518,7 +518,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: AppColors.mutedForeground,
                 ),
               ),
-              const Icon(
+              Icon(
                 LucideIcons.externalLink,
                 size: 12,
                 color: AppColors.mutedForeground,
@@ -541,7 +541,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
+              const Expanded(
                 child: Text(
                   'Is there free parking near the entrance?',
                   style: TextStyle(
@@ -620,6 +620,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildImageMessage({
     required String imageUrl,
     required String caption,
@@ -706,8 +707,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(50),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Text('❤️'),
                   SizedBox(width: 4),
                   Text('👍'),
@@ -721,7 +722,7 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 8),
             Text(
               time,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: AppColors.mutedForeground,

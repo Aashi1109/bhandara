@@ -1,7 +1,4 @@
 class ApiResponse<T> {
-  final T? data;
-  final String? error;
-
   ApiResponse({this.data, this.error});
 
   factory ApiResponse.fromJson(
@@ -13,12 +10,11 @@ class ApiResponse<T> {
       error: json['error'] as String?,
     );
   }
+  final T? data;
+  final String? error;
 }
 
 class PaginatedResponse<T> {
-  final List<T> items;
-  final Pagination pagination;
-
   PaginatedResponse({required this.items, required this.pagination});
 
   factory PaginatedResponse.fromJson(
@@ -32,14 +28,11 @@ class PaginatedResponse<T> {
       ),
     );
   }
+  final List<T> items;
+  final Pagination pagination;
 }
 
 class Pagination {
-  final int total;
-  final int page;
-  final int limit;
-  final int totalPages;
-
   Pagination({
     required this.total,
     required this.page,
@@ -55,4 +48,8 @@ class Pagination {
       totalPages: json['totalPages'] as int,
     );
   }
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
 }

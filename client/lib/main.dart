@@ -5,7 +5,7 @@ import 'theme/theme.dart';
 import 'router.dart';
 import 'services/local_storage.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorage.init();
   SystemChrome.setSystemUIOverlayStyle(

@@ -5,14 +5,6 @@ import '../theme/theme.dart';
 import '../services/file.dart';
 
 class ChatAttachment {
-  final String id;
-  final String? mediaId; // Null if still uploading
-  final String name;
-  final String? url; // Public URL if uploaded
-  final String localPath;
-  final bool isVideo;
-  final bool isUploading;
-
   ChatAttachment({
     required this.id,
     this.mediaId,
@@ -22,6 +14,13 @@ class ChatAttachment {
     this.isVideo = false,
     this.isUploading = false,
   });
+  final String id;
+  final String? mediaId; // Null if still uploading
+  final String name;
+  final String? url; // Public URL if uploaded
+  final String localPath;
+  final bool isVideo;
+  final bool isUploading;
 
   ChatAttachment copyWith({String? mediaId, String? url, bool? isUploading}) {
     return ChatAttachment(
@@ -37,16 +36,15 @@ class ChatAttachment {
 }
 
 class FloatingMessageBar extends StatefulWidget {
-  final String placeholder;
-  final Function(String message, List<String> mediaIds) onSend;
-  final bool isVisible;
-
   const FloatingMessageBar({
     super.key,
     this.placeholder = 'Add a reply...',
     required this.onSend,
     this.isVisible = true,
   });
+  final String placeholder;
+  final Function(String message, List<String> mediaIds) onSend;
+  final bool isVisible;
 
   @override
   State<FloatingMessageBar> createState() => _FloatingMessageBarState();

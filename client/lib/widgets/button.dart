@@ -6,16 +6,6 @@ enum AppButtonVariant { primary, secondary, ghost, outline }
 enum AppButtonSize { sm, md, lg, xl }
 
 class AppButton extends StatelessWidget {
-  final AppButtonVariant variant;
-  final AppButtonSize size;
-  final VoidCallback? onPressed;
-  final Widget? child;
-  final String? label;
-  final Widget? icon;
-  final bool fullWidth;
-  final MainAxisAlignment mainAxisAlignment;
-  final Widget? iconRight;
-
   const AppButton({
     super.key,
     this.variant = AppButtonVariant.primary,
@@ -28,6 +18,15 @@ class AppButton extends StatelessWidget {
     this.fullWidth = false,
     this.mainAxisAlignment = MainAxisAlignment.center,
   });
+  final AppButtonVariant variant;
+  final AppButtonSize size;
+  final VoidCallback? onPressed;
+  final Widget? child;
+  final String? label;
+  final Widget? icon;
+  final bool fullWidth;
+  final MainAxisAlignment mainAxisAlignment;
+  final Widget? iconRight;
 
   double get _height {
     switch (size) {

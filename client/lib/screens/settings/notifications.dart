@@ -7,8 +7,8 @@ import '../../widgets/button.dart';
 import '../settings.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
-  static const String routePath = '/settings/notifications';
   const NotificationsSettingsScreen({super.key});
+  static const String routePath = '/settings/notifications';
 
   @override
   State<NotificationsSettingsScreen> createState() =>
@@ -17,11 +17,11 @@ class NotificationsSettingsScreen extends StatefulWidget {
 
 class _NotificationsSettingsScreenState
     extends State<NotificationsSettingsScreen> {
-  bool _pushNotifications = true;
-  bool _emailNotifications = true;
-  bool _smsAlerts = false;
-  bool _eventReminders = true;
-  bool _marketingUpdates = false;
+  // Syncing with web initialSettings
+  bool _events = true;
+  bool _chat = true;
+  bool _replies = false;
+  bool _reminders = true;
 
   @override
   Widget build(BuildContext context) {
@@ -30,72 +30,58 @@ class _NotificationsSettingsScreenState
       body: Column(
         children: [
           AppHeader(
-            title: 'Notifications',
+            title: 'Notification Settings',
             onBack: () => context.go(SettingsScreen.routePath),
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel('SYSTEM NOTIFICATIONS'),
+                  _sectionLabel('ALERTS'),
+                  const SizedBox(height: 16),
+                  _notificationItem(
+                    LucideIcons.calendar,
+                    'New Food Events',
+                    'ALERTS FOR EVENTS NEAR YOU',
+                    _events,
+                    (val) => setState(() => _events = val),
+                  ),
                   const SizedBox(height: 12),
-                  _notificationContainer([
-                    _toggleItem(
-                      LucideIcons.bell,
-                      'Push Notifications',
-                      'Alerts on your device',
-                      _pushNotifications,
-                      (val) => setState(() => _pushNotifications = val),
-                      showBorder: true,
-                    ),
-                    _toggleItem(
-                      LucideIcons.mail,
-                      'Email Notifications',
-                      'Daily digests and updates',
-                      _emailNotifications,
-                      (val) => setState(() => _emailNotifications = val),
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
-                  _sectionLabel('EVENT UPDATES'),
+                  _notificationItem(
+                    LucideIcons.messageCircle,
+                    'Chat Messages',
+                    'WHEN SOMEONE MESSAGES YOU',
+                    _chat,
+                    (val) => setState(() => _chat = val),
+                  ),
                   const SizedBox(height: 12),
-                  _notificationContainer([
-                    _toggleItem(
-                      LucideIcons.calendar,
-                      'Event Reminders',
-                      'Alerts for upcoming events',
-                      _eventReminders,
-                      (val) => setState(() => _eventReminders = val),
-                      showBorder: true,
-                    ),
-                    _toggleItem(
-                      LucideIcons.messageSquare,
-                      'SMS Alerts',
-                      'Critical updates via text',
-                      _smsAlerts,
-                      (val) => setState(() => _smsAlerts = val),
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
-                  _sectionLabel('PROMOTIONAL'),
+                  _notificationItem(
+                    LucideIcons.messageSquare,
+                    'Thread Replies',
+                    'UPDATES ON YOUR COMMENTS',
+                    _replies,
+                    (val) => setState(() => _replies = val),
+                  ),
                   const SizedBox(height: 12),
-                  _notificationContainer([
-                    _toggleItem(
-                      LucideIcons.star,
-                      'Marketing Updates',
-                      'New features and offers',
-                      _marketingUpdates,
-                      (val) => setState(() => _marketingUpdates = val),
-                    ),
-                  ]),
+                  _notificationItem(
+                    LucideIcons.bellRing,
+                    'Event Reminders',
+                    'BEFORE AN EVENT STARTS',
+                    _reminders,
+                    (val) => setState(() => _reminders = val),
+                  ),
                 ],
               ),
             ),
           ),
-          Padding(
+          Container(
             padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.8),
+              border: const Border(top: BorderSide(color: AppColors.border)),
+            ),
             child: AppButton(
               size: AppButtonSize.xl,
               fullWidth: true,
@@ -123,51 +109,39 @@ class _NotificationsSettingsScreenState
     );
   }
 
-  Widget _notificationContainer(List<Widget> children) {
+  Widget _notificationItem(
+    IconData icon,
+    String title,
+    String description,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32), // rounded-3xl
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
-      ),
-      child: Column(children: children),
-    );
-  }
-
-  Widget _toggleItem(
-    IconData icon,
-    String title,
-    String subtitle,
-    bool value,
-    ValueChanged<bool> onChanged, {
-    bool showBorder = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: showBorder
-            ? const Border(bottom: BorderSide(color: AppColors.border))
-            : null,
       ),
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 40,
+            height: 40,
             decoration: const BoxDecoration(
               color: AppColors.muted,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 16, color: AppColors.mutedForeground),
+            child: Icon(icon, size: 20, color: AppColors.primary),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,11 +154,13 @@ class _NotificationsSettingsScreenState
                     color: AppColors.primary,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  subtitle,
+                  description,
                   style: const TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
                     color: AppColors.mutedForeground,
                   ),
                 ),

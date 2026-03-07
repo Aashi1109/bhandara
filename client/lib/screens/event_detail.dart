@@ -13,9 +13,9 @@ import 'explore.dart';
 import 'chat.dart';
 
 class EventDetailScreen extends StatefulWidget {
+  const EventDetailScreen({super.key, required this.id});
   static const String routePath = '/event/:id';
   final String id;
-  const EventDetailScreen({super.key, required this.id});
 
   @override
   State<EventDetailScreen> createState() => _EventDetailScreenState();
@@ -208,8 +208,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Row(
-                                    children: const [
+                                  const Row(
+                                    children: [
                                       Icon(
                                         LucideIcons.badgeCheck,
                                         size: 14,
@@ -304,10 +304,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            Expanded(
+                            const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
                                     'HOSTED BY',
                                     style: TextStyle(
@@ -373,9 +373,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                   borderRadius: BorderRadius.circular(50),
                                   border: Border.all(color: AppColors.border),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
+                                  children: [
                                     Icon(
                                       LucideIcons.messageCircle,
                                       size: 16,
@@ -409,10 +409,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         const SizedBox(height: 40),
 
                         // Location
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Location',
                               style: TextStyle(
                                 fontSize: 18,
@@ -512,9 +512,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                         const SizedBox(height: 40),
 
                         // Who's going
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text(
                               "Who's Going",
                               style: TextStyle(
@@ -616,20 +616,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: AppButton(
+                    child: const AppButton(
                       variant: AppButtonVariant.outline,
                       size: AppButtonSize.lg,
-                      icon: const Icon(LucideIcons.timer),
+                      icon: Icon(LucideIcons.timer),
                       label: 'Save',
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
+                const Expanded(
                   flex: 2,
                   child: AppButton(
                     size: AppButtonSize.lg,
-                    icon: const Icon(LucideIcons.utensils),
+                    icon: Icon(LucideIcons.utensils),
                     label: 'Participate Now',
                   ),
                 ),

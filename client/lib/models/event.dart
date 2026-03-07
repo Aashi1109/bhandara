@@ -1,16 +1,4 @@
 class Event {
-  final String id;
-  final String name;
-  final String? description;
-  final String status;
-  final String visibility;
-  final DateTime startTime;
-  final DateTime endTime;
-  final String createdBy;
-  final Location location;
-  final List<Media>? media;
-  final List<Tag>? tags;
-
   Event({
     required this.id,
     required this.name,
@@ -48,13 +36,20 @@ class Event {
           : null,
     );
   }
+  final String id;
+  final String name;
+  final String? description;
+  final String status;
+  final String visibility;
+  final DateTime startTime;
+  final DateTime endTime;
+  final String createdBy;
+  final Location location;
+  final List<Media>? media;
+  final List<Tag>? tags;
 }
 
 class Location {
-  final double latitude;
-  final double longitude;
-  final String address;
-
   Location({
     required this.latitude,
     required this.longitude,
@@ -68,13 +63,12 @@ class Location {
       address: json['address'] as String,
     );
   }
+  final double latitude;
+  final double longitude;
+  final String address;
 }
 
 class Media {
-  final String id;
-  final String url;
-  final String type;
-
   Media({required this.id, required this.url, required this.type});
 
   factory Media.fromJson(Map<String, dynamic> json) {
@@ -84,15 +78,17 @@ class Media {
       type: json['type'] as String,
     );
   }
+  final String id;
+  final String url;
+  final String type;
 }
 
 class Tag {
-  final String id;
-  final String name;
-
   Tag({required this.id, required this.name});
 
   factory Tag.fromJson(Map<String, dynamic> json) {
     return Tag(id: json['id'] as String, name: json['name'] as String);
   }
+  final String id;
+  final String name;
 }

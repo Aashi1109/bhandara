@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import '../theme/theme.dart';
 
 class ValidationRule<T> {
+  const ValidationRule({required this.value, required this.message});
   final T value;
   final String message;
-
-  const ValidationRule({required this.value, required this.message});
 }
 
 class InputValidations {
+  const InputValidations({
+    this.required,
+    this.minLength,
+    this.maxLength,
+    this.pattern,
+    this.validate,
+  });
+
   /// Can be [bool] (default message), [String] (shortcut for message),
   /// or [ValidationRule<bool>] (object for message).
   final dynamic required;
@@ -23,35 +30,9 @@ class InputValidations {
   final dynamic pattern;
 
   final String? Function(String?)? validate;
-
-  const InputValidations({
-    this.required,
-    this.minLength,
-    this.maxLength,
-    this.pattern,
-    this.validate,
-  });
 }
 
 class AppInput extends StatefulWidget {
-  final String? label;
-  final String? placeholder;
-  final String? error;
-  final Widget? icon;
-  final Widget? rightElement;
-  final TextEditingController? controller;
-  final ValueChanged<String>? onChanged;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final double height;
-  final double borderRadius;
-  final Color? backgroundColor;
-  final bool hasBorder;
-  final InputValidations? validations;
-  final ValueChanged<String?>? onValidationError;
-  final int? maxLines;
-  final int? minLines;
-
   const AppInput({
     super.key,
     this.label,
@@ -72,6 +53,23 @@ class AppInput extends StatefulWidget {
     this.maxLines = 1,
     this.minLines,
   });
+  final String? label;
+  final String? placeholder;
+  final String? error;
+  final Widget? icon;
+  final Widget? rightElement;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final double height;
+  final double borderRadius;
+  final Color? backgroundColor;
+  final bool hasBorder;
+  final InputValidations? validations;
+  final ValueChanged<String?>? onValidationError;
+  final int? maxLines;
+  final int? minLines;
 
   @override
   State<AppInput> createState() => _AppInputState();

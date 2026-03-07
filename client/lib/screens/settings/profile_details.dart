@@ -11,8 +11,8 @@ import '../../providers/user.dart';
 import '../settings.dart';
 
 class ProfileDetailsScreen extends ConsumerStatefulWidget {
-  static const String routePath = '/settings/profile';
   const ProfileDetailsScreen({super.key});
+  static const String routePath = '/settings/profile';
 
   @override
   ConsumerState<ProfileDetailsScreen> createState() =>

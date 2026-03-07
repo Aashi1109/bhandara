@@ -10,8 +10,8 @@ import 'splash.dart';
 import 'explore.dart';
 
 class PreferencesScreen extends StatefulWidget {
-  static const String routePath = '/preferences';
   const PreferencesScreen({super.key});
+  static const String routePath = '/preferences';
 
   @override
   State<PreferencesScreen> createState() => _PreferencesScreenState();
@@ -262,9 +262,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
+                                const Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
+                                  children: [
                                     Text(
                                       'CURRENT SELECTION',
                                       style: TextStyle(
@@ -343,8 +343,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 }
 
 class _Cat {
+  _Cat(this.id, this.name, this.icon);
   final String id;
   final String name;
   final IconData icon;
-  _Cat(this.id, this.name, this.icon);
 }

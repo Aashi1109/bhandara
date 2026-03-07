@@ -5,10 +5,9 @@ import '../widgets/button.dart';
 import '../services/local_storage.dart';
 
 class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key, required this.onComplete});
   static const String routePath = '/onboarding';
   final VoidCallback onComplete;
-
-  const OnboardingScreen({super.key, required this.onComplete});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -18,7 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _current = 0;
   final storage = LocalStorage(namespace: 'user');
 
-  void _finish() async {
+  Future<void> _finish() async {
     await storage.set('onboarded', true);
     widget.onComplete();
   }
@@ -169,13 +168,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _OnboardingSlide {
-  final String title;
-  final String description;
-  final IconData icon;
-
   const _OnboardingSlide({
     required this.title,
     required this.description,
     required this.icon,
   });
+  final String title;
+  final String description;
+  final IconData icon;
 }

@@ -14,8 +14,8 @@ import 'settings/notifications.dart';
 import 'splash.dart';
 
 class SettingsScreen extends StatefulWidget {
-  static const String routePath = '/settings';
   const SettingsScreen({super.key});
+  static const String routePath = '/settings';
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -101,10 +101,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const SizedBox(width: 16),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
                               'Alex Johnson',
                               style: TextStyle(

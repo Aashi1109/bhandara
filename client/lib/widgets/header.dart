@@ -3,13 +3,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
-  final bool showBack;
-  final VoidCallback? onBack;
-  final Widget? rightElement;
-  final Color? backgroundColor;
-  final bool showBorder;
-
   const AppHeader({
     super.key,
     required this.title,
@@ -19,6 +12,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.showBorder = true,
   });
+  final String title;
+  final bool showBack;
+  final VoidCallback? onBack;
+  final Widget? rightElement;
+  final Color? backgroundColor;
+  final bool showBorder;
 
   @override
   Size get preferredSize => const Size.fromHeight(64);

@@ -5,8 +5,8 @@ import '../widgets/header.dart';
 import '../widgets/bottom_nav.dart';
 
 class UpdatesScreen extends StatelessWidget {
-  static const String routePath = '/updates';
   const UpdatesScreen({super.key});
+  static const String routePath = '/updates';
 
   @override
   Widget build(BuildContext context) {

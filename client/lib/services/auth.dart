@@ -25,7 +25,7 @@ class AuthService {
       }
 
       return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json as Map<String, dynamic>)['user'] ?? json;
+        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {
@@ -45,7 +45,7 @@ class AuthService {
       }
 
       return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json as Map<String, dynamic>)['user'] ?? json;
+        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {
@@ -96,7 +96,7 @@ class AuthService {
       }
 
       return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json as Map<String, dynamic>)['user'] ?? json;
+        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {

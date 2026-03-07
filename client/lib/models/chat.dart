@@ -1,9 +1,4 @@
 class Thread {
-  final String id;
-  final String eventId;
-  final String? type;
-  final DateTime createdAt;
-
   Thread({
     required this.id,
     required this.eventId,
@@ -19,6 +14,10 @@ class Thread {
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
+  final String id;
+  final String eventId;
+  final String? type;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() {
     return {
@@ -31,15 +30,6 @@ class Thread {
 }
 
 class Message {
-  final String id;
-  final String threadId;
-  final String senderId;
-  final String content;
-  final String? type;
-  final DateTime createdAt;
-  final String? senderName;
-  final String? senderAvatar;
-
   Message({
     required this.id,
     required this.threadId,
@@ -65,6 +55,14 @@ class Message {
       senderAvatar: json['sender']?['avatarUrl'] as String?,
     );
   }
+  final String id;
+  final String threadId;
+  final String senderId;
+  final String content;
+  final String? type;
+  final DateTime createdAt;
+  final String? senderName;
+  final String? senderAvatar;
 
   Map<String, dynamic> toJson() {
     return {

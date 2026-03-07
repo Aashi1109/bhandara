@@ -10,8 +10,8 @@ import 'explore.dart';
 import 'event_detail.dart';
 
 class SearchScreen extends StatelessWidget {
-  static const String routePath = '/search';
   const SearchScreen({super.key});
+  static const String routePath = '/search';
 
   static final _events = [
     _Event(
@@ -107,10 +107,10 @@ class SearchScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(
+                        const Expanded(
                           child: AppInput(
                             placeholder: 'Search...',
-                            icon: const Icon(LucideIcons.search, size: 20),
+                            icon: Icon(LucideIcons.search, size: 20),
                             height: 48,
                             borderRadius: 50,
                           ),
@@ -381,7 +381,7 @@ class SearchScreen extends StatelessWidget {
                         margin: const EdgeInsets.symmetric(horizontal: 12),
                         width: 4,
                         height: 4,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppColors.border,
                           shape: BoxShape.circle,
                         ),
@@ -402,16 +402,16 @@ class SearchScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             if (e.status == 'urgent')
-                              Icon(
+                              const Icon(
                                 LucideIcons.timer,
                                 size: 14,
-                                color: const Color(0xFFD97706),
+                                color: Color(0xFFD97706),
                               ),
                             if (e.status == 'new')
-                              Icon(
+                              const Icon(
                                 LucideIcons.checkCircle2,
                                 size: 14,
-                                color: const Color(0xFF059669),
+                                color: Color(0xFF059669),
                               ),
                             if (e.status == 'urgent' || e.status == 'new')
                               const SizedBox(width: 4),
@@ -473,15 +473,6 @@ class SearchScreen extends StatelessWidget {
 }
 
 class _Event {
-  final int id;
-  final String title;
-  final String description;
-  final String distance;
-  final String time;
-  final String? tag;
-  final String image;
-  final String status;
-
   _Event(
     this.id,
     this.title,
@@ -492,4 +483,12 @@ class _Event {
     this.image,
     this.status,
   );
+  final int id;
+  final String title;
+  final String description;
+  final String distance;
+  final String time;
+  final String? tag;
+  final String image;
+  final String status;
 }

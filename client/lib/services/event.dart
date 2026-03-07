@@ -18,8 +18,8 @@ class EventService {
       return ApiResponse.fromJson(
         response.data,
         (json) => PaginatedResponse<Event>.fromJson(
-          json as Map<String, dynamic>,
-          (e) => Event.fromJson(e as Map<String, dynamic>),
+          json! as Map<String, dynamic>,
+          (e) => Event.fromJson(e! as Map<String, dynamic>),
         ),
       );
     } on DioException catch (e) {
@@ -36,7 +36,7 @@ class EventService {
       final response = await _dio.post(Api.events, data: data);
       return ApiResponse.fromJson(
         response.data,
-        (json) => Event.fromJson(json as Map<String, dynamic>),
+        (json) => Event.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       return ApiResponse(

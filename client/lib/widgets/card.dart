@@ -6,13 +6,6 @@ enum AppCardVariant { defaultCard, elevated, glass }
 enum AppCardPadding { none, sm, md, lg, xl }
 
 class AppCard extends StatelessWidget {
-  final Widget child;
-  final AppCardVariant variant;
-  final AppCardPadding padding;
-  final double borderRadius;
-  final BoxBorder? border;
-  final Color? backgroundColor;
-
   const AppCard({
     super.key,
     required this.child,
@@ -22,6 +15,12 @@ class AppCard extends StatelessWidget {
     this.border,
     this.backgroundColor,
   });
+  final Widget child;
+  final AppCardVariant variant;
+  final AppCardPadding padding;
+  final double borderRadius;
+  final BoxBorder? border;
+  final Color? backgroundColor;
 
   EdgeInsets get _padding {
     switch (padding) {

@@ -10,8 +10,8 @@ import '../../widgets/input.dart';
 import '../settings.dart';
 
 class LocationSettingsScreen extends StatelessWidget {
-  static const String routePath = '/settings/location';
   const LocationSettingsScreen({super.key});
+  static const String routePath = '/settings/location';
 
   @override
   Widget build(BuildContext context) {

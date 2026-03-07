@@ -146,10 +146,9 @@ class AppBottomNav extends StatelessWidget {
 }
 
 class _NavItem {
+  _NavItem(this.path, this.icon, this.label, {this.isAction = false});
   final String path;
   final IconData icon;
   final String label;
   final bool isAction;
-
-  _NavItem(this.path, this.icon, this.label, {this.isAction = false});
 }

@@ -9,8 +9,8 @@ import '../../widgets/input.dart';
 import '../settings.dart';
 
 class EmailSettingsScreen extends StatelessWidget {
-  static const String routePath = '/settings/email';
   const EmailSettingsScreen({super.key});
+  static const String routePath = '/settings/email';
 
   @override
   Widget build(BuildContext context) {

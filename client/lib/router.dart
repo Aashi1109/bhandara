@@ -21,6 +21,8 @@ import 'screens/settings/email.dart';
 import 'screens/settings/cuisines.dart';
 import 'screens/settings/notifications.dart';
 import 'screens/updates.dart';
+import 'screens/media_preview_screen.dart';
+import 'widgets/media_preview.dart';
 
 final router = GoRouter(
   initialLocation: SplashScreen.routePath,
@@ -111,6 +113,13 @@ final router = GoRouter(
     GoRoute(
       path: NotificationsSettingsScreen.routePath,
       builder: (context, state) => const NotificationsSettingsScreen(),
+    ),
+    GoRoute(
+      path: MediaPreviewScreen.routePath,
+      builder: (context, state) {
+        final items = state.extra as List<MediaItem>? ?? const [];
+        return MediaPreviewScreen(items: items);
+      },
     ),
     GoRoute(
       path: UpdatesScreen.routePath,

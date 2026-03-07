@@ -14,8 +14,8 @@ import '../constants/socket_events.dart';
 import 'event_detail.dart';
 
 class ExploreScreen extends StatefulWidget {
-  static const String routePath = '/explore';
   const ExploreScreen({super.key});
+  static const String routePath = '/explore';
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
@@ -163,10 +163,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                       child: Row(
                         children: [
-                          Expanded(
+                          const Expanded(
                             child: AppInput(
                               placeholder: 'Find food events...',
-                              icon: const Icon(LucideIcons.search, size: 20),
+                              icon: Icon(LucideIcons.search, size: 20),
                               height: 40,
                               borderRadius: 12,
                               hasBorder: false,
@@ -423,10 +423,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        AppButton(
+                        const AppButton(
                           variant: AppButtonVariant.outline,
                           size: AppButtonSize.lg,
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.share2,
                             size: 20,
                             color: AppColors.primary,
@@ -638,10 +638,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       children: [
                         _sectionLabel('DISTANCE'),
                         const SizedBox(height: 16),
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               '5 km',
                               style: TextStyle(
                                 fontSize: 14,
@@ -730,7 +730,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(
+                      const Expanded(
                         child: AppButton(
                           variant: AppButtonVariant.outline,
                           size: AppButtonSize.lg,
@@ -893,8 +893,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 }
 
 class _Filter {
+  _Filter(this.id, this.name, this.icon);
   final String id;
   final String name;
   final IconData? icon;
-  _Filter(this.id, this.name, this.icon);
 }

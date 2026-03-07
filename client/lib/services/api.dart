@@ -3,19 +3,6 @@ import 'dart:io' show Platform;
 import 'secure_storage.dart';
 
 class ApiService {
-  late final Dio _dio;
-  final _storage = SecureStorage(namespace: 'auth');
-  static const String _tokenKey = 'token';
-
-  // Use 10.0.2.2 for Android Emulator to access localhost on host machine
-  // Use localhost for iOS Simulator or web
-  static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/api';
-    }
-    return 'http://localhost:3000/api';
-  }
-
   ApiService() {
     _dio = Dio(
       BaseOptions(
@@ -46,6 +33,18 @@ class ApiService {
     _dio.interceptors.add(
       LogInterceptor(requestBody: true, responseBody: true),
     );
+  }
+  late final Dio _dio;
+  final _storage = SecureStorage(namespace: 'auth');
+  static const String _tokenKey = 'token';
+
+  // Use 10.0.2.2 for Android Emulator to access localhost on host machine
+  // Use localhost for iOS Simulator or web
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000/api';
+    }
+    return 'http://localhost:3000/api';
   }
 
   Dio get dio => _dio;

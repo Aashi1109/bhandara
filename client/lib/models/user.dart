@@ -1,12 +1,4 @@
 class User {
-  final String id;
-  final String email;
-  final String? name;
-  final String? username;
-  final String? avatarUrl;
-  final String? bio;
-  final DateTime? createdAt;
-
   User({
     required this.id,
     required this.email,
@@ -30,6 +22,13 @@ class User {
           : null,
     );
   }
+  final String id;
+  final String email;
+  final String? name;
+  final String? username;
+  final String? avatarUrl;
+  final String? bio;
+  final DateTime? createdAt;
 
   Map<String, dynamic> toJson() {
     return {

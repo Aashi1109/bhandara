@@ -11,9 +11,9 @@ import 'auth.dart';
 import 'explore.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, this.email = 'john.doe@example.com'});
   static const String routePath = '/login';
   final String email;
-  const LoginScreen({super.key, this.email = 'john.doe@example.com'});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Column(
                             children: requirements.map((req) {
-                              final met = req['met'] as bool;
+                              final met = req['met']! as bool;
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Row(
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      req['label'] as String,
+                                      req['label']! as String,
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -286,7 +286,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed:
                               (_isLoading ||
                                   _passwordController.text.isEmpty ||
-                                  !requirements.every((r) => r['met'] as bool))
+                                  !requirements.every((r) => r['met']! as bool))
                               ? null
                               : _handleLogin,
                         ),

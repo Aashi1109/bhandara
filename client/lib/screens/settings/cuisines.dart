@@ -8,22 +8,21 @@ import '../../widgets/input.dart';
 import '../settings.dart';
 
 class Cuisine {
-  final String id;
-  final String name;
-  final String description;
-  final IconData icon;
-
   Cuisine({
     required this.id,
     required this.name,
     required this.description,
     required this.icon,
   });
+  final String id;
+  final String name;
+  final String description;
+  final IconData icon;
 }
 
 class CuisineInterestsScreen extends StatefulWidget {
-  static const String routePath = '/settings/cuisines';
   const CuisineInterestsScreen({super.key});
+  static const String routePath = '/settings/cuisines';
 
   @override
   State<CuisineInterestsScreen> createState() => _CuisineInterestsScreenState();

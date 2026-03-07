@@ -12,8 +12,8 @@ import 'package:intl/intl.dart';
 import 'settings.dart';
 
 class ProfileScreen extends StatefulWidget {
-  static const String routePath = '/profile';
   const ProfileScreen({super.key});
+  static const String routePath = '/profile';
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -83,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => Navigator.pop(context),
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.muted,
                       shape: BoxShape.circle,
                     ),
@@ -315,9 +315,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 32),
 
                         // Badges
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text(
                               'Badges',
                               style: TextStyle(
@@ -351,11 +351,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 32),
 
                         // Manage events
-                        AppButton(
+                        const AppButton(
                           variant: AppButtonVariant.outline,
                           size: AppButtonSize.lg,
                           fullWidth: true,
-                          icon: const Icon(
+                          icon: Icon(
                             LucideIcons.calendar,
                             color: AppColors.primary,
                             size: 20,
@@ -365,9 +365,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 32),
 
                         // Recent activity
-                        Row(
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text(
                               'Recent Activity',
                               style: TextStyle(

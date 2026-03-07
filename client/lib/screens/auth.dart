@@ -15,8 +15,8 @@ import 'login.dart';
 import 'explore.dart';
 
 class AuthScreen extends StatefulWidget {
-  static const String routePath = '/auth';
   const AuthScreen({super.key});
+  static const String routePath = '/auth';
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -120,17 +120,15 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
 
                           // Divider
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 32),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
                             child: Row(
                               children: [
-                                const Expanded(
+                                Expanded(
                                   child: Divider(color: AppColors.border),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
                                   child: Text(
                                     'OR CONNECT WITH',
                                     style: TextStyle(
@@ -141,7 +139,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ),
                                   ),
                                 ),
-                                const Expanded(
+                                Expanded(
                                   child: Divider(color: AppColors.border),
                                 ),
                               ],
@@ -187,11 +185,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              Expanded(
+                              const Expanded(
                                 child: AppButton(
                                   variant: AppButtonVariant.outline,
                                   size: AppButtonSize.lg,
-                                  child: const Icon(
+                                  child: Icon(
                                     LucideIcons.apple,
                                     size: 20,
                                     color: AppColors.primary,
@@ -231,10 +229,10 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            Expanded(
+                            const Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
+                                children: [
                                   Text(
                                     'Near Me Mode',
                                     style: TextStyle(
@@ -292,16 +290,14 @@ class _AuthScreenState extends State<AuthScreen> {
                     Center(
                       child: RichText(
                         textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: const TextStyle(
+                        text: const TextSpan(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             color: AppColors.mutedForeground,
                           ),
                           children: [
-                            const TextSpan(
-                              text: 'By joining, you agree to our ',
-                            ),
+                            TextSpan(text: 'By joining, you agree to our '),
                             TextSpan(
                               text: 'Terms',
                               style: TextStyle(
@@ -310,7 +306,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 decoration: TextDecoration.underline,
                               ),
                             ),
-                            const TextSpan(text: ' & '),
+                            TextSpan(text: ' & '),
                             TextSpan(
                               text: 'Privacy Policy',
                               style: TextStyle(

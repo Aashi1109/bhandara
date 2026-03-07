@@ -13,7 +13,7 @@ class UserService {
       return ApiResponse.fromJson(
         response.data,
         (json) => User.fromJson(
-          (json as Map<String, dynamic>)['user'] as Map<String, dynamic>,
+          (json! as Map<String, dynamic>)['user'] as Map<String, dynamic>,
         ),
       );
     } on DioException catch (e) {
@@ -33,7 +33,7 @@ class UserService {
       final response = await _dio.patch(Api.updateUser(id), data: data);
       return ApiResponse.fromJson(
         response.data,
-        (json) => User.fromJson(json as Map<String, dynamic>),
+        (json) => User.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       return ApiResponse(

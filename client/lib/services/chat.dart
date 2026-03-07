@@ -19,8 +19,8 @@ class ChatService {
       return ApiResponse.fromJson(
         response.data,
         (json) => PaginatedResponse<Thread>.fromJson(
-          json as Map<String, dynamic>,
-          (e) => Thread.fromJson(e as Map<String, dynamic>),
+          json! as Map<String, dynamic>,
+          (e) => Thread.fromJson(e! as Map<String, dynamic>),
         ),
       );
     } on DioException catch (e) {
@@ -45,8 +45,8 @@ class ChatService {
       return ApiResponse.fromJson(
         response.data,
         (json) => PaginatedResponse<Message>.fromJson(
-          json as Map<String, dynamic>,
-          (e) => Message.fromJson(e as Map<String, dynamic>),
+          json! as Map<String, dynamic>,
+          (e) => Message.fromJson(e! as Map<String, dynamic>),
         ),
       );
     } on DioException catch (e) {
@@ -73,7 +73,7 @@ class ChatService {
       );
       return ApiResponse.fromJson(
         response.data,
-        (json) => Message.fromJson(json as Map<String, dynamic>),
+        (json) => Message.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       return ApiResponse(
