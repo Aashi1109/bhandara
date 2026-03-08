@@ -247,13 +247,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
+                              color: AppColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               _error!,
                               style: const TextStyle(
-                                color: Colors.red,
+                                color: AppColors.error,
                                 fontSize: 12,
                               ),
                             ),
@@ -302,14 +302,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                                         right: 12,
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.black54,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.54,
+                                            ),
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Icon(
                                             LucideIcons.edit,
                                             size: 16,
-                                            color: Colors.white,
+                                            color: AppColors.surface,
                                           ),
                                         ),
                                       ),
@@ -321,14 +323,15 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                                       Container(
                                         width: 48,
                                         height: 48,
-                                        decoration: const BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: AppColors.primary,
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Color(0x33000000),
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.2),
                                               blurRadius: 12,
-                                              offset: Offset(0, 4),
+                                              offset: const Offset(0, 4),
                                             ),
                                           ],
                                         ),

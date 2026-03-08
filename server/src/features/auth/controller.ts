@@ -1,16 +1,13 @@
-import config from "@/config";
-import { supabase } from "@/connections";
-import { EAuthProvider } from "@/definitions/enums";
-import type { ICustomRequest } from "@/definitions/types";
-import { BadRequestError, NotFoundError } from "@/exceptions";
-import { AuthService } from "@/features";
-import {
-  deleteUserSessionCache,
-  getUserSessionCacheList,
-} from "@/features/users/helpers";
-import UserService from "@/features/users/service";
-import { isEmpty, merge } from "@/utils";
-import type { Request, Response } from "express";
+import config from '@/config';
+import { supabase } from '@/connections';
+import { EAuthProvider } from '@/definitions/enums';
+import type { ICustomRequest } from '@/definitions/types';
+import { BadRequestError, NotFoundError } from '@/exceptions';
+import { AuthService } from '@/features';
+import { deleteUserSessionCache, getUserSessionCacheList } from '@/features/users/helpers';
+import UserService from '@/features/users/service';
+import { isEmpty, merge } from '@/utils';
+import type { Request, Response } from 'express';
 
 const authService = new AuthService();
 const userService = new UserService();
@@ -24,29 +21,27 @@ const login = async (req: Request, res: Response) => {
   const { email, password } = req.body || {};
 
   if (!(email && password)) {
-    throw new BadRequestError("Username and password are required");
+    throw new BadRequestError('Username and password are required');
   }
 
   const existingUser = await userService.getUserByEmail(email);
 
-  if (!existingUser)
-    throw new NotFoundError(`User not found with email: ${email}`);
+  if (!existingUser) throw new NotFoundError(`User not found with email: ${email}`);
 
-  const loginProvider = existingUser.meta?.auth?.authProvider;
-  if (!loginProvider) {
+  const provider = existingUser.meta?.auth?.provider || existingUser.meta?.provider;
+  if (!provider) {
     existingUser.meta = merge(existingUser.meta, {
       auth: {
-        authProvider: EAuthProvider.Email,
+        provider: EAuthProvider.Email,
       },
+      provider: EAuthProvider.Email,
     });
   }
 
-  const isSocialLoggedInUser = [EAuthProvider.Google].includes(loginProvider);
+  const isSocialLoggedInUser = [EAuthProvider.Google].includes(provider);
 
   if (isSocialLoggedInUser) {
-    throw new BadRequestError(
-      `User signed in with ${loginProvider}, please login with the same ${loginProvider}`
-    );
+    throw new BadRequestError(`User signed in with ${provider}, please login with the same ${provider}`);
   }
 
   // TODO: Add if required
@@ -74,12 +69,9 @@ const login = async (req: Request, res: Response) => {
 };
 
 const logOut = async (req: ICustomRequest, res: Response) => {
-  await deleteUserSessionCache(
-    req.user.id,
-    req.cookies[config.sessionCookie.keyName]
-  );
+  await deleteUserSessionCache(req.user.id, req.cookies[config.sessionCookie.keyName]);
   res.clearCookie(config.sessionCookie.keyName);
-  return res.status(200).json({ data: "Logout successful", success: true });
+  return res.status(200).json({ data: 'Logout successful', success: true });
 };
 
 const session = (req: ICustomRequest, res: Response) => {
@@ -94,7 +86,7 @@ const googleAuth = async (req: Request, res: Response) => {
   const redirectUrl = `${config.baseUrl}/api/auth/google/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider: 'google',
     options: { redirectTo: redirectUrl },
   });
 
@@ -104,9 +96,7 @@ const googleAuth = async (req: Request, res: Response) => {
 };
 
 const googleCallback = async (req: Request, res: Response) => {
-  const exchangeCodeResponse = await supabase.auth.exchangeCodeForSession(
-    req.query.code as string
-  );
+  const exchangeCodeResponse = await supabase.auth.exchangeCodeForSession(req.query.code as string);
 
   const { sessionId, user } = await authService.createPlatformUser({
     req,
@@ -133,26 +123,21 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
     web: config.google.webClientId,
   };
 
-  const clientPlatform = req.headers[
-    "x-client-platform"
-  ] as keyof typeof clientIds;
+  const clientPlatform = req.headers['x-client-platform'] as keyof typeof clientIds;
 
-  const clientId =
-    clientIds[req.headers["x-client-platform"] as keyof typeof clientIds] ||
-    config.google.webClientId;
+  const clientId = clientIds[req.headers['x-client-platform'] as keyof typeof clientIds] || config.google.webClientId;
 
   const queryParams = new URLSearchParams();
-  queryParams.set("client_id", clientId);
-  if (clientPlatform === "web")
-    queryParams.set("client_secret", config.google.clientSecret);
+  queryParams.set('client_id', clientId);
+  if (clientPlatform === 'web') queryParams.set('client_secret', config.google.clientSecret);
 
-  queryParams.set("code", req.body.code);
-  queryParams.set("grant_type", "authorization_code");
-  queryParams.set("code_verifier", req.body.codeVerifier);
-  queryParams.set("redirect_uri", req.body.redirectUri);
+  queryParams.set('code', req.body.code);
+  queryParams.set('grant_type', 'authorization_code');
+  queryParams.set('code_verifier', req.body.codeVerifier);
+  queryParams.set('redirect_uri', req.body.redirectUri);
 
-  const tokenRequest = await fetch("https://www.googleapis.com/oaut@/token", {
-    method: "POST",
+  const tokenRequest = await fetch('https://www.googleapis.com/oaut@/token', {
+    method: 'POST',
     body: queryParams,
   });
 
@@ -161,11 +146,11 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
   const { access_token, id_token } = tokenResponse;
 
   if (!access_token) {
-    throw new BadRequestError("Invalid access token");
+    throw new BadRequestError('Invalid access token');
   }
 
   const signInResponse = await supabase.auth.signInWithIdToken({
-    provider: "google",
+    provider: 'google',
     token: id_token,
   });
 
@@ -180,9 +165,7 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
     maxAge: config.sessionCookie.maxAge,
   });
 
-  return res
-    .status(200)
-    .json({ data: { session: { id: sessionId }, user }, success: true });
+  return res.status(200).json({ data: { session: { id: sessionId }, user }, success: true });
 };
 
 export const sessionsList = async (req: ICustomRequest, res: Response) => {
@@ -192,22 +175,21 @@ export const sessionsList = async (req: ICustomRequest, res: Response) => {
 
 export const deleteSession = async (req: ICustomRequest, res: Response) => {
   const { sessionId } = req.params;
-  await deleteUserSessionCache(req.user.id, sessionId);
-  return res.status(200).json({ data: "Session deleted", success: true });
+  await deleteUserSessionCache(req.user.id, sessionId as string);
+  return res.status(200).json({ data: 'Session deleted', success: true });
 };
 
 export const signUp = async (req: Request, res: Response) => {
-  const { email, password, location, name } = req.body;
+  const { email, password, location, name, gender } = req.body;
   const existingUser = await userService.getUserByEmail(email);
 
-  if (!isEmpty(existingUser))
-    throw new BadRequestError(`User already exists with email: ${email}`);
+  if (!isEmpty(existingUser)) throw new BadRequestError(`User already exists with email: ${email}`);
 
   const signUpData = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { location, name, full_name: name },
+      data: { location, name, full_name: name, gender },
     },
   });
 
@@ -229,7 +211,7 @@ export const signUp = async (req: Request, res: Response) => {
 export const signInWithGoogleIdToken = async (req: Request, res: Response) => {
   const { token, clientType } = req.body;
   const { data, error } = await supabase.auth.signInWithIdToken({
-    provider: "google",
+    provider: 'google',
     token,
   });
 

@@ -8,6 +8,7 @@ import '../widgets/floating_message_bar.dart';
 import 'explore.dart';
 import 'thread.dart';
 import '../services/socket.dart';
+import '../widgets/snackbar.dart';
 import '../models/chat.dart';
 import 'package:intl/intl.dart';
 
@@ -157,7 +158,6 @@ class _ChatScreenState extends State<ChatScreen> {
               onSend: (msg, mediaIds) async {
                 if (_isThreadLocked) return;
                 if (msg.trim().isNotEmpty || mediaIds.isNotEmpty) {
-                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     // Send message using standardized emit
                     await socketService.emit(SocketEvents.messageCreated, {
@@ -166,8 +166,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     });
                   } catch (e) {
                     if (!mounted) return;
-                    messenger.showSnackBar(
-                      SnackBar(content: Text('Failed to send message: $e')),
+                    AppSnackBar.show(
+                      context,
+                      message: 'Failed to send message: $e',
+                      type: SnackBarType.error,
                     );
                   }
                 }
@@ -206,7 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 border: Border.all(color: AppColors.border),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: AppColors.primary.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -280,7 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: AppColors.error,
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.surface, width: 2),
                     ),
@@ -637,7 +639,7 @@ class _ChatScreenState extends State<ChatScreen> {
             border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -654,11 +656,14 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               Positioned.fill(
                 child: Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black54],
+                      colors: [
+                        AppColors.transparent,
+                        AppColors.primary.withValues(alpha: 0.54),
+                      ],
                     ),
                   ),
                 ),
@@ -671,7 +676,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.surface,
                   ),
                 ),
               ),
@@ -682,9 +687,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Colors.black26,
+                    color: AppColors.primary.withValues(alpha: 0.26),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
+                    border: Border.all(
+                      color: AppColors.surface.withValues(alpha: 0.24),
+                    ),
                   ),
                   child: const Icon(
                     LucideIcons.plus,

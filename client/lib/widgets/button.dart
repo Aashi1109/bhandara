@@ -16,6 +16,7 @@ class AppButton extends StatelessWidget {
     this.icon,
     this.iconRight,
     this.fullWidth = false,
+    this.isLoading = false,
     this.mainAxisAlignment = MainAxisAlignment.center,
   });
   final AppButtonVariant variant;
@@ -25,6 +26,7 @@ class AppButton extends StatelessWidget {
   final String? label;
   final Widget? icon;
   final bool fullWidth;
+  final bool isLoading;
   final MainAxisAlignment mainAxisAlignment;
   final Widget? iconRight;
 
@@ -131,43 +133,51 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content =
-        child ??
-        Row(
-          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: mainAxisAlignment,
-          children: [
-            if (icon != null) ...[
-              IconTheme(
-                data: IconThemeData(
-                  color: _foregroundColor,
-                  size: _fontSize + 4,
-                ),
-                child: icon!,
-              ),
-              const SizedBox(width: 8),
-            ],
-            if (label != null)
-              Text(
-                label!,
-                style: TextStyle(
-                  fontSize: _fontSize,
-                  fontWeight: FontWeight.w700,
-                  color: _foregroundColor,
-                ),
-              ),
-            if (iconRight != null) ...[
-              const SizedBox(width: 8),
-              IconTheme(
-                data: IconThemeData(
-                  color: _foregroundColor,
-                  size: _fontSize + 4,
-                ),
-                child: iconRight!,
-              ),
-            ],
-          ],
-        );
+    final content = isLoading
+        ? SizedBox(
+            width: _fontSize + 4,
+            height: _fontSize + 4,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(_foregroundColor),
+            ),
+          )
+        : child ??
+              Row(
+                mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisAlignment: mainAxisAlignment,
+                children: [
+                  if (icon != null) ...[
+                    IconTheme(
+                      data: IconThemeData(
+                        color: _foregroundColor,
+                        size: _fontSize + 4,
+                      ),
+                      child: icon!,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (label != null)
+                    Text(
+                      label!,
+                      style: TextStyle(
+                        fontSize: _fontSize,
+                        fontWeight: FontWeight.w700,
+                        color: _foregroundColor,
+                      ),
+                    ),
+                  if (iconRight != null) ...[
+                    const SizedBox(width: 8),
+                    IconTheme(
+                      data: IconThemeData(
+                        color: _foregroundColor,
+                        size: _fontSize + 4,
+                      ),
+                      child: iconRight!,
+                    ),
+                  ],
+                ],
+              );
 
     return GestureDetector(
       onTap: onPressed,

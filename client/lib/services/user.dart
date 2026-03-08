@@ -3,8 +3,9 @@ import '../constants/api.dart';
 import 'api.dart';
 import '../models/api_response.dart';
 import '../models/user.dart';
+import 'base.dart';
 
-class UserService {
+class UserService extends BaseService {
   final Dio _dio = apiService.dio;
 
   Future<ApiResponse<User>> getCurrentUser() async {
@@ -17,9 +18,7 @@ class UserService {
         ),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to fetch user',
-      );
+      return handleError(e, 'Failed to fetch user');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -36,9 +35,33 @@ class UserService {
         (json) => User.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to update profile',
+      return handleError(e, 'Failed to update profile');
+    } catch (e) {
+      return ApiResponse(error: 'An unexpected error occurred');
+    }
+  }
+
+  Future<ApiResponse<PaginatedResponse<User>>> getByQuery({
+    String? email,
+    String? username,
+  }) async {
+    try {
+      final response = await _dio.get(
+        Api.getUserByQuery,
+        queryParameters: {
+          ...email != null ? {'email': email} : {},
+          ...username != null ? {'username': username} : {},
+        },
       );
+      return ApiResponse.fromJson(
+        response.data,
+        (json) => PaginatedResponse<User>.fromJson(
+          json! as Map<String, dynamic>,
+          (json) => User.fromJson(json! as Map<String, dynamic>),
+        ),
+      );
+    } on DioException catch (e) {
+      return handleError(e, 'Failed to fetch user');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }

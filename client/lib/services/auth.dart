@@ -5,8 +5,9 @@ import 'secure_storage.dart';
 import '../models/api_response.dart';
 import '../models/user.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'base.dart';
 
-class AuthService {
+class AuthService extends BaseService {
   final Dio _dio = apiService.dio;
   final _storage = SecureStorage(namespace: 'auth');
   static const String _tokenKey =
@@ -29,7 +30,7 @@ class AuthService {
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {
-      return ApiResponse(error: e.response?.data['error'] ?? 'Login failed');
+      return handleError(e, 'Login failed');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -40,8 +41,9 @@ class AuthService {
       final response = await _dio.post(Api.signup, data: data);
 
       final responseData = response.data['data'];
-      if (responseData != null && responseData['token'] != null) {
-        await _storage.write(_tokenKey, responseData['token'] as String);
+      if (responseData != null && responseData['session'] != null) {
+        final sessionId = responseData['session']['id'] as String;
+        await _storage.write(_tokenKey, sessionId);
       }
 
       return ApiResponse.fromJson(response.data, (json) {
@@ -49,7 +51,7 @@ class AuthService {
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {
-      return ApiResponse(error: e.response?.data['error'] ?? 'Signup failed');
+      return handleError(e, 'Signup failed');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -100,13 +102,26 @@ class AuthService {
         return User.fromJson(userData as Map<String, dynamic>);
       });
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Google Sign-In failed',
-      );
+      return handleError(e, 'Google Sign-In failed');
     } catch (e) {
       return ApiResponse(
         error: 'An unexpected error occurred during Google Sign-In',
       );
+    }
+  }
+
+  Future<ApiResponse<User>> getSession() async {
+    try {
+      final response = await _dio.get(Api.session);
+
+      return ApiResponse.fromJson(response.data, (json) {
+        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
+        return User.fromJson(userData as Map<String, dynamic>);
+      });
+    } on DioException catch (e) {
+      return handleError(e, 'Failed to fetch session');
+    } catch (e) {
+      return ApiResponse(error: 'An unexpected error occurred');
     }
   }
 }

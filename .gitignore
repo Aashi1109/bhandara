@@ -37,6 +37,7 @@ yarn-error.*
 
 app-example
 *.env*
+!*.env.example
 tmp
 .temp
 logs

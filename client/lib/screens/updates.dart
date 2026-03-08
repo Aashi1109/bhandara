@@ -83,7 +83,7 @@ class UpdatesScreen extends StatelessWidget {
                         'You earned the "Week Streak" badge 🔥',
                         '1h ago',
                         true,
-                        const Color(0xFFD97706),
+                        AppColors.warning,
                       ),
                       const SizedBox(height: 32),
 

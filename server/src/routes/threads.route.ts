@@ -19,13 +19,8 @@
  *         content:
  *           type: object
  */
-import { Router } from "express";
-import {
-  asyncHandler,
-  paginationParser,
-  sessionParser,
-  userParser,
-} from "@/middlewares";
+import { Router } from 'express';
+import { asyncHandler, paginationParser, sessionParser, userParser, validateRequest } from '@/middlewares';
 
 import {
   getMessages,
@@ -34,7 +29,7 @@ import {
   updateMessage,
   deleteMessage,
   getChildMessages,
-} from "@/features/messages/controller";
+} from '@/features/messages/controller';
 import {
   createThread,
   deleteThread,
@@ -43,7 +38,9 @@ import {
   updateThread,
   lockThread,
   unlockThread,
-} from "@/features/threads/controller";
+} from '@/features/threads/controller';
+import { threadSchema, threadUpdateSchema } from '@/features/threads/validation';
+import { messageSchema, messageUpdateSchema } from '@/features/messages/validation';
 
 const router = Router();
 
@@ -59,10 +56,10 @@ router.use([sessionParser, userParser]);
  *     tags: [Threads]
  *     summary: Create thread
  */
-router.get("/", [paginationParser], asyncHandler(getThreads));
-router.post("/", asyncHandler(createThread));
+router.get('/', [paginationParser], asyncHandler(getThreads));
+router.post('/', asyncHandler(createThread));
 router
-  .route("/:threadId")
+  .route('/:threadId')
   /**
    * @openapi
    * /threads/{threadId}:
@@ -87,7 +84,7 @@ router
  *     tags: [Threads]
  *     summary: Lock thread (author only)
  */
-router.post("/:threadId/lock", asyncHandler(lockThread));
+router.post('/:threadId/lock', asyncHandler(lockThread));
 
 /**
  * @openapi
@@ -96,13 +93,9 @@ router.post("/:threadId/lock", asyncHandler(lockThread));
  *     tags: [Threads]
  *     summary: Unlock thread (author only)
  */
-router.post("/:threadId/unlock", asyncHandler(unlockThread));
+router.post('/:threadId/unlock', asyncHandler(unlockThread));
 
-router.get(
-  "/:threadId/messages",
-  [paginationParser],
-  asyncHandler(getMessages)
-);
+router.get('/:threadId/messages', [paginationParser], asyncHandler(getMessages));
 /**
  * @openapi
  * /threads/{threadId}/messages:
@@ -117,9 +110,9 @@ router.get(
  *     tags: [Threads]
  *     summary: Create message
  */
-router.post("/:threadId/messages", asyncHandler(createMessage));
+router.post('/:threadId/messages', asyncHandler(createMessage));
 router
-  .route("/:threadId/messages/:messageId")
+  .route('/:threadId/messages/:messageId')
   /**
    * @openapi
    * /threads/{threadId}/messages/{messageId}:
@@ -137,11 +130,7 @@ router
   .put(asyncHandler(updateMessage))
   .delete(asyncHandler(deleteMessage));
 
-router.get(
-  "/:threadId/child-messages/:parentId",
-  [paginationParser],
-  asyncHandler(getChildMessages)
-);
+router.get('/:threadId/child-messages/:parentId', [paginationParser], asyncHandler(getChildMessages));
 /**
  * @openapi
  * /threads/{threadId}/child-messages/{parentId}:

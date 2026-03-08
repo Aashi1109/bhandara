@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:foody_mobile/screens/preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/theme.dart';
 import '../services/secure_storage.dart';
 import '../services/local_storage.dart';
+import '../services/auth.dart';
+import '../providers/user.dart';
 
 import 'explore.dart';
 import 'onboarding.dart';
 import 'auth.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
   static const String routePath = '/';
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -60,13 +64,30 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (token != null) {
-      if (onboarded) {
-        context.go(ExploreScreen.routePath);
+      final response = await authService.getSession();
+
+      if (!mounted) return;
+
+      if (response.data != null) {
+        final user = response.data!;
+
+        // Sync with global store
+        ref.read(userProfileProvider.notifier).setUser(user);
+
+        if (user.meta?.hasOnboarded ?? false) {
+          context.go(ExploreScreen.routePath);
+        } else {
+          context.go(PreferencesScreen.routePath);
+        }
       } else {
-        context.go(OnboardingScreen.routePath);
+        // Invalid session
+        ref.read(userProfileProvider.notifier).setUser(null);
+        await authService.logout();
+        context.go(AuthScreen.routePath);
       }
     } else {
       // No active session
+      ref.read(userProfileProvider.notifier).setUser(null);
       if (onboarded) {
         context.go(AuthScreen.routePath);
       } else {

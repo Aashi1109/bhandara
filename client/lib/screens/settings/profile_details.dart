@@ -8,6 +8,7 @@ import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
 import '../../providers/user.dart';
+import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
 class ProfileDetailsScreen extends ConsumerStatefulWidget {
@@ -40,17 +41,18 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           .updateProfile(name: _nameController.text, bio: _bioController.text);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: AppColors.primary,
-          ),
+        AppSnackBar.show(
+          context,
+          message: 'Profile updated successfully',
+          type: SnackBarType.success,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        AppSnackBar.show(
+          context,
+          message: e.toString(),
+          type: SnackBarType.error,
         );
       }
     }
@@ -61,11 +63,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
       await ref.read(userProfileProvider.notifier).updateAvatar();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update photo: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppSnackBar.show(
+          context,
+          message: 'Failed to update photo: $e',
+          type: SnackBarType.error,
         );
       }
     }

@@ -1,17 +1,13 @@
-import { supabase } from "@/connections";
-import { RequestContext } from "@/contexts";
-import { EAuthProvider } from "@/definitions/enums";
-import type { IBaseUser } from "@/definitions/types";
-import {
-  getSafeUser,
-  setUserCache,
-  setUserSessionCache,
-} from "@/features/users/helpers";
-import UserService from "@/features/users/service";
-import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from "@/helpers";
-import type { AuthResponse } from "@supabase/supabase-js";
-import type { Request } from "express";
-import { UAParser } from "ua-parser-js";
+import { supabase } from '@/connections';
+import { RequestContext } from '@/contexts';
+import { EAuthProvider } from '@/definitions/enums';
+import type { IBaseUser } from '@/definitions/types';
+import { getSafeUser, setUserCache, setUserSessionCache } from '@/features/users/helpers';
+import UserService from '@/features/users/service';
+import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from '@/helpers';
+import type { AuthResponse } from '@supabase/supabase-js';
+import type { Request } from 'express';
+import { UAParser } from 'ua-parser-js';
 
 class Auth {
   private userService: UserService;
@@ -19,7 +15,7 @@ class Auth {
     this.userService = new UserService();
   }
 
-  performOAuth = async (provider: "github" | "google", redirectTo: string) => {
+  performOAuth = async (provider: 'github' | 'google', redirectTo: string) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -41,11 +37,7 @@ class Auth {
     if (error) throw error;
   };
 
-  signUpNewUser = async (
-    email: string,
-    password: string,
-    redirectTo: string
-  ) => {
+  signUpNewUser = async (email: string, password: string, redirectTo: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -78,8 +70,8 @@ class Auth {
     if (error) throw error;
   };
 
-  signOut = async (scope: "global" | "local" | "others") => {
-    if (scope === "global") {
+  signOut = async (scope: 'global' | 'local' | 'others') => {
+    if (scope === 'global') {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } else {
@@ -110,7 +102,7 @@ class Auth {
 
     const { user, session } = data;
 
-    RequestContext.setContextValue("session", {
+    RequestContext.setContextValue('session', {
       accessToken: session?.access_token,
       refreshToken: session?.refresh_token,
     });
@@ -121,10 +113,8 @@ class Auth {
     }
 
     // Extract IP and location info
-    const ip =
-      (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-      req.socket.remoteAddress;
-    const rawUserAgent = req.headers["user-agent"] as string;
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress;
+    const rawUserAgent = req.headers['user-agent'] as string;
 
     const geoLocationData = await getGeoLocationData(ip);
 
@@ -146,16 +136,14 @@ class Auth {
         __sid: user.id, // supabase user id
         email: user.email,
         name: user.user_metadata.full_name,
-        gender: "-", // will be updated later
+        gender: user.user_metadata.gender || '-',
         address: geoLocationData,
-        isVerified: Object.values(EAuthProvider).includes(
-          authProvider as EAuthProvider
-        ),
+        isVerified: Object.values(EAuthProvider).includes(authProvider as EAuthProvider),
         profilePic,
         mediaId: user.user_metadata?.mediaId,
         meta: {
           auth: {
-            authProvider: user.app_metadata.provider,
+            provider: user.app_metadata.provider,
           },
           hasOnboarded: false,
         },
@@ -192,9 +180,7 @@ class Auth {
       refreshToken: session?.refresh_token,
       userAgent: finalUserAgent,
       location: geoLocationData,
-      expiresAt: new Date(
-        new Date(0).setUTCSeconds(session.expires_at)
-      ).toISOString(),
+      expiresAt: new Date(new Date(0).setUTCSeconds(session.expires_at)).toISOString(),
       expiresIn: session.expires_in,
       user: { id: existingUser.id },
     };

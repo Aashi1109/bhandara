@@ -7,7 +7,11 @@ class ApiResponse<T> {
   ) {
     return ApiResponse<T>(
       data: json['data'] != null ? fromJsonT(json['data']) : null,
-      error: json['error'] as String?,
+      error: json['error'] is String
+          ? json['error'] as String
+          : json['error'] is Map
+          ? (json['error'] as Map)['message'] as String?
+          : null,
     );
   }
   final T? data;

@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/login_flow.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/input.dart';
 import '../widgets/header.dart';
-import '../services/auth.dart';
+import '../providers/auth.dart';
+import '../widgets/snackbar.dart';
 
 import 'auth.dart';
+import 'profile_setup.dart';
 import 'explore.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.email = 'john.doe@example.com'});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key, this.extra});
   static const String routePath = '/login';
-  final String email;
+  final Map<String, dynamic>? extra;
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _showPassword = false;
   bool _isLoading = false;
   final TextEditingController _passwordController = TextEditingController();
@@ -33,24 +37,53 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (_passwordController.text.isEmpty) return;
 
-    setState(() => _isLoading = true);
-
-    final response = await authService.login(
-      widget.email,
-      _passwordController.text,
-    );
+    final flowState = ref.read(loginFlowProvider);
+    final email = flowState.email;
+    if (email == null || email.isEmpty) {
+      context.go(AuthScreen.routePath);
+      return;
+    }
 
     if (mounted) {
-      setState(() => _isLoading = false);
-      if (response.data != null) {
-        context.go(ExploreScreen.routePath);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response.error ?? 'Login failed'),
-            backgroundColor: Colors.red,
-          ),
+      try {
+        final flowState = ref.read(loginFlowProvider);
+        final isNewUser =
+            flowState.data.isEmpty || flowState.data['id'] == null;
+        setState(() => _isLoading = true);
+
+        if (isNewUser) {
+          ref.read(loginFlowProvider.notifier).update({
+            'password': _passwordController.text,
+          });
+          await context.push(ProfileSetupScreen.routePath);
+          return;
+        }
+
+        // Strictly using login as requested, even for new users
+        final response = await ref
+            .read(authProvider.notifier)
+            .login(email, _passwordController.text);
+
+        if (!mounted) return;
+        if (response.error != null) {
+          AppSnackBar.show(
+            context,
+            message: response.error!,
+            type: SnackBarType.error,
+          );
+        } else {
+          await context.push(ExploreScreen.routePath);
+          ref.invalidate(loginFlowProvider);
+        }
+      } catch (e) {
+        if (!mounted) return;
+        AppSnackBar.show(
+          context,
+          message: 'An unexpected error occurred',
+          type: SnackBarType.error,
         );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -70,6 +103,12 @@ class _LoginScreenState extends State<LoginScreen> {
         'met': password.contains(RegExp(r'[^A-Za-z0-9]')),
       },
     ];
+
+    final email = ref.watch(loginFlowProvider).email ?? 'User';
+    final initial = email.isNotEmpty && email != 'User'
+        ? email[0].toUpperCase()
+        : 'U';
+    debugPrint('email: ${ref.watch(loginFlowProvider)}');
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -105,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 AppHeader(
-                  onBack: () => context.go(AuthScreen.routePath),
+                  onBack: () => context.pop(),
                   title: '',
                   showBorder: false,
                   backgroundColor: AppColors.transparent,
@@ -146,7 +185,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               border: Border.all(color: AppColors.border),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.05,
+                                  ),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -164,9 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      widget.email.isNotEmpty
-                                          ? widget.email[0].toUpperCase()
-                                          : 'U',
+                                      initial,
                                       style: const TextStyle(
                                         color: AppColors.surface,
                                         fontSize: 10,
@@ -177,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  widget.email,
+                                  ref.watch(loginFlowProvider).email ?? 'User',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -279,7 +318,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         AppButton(
                           size: AppButtonSize.lg,
                           fullWidth: true,
-                          label: _isLoading ? 'Logging In...' : 'Log In',
+                          label: 'Log In',
+                          isLoading: _isLoading,
                           iconRight: _isLoading
                               ? null
                               : const Icon(LucideIcons.arrowRight),

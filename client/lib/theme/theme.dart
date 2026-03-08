@@ -10,6 +10,7 @@ class AppColors {
   static const Color accent = Color(0xFF10B981);
   static const Color error = Color(0xFFEF4444);
   static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFF59E0B);
   static const Color transparent = Colors.transparent;
 }
 

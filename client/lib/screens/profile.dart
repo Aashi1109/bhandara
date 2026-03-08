@@ -43,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showEditPhotoOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
         decoration: const BoxDecoration(
@@ -132,12 +132,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isDestructive
-              ? Colors.red.withValues(alpha: 0.05)
+              ? AppColors.error.withValues(alpha: 0.05)
               : AppColors.muted.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDestructive
-                ? Colors.red.withValues(alpha: 0.1)
+                ? AppColors.error.withValues(alpha: 0.1)
                 : AppColors.border,
           ),
         ),
@@ -149,13 +149,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: isDestructive ? Colors.red : AppColors.primary,
+                color: isDestructive ? AppColors.error : AppColors.primary,
               ),
             ),
             Icon(
               icon,
               size: 20,
-              color: isDestructive ? Colors.red : AppColors.primary,
+              color: isDestructive ? AppColors.error : AppColors.primary,
             ),
           ],
         ),
@@ -223,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: ClipOval(
                                   child: ColorFiltered(
                                     colorFilter: const ColorFilter.mode(
-                                      Colors.grey,
+                                      AppColors.mutedForeground,
                                       BlendMode.saturation,
                                     ),
                                     child: CachedNetworkImage(

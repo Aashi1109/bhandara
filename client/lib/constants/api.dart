@@ -9,6 +9,9 @@ class Api {
   // User endpoints
   static const String users = '/users';
   static String updateUser(String id) => '/users/$id';
+  static String getUserById(String id) => '/users/$id';
+  static String getUserByEmail(String email) => '/users/email/$email';
+  static const String getUserByQuery = '/users/query';
 
   // Event endpoints
   static const String events = '/events';
@@ -23,4 +26,7 @@ class Api {
   static const String getSignedUrl = '/media/get-signed-upload-url';
   static const String getPublicUrl = '/media/get-public-upload-url';
   static String media(String id) => '/media/$id';
+
+  // Tag endpoints
+  static const String tags = '/tags';
 }

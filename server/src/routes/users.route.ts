@@ -17,13 +17,8 @@
  *           type: object
  *           nullable: true
  */
-import {
-  asyncHandler,
-  paginationParser,
-  sessionParser,
-  userParser,
-} from "@/middlewares";
-import { Router } from "express";
+import { asyncHandler, paginationParser, sessionParser, userParser, validateRequest } from '@/middlewares';
+import { Router } from 'express';
 import {
   getAllUser,
   getUserById,
@@ -31,7 +26,8 @@ import {
   updateUser,
   getUserByQuery,
   getUserInterests,
-} from "@/features/users/controller";
+} from '@/features/users/controller';
+import { updateSchema } from '@/features/users/validation';
 
 const router = Router();
 
@@ -63,7 +59,7 @@ const router = Router();
  *                 error:
  *                   nullable: true
  */
-router.get("/query", asyncHandler(getUserByQuery));
+router.get('/query', asyncHandler(getUserByQuery));
 
 router.use([sessionParser, userParser]);
 
@@ -86,10 +82,10 @@ router.use([sessionParser, userParser]);
  *       200:
  *         description: Paginated users
  */
-router.get("/", paginationParser, asyncHandler(getAllUser));
+router.get('/', paginationParser, asyncHandler(getAllUser));
 
 router
-  .route("/:id")
+  .route('/:id')
   /**
    * @openapi
    * /users/{id}:
@@ -146,7 +142,7 @@ router
    *       200:
    *         description: Updated
    */
-  .patch(asyncHandler(updateUser));
+  .patch(validateRequest('USER_UPDATE', updateSchema), asyncHandler(updateUser));
 
 /**
  * @openapi
@@ -164,6 +160,6 @@ router
  *       200:
  *         description: List of interests
  */
-router.get("/:id/interests", asyncHandler(getUserInterests));
+router.get('/:id/interests', asyncHandler(getUserInterests));
 
 export default router;

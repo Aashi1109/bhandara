@@ -12,16 +12,10 @@
  *         value:
  *           type: string
  */
-import { Router } from "express";
-import { sessionParser, userParser, asyncHandler } from "@/middlewares";
-import {
-  createTag,
-  deleteTag,
-  getSubTags,
-  getTagById,
-  getTags,
-  updateTag,
-} from "@/features/tags/controller";
+import { Router } from 'express';
+import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
+import { createTag, deleteTag, getSubTags, getTagById, getTags, updateTag } from '@/features/tags/controller';
+import { tagSchema, tagUpdateSchema } from '@/features/tags/validation';
 
 const router = Router();
 
@@ -43,10 +37,10 @@ router.use([sessionParser, userParser]);
  *           schema:
  *             $ref: '#/components/schemas/Tag'
  */
-router.get("/", asyncHandler(getTags));
-router.post("/", asyncHandler(createTag));
+router.get('/', asyncHandler(getTags));
+router.post('/', validateRequest('TAG_CREATE', tagSchema), asyncHandler(createTag));
 router
-  .route("/:tagId")
+  .route('/:tagId')
   /**
    * @openapi
    * /tags/{tagId}:
@@ -67,7 +61,7 @@ router
    *     summary: Delete tag
    */
   .get(asyncHandler(getTagById))
-  .put(asyncHandler(updateTag))
+  .put(validateRequest('TAG_UPDATE', tagUpdateSchema), asyncHandler(updateTag))
   .delete(asyncHandler(deleteTag));
 
 /**
@@ -83,6 +77,6 @@ router
  *         schema:
  *           type: string
  */
-router.get("/:tagId/sub-tags", asyncHandler(getSubTags));
+router.get('/:tagId/sub-tags', asyncHandler(getSubTags));
 
 export default router;

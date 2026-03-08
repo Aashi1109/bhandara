@@ -101,7 +101,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Positioned.fill(
             child: ColorFiltered(
               colorFilter: const ColorFilter.mode(
-                Colors.grey,
+                AppColors.mutedForeground,
                 BlendMode.saturation,
               ),
               child: CachedNetworkImage(
@@ -155,7 +155,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         border: Border.all(color: AppColors.border),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
+                            color: AppColors.primary.withValues(alpha: 0.08),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -170,7 +170,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               height: 40,
                               borderRadius: 12,
                               hasBorder: false,
-                              backgroundColor: Colors.transparent,
+                              backgroundColor: AppColors.transparent,
                             ),
                           ),
                           Container(
@@ -333,7 +333,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                     decoration: BoxDecoration(
                                       color: _selectedEvent!.status == 'active'
                                           ? AppColors.primary
-                                          : Colors.grey,
+                                          : AppColors.mutedForeground,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -500,7 +500,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             border: Border.all(color: AppColors.surface, width: 3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: AppColors.primary.withValues(alpha: 0.12),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -533,7 +533,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         border: isPrimary ? null : Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -571,7 +571,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         // Backdrop
         GestureDetector(
           onTap: () => setState(() => _isFilterOpen = false),
-          child: Container(color: Colors.black.withValues(alpha: 0.4)),
+          child: Container(color: AppColors.primary.withValues(alpha: 0.4)),
         ),
         // Drawer
         Positioned(
@@ -794,7 +794,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          color: selected ? Colors.white : AppColors.primary,
+          color: selected ? AppColors.surface : AppColors.primary,
         ),
       ),
     );
@@ -820,7 +820,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Icon(
               icon,
               size: 16,
-              color: selected ? Colors.white : AppColors.mutedForeground,
+              color: selected ? AppColors.surface : AppColors.mutedForeground,
             ),
           ),
           const SizedBox(width: 12),
@@ -842,7 +842,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
             child: selected
-                ? const Icon(LucideIcons.x, size: 12, color: Colors.white)
+                ? const Icon(LucideIcons.x, size: 12, color: AppColors.surface)
                 : null,
           ),
         ],
@@ -874,7 +874,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Icon(
             icon,
             size: 24,
-            color: selected ? Colors.white : AppColors.mutedForeground,
+            color: selected ? AppColors.surface : AppColors.mutedForeground,
           ),
           const SizedBox(height: 12),
           Text(
@@ -883,7 +883,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 2,
-              color: selected ? Colors.white : AppColors.mutedForeground,
+              color: selected ? AppColors.surface : AppColors.mutedForeground,
             ),
           ),
         ],

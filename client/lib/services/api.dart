@@ -22,7 +22,7 @@ class ApiService {
         onRequest: (options, handler) async {
           final token = await _storage.read(_tokenKey);
           if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+            options.headers['Cookie'] = 'bh_session=$token';
           }
           return handler.next(options);
         },

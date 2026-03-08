@@ -180,7 +180,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
+                      color: AppColors.primary.withValues(alpha: 0.12),
                       blurRadius: 30,
                       offset: const Offset(0, 8),
                     ),
@@ -301,7 +301,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

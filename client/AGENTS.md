@@ -13,8 +13,11 @@ The following skills MUST be activated and used for all work in the `/mobile` di
 - `mobile-design`: To ensure premium UI/UX, responsiveness, and consistent design language.
 - `native-data-fetching`: For Dio services, WebSocket integration, and error handling.
 - `mobile-security-coder`: For handling secure storage and sensitive authentication data.
+- `agent-memory`: **CRITICAL**: Always use this skill at the start of any task or when context is needed. Proactively use it to **save new memories** about architectural decisions, complex patterns, or important user preferences discovered during work.
+- `agent-memory-mcp`: Use this to maintain and access structured, persistent architectural memory.
 
 - **Networking**: Use `ApiService` (`dio`) for REST and `SocketService` (`web_socket_channel`) for real-time features.
+- **Styling**: DO NOT use colors directly (e.g., `Colors.red`). ALWAYS use semantic colors from `AppColors` defined in `lib/theme/theme.dart`.
 
 ## Development Workflow
 

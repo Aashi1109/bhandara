@@ -1,33 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/header.dart';
+import '../providers/tag.dart';
 
-import 'splash.dart';
 import 'explore.dart';
 
-class PreferencesScreen extends StatefulWidget {
+class PreferencesScreen extends ConsumerStatefulWidget {
   const PreferencesScreen({super.key});
   static const String routePath = '/preferences';
 
   @override
-  State<PreferencesScreen> createState() => _PreferencesScreenState();
+  ConsumerState<PreferencesScreen> createState() => _PreferencesScreenState();
 }
 
-class _PreferencesScreenState extends State<PreferencesScreen> {
-  final _selected = <String>{'street', 'bakery'};
+class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
+  final _selected = <String>{};
 
-  final _categories = [
-    _Cat('street', 'Street Food', LucideIcons.utensils),
-    _Cat('vegan', 'Vegan', LucideIcons.leaf),
-    _Cat('bakery', 'Bakery', LucideIcons.apple),
-    _Cat('produce', 'Fresh Produce', LucideIcons.apple),
-    _Cat('coffee', 'Coffee & Tea', LucideIcons.coffee),
-    _Cat('homemade', 'Homemade', LucideIcons.soup),
-  ];
+  IconData _getIcon(String? iconName) {
+    switch (iconName?.toLowerCase()) {
+      case 'utensils':
+        return LucideIcons.utensils;
+      case 'leaf':
+        return LucideIcons.leaf;
+      case 'apple':
+        return LucideIcons.apple;
+      case 'coffee':
+        return LucideIcons.coffee;
+      case 'soup':
+        return LucideIcons.soup;
+      case 'pizza':
+        return LucideIcons.pizza;
+      case 'sandwich':
+        return LucideIcons.sandwich;
+      case 'ice-cream':
+        return LucideIcons.iceCream;
+      case 'beer':
+        return LucideIcons.beer;
+      case 'wine':
+        return LucideIcons.wine;
+      default:
+        return LucideIcons.utensils;
+    }
+  }
 
   void _toggle(String id) {
     setState(() {
@@ -41,13 +60,15 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tagsAsync = ref.watch(tagsProvider(rootOnly: true));
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
           AppHeader(
             title: 'Preferences',
-            onBack: () => context.go(SplashScreen.routePath),
+            onBack: () => context.pop(),
             rightElement: GestureDetector(
               onTap: () => context.go(ExploreScreen.routePath),
               child: const Text(
@@ -100,75 +121,95 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: _categories.map((cat) {
-                      final isSelected = _selected.contains(cat.id);
-                      return GestureDetector(
-                        onTap: () => _toggle(cat.id),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(50),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                cat.icon,
-                                size: 16,
+                  tagsAsync.when(
+                    data: (tags) {
+                      if (tags.isEmpty) {
+                        return const Center(child: Text('No categories found'));
+                      }
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: tags.map((tag) {
+                          final isSelected = _selected.contains(tag.id);
+                          return GestureDetector(
+                            onTap: () => _toggle(tag.id),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.surface
-                                    : AppColors.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                cat.name,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                                    ? AppColors.primary
+                                    : AppColors.surface,
+                                borderRadius: BorderRadius.circular(50),
+                                border: Border.all(
                                   color: isSelected
-                                      ? AppColors.surface
-                                      : AppColors.primary,
+                                      ? AppColors.primary
+                                      : AppColors.border,
                                 ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ]
+                                    : null,
                               ),
-                              if (isSelected) ...[
-                                const SizedBox(width: 6),
-                                const Icon(
-                                  LucideIcons.check,
-                                  size: 12,
-                                  color: AppColors.surface,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getIcon(tag.icon),
+                                    size: 16,
+                                    color: isSelected
+                                        ? AppColors.surface
+                                        : AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    tag.name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected
+                                          ? AppColors.surface
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                  if (isSelected) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(
+                                      LucideIcons.check,
+                                      size: 12,
+                                      color: AppColors.surface,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
+                    },
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    error: (err, stack) => Center(
+                      child: Text(
+                        'Failed to load categories: ${err.toString()}',
+                        style: const TextStyle(color: AppColors.error),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 40),
 
@@ -219,7 +260,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                               children: [
                                 ColorFiltered(
                                   colorFilter: const ColorFilter.mode(
-                                    Colors.grey,
+                                    AppColors.mutedForeground,
                                     BlendMode.saturation,
                                   ),
                                   child: CachedNetworkImage(
@@ -240,7 +281,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                                       ),
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.white.withValues(
+                                        color: AppColors.surface.withValues(
                                           alpha: 0.2,
                                         ),
                                       ),
@@ -340,11 +381,4 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
       ),
     );
   }
-}
-
-class _Cat {
-  _Cat(this.id, this.name, this.icon);
-  final String id;
-  final String name;
-  final IconData icon;
 }

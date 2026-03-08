@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/theme.dart';
 import '../widgets/header.dart';
 import '../widgets/floating_message_bar.dart';
+import '../widgets/snackbar.dart';
 
 import '../constants/socket_events.dart';
 import '../services/socket.dart';
@@ -218,7 +219,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
               placeholder: 'Reply to thread...',
               onSend: (msg, mediaIds) async {
                 if (msg.trim().isNotEmpty || mediaIds.isNotEmpty) {
-                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     // Send message and await acknowledgment
                     await socketService.sendMessage(
@@ -233,8 +233,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
                     // For now, just a placeholder for the logic
                   } catch (e) {
                     if (!mounted) return;
-                    messenger.showSnackBar(
-                      SnackBar(content: Text('Failed to send reply: $e')),
+                    AppSnackBar.show(
+                      context,
+                      message: 'Failed to send reply: $e',
+                      type: SnackBarType.error,
                     );
                   }
                 }

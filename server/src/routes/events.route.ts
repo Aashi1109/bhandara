@@ -36,14 +36,15 @@
  *         content:
  *           type: object
  */
-import { Router } from "express";
+import { Router } from 'express';
 import {
   asyncHandler,
   sessionParser,
   userParser,
   validateParams,
   paginationParser,
-} from "@/middlewares";
+  validateRequest,
+} from '@/middlewares';
 
 import {
   updateEvent,
@@ -57,7 +58,8 @@ import {
   getEventThreads,
   deleteEvent,
   disassociateMediaFromEvent,
-} from "@/features/events/controller";
+} from '@/features/events/controller';
+import { eventSchema, eventUpdateSchema } from '@/features/events/validation';
 import {
   createThread,
   deleteThread,
@@ -65,7 +67,7 @@ import {
   updateThread,
   lockThread,
   unlockThread,
-} from "@/features/threads/controller";
+} from '@/features/threads/controller';
 import {
   getMessages,
   createMessage,
@@ -73,8 +75,8 @@ import {
   updateMessage,
   deleteMessage,
   getChildMessages,
-} from "@/features/messages/controller";
-import { BadRequestError } from "@/exceptions";
+} from '@/features/messages/controller';
+import { BadRequestError } from '@/exceptions';
 const router = Router();
 
 router.use([sessionParser, userParser]);
@@ -111,10 +113,13 @@ router.use([sessionParser, userParser]);
  *             schema:
  *               $ref: '#/components/schemas/Event'
  */
-router.route("/").get(asyncHandler(getEvents)).post(asyncHandler(createEvent));
+router
+  .route('/')
+  .get(asyncHandler(getEvents))
+  .post(validateRequest('EVENT_CREATE', eventSchema), asyncHandler(createEvent));
 
 router
-  .route("/:eventId")
+  .route('/:eventId')
   /**
    * @openapi
    * /events/{eventId}:
@@ -161,9 +166,9 @@ router
    *             schema:
    *               $ref: '#/components/schemas/Event'
    */
-  .get([validateParams(["eventId"])], asyncHandler(getEventById))
-  .put([validateParams(["eventId"])], asyncHandler(updateEvent))
-  .delete([validateParams(["eventId"])], asyncHandler(deleteEvent));
+  .get([validateParams(['eventId'])], asyncHandler(getEventById))
+  .put([validateParams(['eventId']), validateRequest('EVENT_UPDATE', eventUpdateSchema)], asyncHandler(updateEvent))
+  .delete([validateParams(['eventId'])], asyncHandler(deleteEvent));
 
 /**
  * @openapi
@@ -186,11 +191,7 @@ router
  *       200:
  *         description: Tag removed
  */
-router.delete(
-  "/:eventId/tags/:tagId",
-  [validateParams(["eventId", "tagId"])],
-  asyncHandler(deleteEventTag)
-);
+router.delete('/:eventId/tags/:tagId', [validateParams(['eventId', 'tagId'])], asyncHandler(deleteEventTag));
 
 /**
  * @openapi
@@ -208,11 +209,7 @@ router.delete(
  *       200:
  *         description: List of threads
  */
-router.get(
-  "/:eventId/threads",
-  [validateParams(["eventId"])],
-  asyncHandler(getEventThreads)
-);
+router.get('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(getEventThreads));
 
 /**
  * @openapi
@@ -236,11 +233,7 @@ router.get(
  *       201:
  *         description: Created thread
  */
-router.post(
-  "/:eventId/threads",
-  [validateParams(["eventId"])],
-  asyncHandler(createThread)
-);
+router.post('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(createThread));
 
 /**
  * @openapi
@@ -267,13 +260,10 @@ router.post(
  *           type: string
  */
 router
-  .route("/:eventId/threads/:threadId")
-  .get([validateParams(["eventId", "threadId"])], asyncHandler(getThread))
-  .put([validateParams(["eventId", "threadId"])], asyncHandler(updateThread))
-  .delete(
-    [validateParams(["eventId", "threadId"])],
-    asyncHandler(deleteThread)
-  );
+  .route('/:eventId/threads/:threadId')
+  .get([validateParams(['eventId', 'threadId'])], asyncHandler(getThread))
+  .put([validateParams(['eventId', 'threadId'])], asyncHandler(updateThread))
+  .delete([validateParams(['eventId', 'threadId'])], asyncHandler(deleteThread));
 
 /**
  * @openapi
@@ -303,14 +293,14 @@ router
  *         description: Thread lock/unlock result
  */
 router.post(
-  "/:eventId/threads/:threadId/:action",
-  [validateParams(["eventId", "threadId", "action"])],
+  '/:eventId/threads/:threadId/:action',
+  [validateParams(['eventId', 'threadId', 'action'])],
   asyncHandler((req: any, res: any) => {
     const { action } = req.params;
-    if (action === "lock") return lockThread(req, res);
-    else if (action === "unlock") return unlockThread(req, res);
+    if (action === 'lock') return lockThread(req, res);
+    else if (action === 'unlock') return unlockThread(req, res);
     else throw new BadRequestError("Invalid action. Use 'lock' or 'unlock'");
-  })
+  }),
 );
 
 /**
@@ -341,14 +331,14 @@ router.post(
  *             $ref: '#/components/schemas/Message'
  */
 router.get(
-  "/:eventId/threads/:threadId/messages",
-  [validateParams(["eventId", "threadId"]), paginationParser],
-  asyncHandler(getMessages)
+  '/:eventId/threads/:threadId/messages',
+  [validateParams(['eventId', 'threadId']), paginationParser],
+  asyncHandler(getMessages),
 );
 router.post(
-  "/:eventId/threads/:threadId/messages",
-  [validateParams(["eventId", "threadId"])],
-  asyncHandler(createMessage)
+  '/:eventId/threads/:threadId/messages',
+  [validateParams(['eventId', 'threadId'])],
+  asyncHandler(createMessage),
 );
 
 /**
@@ -381,19 +371,10 @@ router.post(
  *           type: string
  */
 router
-  .route("/:eventId/threads/:threadId/messages/:messageId")
-  .get(
-    [validateParams(["eventId", "threadId", "messageId"])],
-    asyncHandler(getMessageById)
-  )
-  .put(
-    [validateParams(["eventId", "threadId", "messageId"])],
-    asyncHandler(updateMessage)
-  )
-  .delete(
-    [validateParams(["eventId", "threadId", "messageId"])],
-    asyncHandler(deleteMessage)
-  );
+  .route('/:eventId/threads/:threadId/messages/:messageId')
+  .get([validateParams(['eventId', 'threadId', 'messageId'])], asyncHandler(getMessageById))
+  .put([validateParams(['eventId', 'threadId', 'messageId'])], asyncHandler(updateMessage))
+  .delete([validateParams(['eventId', 'threadId', 'messageId'])], asyncHandler(deleteMessage));
 
 /**
  * @openapi
@@ -419,9 +400,9 @@ router
  *           type: string
  */
 router.get(
-  "/:eventId/threads/:threadId/child-messages/:parentId",
-  [validateParams(["eventId", "threadId", "parentId"]), paginationParser],
-  asyncHandler(getChildMessages)
+  '/:eventId/threads/:threadId/child-messages/:parentId',
+  [validateParams(['eventId', 'threadId', 'parentId']), paginationParser],
+  asyncHandler(getChildMessages),
 );
 
 /**
@@ -449,7 +430,7 @@ router.get(
  *       200:
  *         description: Verification result
  */
-router.post("/:eventId/verify", asyncHandler(verifyEvent));
+router.post('/:eventId/verify', asyncHandler(verifyEvent));
 
 /**
  * @openapi
@@ -473,11 +454,7 @@ router.post("/:eventId/verify", asyncHandler(verifyEvent));
  *       200:
  *         description: Join/leave status
  */
-router.get(
-  "/:eventId/:action",
-  [validateParams(["eventId", "action"])],
-  asyncHandler(eventJoinLeaveHandler)
-);
+router.get('/:eventId/:action', [validateParams(['eventId', 'action'])], asyncHandler(eventJoinLeaveHandler));
 
 /**
  * @openapi
@@ -500,10 +477,6 @@ router.get(
  *       200:
  *         description: Media deleted
  */
-router.delete(
-  "/:eventId/media/:mediaId",
-  [validateParams(["eventId", "mediaId"])],
-  asyncHandler(deleteEventMedia)
-);
+router.delete('/:eventId/media/:mediaId', [validateParams(['eventId', 'mediaId'])], asyncHandler(deleteEventMedia));
 
 export default router;

@@ -84,11 +84,26 @@ class Media {
 }
 
 class Tag {
-  Tag({required this.id, required this.name});
+  Tag({
+    required this.id,
+    required this.name,
+    this.value,
+    this.icon,
+    this.color,
+  });
 
   factory Tag.fromJson(Map<String, dynamic> json) {
-    return Tag(id: json['id'] as String, name: json['name'] as String);
+    return Tag(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      value: json['value'] as String?,
+      icon: json['icon'] as String?,
+      color: json['color'] as String?,
+    );
   }
   final String id;
   final String name;
+  final String? value;
+  final String? icon;
+  final String? color;
 }

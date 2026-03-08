@@ -93,7 +93,9 @@ class SearchScreen extends StatelessWidget {
                               border: Border.all(color: AppColors.border),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.04,
+                                  ),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -240,7 +242,7 @@ class SearchScreen extends StatelessWidget {
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -259,11 +261,11 @@ class SearchScreen extends StatelessWidget {
                     ColorFiltered(
                       colorFilter: isClosed
                           ? const ColorFilter.mode(
-                              Colors.grey,
+                              AppColors.mutedForeground,
                               BlendMode.saturation,
                             )
                           : const ColorFilter.mode(
-                              Colors.transparent,
+                              AppColors.transparent,
                               BlendMode.multiply,
                             ),
                       child: CachedNetworkImage(
@@ -393,10 +395,10 @@ class SearchScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: e.status == 'urgent'
-                              ? const Color(0xFFFFFBEB)
+                              ? AppColors.warning.withValues(alpha: 0.1)
                               : e.status == 'new'
-                              ? const Color(0xFFECFDF5)
-                              : Colors.transparent,
+                              ? AppColors.primary.withValues(alpha: 0.1)
+                              : AppColors.transparent,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -405,13 +407,13 @@ class SearchScreen extends StatelessWidget {
                               const Icon(
                                 LucideIcons.timer,
                                 size: 14,
-                                color: Color(0xFFD97706),
+                                color: AppColors.warning,
                               ),
                             if (e.status == 'new')
                               const Icon(
                                 LucideIcons.checkCircle2,
                                 size: 14,
-                                color: Color(0xFF059669),
+                                color: AppColors.primary,
                               ),
                             if (e.status == 'urgent' || e.status == 'new')
                               const SizedBox(width: 4),
@@ -421,9 +423,9 @@ class SearchScreen extends StatelessWidget {
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: e.status == 'urgent'
-                                    ? const Color(0xFFD97706)
+                                    ? AppColors.warning
                                     : e.status == 'new'
-                                    ? const Color(0xFF059669)
+                                    ? AppColors.primary
                                     : AppColors.mutedForeground,
                               ),
                             ),

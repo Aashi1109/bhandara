@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router } from 'express';
 /**
  * @openapi
  * components:
@@ -21,8 +21,10 @@ import {
   deleteSession,
   signUp,
   signInWithIdToken,
-} from "@/features/auth/controller";
-import { sessionParser, userParser, asyncHandler } from "@/middlewares";
+} from '@/features/auth/controller';
+import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
+
+import { schemas } from '@/features/auth/validation';
 
 const router = Router();
 
@@ -51,7 +53,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  */
-router.post("/login", asyncHandler(login));
+router.post('/login', validateRequest('AUTH_LOGIN', schemas.login), asyncHandler(login));
 /**
  * @openapi
  * /auth/google/callback:
@@ -62,7 +64,7 @@ router.post("/login", asyncHandler(login));
  *       200:
  *         description: OAuth success
  */
-router.get("/google/callback", asyncHandler(googleCallback));
+router.get('/google/callback', asyncHandler(googleCallback));
 /**
  * @openapi
  * /auth/google:
@@ -73,7 +75,7 @@ router.get("/google/callback", asyncHandler(googleCallback));
  *       302:
  *         description: Redirect
  */
-router.get("/google", asyncHandler(googleAuth));
+router.get('/google', asyncHandler(googleAuth));
 /**
  * @openapi
  * /auth/signup:
@@ -95,7 +97,7 @@ router.get("/google", asyncHandler(googleAuth));
  *       200:
  *         description: Signup success
  */
-router.post("/signup", asyncHandler(signUp));
+router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHandler(signUp));
 /**
  * @openapi
  * /auth/oauth/signin-with-id-token:
@@ -106,7 +108,7 @@ router.post("/signup", asyncHandler(signUp));
  *       200:
  *         description: Signin success
  */
-router.post("/oauth/signin-with-id-token", asyncHandler(signInWithIdToken));
+router.post('/oauth/signin-with-id-token', asyncHandler(signInWithIdToken));
 
 router.use([sessionParser, userParser]);
 /**
@@ -119,7 +121,7 @@ router.use([sessionParser, userParser]);
  *       200:
  *         description: Logged out
  */
-router.get("/logout", asyncHandler(logOut));
+router.get('/logout', asyncHandler(logOut));
 /**
  * @openapi
  * /auth/session:
@@ -127,7 +129,7 @@ router.get("/logout", asyncHandler(logOut));
  *     tags: [Auth]
  *     summary: Get current session
  */
-router.get("/session", asyncHandler(session));
+router.get('/session', asyncHandler(session));
 /**
  * @openapi
  * /auth/session/{sessionId}:
@@ -141,7 +143,7 @@ router.get("/session", asyncHandler(session));
  *         schema:
  *           type: string
  */
-router.delete("/session/:sessionId", asyncHandler(deleteSession));
+router.delete('/session/:sessionId', asyncHandler(deleteSession));
 /**
  * @openapi
  * /auth/sessions:
@@ -149,6 +151,6 @@ router.delete("/session/:sessionId", asyncHandler(deleteSession));
  *     tags: [Auth]
  *     summary: List sessions
  */
-router.get("/sessions", asyncHandler(sessionsList));
+router.get('/sessions', asyncHandler(sessionsList));
 
 export default router;

@@ -1,4 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../models/api_response.dart';
+import '../models/user.dart';
 import '../services/auth.dart';
 import 'user.dart';
 
@@ -14,7 +16,7 @@ class Auth extends _$Auth {
     return profile != null;
   }
 
-  Future<void> login(String email, String password) async {
+  Future<ApiResponse<User>> login(String email, String password) async {
     state = const AsyncLoading();
 
     final response = await authService.login(email, password);
@@ -25,9 +27,10 @@ class Auth extends _$Auth {
       ref.read(userProfileProvider.notifier).setUser(response.data);
       state = const AsyncData(true);
     }
+    return response;
   }
 
-  Future<void> signup(Map<String, dynamic> data) async {
+  Future<ApiResponse<User>> signup(Map<String, dynamic> data) async {
     state = const AsyncLoading();
 
     final response = await authService.signup(data);
@@ -38,6 +41,7 @@ class Auth extends _$Auth {
       ref.read(userProfileProvider.notifier).setUser(response.data);
       state = const AsyncData(true);
     }
+    return response;
   }
 
   Future<void> logout() async {

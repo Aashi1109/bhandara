@@ -7,7 +7,7 @@ import {
   getMediaPublicUrl,
   getMediaPublicUrls,
   getPublicSignedUploadUrl,
-} from "@/features/media/controller";
+} from '@/features/media/controller';
 /**
  * @openapi
  * components:
@@ -20,8 +20,9 @@ import {
  *         url:
  *           type: string
  */
-import { asyncHandler, sessionParser, userParser } from "@/middlewares";
-import { Router } from "express";
+import { asyncHandler, sessionParser, userParser, validateRequest } from '@/middlewares';
+import { Router } from 'express';
+import { mediaUpdateSchema } from '@/features/media/validation';
 
 const router = Router({ mergeParams: true });
 
@@ -34,7 +35,7 @@ router.use([sessionParser, userParser]);
  *     tags: [Media]
  *     summary: Get public URLs for media
  */
-router.get("/public-urls", asyncHandler(getMediaPublicUrls));
+router.get('/public-urls', asyncHandler(getMediaPublicUrls));
 /**
  * @openapi
  * /media/upload:
@@ -42,7 +43,7 @@ router.get("/public-urls", asyncHandler(getMediaPublicUrls));
  *     tags: [Media]
  *     summary: Upload file
  */
-router.post("/upload", asyncHandler(uploadFile));
+router.post('/upload', asyncHandler(uploadFile));
 /**
  * @openapi
  * /media/get-signed-upload-url:
@@ -50,10 +51,10 @@ router.post("/upload", asyncHandler(uploadFile));
  *     tags: [Media]
  *     summary: Get signed upload URL
  */
-router.post("/get-signed-upload-url", asyncHandler(getSignedUploadUrl));
-router.post("/get-public-upload-url", asyncHandler(getPublicSignedUploadUrl));
+router.post('/get-signed-upload-url', asyncHandler(getSignedUploadUrl));
+router.post('/get-public-upload-url', asyncHandler(getPublicSignedUploadUrl));
 router
-  .route("/:mediaId")
+  .route('/:mediaId')
   /**
    * @openapi
    * /media/{mediaId}:
@@ -69,7 +70,7 @@ router
    */
   .delete(asyncHandler(deleteFile))
   .get(asyncHandler(getMediaById))
-  .patch(asyncHandler(updateMedia));
+  .patch(validateRequest('MEDIA_UPDATE', mediaUpdateSchema), asyncHandler(updateMedia));
 
 /**
  * @openapi
@@ -78,6 +79,6 @@ router
  *     tags: [Media]
  *     summary: Get public URL for a media file
  */
-router.post("/public-url", asyncHandler(getMediaPublicUrl));
+router.post('/public-url', asyncHandler(getMediaPublicUrl));
 
 export default router;

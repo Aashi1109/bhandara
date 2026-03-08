@@ -3,8 +3,9 @@ import '../constants/api.dart';
 import 'api.dart';
 import '../models/api_response.dart';
 import '../models/event.dart';
+import 'base.dart';
 
-class EventService {
+class EventService extends BaseService {
   final Dio _dio = apiService.dio;
 
   Future<ApiResponse<PaginatedResponse<Event>>> getEvents({
@@ -23,9 +24,7 @@ class EventService {
         ),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to fetch events',
-      );
+      return handleError(e, 'Failed to fetch events');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -39,9 +38,7 @@ class EventService {
         (json) => Event.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to create event',
-      );
+      return handleError(e, 'Failed to create event');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }

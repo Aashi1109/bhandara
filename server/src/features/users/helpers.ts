@@ -149,9 +149,11 @@ export const deleteUserSessionCache = async (userId: string, sessionId: string) 
 
 export const getSafeUser = (user: IBaseUser) => {
   const _user = { ...user };
+  const provider = _user.meta?.auth?.provider;
   delete _user.password;
-  delete _user.meta.auth;
-  return _user;
+  delete _user.meta?.auth?.accessToken;
+  delete _user.meta?.auth?.refreshToken;
+  return { ..._user, isSocialLogin: provider !== 'email' };
 };
 
 export const getLeanUser = (user: IBaseUser) => {

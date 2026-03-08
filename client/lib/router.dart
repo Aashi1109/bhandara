@@ -21,6 +21,7 @@ import 'screens/settings/email.dart';
 import 'screens/settings/cuisines.dart';
 import 'screens/settings/notifications.dart';
 import 'screens/updates.dart';
+import 'screens/profile_setup.dart';
 import 'screens/media_preview_screen.dart';
 import 'widgets/media_preview.dart';
 
@@ -42,11 +43,12 @@ final router = GoRouter(
     ),
     GoRoute(
       path: LoginScreen.routePath,
-      builder: (context, state) {
-        final email =
-            state.uri.queryParameters['email'] ?? 'john.doe@example.com';
-        return LoginScreen(email: email);
-      },
+      builder: (context, state) =>
+          LoginScreen(extra: state.extra as Map<String, dynamic>?),
+    ),
+    GoRoute(
+      path: ProfileSetupScreen.routePath,
+      builder: (context, state) => const ProfileSetupScreen(),
     ),
     GoRoute(
       path: PreferencesScreen.routePath,

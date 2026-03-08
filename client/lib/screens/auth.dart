@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:foody_mobile/models/user.dart';
+import 'package:foody_mobile/services/user.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/login_flow.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,22 +11,22 @@ import '../widgets/button.dart';
 import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/header.dart';
+import '../widgets/snackbar.dart';
 
 import '../services/auth.dart';
 
-import 'onboarding.dart';
 import 'login.dart';
 import 'explore.dart';
 
-class AuthScreen extends StatefulWidget {
+class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
   static const String routePath = '/auth';
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool nearMe = true;
   final TextEditingController _emailController = TextEditingController();
   bool _isEmailValid = false;
@@ -33,6 +37,43 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  Future<void> _handleContinue() async {
+    bool isUserExists = false;
+    bool isSocialLogin = false;
+    User? user;
+    // check if user exists with email
+    try {
+      final users = await userService.getByQuery(email: _emailController.text);
+      final items = users.data?.items;
+      if (items != null && items.isNotEmpty) {
+        isUserExists = true;
+        isSocialLogin = items.first.isSocialLogin;
+        user = items.first;
+      }
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+    if (mounted) {
+      if (isUserExists) {
+        if (!isSocialLogin) {
+          await context.push(LoginScreen.routePath);
+        } else {
+          AppSnackBar.show(
+            context,
+            message: 'Please login using social login',
+            type: SnackBarType.warning,
+          );
+        }
+      } else {
+        ref.read(loginFlowProvider.notifier).update({
+          'email': _emailController.text,
+          ...?user?.toJson(),
+        });
+        await context.push(LoginScreen.routePath);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +82,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Column(
           children: [
             AppHeader(
-              onBack: () => context.go(OnboardingScreen.routePath),
+              onBack: () => context.pop(),
               title: '',
               showBorder: false,
               backgroundColor: AppColors.transparent,
@@ -110,13 +151,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             fullWidth: true,
                             label: 'Continue',
                             iconRight: const Icon(LucideIcons.arrowRight),
-                            onPressed: _isEmailValid
-                                ? () {
-                                    context.go(
-                                      '${LoginScreen.routePath}?email=${Uri.encodeComponent(_emailController.text)}',
-                                    );
-                                  }
-                                : null,
+                            onPressed: _isEmailValid ? _handleContinue : null,
                           ),
 
                           // Divider
@@ -160,16 +195,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                       if (response.data != null) {
                                         context.go(ExploreScreen.routePath);
                                       } else {
-                                        ScaffoldMessenger.of(
+                                        AppSnackBar.show(
                                           context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
+                                          message:
                                               response.error ??
-                                                  'Google Sign-In failed',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
+                                              'Google Sign-In failed',
+                                          type: SnackBarType.error,
                                         );
                                       }
                                     }

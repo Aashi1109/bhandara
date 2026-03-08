@@ -132,7 +132,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             end: Alignment.bottomCenter,
                             colors: [
                               AppColors.primary.withValues(alpha: 0.6),
-                              Colors.transparent,
+                              AppColors.transparent,
                               AppColors.surface,
                             ],
                             stops: const [0.0, 0.4, 1.0],
@@ -292,7 +292,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                 ),
                                 child: ColorFiltered(
                                   colorFilter: const ColorFilter.mode(
-                                    Colors.grey,
+                                    AppColors.mutedForeground,
                                     BlendMode.saturation,
                                   ),
                                   child: CachedNetworkImage(
@@ -441,7 +441,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               children: [
                                 ColorFiltered(
                                   colorFilter: const ColorFilter.mode(
-                                    Colors.grey,
+                                    AppColors.mutedForeground,
                                     BlendMode.saturation,
                                   ),
                                   child: Opacity(
@@ -554,7 +554,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                                     child: ClipOval(
                                       child: ColorFiltered(
                                         colorFilter: const ColorFilter.mode(
-                                          Colors.grey,
+                                          AppColors.mutedForeground,
                                           BlendMode.saturation,
                                         ),
                                         child: CachedNetworkImage(
@@ -653,7 +653,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -673,7 +673,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.primary.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

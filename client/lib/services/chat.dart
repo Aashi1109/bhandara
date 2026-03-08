@@ -3,8 +3,9 @@ import '../constants/api.dart';
 import 'api.dart';
 import '../models/api_response.dart';
 import '../models/chat.dart';
+import 'base.dart';
 
-class ChatService {
+class ChatService extends BaseService {
   final Dio _dio = apiService.dio;
 
   Future<ApiResponse<PaginatedResponse<Thread>>> getThreads({
@@ -24,9 +25,7 @@ class ChatService {
         ),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to fetch threads',
-      );
+      return handleError(e, 'Failed to fetch threads');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -50,9 +49,7 @@ class ChatService {
         ),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to fetch messages',
-      );
+      return handleError(e, 'Failed to fetch messages');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
@@ -76,9 +73,7 @@ class ChatService {
         (json) => Message.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      return ApiResponse(
-        error: e.response?.data['error'] ?? 'Failed to send message',
-      );
+      return handleError(e, 'Failed to send message');
     } catch (e) {
       return ApiResponse(error: 'An unexpected error occurred');
     }
