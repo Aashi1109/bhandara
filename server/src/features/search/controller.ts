@@ -1,7 +1,7 @@
-import type { Request, Response } from "express";
-import SearchService, { type ISearchFilters } from "./service";
-import { validateSearchRequest } from "./validation";
-import logger from "@/logger";
+import type { Request, Response } from 'express';
+import SearchService, { type ISearchFilters } from './service';
+import { validateSearchRequest } from './validation';
+import logger from '@/logger';
 
 class SearchController {
   /**
@@ -13,7 +13,7 @@ class SearchController {
       if (error) {
         return res.status(400).json({
           success: false,
-          message: "Invalid search parameters",
+          message: 'Invalid search parameters',
           errors: error.details,
         });
       }
@@ -23,7 +23,7 @@ class SearchController {
       if (!query || query.trim().length < 2) {
         return res.status(400).json({
           success: false,
-          message: "Search query must be at least 2 characters long",
+          message: 'Search query must be at least 2 characters long',
         });
       }
 
@@ -54,22 +54,17 @@ class SearchController {
         limit: parseInt(limit),
       });
 
-      logger.info(
-        `Search performed: "${query}" returned ${result.data.length} results`
-      );
+      logger.info(`Search performed: "${query}" returned ${result.items.length} results`);
 
       return res.status(200).json({
-        success: true,
-        data: result.data,
-        pagination: result.pagination,
+        data: result,
+        error: null,
       });
     } catch (error: any) {
-      logger.error("Search error:", error);
+      logger.error('Search error:', error);
       return res.status(500).json({
-        success: false,
-        message: "An error occurred while performing the search",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        data: null,
+        error: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while performing the search',
       });
     }
   }
@@ -81,29 +76,24 @@ class SearchController {
     try {
       const { query, limit = 5 } = req.query;
 
-      if (!query || typeof query !== "string" || query.trim().length < 1) {
+      if (!query || typeof query !== 'string' || query.trim().length < 1) {
         return res.status(400).json({
           success: false,
-          message: "Query parameter is required",
+          message: 'Query parameter is required',
         });
       }
 
-      const suggestions = await SearchService.getSuggestions(
-        query.trim(),
-        parseInt(limit as string)
-      );
+      const suggestions = await SearchService.getSuggestions(query.trim(), parseInt(limit as string));
 
       return res.status(200).json({
-        success: true,
         data: suggestions,
+        error: null,
       });
     } catch (error: any) {
-      logger.error("Get suggestions error:", error);
+      logger.error('Get suggestions error:', error);
       return res.status(500).json({
-        success: false,
-        message: "An error occurred while getting suggestions",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        data: null,
+        error: process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while getting suggestions',
       });
     }
   }
@@ -116,38 +106,37 @@ class SearchController {
       // Return available search filters and options
       const options = {
         types: [
-          { value: "event", label: "Events" },
-          { value: "user", label: "Users" },
-          { value: "tag", label: "Tags" },
+          { value: 'event', label: 'Events' },
+          { value: 'user', label: 'Users' },
+          { value: 'tag', label: 'Tags' },
         ],
         eventStatus: [
-          { value: "draft", label: "Draft" },
-          { value: "published", label: "Published" },
-          { value: "ongoing", label: "Ongoing" },
-          { value: "completed", label: "Completed" },
-          { value: "cancelled", label: "Cancelled" },
+          { value: 'draft', label: 'Draft' },
+          { value: 'published', label: 'Published' },
+          { value: 'ongoing', label: 'Ongoing' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'cancelled', label: 'Cancelled' },
         ],
         eventType: [
-          { value: "conference", label: "Conference" },
-          { value: "workshop", label: "Workshop" },
-          { value: "meetup", label: "Meetup" },
-          { value: "webinar", label: "Webinar" },
-          { value: "hackathon", label: "Hackathon" },
-          { value: "other", label: "Other" },
+          { value: 'conference', label: 'Conference' },
+          { value: 'workshop', label: 'Workshop' },
+          { value: 'meetup', label: 'Meetup' },
+          { value: 'webinar', label: 'Webinar' },
+          { value: 'hackathon', label: 'Hackathon' },
+          { value: 'other', label: 'Other' },
         ],
       };
 
       return res.status(200).json({
-        success: true,
         data: options,
+        error: null,
       });
     } catch (error: any) {
-      logger.error("Get search options error:", error);
+      logger.error('Get search options error:', error);
       return res.status(500).json({
-        success: false,
-        message: "An error occurred while getting search options",
+        data: null,
         error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          process.env.NODE_ENV === 'development' ? error.message : 'An error occurred while getting search options',
       });
     }
   }

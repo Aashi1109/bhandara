@@ -28,6 +28,16 @@ import {
   getUserInterests,
 } from '@/features/users/controller';
 import { updateSchema } from '@/features/users/validation';
+import {
+  getMyUpdates,
+  getUserActivity,
+  markAllUpdatesAsRead,
+  markUpdateAsRead,
+} from '@/features/activity/controller';
+import {
+  getUserAchievementProgress,
+  getUserAchievements,
+} from '@/features/achievements/controller';
 
 const router = Router();
 
@@ -83,6 +93,14 @@ router.use([sessionParser, userParser]);
  *         description: Paginated users
  */
 router.get('/', paginationParser, asyncHandler(getAllUser));
+
+router.get('/me/updates', paginationParser, asyncHandler(getMyUpdates));
+router.patch('/me/updates/read-all', asyncHandler(markAllUpdatesAsRead));
+router.patch('/me/updates/:activityId/read', asyncHandler(markUpdateAsRead));
+
+router.get('/:id/activity', paginationParser, asyncHandler(getUserActivity));
+router.get('/:id/achievements', asyncHandler(getUserAchievements));
+router.get('/:id/achievements/progress', asyncHandler(getUserAchievementProgress));
 
 router
   .route('/:id')

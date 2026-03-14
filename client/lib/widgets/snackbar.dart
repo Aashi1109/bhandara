@@ -54,6 +54,22 @@ class AppSnackBar {
 
     overlay.insert(_currentEntry!);
   }
+
+  static void success(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.success);
+  }
+
+  static void error(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.error);
+  }
+
+  static void warning(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.warning);
+  }
+
+  static void info(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.info);
+  }
 }
 
 class _TopSnackBar extends StatefulWidget {

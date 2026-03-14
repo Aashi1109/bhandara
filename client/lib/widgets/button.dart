@@ -5,7 +5,7 @@ enum AppButtonVariant { primary, secondary, ghost, outline }
 
 enum AppButtonSize { sm, md, lg, xl }
 
-class AppButton extends StatelessWidget {
+class AppButton extends StatefulWidget {
   const AppButton({
     super.key,
     this.variant = AppButtonVariant.primary,
@@ -17,21 +17,30 @@ class AppButton extends StatelessWidget {
     this.iconRight,
     this.fullWidth = false,
     this.isLoading = false,
+    this.loadable = false,
     this.mainAxisAlignment = MainAxisAlignment.center,
   });
   final AppButtonVariant variant;
   final AppButtonSize size;
-  final VoidCallback? onPressed;
+  final dynamic Function()? onPressed;
   final Widget? child;
   final String? label;
   final Widget? icon;
   final bool fullWidth;
   final bool isLoading;
+  final bool loadable;
   final MainAxisAlignment mainAxisAlignment;
   final Widget? iconRight;
 
+  @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _internalLoading = false;
+
   double get _height {
-    switch (size) {
+    switch (widget.size) {
       case AppButtonSize.sm:
         return 40;
       case AppButtonSize.md:
@@ -44,7 +53,7 @@ class AppButton extends StatelessWidget {
   }
 
   double get _horizontalPadding {
-    switch (size) {
+    switch (widget.size) {
       case AppButtonSize.sm:
         return 16;
       case AppButtonSize.md:
@@ -57,7 +66,7 @@ class AppButton extends StatelessWidget {
   }
 
   double get _fontSize {
-    switch (size) {
+    switch (widget.size) {
       case AppButtonSize.sm:
         return 12;
       case AppButtonSize.md:
@@ -70,7 +79,7 @@ class AppButton extends StatelessWidget {
   }
 
   double get _borderRadius {
-    switch (size) {
+    switch (widget.size) {
       case AppButtonSize.sm:
         return 12;
       case AppButtonSize.md:
@@ -83,7 +92,7 @@ class AppButton extends StatelessWidget {
   }
 
   Color get _backgroundColor {
-    switch (variant) {
+    switch (widget.variant) {
       case AppButtonVariant.primary:
         return AppColors.primary;
       case AppButtonVariant.secondary:
@@ -96,7 +105,7 @@ class AppButton extends StatelessWidget {
   }
 
   Color get _foregroundColor {
-    switch (variant) {
+    switch (widget.variant) {
       case AppButtonVariant.primary:
         return AppColors.surface;
       case AppButtonVariant.secondary:
@@ -109,7 +118,7 @@ class AppButton extends StatelessWidget {
   }
 
   BoxBorder? get _border {
-    switch (variant) {
+    switch (widget.variant) {
       case AppButtonVariant.outline:
       case AppButtonVariant.secondary:
         return Border.all(color: AppColors.border);
@@ -119,7 +128,7 @@ class AppButton extends StatelessWidget {
   }
 
   List<BoxShadow>? get _shadow {
-    if (variant == AppButtonVariant.primary) {
+    if (widget.variant == AppButtonVariant.primary) {
       return [
         BoxShadow(
           color: AppColors.primary.withValues(alpha: 0.1),
@@ -133,60 +142,97 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = isLoading
-        ? SizedBox(
-            width: _fontSize + 4,
-            height: _fontSize + 4,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(_foregroundColor),
-            ),
-          )
-        : child ??
+    final isLoading = widget.isLoading || _internalLoading;
+
+    final loadingIndicator = SizedBox(
+      width: _fontSize + 4,
+      height: _fontSize + 4,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(_foregroundColor),
+      ),
+    );
+
+    final hasContent =
+        widget.label != null || widget.icon != null || widget.iconRight != null;
+    final showBeside = isLoading && hasContent;
+    final showOnlyLoading = isLoading && !hasContent;
+
+    final content = showOnlyLoading
+        ? loadingIndicator
+        : widget.child ??
               Row(
-                mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment: mainAxisAlignment,
+                mainAxisSize: widget.fullWidth
+                    ? MainAxisSize.max
+                    : MainAxisSize.min,
+                mainAxisAlignment: widget.mainAxisAlignment,
                 children: [
-                  if (icon != null) ...[
+                  if (widget.icon != null && !isLoading) ...[
                     IconTheme(
                       data: IconThemeData(
                         color: _foregroundColor,
                         size: _fontSize + 4,
                       ),
-                      child: icon!,
+                      child: widget.icon!,
                     ),
                     const SizedBox(width: 8),
                   ],
-                  if (label != null)
-                    Text(
-                      label!,
-                      style: TextStyle(
-                        fontSize: _fontSize,
-                        fontWeight: FontWeight.w700,
-                        color: _foregroundColor,
+                  if (widget.label != null)
+                    Flexible(
+                      child: Text(
+                        widget.label!,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: _fontSize,
+                          fontWeight: FontWeight.w700,
+                          color: _foregroundColor,
+                        ),
                       ),
                     ),
-                  if (iconRight != null) ...[
+                  if (widget.iconRight != null && !isLoading) ...[
                     const SizedBox(width: 8),
                     IconTheme(
                       data: IconThemeData(
                         color: _foregroundColor,
                         size: _fontSize + 4,
                       ),
-                      child: iconRight!,
+                      child: widget.iconRight!,
                     ),
+                  ],
+                  if (showBeside) ...[
+                    const SizedBox(width: 8),
+                    loadingIndicator,
                   ],
                 ],
               );
 
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isLoading
+          ? null
+          : () async {
+              if (widget.onPressed == null) return;
+
+              if (widget.loadable) {
+                if (mounted) setState(() => _internalLoading = true);
+              }
+
+              try {
+                await widget.onPressed!();
+              } finally {
+                if (mounted && widget.loadable) {
+                  setState(() => _internalLoading = false);
+                }
+              }
+            },
       child: Container(
         height: _height,
-        width: fullWidth ? double.infinity : null,
+        width: widget.fullWidth ? double.infinity : null,
         padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
         decoration: BoxDecoration(
-          color: _backgroundColor,
+          color: isLoading
+              ? _backgroundColor.withValues(alpha: 0.5)
+              : _backgroundColor,
           borderRadius: BorderRadius.circular(_borderRadius),
           border: _border,
           boxShadow: _shadow,

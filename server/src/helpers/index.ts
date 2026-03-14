@@ -136,7 +136,7 @@ export * from "./validation";
 export { default as ajv } from "./validation";
 
 /**
- * Retrieve geo location data for an IP address using ip2location.
+ * Retrieve geo location data for an IP address using ip-api.
  */
 export const getGeoLocationData = async (ip: string) => {
   const skippedIps = ["127.0.0.1", "::1", "localhost"];
@@ -144,23 +144,21 @@ export const getGeoLocationData = async (ip: string) => {
   if (skippedIps.includes(ip)) {
     return null;
   }
-  const response = await fetch(
-    `https://api.ip2location.io/?key=${config.ip2location.apiKey}&ip=${ip}`
-  );
+  const response = await fetch(`http://ip-api.com/json/${ip}`);
   const data = await response.json();
 
-  if (data?.error) {
-    logger.error(`Error getting geo location data: ${data.error}`);
+  if (data?.status === "fail") {
+    logger.error(`Error getting geo location data: ${data.message}`);
     return {};
   }
 
   return {
-    city: data.city_name,
-    country: data.country_name,
-    region: data.region_name,
-    latitude: data.latitude,
-    longitude: data.longitude,
-    timezone: data.time_zone,
+    city: data.city,
+    country: data.country,
+    region: data.regionName,
+    latitude: data.lat,
+    longitude: data.lon,
+    timezone: data.timezone,
   };
 };
 

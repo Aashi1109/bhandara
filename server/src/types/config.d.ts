@@ -56,9 +56,6 @@ export interface AppConfig {
       token: string;
     };
   };
-  ip2location: {
-    apiKey: string;
-  };
   sessionCookie: {
     keyName: string;
     maxAge: number;

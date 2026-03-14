@@ -12,6 +12,7 @@ import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/header.dart';
 import '../widgets/snackbar.dart';
+import '../utils/error.dart';
 
 import '../services/auth.dart';
 
@@ -38,39 +39,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _handleContinue() async {
-    bool isUserExists = false;
-    bool isSocialLogin = false;
-    User? user;
-    // check if user exists with email
     try {
+      bool isUserExists = false;
+      bool isSocialLogin = false;
+      User? user;
       final users = await userService.getByQuery(email: _emailController.text);
-      final items = users.data?.items;
-      if (items != null && items.isNotEmpty) {
+      final items = users.items;
+      if (items.isNotEmpty) {
         isUserExists = true;
         isSocialLogin = items.first.isSocialLogin;
         user = items.first;
       }
-    } catch (e) {
-      debugPrint(e.toString());
-    }
-    if (mounted) {
-      if (isUserExists) {
-        if (!isSocialLogin) {
-          await context.push(LoginScreen.routePath);
+      ref.read(loginFlowProvider.notifier).update({
+        'email': _emailController.text,
+        ...?user?.toJson(),
+      });
+      if (mounted) {
+        if (isUserExists) {
+          if (!isSocialLogin) {
+            await context.push(LoginScreen.routePath);
+          } else {
+            AppSnackBar.warning(context, 'Please login using social login');
+          }
         } else {
-          AppSnackBar.show(
-            context,
-            message: 'Please login using social login',
-            type: SnackBarType.warning,
-          );
+          await context.push(LoginScreen.routePath);
         }
-      } else {
-        ref.read(loginFlowProvider.notifier).update({
-          'email': _emailController.text,
-          ...?user?.toJson(),
-        });
-        await context.push(LoginScreen.routePath);
       }
+    } catch (e) {
+      if (mounted) AppSnackBar.error(context, extractExceptionMessage(e));
+      debugPrint(e.toString());
     }
   }
 
@@ -150,6 +147,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             size: AppButtonSize.lg,
                             fullWidth: true,
                             label: 'Continue',
+                            loadable: true,
                             iconRight: const Icon(LucideIcons.arrowRight),
                             onPressed: _isEmailValid ? _handleContinue : null,
                           ),
@@ -189,17 +187,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   variant: AppButtonVariant.outline,
                                   size: AppButtonSize.lg,
                                   onPressed: () async {
-                                    final response = await authService
-                                        .signInWithGoogle();
-                                    if (context.mounted) {
-                                      if (response.data != null) {
+                                    try {
+                                      await authService.signInWithGoogle();
+                                      if (context.mounted) {
                                         context.go(ExploreScreen.routePath);
-                                      } else {
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        final message = extractExceptionMessage(
+                                          e,
+                                        );
                                         AppSnackBar.show(
                                           context,
-                                          message:
-                                              response.error ??
-                                              'Google Sign-In failed',
+                                          message: message,
                                           type: SnackBarType.error,
                                         );
                                       }

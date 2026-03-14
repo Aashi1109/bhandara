@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import '../constants/api.dart';
 import 'api.dart';
 import 'secure_storage.dart';
-import '../models/api_response.dart';
 import '../models/user.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'base.dart';
@@ -10,50 +9,45 @@ import 'base.dart';
 class AuthService extends BaseService {
   final Dio _dio = apiService.dio;
   final _storage = SecureStorage(namespace: 'auth');
-  static const String _tokenKey =
-      'token'; // Prefix will be added by SecureStorage
+  static const String _tokenKey = 'token';
 
-  Future<ApiResponse<User>> login(String email, String password) async {
+  Future<User> login(String email, String password) async {
     try {
       final response = await _dio.post(
         Api.login,
         data: {'email': email, 'password': password},
       );
-
-      final data = response.data['data'];
-      if (data != null && data['token'] != null) {
-        await _storage.write(_tokenKey, data['token'] as String);
+      final data = response.data['data'] as Map<String, dynamic>;
+      final session = data['session'] as Map<String, dynamic>?;
+      if (session != null && session['id'] != null) {
+        await _storage.write(_tokenKey, session['id'] as String);
       }
-
-      return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
-        return User.fromJson(userData as Map<String, dynamic>);
-      });
+      final userData = data['user'] ?? data;
+      return User.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      return handleError(e, 'Login failed');
+      throwError(e, 'Login failed');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
     }
   }
 
-  Future<ApiResponse<User>> signup(Map<String, dynamic> data) async {
+  Future<User> signup(Map<String, dynamic> data) async {
     try {
       final response = await _dio.post(Api.signup, data: data);
-
       final responseData = response.data['data'];
       if (responseData != null && responseData['session'] != null) {
-        final sessionId = responseData['session']['id'] as String;
-        await _storage.write(_tokenKey, sessionId);
+        await _storage.write(
+          _tokenKey,
+          responseData['session']['id'] as String,
+        );
       }
-
-      return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
-        return User.fromJson(userData as Map<String, dynamic>);
-      });
+      final json = responseData as Map<String, dynamic>;
+      final userData = json['user'] ?? json;
+      return User.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      return handleError(e, 'Signup failed');
+      throwError(e, 'Signup failed');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
     }
   }
 
@@ -67,61 +61,68 @@ class AuthService extends BaseService {
     }
   }
 
-  Future<ApiResponse<User>> signInWithGoogle() async {
+  Future<User> signInWithGoogle() async {
     try {
       final googleSignIn = GoogleSignIn.instance;
       await googleSignIn.initialize();
-
       final googleUser = await googleSignIn.authenticate(
         scopeHint: ['email', 'profile'],
       );
-
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
+      final googleAuth = googleUser.authentication;
       if (googleAuth.idToken == null) {
-        return ApiResponse(error: 'Failed to retrieve Google ID Token');
+        throw Exception('Failed to retrieve Google ID Token');
       }
-
       final response = await _dio.post(
         Api.googleSignIn,
         data: {'token': googleAuth.idToken},
       );
-
       final data = response.data['data'];
-      if (data != null) {
-        // The backend explicitly returns { data: null, success: true }
-        // But in signInWithIdToken some parts suggest it returns session/user
-        // We'll write to storage if a token exists.
-        if (data['session'] != null && data['session']['id'] != null) {
-          await _storage.write(_tokenKey, data['session']['id'] as String);
-        }
+      if (data != null &&
+          data['session'] != null &&
+          data['session']['id'] != null) {
+        await _storage.write(_tokenKey, data['session']['id'] as String);
       }
-
-      return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
-        return User.fromJson(userData as Map<String, dynamic>);
-      });
+      final json = data as Map<String, dynamic>;
+      final userData = json['user'] ?? json;
+      return User.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      return handleError(e, 'Google Sign-In failed');
+      throwError(e, 'Google Sign-In failed');
     } catch (e) {
-      return ApiResponse(
-        error: 'An unexpected error occurred during Google Sign-In',
-      );
+      rethrow;
     }
   }
 
-  Future<ApiResponse<User>> getSession() async {
+  Future<User?> getSession() async {
     try {
       final response = await _dio.get(Api.session);
-
-      return ApiResponse.fromJson(response.data, (json) {
-        final userData = (json! as Map<String, dynamic>)['user'] ?? json;
-        return User.fromJson(userData as Map<String, dynamic>);
-      });
+      final json = response.data['data'] as Map<String, dynamic>;
+      final userData = json['user'] ?? json;
+      return User.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      return handleError(e, 'Failed to fetch session');
+      throwError(e, 'Failed to fetch session');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getSessions() async {
+    try {
+      final response = await _dio.get(Api.sessions);
+      return response.data['data'] as List? ?? [];
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch sessions');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    try {
+      await _dio.delete(Api.deleteSession(sessionId));
+    } on DioException catch (e) {
+      throwError(e, 'Failed to delete session');
+    } catch (e) {
+      rethrow;
     }
   }
 }

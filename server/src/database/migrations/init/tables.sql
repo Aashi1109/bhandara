@@ -10,6 +10,8 @@ CREATE TYPE "AccessLevel" AS ENUM ('public', 'private', 'restricted');
 CREATE TYPE "MediaType" AS ENUM ('image', 'video', 'audio', 'document');
 CREATE TYPE "EventType" AS ENUM ('organized', 'custom');
 CREATE TYPE "EventStatus" AS ENUM ('draft', 'upcoming', 'ongoing', 'completed', 'cancelled');
+CREATE TYPE "ActivityVisibility" AS ENUM ('public', 'private');
+CREATE TYPE "ActivityEntityType" AS ENUM ('event', 'message', 'thread', 'reaction', 'achievement', 'user', 'system');
 
 -- Media Table
 CREATE TABLE "Media" (
@@ -172,3 +174,51 @@ CREATE TABLE "EventMedia" (
 COMMENT ON TABLE "EventMedia" IS 'Junction table for many-to-many relationship between Events and Media';
 COMMENT ON COLUMN "EventMedia"."eventId" IS 'ID of the event';
 COMMENT ON COLUMN "EventMedia"."mediaId" IS 'ID of the media';
+
+-- Activity Table
+CREATE TABLE "Activities" (
+    "id" UUID PRIMARY KEY DEFAULT uuidv7(),
+    "actorId" UUID NOT NULL REFERENCES "Users"("id"),
+    "recipientId" UUID NULL REFERENCES "Users"("id"),
+    "type" TEXT NOT NULL,
+    "entityType" "ActivityEntityType" NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "payload" JSONB NOT NULL DEFAULT '{}'::JSONB,
+    "visibility" "ActivityVisibility" NOT NULL DEFAULT 'public',
+    "readAt" TIMESTAMPTZ NULL,
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+    "deletedAt" TIMESTAMPTZ NULL
+);
+
+CREATE INDEX "activities_actorId_createdAt_idx" ON "Activities"("actorId", "createdAt");
+CREATE INDEX "activities_recipientId_createdAt_idx" ON "Activities"("recipientId", "createdAt");
+CREATE INDEX "activities_entityType_entityId_idx" ON "Activities"("entityType", "entityId");
+CREATE INDEX "activities_type_idx" ON "Activities"("type");
+
+-- User achievements and progress
+CREATE TABLE "UserAchievements" (
+    "id" UUID PRIMARY KEY DEFAULT uuidv7(),
+    "userId" UUID NOT NULL REFERENCES "Users"("id"),
+    "key" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "icon" TEXT NULL,
+    "metadata" JSONB NOT NULL DEFAULT '{}'::JSONB,
+    "unlockedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+    "deletedAt" TIMESTAMPTZ NULL,
+    UNIQUE ("userId", "key")
+);
+
+CREATE INDEX "user_achievements_userId_unlockedAt_idx" ON "UserAchievements"("userId", "unlockedAt");
+
+CREATE TABLE "AchievementProgress" (
+    "id" UUID PRIMARY KEY DEFAULT uuidv7(),
+    "userId" UUID NOT NULL UNIQUE REFERENCES "Users"("id"),
+    "metrics" JSONB NOT NULL DEFAULT '{}'::JSONB,
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+    "deletedAt" TIMESTAMPTZ NULL
+);

@@ -25,11 +25,20 @@ class PaginatedResponse<T> {
     Map<String, dynamic> json,
     T Function(Object? json) fromJsonT,
   ) {
+    final itemsJson = json['items'] as List<dynamic>? ?? [];
+    final paginationJson = json['pagination'] as Map<String, dynamic>?;
+
     return PaginatedResponse<T>(
-      items: (json['items'] as List<dynamic>).map(fromJsonT).toList(),
-      pagination: Pagination.fromJson(
-        json['pagination'] as Map<String, dynamic>,
-      ),
+      items: itemsJson.map(fromJsonT).toList(),
+      pagination: paginationJson != null
+          ? Pagination.fromJson(paginationJson)
+          : Pagination(
+              total: itemsJson.length,
+              page: 1,
+              limit: itemsJson.length,
+              totalPages: 1,
+              hasNext: false,
+            ),
     );
   }
   final List<T> items;
@@ -42,18 +51,24 @@ class Pagination {
     required this.page,
     required this.limit,
     required this.totalPages,
+    required this.hasNext,
+    this.next,
   });
 
   factory Pagination.fromJson(Map<String, dynamic> json) {
     return Pagination(
-      total: json['total'] as int,
-      page: json['page'] as int,
-      limit: json['limit'] as int,
-      totalPages: json['totalPages'] as int,
+      total: (json['total'] ?? 0) as int,
+      page: (json['page'] ?? 1) as int,
+      limit: (json['limit'] ?? 10) as int,
+      totalPages: (json['totalPages'] ?? 0) as int,
+      hasNext: (json['hasNext'] ?? false) as bool,
+      next: json['next'] as String?,
     );
   }
   final int total;
   final int page;
   final int limit;
   final int totalPages;
+  final bool hasNext;
+  final String? next;
 }

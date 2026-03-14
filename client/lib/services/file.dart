@@ -93,6 +93,39 @@ class FileService {
   // Deprecated: use uploadFile
   Future<String?> uploadImage(XFile file, {String bucket = 'avatars'}) =>
       uploadFile(file, bucket: bucket);
+
+  Future<bool> deleteMedia(String mediaId) async {
+    try {
+      final response = await _dio.delete(Api.media(mediaId));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateMedia(
+    String mediaId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dio.patch(Api.media(mediaId), data: data);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<String?> getPublicUrl(String mediaId) async {
+    try {
+      final response = await _dio.post(
+        Api.mediaPublicUrl,
+        data: {'mediaId': mediaId},
+      );
+      return response.data['data']['url'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 final fileService = FileService();

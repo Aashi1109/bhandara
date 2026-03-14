@@ -7,9 +7,18 @@ import TagService from "@/features/tags/service";
 import { emitSocketEvent } from "@/socket/emitter";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
 import { EEventStatus } from "@/definitions/enums";
+import ActivityService from "@/features/activity/service";
+import {
+  EActivityEntityType,
+  EActivityType,
+  EActivityVisibility,
+} from "@/features/activity/constants";
+import AchievementService from "@/features/achievements/service";
 
 const eventService = new EventService();
 const tagService = new TagService();
+const activityService = new ActivityService();
+const achievementService = new AchievementService();
 
 export const getEvents = async (
   req: ICustomRequest & IRequestPagination,
@@ -40,6 +49,20 @@ export const getEventById = async (req: ICustomRequest, res: Response) => {
 
 export const createEvent = async (req: ICustomRequest, res: Response) => {
   const event = await eventService.createEvent(req.body);
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      type: EActivityType.EventCreated,
+      entityType: EActivityEntityType.Event,
+      entityId: event.id,
+      payload: {
+        eventId: event.id,
+        eventName: event.name,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, EActivityType.EventCreated),
+  ]);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATED, { data: event });
   return res.status(201).json({ data: event, error: null });
 };
@@ -89,12 +112,37 @@ export const eventJoinLeaveHandler = async (
   req: ICustomRequest,
   res: Response
 ) => {
-  const event = await eventService.joinLeaveEvent(
+  const eventId = req.params.eventId as string;
+  const action = req.params.action as "join" | "leave";
+  const eventData = await eventService.getById(eventId);
+  const result = await eventService.joinLeaveEvent(
     req.user.id,
-    req.params.eventId,
-    req.params.action as "join" | "leave"
+    eventId,
+    action
   );
-  return res.status(200).json({ data: event, error: null });
+
+  const activityType = action === "join" ? EActivityType.EventJoined : EActivityType.EventLeft;
+
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      recipientId:
+        eventData && eventData.createdBy !== req.user.id
+          ? eventData.createdBy
+          : null,
+      type: activityType,
+      entityType: EActivityEntityType.Event,
+      entityId: eventId,
+      payload: {
+        eventId,
+        action,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, activityType),
+  ]);
+
+  return res.status(200).json({ data: result, error: null });
 };
 
 export const verifyEvent = async (req: ICustomRequest, res: Response) => {
@@ -105,9 +153,24 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
 
   const event = await eventService.verifyEvent(
     req.user.id,
-    req.params.eventId,
+    req.params.eventId as string,
     currentCoordinates
   );
+
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      type: EActivityType.EventVerified,
+      entityType: EActivityEntityType.Event,
+      entityId: req.params.eventId as string,
+      payload: {
+        eventId: req.params.eventId as string,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, EActivityType.EventVerified),
+  ]);
+
   return res.status(200).json({ data: event, error: null });
 };
 

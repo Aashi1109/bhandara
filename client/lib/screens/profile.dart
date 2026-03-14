@@ -31,12 +31,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUser() async {
     setState(() => _isLoading = true);
-    final response = await userService.getCurrentUser();
-    if (mounted) {
-      setState(() {
-        _user = response.data;
-        _isLoading = false;
-      });
+    try {
+      final user = await userService.getCurrentUser();
+      if (mounted) setState(() { _user = user; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

@@ -3,10 +3,13 @@ import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../theme/theme.dart';
 import '../widgets/header.dart';
 import '../widgets/floating_message_bar.dart';
 import '../widgets/snackbar.dart';
+import '../models/chat.dart';
+import '../services/chat.dart';
 
 import '../constants/socket_events.dart';
 import '../services/socket.dart';
@@ -24,11 +27,33 @@ class ThreadScreen extends StatefulWidget {
 class _ThreadScreenState extends State<ThreadScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isInputVisible = true;
+  bool _isLoading = true;
+  final List<Message> _replies = [];
+  Message? _originalMessage;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
+    _loadReplies();
+  }
+
+  Future<void> _loadReplies() async {
+    try {
+      final result = await chatService.getMessages(widget.id);
+      if (mounted) {
+        setState(() {
+          final items = result.items;
+          if (items.isNotEmpty) {
+            _originalMessage = items.first;
+            _replies.addAll(items.skip(1));
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _scrollListener() {
@@ -83,130 +108,142 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 ),
               ),
               Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Original message
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.muted,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.border),
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
                         ),
+                      )
+                    : SingleChildScrollView(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
+                            // Original message
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppColors.muted,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(50),
+                                        ),
+                                        child: const Text(
+                                          'ORIGINAL',
+                                          style: TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 2,
+                                            color: AppColors.surface,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _originalMessage?.senderName ?? 'Unknown',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(50),
-                                  ),
-                                  child: const Text(
-                                    'ORIGINAL',
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 2,
-                                      color: AppColors.surface,
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _originalMessage?.content ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.5,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Marcus C.',
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _originalMessage != null
+                                        ? DateFormat('hh:mm a').format(
+                                            _originalMessage!.createdAt,
+                                          )
+                                        : '',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 1,
+                                    height: 24,
+                                    color: AppColors.border,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${_replies.length} REPL${_replies.length == 1 ? 'Y' : 'IES'}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 2,
+                                      color: AppColors.mutedForeground,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (_replies.isEmpty)
+                              const Center(
+                                child: Text(
+                                  'No replies yet. Be the first to reply!',
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: AppColors.mutedForeground,
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Is there free parking near the entrance? I want to bring some extra supplies for the event.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              '10:15 AM',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
+                              )
+                            else
+                              ...List.generate(_replies.length, (i) {
+                                final reply = _replies[i];
+                                return Padding(
+                                  padding: EdgeInsets.only(
+                                    top: i > 0 ? 24 : 0,
+                                  ),
+                                  child: _reply(
+                                    reply.senderAvatar ??
+                                        'https://picsum.photos/seed/${reply.senderId}/100/100',
+                                    reply.senderName ?? 'User',
+                                    reply.content,
+                                    DateFormat('hh:mm a').format(
+                                      reply.createdAt,
+                                    ),
+                                    0,
+                                    null,
+                                  ),
+                                );
+                              }),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 1,
-                              height: 24,
-                              color: AppColors.border,
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              '3 REPLIES',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Replies
-                      _reply(
-                        'https://picsum.photos/seed/r1/100/100',
-                        'Lisa W.',
-                        "Yes! There's a free lot behind the community center. It fills up fast so come early 🚗",
-                        '10:18 AM',
-                        3,
-                        null,
-                      ),
-                      const SizedBox(height: 24),
-                      _reply(
-                        'https://picsum.photos/seed/r2/100/100',
-                        'Alex K.',
-                        "I usually park on Oak Street. It's about a 2 min walk. Metered parking is free after 6pm.",
-                        '10:22 AM',
-                        1,
-                        null,
-                      ),
-                      const SizedBox(height: 24),
-                      _reply(
-                        'https://picsum.photos/seed/r3/100/100',
-                        'Jordan P.',
-                        "Pro tip: there is also bike parking right at the entrance!",
-                        '10:25 AM',
-                        0,
-                        'https://picsum.photos/seed/bike/600/400',
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
@@ -232,7 +269,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                     // Optimistic UI update or wait for broadcast
                     // For now, just a placeholder for the logic
                   } catch (e) {
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     AppSnackBar.show(
                       context,
                       message: 'Failed to send reply: $e',

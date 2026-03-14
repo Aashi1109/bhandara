@@ -47,9 +47,6 @@ const config: AppConfig = {
       token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
     },
   },
-  ip2location: {
-    apiKey: process.env.IP2LOCATION_API_KEY || '',
-  },
   sessionCookie: {
     keyName: 'bh_session',
     maxAge: +(process.env.SESSION_COOKIE_MAX_AGE || 1000 * 60 * 60 * 24 * 30),

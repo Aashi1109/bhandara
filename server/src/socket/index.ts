@@ -25,6 +25,13 @@ import { getDistanceInMeters } from "@/helpers";
 import { setPlatformNamespace, emitSocketEvent } from "./emitter";
 import { EAllowedReactionTables } from "@/features/reactions/constants";
 import { EAccessLevel, EThreadType, EEventStatus } from "@/definitions/enums";
+import ActivityService from "@/features/activity/service";
+import {
+  EActivityEntityType,
+  EActivityType,
+  EActivityVisibility,
+} from "@/features/activity/constants";
+import AchievementService from "@/features/achievements/service";
 
 interface CustomSocket
   extends Socket<
@@ -47,6 +54,8 @@ const threadService = new ThreadService();
 const mediaService = new MediaService();
 const reactionService = new ReactionService();
 const eventService = new EventService();
+const activityService = new ActivityService();
+const achievementService = new AchievementService();
 
 const createJoinRoom = (socket: CustomSocket, room: string) => {
   socket.join(room);
@@ -95,6 +104,23 @@ export function initializeSocket(server: http.Server) {
             (message as any).thread = threadResponse;
             (message as any).user = socket.request.user;
           }
+          await Promise.all([
+            activityService.create({
+              actorId: socketUserId,
+              type: EActivityType.MessageCreated,
+              entityType: EActivityEntityType.Message,
+              entityId: message.id,
+              payload: {
+                messageId: message.id,
+                threadId: message.threadId,
+              },
+              visibility: EActivityVisibility.Public,
+            }),
+            achievementService.trackActivity(
+              socketUserId,
+              EActivityType.MessageCreated
+            ),
+          ]);
           emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
             data: message,
           });
@@ -190,6 +216,32 @@ export function initializeSocket(server: http.Server) {
             const newReaction = await reactionService.create(creationData);
 
             newReaction.user = getSafeUser(socket.request.user);
+
+            const entityTypeMap = {
+              [EAllowedReactionTables.Event]: EActivityEntityType.Event,
+              [EAllowedReactionTables.Message]: EActivityEntityType.Message,
+              [EAllowedReactionTables.Thread]: EActivityEntityType.Thread,
+            };
+
+            await Promise.all([
+              activityService.create({
+                actorId: socketUserId,
+                type: EActivityType.ReactionCreated,
+                entityType: entityTypeMap[contentPath] || EActivityEntityType.Reaction,
+                entityId: String(contentId),
+                payload: {
+                  reactionId: newReaction.id,
+                  emoji: reaction,
+                  contentPath,
+                  contentId,
+                },
+                visibility: EActivityVisibility.Public,
+              }),
+              achievementService.trackActivity(
+                socketUserId,
+                EActivityType.ReactionCreated
+              ),
+            ]);
 
             emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, {
               data: {

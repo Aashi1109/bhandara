@@ -1,5 +1,4 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../models/api_response.dart';
 import '../models/user.dart';
 import '../services/auth.dart';
 import 'user.dart';
@@ -10,38 +9,34 @@ part 'auth.g.dart';
 class Auth extends _$Auth {
   @override
   FutureOr<bool> build() async {
-    // Check if we have an active session
     final profile = await ref.watch(userProfileProvider.future);
-
     return profile != null;
   }
 
-  Future<ApiResponse<User>> login(String email, String password) async {
+  Future<User> login(String email, String password) async {
     state = const AsyncLoading();
-
-    final response = await authService.login(email, password);
-
-    if (response.error != null) {
-      state = AsyncError(response.error!, StackTrace.current);
-    } else {
-      ref.read(userProfileProvider.notifier).setUser(response.data);
+    try {
+      final user = await authService.login(email, password);
+      ref.read(userProfileProvider.notifier).setUser(user);
       state = const AsyncData(true);
+      return user;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
     }
-    return response;
   }
 
-  Future<ApiResponse<User>> signup(Map<String, dynamic> data) async {
+  Future<User> signup(Map<String, dynamic> data) async {
     state = const AsyncLoading();
-
-    final response = await authService.signup(data);
-
-    if (response.error != null) {
-      state = AsyncError(response.error!, StackTrace.current);
-    } else {
-      ref.read(userProfileProvider.notifier).setUser(response.data);
+    try {
+      final user = await authService.signup(data);
+      ref.read(userProfileProvider.notifier).setUser(user);
       state = const AsyncData(true);
+      return user;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
     }
-    return response;
   }
 
   Future<void> logout() async {

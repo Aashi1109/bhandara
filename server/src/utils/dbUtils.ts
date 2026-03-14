@@ -1,10 +1,5 @@
-import { type FindOptions, type Model, type ModelStatic, Op } from "sequelize";
-import type { IPaginationParams } from "@/definitions/types";
-
-export interface PaginatedResult<T> {
-  items: T[];
-  pagination: IPaginationParams;
-}
+import { type FindOptions, type Model, type ModelStatic, Op } from 'sequelize';
+import type { IPaginationParams, PaginatedResult } from '@/definitions/types';
 
 /**
  * Retrieve records with pagination, supporting both cursor and offset modes.
@@ -15,22 +10,16 @@ export async function findAllWithPagination<T extends Model>(
   findOptions: FindOptions = {},
   pagination: Partial<IPaginationParams> = {},
   select?: string,
-  modifyOptions?: (opts: FindOptions) => FindOptions
+  modifyOptions?: (opts: FindOptions) => FindOptions,
 ): Promise<PaginatedResult<T>> {
-  const {
-    limit = 10,
-    page = 1,
-    next = null,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = pagination;
+  const { limit = 10, page = 1, next = null, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
 
   const _pagination = {
     limit: limit ?? 10,
     page: page ?? 1,
     next: next ?? null,
-    sortBy: sortBy ?? "createdAt",
-    sortOrder: sortOrder ?? "desc",
+    sortBy: sortBy ?? 'createdAt',
+    sortOrder: sortOrder ?? 'desc',
   };
 
   const isCursorMode = !!next;
@@ -39,15 +28,13 @@ export async function findAllWithPagination<T extends Model>(
   const options: FindOptions = {
     raw: true,
     ...findOptions, // Spread the provided options first
-    order: findOptions.order || [
-      [_pagination.sortBy, _pagination.sortOrder.toUpperCase()],
-    ],
+    order: findOptions.order || [[_pagination.sortBy, _pagination.sortOrder.toUpperCase()]],
     limit,
   };
 
   // Select specific fields
   if (select) {
-    options.attributes = select.split(",").map((s) => s.trim());
+    options.attributes = select.split(',').map((s) => s.trim());
   }
 
   // Cursor-based pagination
@@ -55,7 +42,7 @@ export async function findAllWithPagination<T extends Model>(
     // Merge cursor condition with existing where clause
     const cursorCondition = {
       [_pagination.sortBy]: {
-        [_pagination.sortOrder === "asc" ? Op.gt : Op.lt]: _pagination.next,
+        [_pagination.sortOrder === 'asc' ? Op.gt : Op.lt]: _pagination.next,
       },
     };
 
@@ -78,27 +65,26 @@ export async function findAllWithPagination<T extends Model>(
 
   const { rows, count } = await model.findAndCountAll(options);
 
+  const totalPages = Math.ceil(count / _pagination.limit);
+
   const paginationResult = {
     limit,
     total: count,
+    totalPages,
   } as IPaginationParams;
 
   if (isCursorMode) {
     // For cursor pagination, check if we got exactly the limit (indicating more results)
     const hasNext = rows.length === _pagination.limit;
-    paginationResult.next = hasNext
-      ? rows[rows.length - 1][_pagination.sortBy]
-      : null;
+    paginationResult.next = hasNext ? rows[rows.length - 1][_pagination.sortBy] : null;
+    paginationResult.hasNext = hasNext;
   } else {
     // For offset pagination, calculate hasNext based on total count and current page
-    const totalPages = Math.ceil(count / _pagination.limit);
     const hasNext = _pagination.page < totalPages;
 
     paginationResult.page = _pagination.page;
     paginationResult.hasNext = hasNext;
-    paginationResult.next = hasNext
-      ? rows[rows.length - 1][_pagination.sortBy]
-      : null;
+    paginationResult.next = hasNext ? rows[rows.length - 1][_pagination.sortBy] : null;
   }
 
   const items = rows as T[];

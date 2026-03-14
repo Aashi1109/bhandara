@@ -64,25 +64,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
 
     if (token != null) {
-      final response = await authService.getSession();
+      try {
+        final user = await authService.getSession();
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (response.data != null) {
-        final user = response.data!;
+        if (user != null) {
+          ref.read(userProfileProvider.notifier).setUser(user);
 
-        // Sync with global store
-        ref.read(userProfileProvider.notifier).setUser(user);
-
-        if (user.meta?.hasOnboarded ?? false) {
-          context.go(ExploreScreen.routePath);
+          if (user.meta?.hasOnboarded ?? false) {
+            context.go(ExploreScreen.routePath);
+          } else {
+            context.go(PreferencesScreen.routePath);
+          }
         } else {
-          context.go(PreferencesScreen.routePath);
+          ref.read(userProfileProvider.notifier).setUser(null);
+          await authService.logout();
+          if (!mounted) return;
+          context.go(AuthScreen.routePath);
         }
-      } else {
+      } catch (_) {
         // Invalid session
         ref.read(userProfileProvider.notifier).setUser(null);
         await authService.logout();
+        if (!mounted) return;
         context.go(AuthScreen.routePath);
       }
     } else {

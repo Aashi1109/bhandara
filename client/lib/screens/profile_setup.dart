@@ -4,6 +4,7 @@ import 'package:foody_mobile/providers/auth.dart';
 import 'package:foody_mobile/providers/login_flow.dart';
 import 'package:foody_mobile/screens/preferences.dart';
 import 'package:foody_mobile/widgets/snackbar.dart';
+import '../utils/error.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
@@ -40,29 +41,23 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final email = flowState.data['email'];
     final password = flowState.data['password'];
 
-    final response = await ref.read(authProvider.notifier).signup({
-      'name': name,
-      'gender': _gender,
-      'email': email,
-      'password': password,
-    });
+    try {
+      await ref.read(authProvider.notifier).signup({
+        'name': name,
+        'gender': _gender,
+        'email': email,
+        'password': password,
+      });
 
-    if (!mounted) return;
-
-    if (response.error != null) {
-      debugPrint(response.error);
-      AppSnackBar.show(
-        context,
-        message: response.error!,
-        type: SnackBarType.error,
-      );
-      return;
+      if (!mounted) return;
+      ref.read(loginFlowProvider.notifier).clear();
+      await context.push(PreferencesScreen.routePath);
+    } catch (e) {
+      if (!mounted) return;
+      final message = extractExceptionMessage(e);
+      debugPrint(message);
+      AppSnackBar.show(context, message: message, type: SnackBarType.error);
     }
-
-    ref.read(loginFlowProvider.notifier).clear();
-
-    // Handle profile setup completion
-    await context.push(PreferencesScreen.routePath);
   }
 
   @override
@@ -293,9 +288,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 fullWidth: true,
                 label: 'Continue',
                 isLoading: isLoading,
-                iconRight: isLoading
-                    ? null
-                    : const Icon(LucideIcons.arrowRight),
                 onPressed: isLoading ? null : _handleContinue,
               ),
             ),

@@ -9,6 +9,8 @@ import '../widgets/input.dart';
 import '../widgets/header.dart';
 import '../providers/auth.dart';
 import '../widgets/snackbar.dart';
+import '../utils/error.dart';
+import '../widgets/password_requirements.dart';
 
 import 'auth.dart';
 import 'profile_setup.dart';
@@ -25,7 +27,6 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _showPassword = false;
-  bool _isLoading = false;
   final TextEditingController _passwordController = TextEditingController();
 
   @override
@@ -49,7 +50,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final flowState = ref.read(loginFlowProvider);
         final isNewUser =
             flowState.data.isEmpty || flowState.data['id'] == null;
-        setState(() => _isLoading = true);
 
         if (isNewUser) {
           ref.read(loginFlowProvider.notifier).update({
@@ -57,58 +57,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           });
           await context.push(ProfileSetupScreen.routePath);
           return;
-        }
-
-        // Strictly using login as requested, even for new users
-        final response = await ref
-            .read(authProvider.notifier)
-            .login(email, _passwordController.text);
-
-        if (!mounted) return;
-        if (response.error != null) {
-          AppSnackBar.show(
-            context,
-            message: response.error!,
-            type: SnackBarType.error,
-          );
         } else {
+          // Strictly using login as requested, even for new users
+          await ref
+              .read(authProvider.notifier)
+              .login(email, _passwordController.text);
+
+          if (!mounted) return;
           await context.push(ExploreScreen.routePath);
           ref.invalidate(loginFlowProvider);
         }
       } catch (e) {
         if (!mounted) return;
-        AppSnackBar.show(
-          context,
-          message: 'An unexpected error occurred',
-          type: SnackBarType.error,
-        );
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+        final message = extractExceptionMessage(e);
+        AppSnackBar.error(context, message);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final password = _passwordController.text;
-    final requirements = [
-      {'label': 'At least 8 characters', 'met': password.length >= 8},
-      {
-        'label': 'One uppercase letter',
-        'met': password.contains(RegExp(r'[A-Z]')),
-      },
-      {'label': 'One number', 'met': password.contains(RegExp(r'[0-9]'))},
-      {
-        'label': 'One special character',
-        'met': password.contains(RegExp(r'[^A-Za-z0-9]')),
-      },
-    ];
+    final bool isNewUser = ref.watch(loginFlowProvider).data['id'] == null;
+    debugPrint('isNewUser: $isNewUser');
 
     final email = ref.watch(loginFlowProvider).email ?? 'User';
     final initial = email.isNotEmpty && email != 'User'
         ? email[0].toUpperCase()
         : 'U';
-    debugPrint('email: ${ref.watch(loginFlowProvider)}');
+
+    final passwordRequirements = PasswordRequirements(
+      password: _passwordController.text,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -216,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  ref.watch(loginFlowProvider).email ?? 'User',
+                                  email,
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -246,6 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             required: 'Password is required',
                             validate: (value) {
                               if (value == null || value.isEmpty) return null;
+                              if (!isNewUser) return null;
                               final hasUppercase = value.contains(
                                 RegExp(r'[A-Z]'),
                               );
@@ -279,56 +259,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Validation Rows
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Column(
-                            children: requirements.map((req) {
-                              final met = req['met']! as bool;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      met ? LucideIcons.check : LucideIcons.x,
-                                      size: 16,
-                                      color: met
-                                          ? AppColors.primary
-                                          : AppColors.mutedForeground,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      req['label']! as String,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: met
-                                            ? AppColors.primary
-                                            : AppColors.mutedForeground,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
+                        if (isNewUser) ...[
+                          passwordRequirements,
+                          const SizedBox(height: 32),
+                        ],
 
                         AppButton(
                           size: AppButtonSize.lg,
                           fullWidth: true,
                           label: 'Log In',
-                          isLoading: _isLoading,
-                          iconRight: _isLoading
-                              ? null
-                              : const Icon(LucideIcons.arrowRight),
                           onPressed:
-                              (_isLoading ||
-                                  _passwordController.text.isEmpty ||
-                                  !requirements.every((r) => r['met']! as bool))
+                              (_passwordController.text.isEmpty ||
+                                  (isNewUser && !passwordRequirements.allMet))
                               ? null
                               : _handleLogin,
+                          loadable: !isNewUser,
                         ),
                         const SizedBox(height: 16),
                         TextButton(

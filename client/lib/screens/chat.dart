@@ -8,6 +8,7 @@ import '../widgets/floating_message_bar.dart';
 import 'explore.dart';
 import 'thread.dart';
 import '../services/socket.dart';
+import '../services/chat.dart';
 import '../widgets/snackbar.dart';
 import '../models/chat.dart';
 import 'package:intl/intl.dart';
@@ -25,13 +26,30 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isInputVisible = true;
   bool _isThreadLocked = false;
+  bool _isLoadingMessages = true;
   final List<Message> _messages = [];
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
+    _loadMessages();
     _connectSocket();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final result = await chatService.getMessages(widget.id);
+      if (mounted) {
+        setState(() {
+          _messages.addAll(result.items);
+          _isLoadingMessages = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMessages = false);
+    }
   }
 
   Future<void> _connectSocket() async {
@@ -121,31 +139,47 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               _buildHeader(context),
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    if (index == 0) {
-                      return Column(
-                        children: [
-                          _buildTimestamp(
-                            DateFormat(
-                              'MMMM dd, hh:mm a',
-                            ).format(msg.createdAt),
+                child: _isLoadingMessages
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : _messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No messages yet. Start the conversation!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mutedForeground,
                           ),
-                          const SizedBox(height: 24),
-                          _renderMessage(msg),
-                        ],
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 32),
-                      child: _renderMessage(msg),
-                    );
-                  },
-                ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          if (index == 0) {
+                            return Column(
+                              children: [
+                                _buildTimestamp(
+                                  DateFormat(
+                                    'MMMM dd, hh:mm a',
+                                  ).format(msg.createdAt),
+                                ),
+                                const SizedBox(height: 24),
+                                _renderMessage(msg),
+                              ],
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 32),
+                            child: _renderMessage(msg),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -165,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       'threadId': widget.id,
                     });
                   } catch (e) {
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     AppSnackBar.show(
                       context,
                       message: 'Failed to send message: $e',
@@ -227,9 +261,9 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Community BBQ',
-                  style: TextStyle(
+                Text(
+                  _isThreadLocked ? 'Thread (Locked)' : 'Live Discussion',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.primary,

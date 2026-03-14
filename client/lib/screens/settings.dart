@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 import '../widgets/header.dart';
 import '../widgets/button.dart';
+import '../services/auth.dart';
+import '../providers/user.dart';
 import 'profile.dart';
 import 'settings/profile_details.dart';
 import 'settings/email.dart';
@@ -11,17 +14,18 @@ import 'settings/password.dart';
 import 'settings/cuisines.dart';
 import 'settings/location.dart';
 import 'settings/notifications.dart';
-import 'splash.dart';
+import 'auth.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
   static const String routePath = '/settings';
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _locationSharing = true;
+  bool _isSigningOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,93 +44,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Profile summary
-                  Row(
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: AppColors.muted,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: ClipOval(
-                              child: Center(
-                                child: Icon(
-                                  LucideIcons.user,
-                                  size: 32,
-                                  color: AppColors.mutedForeground.withValues(
-                                    alpha: 0.4,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () =>
-                                  context.go(ProfileDetailsScreen.routePath),
-                              child: Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.surface,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  LucideIcons.edit2,
-                                  size: 12,
-                                  color: AppColors.surface,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Builder(builder: (context) {
+                    final user = ref.watch(userProfileProvider).value;
+                    return Row(
+                      children: [
+                        Stack(
                           children: [
-                            Text(
-                              'Alex Johnson',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: AppColors.muted,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: ClipOval(
+                                child: user?.avatarUrl != null
+                                    ? Image.network(
+                                        user!.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          LucideIcons.user,
+                                          size: 32,
+                                          color: AppColors.mutedForeground
+                                              .withValues(alpha: 0.4),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Icon(
+                                          LucideIcons.user,
+                                          size: 32,
+                                          color: AppColors.mutedForeground
+                                              .withValues(alpha: 0.4),
+                                        ),
+                                      ),
                               ),
                             ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Foodie Explorer',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.mutedForeground,
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () =>
+                                    context.go(ProfileDetailsScreen.routePath),
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.surface,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    LucideIcons.edit2,
+                                    size: 12,
+                                    color: AppColors.surface,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.name ?? user?.email ?? 'User',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                user?.email ?? '',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                   const SizedBox(height: 32),
 
                   // Account Information
@@ -223,8 +231,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.xl,
                     fullWidth: true,
-                    onPressed: () => context.go(SplashScreen.routePath),
-                    icon: const Icon(LucideIcons.logOut, size: 20),
+                    onPressed: _isSigningOut
+                        ? null
+                        : () async {
+                            setState(() => _isSigningOut = true);
+                            await authService.logout();
+                            ref.read(userProfileProvider.notifier).setUser(null);
+                            if (!context.mounted) return;
+                            context.go(AuthScreen.routePath);
+                          },
+                    icon: _isSigningOut
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(LucideIcons.logOut, size: 20),
                     label: 'Sign Out',
                   ),
                   const SizedBox(height: 24),

@@ -1,60 +1,102 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/theme.dart';
 import '../widgets/input.dart';
+import '../widgets/card.dart';
 import '../widgets/bottom_nav.dart';
+import '../services/search.dart';
 
 import 'explore.dart';
 import 'event_detail.dart';
 
-class SearchScreen extends StatelessWidget {
+class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
   static const String routePath = '/search';
 
-  static final _events = [
-    _Event(
-      1,
-      'Tuesday Taco Pop-up',
-      'Spicy bean & corn tacos with salsa',
-      '0.3 mi',
-      '45m left',
-      'FREE',
-      'https://picsum.photos/seed/tacos/300/300',
-      'urgent',
-    ),
-    _Event(
-      2,
-      'Elote & Chips Stand',
-      'Fresh corn cups and homemade chips',
-      '0.8 mi',
-      'Just Started',
-      null,
-      'https://picsum.photos/seed/corn/300/300',
-      'new',
-    ),
-    _Event(
-      3,
-      'Community Garden Lunch',
-      'Leftover catering, plant-based tacos',
-      '1.2 mi',
-      '2h remaining',
-      'VEGAN',
-      'https://picsum.photos/seed/garden/300/300',
-      'normal',
-    ),
-    _Event(
-      4,
-      'Downtown Food Drive',
-      'Surplus grocery distribution',
-      '0.1 mi',
-      'Ended 10m ago',
-      'CLOSED',
-      'https://picsum.photos/seed/box/300/300',
-      'closed',
-    ),
-  ];
+  @override
+  State<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  final _controller = TextEditingController();
+  List<SearchResult> _results = [];
+  List<String> _suggestions = [];
+  bool _isLoading = false;
+  bool _hasSearched = false;
+  int _totalResults = 0;
+  String _activeFilter = 'All Results';
+  Timer? _debounce;
+
+  static const _filters = ['All Results', 'Events', 'Users', 'Tags'];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onQueryChanged);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.removeListener(_onQueryChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    final query = _controller.text.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _results = [];
+        _suggestions = [];
+        _hasSearched = false;
+      });
+      return;
+    }
+    if (query.length >= 2) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 400), () {
+        _fetchSuggestions(query);
+      });
+    }
+  }
+
+  Future<void> _fetchSuggestions(String query) async {
+    try {
+      final res = await searchService.getSuggestions(query);
+      if (mounted) setState(() => _suggestions = res);
+    } catch (_) {}
+  }
+
+  Future<void> _search(String query) async {
+    if (query.trim().length < 2) return;
+    _debounce?.cancel();
+    setState(() {
+      _isLoading = true;
+      _hasSearched = true;
+      _suggestions = [];
+    });
+
+    final filters = _activeFilter != 'All Results'
+        ? {'filters[types]': _activeFilter.toLowerCase()}
+        : null;
+
+    try {
+      final res = await searchService.search(query.trim(), filters: filters);
+      if (mounted) {
+        setState(() {
+          _results = res.items;
+          _totalResults = res.pagination.total;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,38 +151,26 @@ class SearchScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: AppInput(
-                            placeholder: 'Search...',
-                            icon: Icon(LucideIcons.search, size: 20),
+                            controller: _controller,
+                            placeholder: 'Search events, people, tags...',
+                            icon: const Icon(LucideIcons.search, size: 20),
                             height: 48,
                             borderRadius: 50,
+                            onChanged: (value) {
+                              // handled by listener
+                            },
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Stack(
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Icon(
-                                LucideIcons.slidersHorizontal,
-                                size: 24,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
+                        const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            LucideIcons.slidersHorizontal,
+                            size: 24,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ],
                     ),
@@ -150,15 +180,20 @@ class SearchScreen extends StatelessWidget {
                       height: 36,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        children: [
-                          _chipBtn('All Results', true),
-                          const SizedBox(width: 8),
-                          _chipBtn('Nearest', false),
-                          const SizedBox(width: 8),
-                          _chipBtn('Closing Soon', false),
-                          const SizedBox(width: 8),
-                          _chipBtn('Vegan', false),
-                        ],
+                        children: _filters.map((f) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _activeFilter = f);
+                                if (_controller.text.trim().length >= 2) {
+                                  _search(_controller.text.trim());
+                                }
+                              },
+                              child: _chipBtn(f, _activeFilter == f),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ],
@@ -167,60 +202,17 @@ class SearchScreen extends StatelessWidget {
 
               // Content
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                  child: Column(
-                    children: [
-                      // Results header
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '12 events found',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.mutedForeground,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => context.go(ExploreScreen.routePath),
-                              child: const Text(
-                                'Map View',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ],
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
                         ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Event cards
-                      ...List.generate(_events.length, (i) {
-                        final e = _events[i];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: GestureDetector(
-                            onTap: () => context.go(
-                              EventDetailScreen.routePath.replaceAll(
-                                ':id',
-                                e.id.toString(),
-                              ),
-                            ),
-                            child: _buildEventCard(e),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
+                      )
+                    : _suggestions.isNotEmpty && !_hasSearched
+                    ? _buildSuggestions()
+                    : _hasSearched
+                    ? _buildResults()
+                    : _buildEmptyState(),
               ),
             ],
           ),
@@ -230,210 +222,183 @@ class SearchScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEventCard(_Event e) {
-    final isClosed = e.status == 'closed';
-    return Opacity(
-      opacity: isClosed ? 0.6 : 1.0,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+  Widget _buildSuggestions() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+      itemCount: _suggestions.length,
+      itemBuilder: (context, index) {
+        final suggestion = _suggestions[index];
+        return ListTile(
+          leading: const Icon(
+            LucideIcons.search,
+            color: AppColors.mutedForeground,
+          ),
+          title: Text(
+            suggestion,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.primary,
+            ),
+          ),
+          onTap: () {
+            _controller.text = suggestion;
+            _search(suggestion);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildResults() {
+    if (_results.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.searchX,
+              size: 48,
+              color: AppColors.mutedForeground,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No results found',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Try a different search term',
+              style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
             ),
           ],
         ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$_totalResults result${_totalResults != 1 ? 's' : ''} found',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.go(ExploreScreen.routePath),
+                  child: const Text(
+                    'Map View',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          ..._results.map((result) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: GestureDetector(
+                onTap: () {
+                  if (result.type == 'event') {
+                    context.go(
+                      EventDetailScreen.routePath.replaceAll(':id', result.id),
+                    );
+                  }
+                },
+                child: _buildResultCard(result),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultCard(SearchResult result) {
+    return AppCard(
+      padding: AppCardPadding.none,
+      borderRadius: 24,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Image
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: 96,
-                height: 96,
-                child: Stack(
-                  children: [
-                    ColorFiltered(
-                      colorFilter: isClosed
-                          ? const ColorFilter.mode(
-                              AppColors.mutedForeground,
-                              BlendMode.saturation,
-                            )
-                          : const ColorFilter.mode(
-                              AppColors.transparent,
-                              BlendMode.multiply,
-                            ),
-                      child: CachedNetworkImage(
-                        imageUrl: e.image,
-                        fit: BoxFit.cover,
-                        width: 96,
-                        height: 96,
-                      ),
-                    ),
-                    if (e.tag != null && !isClosed)
-                      Positioned(
-                        top: 6,
-                        left: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: e.tag == 'VEGAN'
-                                ? AppColors.accent
-                                : AppColors.primary.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Text(
-                            e.tag!,
-                            style: const TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.5,
-                              color: AppColors.surface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (isClosed)
-                      Container(
-                        color: AppColors.primary.withValues(alpha: 0.4),
-                        child: const Center(
-                          child: Text(
-                            'CLOSED',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2,
-                              color: AppColors.surface,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              child: result.imageUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: result.imageUrl!,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => _placeholderImage(result),
+                    )
+                  : _placeholderImage(result),
             ),
             const SizedBox(width: 16),
-
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          e.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            height: 1.2,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Text(
+                      result.type.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: AppColors.primary,
                       ),
-                      const Icon(
-                        LucideIcons.heart,
-                        size: 20,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    e.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.mutedForeground,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            LucideIcons.navigation,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            e.distance,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 12),
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: AppColors.border,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: e.status == 'urgent'
-                              ? AppColors.warning.withValues(alpha: 0.1)
-                              : e.status == 'new'
-                              ? AppColors.primary.withValues(alpha: 0.1)
-                              : AppColors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          children: [
-                            if (e.status == 'urgent')
-                              const Icon(
-                                LucideIcons.timer,
-                                size: 14,
-                                color: AppColors.warning,
-                              ),
-                            if (e.status == 'new')
-                              const Icon(
-                                LucideIcons.checkCircle2,
-                                size: 14,
-                                color: AppColors.primary,
-                              ),
-                            if (e.status == 'urgent' || e.status == 'new')
-                              const SizedBox(width: 4),
-                            Text(
-                              e.time,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: e.status == 'urgent'
-                                    ? AppColors.warning
-                                    : e.status == 'new'
-                                    ? AppColors.primary
-                                    : AppColors.mutedForeground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 6),
+                  Text(
+                    result.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                      color: AppColors.primary,
+                    ),
                   ),
+                  if (result.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      result.description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -443,7 +408,49 @@ class SearchScreen extends StatelessWidget {
     );
   }
 
-  static Widget _chipBtn(String text, bool selected) {
+  Widget _placeholderImage(SearchResult result) {
+    return Container(
+      width: 96,
+      height: 96,
+      color: AppColors.muted,
+      child: Icon(
+        result.type == 'event'
+            ? LucideIcons.calendar
+            : result.type == 'user'
+            ? LucideIcons.user
+            : LucideIcons.tag,
+        size: 32,
+        color: AppColors.mutedForeground,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(LucideIcons.search, size: 48, color: AppColors.mutedForeground),
+          SizedBox(height: 16),
+          Text(
+            'Search for events, people, or tags',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Type at least 2 characters to search',
+            style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chipBtn(String text, bool selected) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
@@ -472,25 +479,4 @@ class SearchScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Event {
-  _Event(
-    this.id,
-    this.title,
-    this.description,
-    this.distance,
-    this.time,
-    this.tag,
-    this.image,
-    this.status,
-  );
-  final int id;
-  final String title;
-  final String description;
-  final String distance;
-  final String time;
-  final String? tag;
-  final String image;
-  final String status;
 }

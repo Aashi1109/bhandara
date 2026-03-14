@@ -10,6 +10,7 @@ import '../widgets/input.dart';
 import '../widgets/header.dart';
 import '../services/event.dart';
 import '../services/file.dart';
+import '../utils/error.dart';
 import 'explore.dart';
 import 'success.dart';
 
@@ -155,27 +156,30 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     final startTime = now.add(const Duration(hours: 1));
     final endTime = now.add(const Duration(hours: 3));
 
-    final response = await eventService.createEvent({
-      'name': _titleController.text,
-      'description': _descriptionController.text,
-      'status': 'PUBLISHED',
-      'visibility': 'PUBLIC',
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'coverId': _mediaId,
-      'location': {
-        'latitude': 34.0522,
-        'longitude': -118.2437,
-        'address': 'Downtown Los Angeles, CA',
-      },
-    });
+    try {
+      await eventService.createEvent({
+        'name': _titleController.text,
+        'description': _descriptionController.text,
+        'status': 'PUBLISHED',
+        'visibility': 'PUBLIC',
+        'startTime': startTime.toIso8601String(),
+        'endTime': endTime.toIso8601String(),
+        'coverId': _mediaId,
+        'location': {
+          'latitude': 34.0522,
+          'longitude': -118.2437,
+          'address': 'Downtown Los Angeles, CA',
+        },
+      });
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (response.error != null) {
-        setState(() => _error = response.error);
-      } else {
+      if (mounted) {
+        setState(() => _isLoading = false);
         context.go(SuccessScreen.routePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = extractExceptionMessage(e);
+        setState(() { _isLoading = false; _error = message; });
       }
     }
   }

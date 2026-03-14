@@ -6,9 +6,18 @@ import { NotFoundError, ForbiddenError } from "@/exceptions";
 import { emitSocketEvent } from "@/socket/emitter";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
 import ThreadsService from "@/features/threads/service";
+import ActivityService from "@/features/activity/service";
+import {
+  EActivityEntityType,
+  EActivityType,
+  EActivityVisibility,
+} from "@/features/activity/constants";
+import AchievementService from "@/features/achievements/service";
 
 const messagesService = new MessageService();
 const threadsService = new ThreadsService();
+const activityService = new ActivityService();
+const achievementService = new AchievementService();
 
 export const getMessages = async (
   req: ICustomRequest & IRequestPagination,
@@ -30,7 +39,7 @@ export const getMessages = async (
 };
 
 export const createMessage = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = req.params.threadId as string;
 
   // Check if the thread (or its parent chain) is locked before creating a message
   const lockStatus = await threadsService.isThreadChainLocked(threadId);
@@ -50,6 +59,20 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
     ]),
     true
   );
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      type: EActivityType.MessageCreated,
+      entityType: EActivityEntityType.Message,
+      entityId: message.id,
+      payload: {
+        messageId: message.id,
+        threadId,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, EActivityType.MessageCreated),
+  ]);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
     data: message,
     error: null,

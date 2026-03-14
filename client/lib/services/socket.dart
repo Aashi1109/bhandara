@@ -26,9 +26,15 @@ class SocketService {
     final token = await _storage.read('token');
 
     // Engine.IO 4 connection URL
-    final baseUrl = ApiService.baseUrl.replaceFirst('http', 'ws');
-    final uri = Uri.parse(
-      '$baseUrl/socket.io/?EIO=4&transport=websocket&token=$token',
+    // Extract origin from baseUrl robustly
+    final baseUri = Uri.parse(ApiService.baseUrl);
+    final wsScheme = baseUri.scheme == 'https' ? 'wss' : 'ws';
+    final uri = Uri(
+      scheme: wsScheme,
+      host: baseUri.host,
+      port: baseUri.port,
+      path: '/socket.io/',
+      queryParameters: {'EIO': '4', 'transport': 'websocket', 'token': token},
     );
 
     try {

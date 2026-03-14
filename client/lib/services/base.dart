@@ -1,8 +1,7 @@
 import 'package:dio/dio.dart';
-import '../models/api_response.dart';
 
 abstract class BaseService {
-  ApiResponse<T> handleError<T>(DioException e, String defaultMessage) {
+  Never throwError(DioException e, String defaultMessage) {
     String message = defaultMessage;
     final response = e.response;
 
@@ -15,6 +14,6 @@ abstract class BaseService {
       }
     }
 
-    return ApiResponse(error: message);
+    throw Exception(message);
   }
 }

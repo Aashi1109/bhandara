@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/map_view.dart';
 import '../services/event.dart';
 import '../models/event.dart';
 import '../services/socket.dart';
+import '../services/location_permission.dart';
+import '../services/maps/map_manager.dart';
+import '../services/maps/map_provider_type.dart';
 import '../constants/socket_events.dart';
 import 'event_detail.dart';
 
@@ -21,12 +26,16 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen>
+    with WidgetsBindingObserver {
   bool _showDetails = false;
   bool _isFilterOpen = false;
   List<Event> _events = [];
   Event? _selectedEvent;
   bool _isLoading = true;
+  bool _isLocationEnabled = true;
+  GoogleMapController? _mapController;
+  final MapManager _mapManager = MapManager(type: MapProviderType.google);
 
   final _filters = [
     _Filter('ongoing', 'Ongoing Now', LucideIcons.timer),
@@ -37,21 +46,42 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshLocationPermission();
     _loadEvents();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshLocationPermission();
+    }
+  }
+
+  Future<void> _refreshLocationPermission() async {
+    final status = await LocationPermissionService.currentStatus();
+    if (!mounted) return;
+    setState(() {
+      _isLocationEnabled = LocationPermissionService.hasAccess(status);
+    });
   }
 
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
-    final response = await eventService.getEvents();
-    if (mounted) {
-      setState(() {
-        _events = response.data?.items ?? [];
-        if (_events.isNotEmpty && _selectedEvent == null) {
-          _selectedEvent = _events.first;
-          _showDetails = true;
-        }
-        _isLoading = false;
-      });
+    try {
+      final result = await eventService.getEvents();
+      if (mounted) {
+        setState(() {
+          _events = result.items;
+          if (_events.isNotEmpty && _selectedEvent == null) {
+            _selectedEvent = _events.first;
+            _showDetails = true;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
     }
     _connectSocket();
   }
@@ -97,17 +127,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
       backgroundColor: AppColors.surface,
       body: Stack(
         children: [
-          // Map background
           Positioned.fill(
-            child: ColorFiltered(
-              colorFilter: const ColorFilter.mode(
-                AppColors.mutedForeground,
-                BlendMode.saturation,
+            child: AppMapView(
+              manager: _mapManager,
+              initialCameraPosition: CameraPosition(
+                target: _getInitialMapCenter(),
+                zoom: 13,
               ),
-              child: CachedNetworkImage(
-                imageUrl: 'https://picsum.photos/seed/nyc-map/1000/1000',
-                fit: BoxFit.cover,
-              ),
+              markers: _buildMarkers(),
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+              myLocationEnabled: _isLocationEnabled,
+              onMapReady: (controller) => _mapController = controller,
             ),
           ),
 
@@ -115,26 +146,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
             const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             )
-          else ...[
-            // Map markers (Simulated positioning for first 3 events)
-            for (int i = 0; i < _events.length && i < 3; i++)
-              Positioned(
-                top: MediaQuery.of(context).size.height * (0.2 + (i * 0.15)),
-                left: MediaQuery.of(context).size.width * (0.2 + (i * 0.2)),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedEvent = _events[i];
-                      _showDetails = true;
-                    });
-                  },
-                  child: _buildMarker(
-                    _getCategoryIcon(_events[i].tags?.firstOrNull?.name),
-                    _selectedEvent?.id == _events[i].id ? 56 : 48,
-                  ),
-                ),
-              ),
-          ],
+          else
+            ...[],
 
           // Search bar
           Positioned(
@@ -264,6 +277,43 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         },
                       ),
                     ),
+                    if (!_isLocationEnabled) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              LucideIcons.alertTriangle,
+                              size: 16,
+                              color: AppColors.warning,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Location is disabled. Nearby results may be incomplete.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -276,11 +326,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
             top: MediaQuery.of(context).size.height * 0.5 - 60,
             child: Column(
               children: [
-                _mapControl(LucideIcons.plus, false),
+                _mapControl(LucideIcons.plus, false, onTap: _zoomIn),
                 const SizedBox(height: 12),
-                _mapControl(LucideIcons.minus, false),
+                _mapControl(LucideIcons.minus, false, onTap: _zoomOut),
                 const SizedBox(height: 8),
-                _mapControl(LucideIcons.locateFixed, true),
+                _mapControl(
+                  LucideIcons.locateFixed,
+                  true,
+                  onTap: _focusOnSelectedEvent,
+                ),
               ],
             ),
           ),
@@ -449,27 +503,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  IconData _getCategoryIcon(String? category) {
-    switch (category?.toLowerCase()) {
-      case 'pizza':
-        return LucideIcons.pizza;
-      case 'veggie':
-      case 'vegan':
-        return LucideIcons.leaf;
-      case 'snack':
-      case 'dessert':
-      case 'desserts':
-        return LucideIcons.cookie;
-      case 'bakery':
-        return LucideIcons.croissant;
-      case 'beverage':
-      case 'beverages':
-        return LucideIcons.coffee;
-      default:
-        return LucideIcons.utensils;
-    }
-  }
-
   String _getRelativeTime(DateTime endTime) {
     final diff = endTime.difference(DateTime.now());
     if (diff.isNegative) return 'Ended';
@@ -479,70 +512,98 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return '${diff.inMinutes} mins remaining';
   }
 
-  Widget _buildMarker(IconData? icon, double size) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: size + 8,
-          height: size + 8,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
+  LatLng _getInitialMapCenter() {
+    for (final event in _events) {
+      final lat = event.location.latitude;
+      final lng = event.location.longitude;
+      if (lat != null && lng != null) {
+        return LatLng(lat, lng);
+      }
+    }
+    return const LatLng(21.1458, 79.0882);
+  }
+
+  Set<Marker> _buildMarkers() {
+    final markers = <Marker>{};
+    for (final event in _events) {
+      final lat = event.location.latitude;
+      final lng = event.location.longitude;
+      if (lat == null || lng == null) continue;
+
+      final isSelected = _selectedEvent?.id == event.id;
+      markers.add(
+        Marker(
+          markerId: MarkerId(event.id),
+          position: LatLng(lat, lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            isSelected ? BitmapDescriptor.hueOrange : BitmapDescriptor.hueRose,
           ),
+          infoWindow: InfoWindow(title: event.name),
+          onTap: () {
+            setState(() {
+              _selectedEvent = event;
+              _showDetails = true;
+            });
+          },
         ),
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.surface, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: icon != null
-              ? Icon(icon, size: size * 0.5, color: AppColors.surface)
-              : Center(
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-        ),
-      ],
+      );
+    }
+    return markers;
+  }
+
+  Future<void> _zoomIn() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final zoom = await controller.getZoomLevel();
+    await controller.animateCamera(
+      CameraUpdate.zoomTo((zoom + 1).clamp(2, 20).toDouble()),
     );
   }
 
-  Widget _mapControl(IconData icon, bool isPrimary) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: isPrimary ? AppColors.primary : AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: isPrimary ? null : Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Icon(
-        icon,
-        size: 20,
-        color: isPrimary ? AppColors.surface : AppColors.primary,
+  Future<void> _zoomOut() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final zoom = await controller.getZoomLevel();
+    await controller.animateCamera(
+      CameraUpdate.zoomTo((zoom - 1).clamp(2, 20).toDouble()),
+    );
+  }
+
+  Future<void> _focusOnSelectedEvent() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final event = _selectedEvent;
+    final lat = event?.location.latitude;
+    final lng = event?.location.longitude;
+    final target = lat != null && lng != null
+        ? LatLng(lat, lng)
+        : _getInitialMapCenter();
+    await controller.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
+  }
+
+  Widget _mapControl(IconData icon, bool isPrimary, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isPrimary ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: isPrimary ? null : Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: isPrimary ? AppColors.surface : AppColors.primary,
+        ),
       ),
     );
   }
@@ -889,6 +950,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 }
 

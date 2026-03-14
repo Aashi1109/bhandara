@@ -39,6 +39,14 @@ export const CACHE_NAMESPACE_CONFIG = {
     namespace: "explore-pages",
     ttl: 3600,
   },
+  Activity: {
+    namespace: "activity",
+    ttl: 900,
+  },
+  Achievements: {
+    namespace: "achievements",
+    ttl: 900,
+  },
 };
 
 export enum DB_CONNECTION_NAMES {

@@ -6,7 +6,7 @@ part of 'tag.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tagsHash() => r'59e65458e1aba47dc9f8580d0a72423449045a57';
+String _$tagsHash() => r'cb248198d5af90239e2cbfba4ba9e78ecf695ac7';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -39,13 +39,13 @@ class TagsFamily extends Family<AsyncValue<List<Tag>>> {
   const TagsFamily();
 
   /// See also [tags].
-  TagsProvider call({bool rootOnly = false}) {
-    return TagsProvider(rootOnly: rootOnly);
+  TagsProvider call({bool rootOnly = false, String? parentId}) {
+    return TagsProvider(rootOnly: rootOnly, parentId: parentId);
   }
 
   @override
   TagsProvider getProviderOverride(covariant TagsProvider provider) {
-    return call(rootOnly: provider.rootOnly);
+    return call(rootOnly: provider.rootOnly, parentId: provider.parentId);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -66,9 +66,9 @@ class TagsFamily extends Family<AsyncValue<List<Tag>>> {
 /// See also [tags].
 class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
   /// See also [tags].
-  TagsProvider({bool rootOnly = false})
+  TagsProvider({bool rootOnly = false, String? parentId})
     : this._internal(
-        (ref) => tags(ref as TagsRef, rootOnly: rootOnly),
+        (ref) => tags(ref as TagsRef, rootOnly: rootOnly, parentId: parentId),
         from: tagsProvider,
         name: r'tagsProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -77,6 +77,7 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
         dependencies: TagsFamily._dependencies,
         allTransitiveDependencies: TagsFamily._allTransitiveDependencies,
         rootOnly: rootOnly,
+        parentId: parentId,
       );
 
   TagsProvider._internal(
@@ -87,9 +88,11 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
     required super.debugGetCreateSourceHash,
     required super.from,
     required this.rootOnly,
+    required this.parentId,
   }) : super.internal();
 
   final bool rootOnly;
+  final String? parentId;
 
   @override
   Override overrideWith(FutureOr<List<Tag>> Function(TagsRef provider) create) {
@@ -103,6 +106,7 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
         rootOnly: rootOnly,
+        parentId: parentId,
       ),
     );
   }
@@ -114,13 +118,16 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
 
   @override
   bool operator ==(Object other) {
-    return other is TagsProvider && other.rootOnly == rootOnly;
+    return other is TagsProvider &&
+        other.rootOnly == rootOnly &&
+        other.parentId == parentId;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, rootOnly.hashCode);
+    hash = _SystemHash.combine(hash, parentId.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -131,6 +138,9 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
 mixin TagsRef on AutoDisposeFutureProviderRef<List<Tag>> {
   /// The parameter `rootOnly` of this provider.
   bool get rootOnly;
+
+  /// The parameter `parentId` of this provider.
+  String? get parentId;
 }
 
 class _TagsProviderElement extends AutoDisposeFutureProviderElement<List<Tag>>
@@ -139,6 +149,8 @@ class _TagsProviderElement extends AutoDisposeFutureProviderElement<List<Tag>>
 
   @override
   bool get rootOnly => (origin as TagsProvider).rootOnly;
+  @override
+  String? get parentId => (origin as TagsProvider).parentId;
 }
 
 // ignore_for_file: type=lint

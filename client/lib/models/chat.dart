@@ -11,9 +11,11 @@ class Thread {
       id: json['id'] as String,
       eventId: json['eventId'] as String,
       type: json['type'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
+
   final String id;
   final String eventId;
   final String? type;
@@ -42,19 +44,41 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    // Server field: userId (not senderId)
+    final senderId = (json['userId'] ?? json['senderId']) as String? ?? '';
+
+    // content: IMessageContent = { text?, media?, links? } or plain string
+    String content = '';
+    final raw = json['content'];
+    if (raw is String) {
+      content = raw;
+    } else if (raw is Map) {
+      content = raw['text'] as String? ?? '';
+    }
+
+    // Sender info: server returns `user` object (not `sender`)
+    final userObj = (json['user'] ?? json['sender']) as Map<String, dynamic>?;
+    final String? senderName = userObj?['name'] as String?;
+    // avatarUrl comes from user.profilePic.url or user.avatarUrl
+    String? senderAvatar = userObj?['avatarUrl'] as String?;
+    if (senderAvatar == null && userObj?['profilePic'] is Map) {
+      senderAvatar =
+          (userObj!['profilePic'] as Map<String, dynamic>)['url'] as String?;
+    }
+
     return Message(
       id: json['id'] as String,
       threadId: json['threadId'] as String,
-      senderId: json['senderId'] as String,
-      content: json['content'] is String
-          ? json['content'] as String
-          : (json['content'] as Map<String, dynamic>)['text'] ?? '',
+      senderId: senderId,
+      content: content,
       type: json['type'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      senderName: json['sender']?['name'] as String?,
-      senderAvatar: json['sender']?['avatarUrl'] as String?,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      senderName: senderName,
+      senderAvatar: senderAvatar,
     );
   }
+
   final String id;
   final String threadId;
   final String senderId;

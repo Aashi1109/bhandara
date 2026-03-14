@@ -8,40 +8,31 @@ import 'base.dart';
 class UserService extends BaseService {
   final Dio _dio = apiService.dio;
 
-  Future<ApiResponse<User>> getCurrentUser() async {
+  Future<User?> getCurrentUser() async {
     try {
       final response = await _dio.get(Api.session);
-      return ApiResponse.fromJson(
-        response.data,
-        (json) => User.fromJson(
-          (json! as Map<String, dynamic>)['user'] as Map<String, dynamic>,
-        ),
-      );
+      final json = response.data['data'] as Map<String, dynamic>;
+      return User.fromJson(json['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      return handleError(e, 'Failed to fetch user');
+      throwError(e, 'Failed to fetch user');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
     }
   }
 
-  Future<ApiResponse<User>> updateUser(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
+  Future<User> updateUser(String id, Map<String, dynamic> data) async {
     try {
       final response = await _dio.patch(Api.updateUser(id), data: data);
-      return ApiResponse.fromJson(
-        response.data,
-        (json) => User.fromJson(json! as Map<String, dynamic>),
-      );
+      final json = response.data['data'] as Map<String, dynamic>;
+      return User.fromJson(json);
     } on DioException catch (e) {
-      return handleError(e, 'Failed to update profile');
+      throwError(e, 'Failed to update profile');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
     }
   }
 
-  Future<ApiResponse<PaginatedResponse<User>>> getByQuery({
+  Future<PaginatedResponse<User>> getByQuery({
     String? email,
     String? username,
   }) async {
@@ -53,17 +44,25 @@ class UserService extends BaseService {
           ...username != null ? {'username': username} : {},
         },
       );
-      return ApiResponse.fromJson(
-        response.data,
-        (json) => PaginatedResponse<User>.fromJson(
-          json! as Map<String, dynamic>,
-          (json) => User.fromJson(json! as Map<String, dynamic>),
-        ),
+      return PaginatedResponse<User>.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+        (json) => User.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
-      return handleError(e, 'Failed to fetch user');
+      throwError(e, 'Failed to fetch user');
     } catch (e) {
-      return ApiResponse(error: 'An unexpected error occurred');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getUserInterests(String userId) async {
+    try {
+      final response = await _dio.get(Api.userInterests(userId));
+      return response.data['data'] as List? ?? [];
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch user interests');
+    } catch (e) {
+      rethrow;
     }
   }
 }

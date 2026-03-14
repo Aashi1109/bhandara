@@ -56,19 +56,26 @@ export const updateUser = async (req: ICustomRequest, res: Response) => {
 export const getUserByQuery = async (req: ICustomRequest, res: Response) => {
   const { email, username } = req.query;
 
-  let data: IBaseUser | null = null;
+  let items: IBaseUser[] = [];
+  let pagination = null;
 
   if (email) {
-    const emailData = await userService.getUserByEmail(email as string);
-    data = emailData;
+    const user = await userService.getUserByEmail(email as string);
+    if (user) items = [user];
   } else if (username) {
     const usernameData = await userService.getUserByUsername(username as string);
-    data = usernameData.items?.[0];
+    items = usernameData.items || [];
+    pagination = usernameData.pagination;
   }
 
-  if (isEmpty(data)) throw new NotFoundError('User not found');
+  const safeUsers = items.map((user) => getSafeUser(user));
 
-  return res.status(200).json({ data: getSafeUser(data) });
+  return res.status(200).json({
+    data: {
+      items: safeUsers,
+      pagination,
+    },
+  });
 };
 
 export const getUserInterests = async (req: ICustomRequest, res: Response) => {

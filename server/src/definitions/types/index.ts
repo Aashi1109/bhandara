@@ -1,4 +1,4 @@
-import type { Request } from "express";
+import type { Request } from 'express';
 import type {
   EAccessLevel,
   EEventParticipantStatus,
@@ -7,9 +7,14 @@ import type {
   EMediaProvider,
   EMediaType,
   EThreadType,
-} from "@/definitions/enums";
+} from '@/definitions/enums';
 
 // Base Interface for Timestamps
+export interface PaginatedResult<T> {
+  items: T[];
+  pagination: IPaginationParams;
+}
+
 export interface ITimeStamp {
   createdAt: Date; // Always present
   updatedAt: Date; // Always present
@@ -161,14 +166,46 @@ export interface IReaction extends ITimeStamp {
   user?: IBaseUser;
 }
 
+export interface IActivity extends ITimeStamp {
+  id: string;
+  actorId: string;
+  recipientId?: string | null;
+  type: string;
+  entityType: string;
+  entityId: string;
+  payload: Record<string, any>;
+  visibility: "public" | "private";
+  readAt?: Date | null;
+  actor?: IBaseUser | null;
+  recipient?: IBaseUser | null;
+}
+
+export interface IUserAchievement extends ITimeStamp {
+  id: string;
+  userId: string;
+  key: string;
+  title: string;
+  description: string;
+  icon?: string | null;
+  metadata: Record<string, any>;
+  unlockedAt: Date;
+}
+
+export interface IAchievementProgress extends ITimeStamp {
+  id: string;
+  userId: string;
+  metrics: Record<string, any>;
+}
+
 export interface IPaginationParams {
   limit: number;
   page: number;
   next: string | null;
   hasNext?: boolean;
   total?: number;
-  sortBy: "createdAt" | "updatedAt";
-  sortOrder: "asc" | "desc";
+  totalPages?: number;
+  sortBy: 'createdAt' | 'updatedAt';
+  sortOrder: 'asc' | 'desc';
   startDate?: Date;
   endDate?: Date;
 }

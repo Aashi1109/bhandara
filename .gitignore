@@ -49,5 +49,13 @@ server/**/assets
 expo-env.d.ts
 # @end expo-cli
 
-android*
-ios*
+# Flutter mobile (generated/local-only files)
+client/.dart_tool/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.packages
+client/build/
+client/.pub-cache/
+client/.pub/
+client/android/
+client/ios/

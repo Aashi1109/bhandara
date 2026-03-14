@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
+import '../widgets/snackbar.dart';
+import '../widgets/map_view.dart';
+import '../utils/error.dart';
 import '../services/event.dart';
 import '../models/event.dart';
 import '../services/socket.dart';
 import '../constants/socket_events.dart';
+import '../providers/user.dart';
+import '../services/maps/map_manager.dart';
+import '../services/maps/map_provider_type.dart';
 
 import 'explore.dart';
 import 'chat.dart';
 
-class EventDetailScreen extends StatefulWidget {
+class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.id});
   static const String routePath = '/event/:id';
   final String id;
 
   @override
-  State<EventDetailScreen> createState() => _EventDetailScreenState();
+  ConsumerState<EventDetailScreen> createState() => _EventDetailScreenState();
 }
 
-class _EventDetailScreenState extends State<EventDetailScreen> {
+class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   Event? _event;
   bool _isLoading = true;
+  bool _isJoining = false;
+  bool _hasJoined = false;
+  final MapManager _mapManager = MapManager(type: MapProviderType.google);
 
   @override
   void initState() {
@@ -32,27 +43,53 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _loadEvent() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    final response = await eventService.getEvents();
-    if (mounted) {
-      if (response.error != null) {
-        setState(() {
-          _isLoading = false;
-        });
-      } else {
-        final events = response.data?.items ?? [];
-        final event = events.firstWhere(
-          (e) => e.id == widget.id,
-          orElse: () => events.isNotEmpty ? events.first : null as dynamic,
-        );
+    try {
+      final event = await eventService.getEvent(widget.id);
+      if (mounted) {
         setState(() {
           _event = event;
           _isLoading = false;
         });
+        _checkIfJoined();
         _connectSocket();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _checkIfJoined() {
+    final currentUser = ref.read(userProfileProvider).value;
+    if (currentUser == null || _event == null) return;
+    final participants = _event!.participants ?? [];
+    setState(() {
+      _hasJoined = participants.any((p) => p == currentUser.id);
+    });
+  }
+
+  Future<void> _toggleParticipation() async {
+    if (_isJoining || _event == null) return;
+    setState(() => _isJoining = true);
+
+    try {
+      final event = _hasJoined
+          ? await eventService.leaveEvent(widget.id)
+          : await eventService.joinEvent(widget.id);
+
+      if (mounted) {
+        setState(() {
+          _event = event;
+          _hasJoined = !_hasJoined;
+          _isJoining = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = extractExceptionMessage(e);
+        AppSnackBar.show(context, message: message, type: SnackBarType.error);
+        setState(() => _isJoining = false);
       }
     }
   }
@@ -61,19 +98,40 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     socketService.connect(widget.id);
     socketService.messages.listen((event) {
       if (!mounted) return;
-
       final eventName = event['event'];
       final eventData = event['data'];
-
       setState(() {
         if (eventName == SocketEvents.eventUpdated) {
           final updatedEvent = Event.fromJson(eventData);
           if (updatedEvent.id == widget.id) {
             _event = updatedEvent;
+            _checkIfJoined();
           }
         }
       });
     });
+  }
+
+  LatLng _eventLatLng() {
+    final lat = _event?.location.latitude;
+    final lng = _event?.location.longitude;
+    if (lat != null && lng != null) return LatLng(lat, lng);
+    return const LatLng(21.1458, 79.0882);
+  }
+
+  Set<Marker> _eventMarkers() {
+    final lat = _event?.location.latitude;
+    final lng = _event?.location.longitude;
+    if (lat == null || lng == null) return const <Marker>{};
+
+    return {
+      Marker(
+        markerId: MarkerId(_event!.id),
+        position: LatLng(lat, lng),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
+        infoWindow: InfoWindow(title: _event!.name),
+      ),
+    };
   }
 
   @override
@@ -439,70 +497,41 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             width: double.infinity,
                             child: Stack(
                               children: [
-                                ColorFiltered(
-                                  colorFilter: const ColorFilter.mode(
-                                    AppColors.mutedForeground,
-                                    BlendMode.saturation,
+                                AppMapView(
+                                  manager: _mapManager,
+                                  initialCameraPosition: CameraPosition(
+                                    target: _eventLatLng(),
+                                    zoom: 14,
                                   ),
-                                  child: Opacity(
-                                    opacity: 0.6,
-                                    child: CachedNetworkImage(
-                                      imageUrl:
-                                          'https://picsum.photos/seed/map-detail/800/400',
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: 176,
-                                    ),
-                                  ),
+                                  markers: _eventMarkers(),
+                                  zoomControlsEnabled: false,
+                                  myLocationButtonEnabled: false,
+                                  myLocationEnabled: false,
                                 ),
-                                Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: AppColors.surface,
-                                            width: 2,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          LucideIcons.mapPin,
-                                          size: 24,
-                                          color: AppColors.surface,
-                                        ),
+                                Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: AppColors.border,
                                       ),
-                                      const SizedBox(height: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surface,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          border: Border.all(
-                                            color: AppColors.border,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _event!.location.address
-                                              .toUpperCase(),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 2,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
+                                    ),
+                                    child: Text(
+                                      _event!.location.address.toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 2,
+                                        color: AppColors.primary,
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -603,7 +632,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ),
           ),
 
-          // Sticky bottom - Clean floating implementation without background
+          // Sticky bottom
           Positioned(
             bottom: 24,
             left: 24,
@@ -616,21 +645,38 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const AppButton(
+                    child: AppButton(
                       variant: AppButtonVariant.outline,
                       size: AppButtonSize.lg,
-                      icon: Icon(LucideIcons.timer),
-                      label: 'Save',
+                      icon: const Icon(LucideIcons.messageCircle),
+                      label: 'Chat',
+                      onPressed: () => context.go(
+                        ChatScreen.routePath.replaceAll(':id', widget.id),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   flex: 2,
                   child: AppButton(
                     size: AppButtonSize.lg,
-                    icon: Icon(LucideIcons.utensils),
-                    label: 'Participate Now',
+                    icon: _isJoining
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: AppColors.surface,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Icon(
+                            _hasJoined
+                                ? LucideIcons.logOut
+                                : LucideIcons.utensils,
+                          ),
+                    label: _hasJoined ? 'Leave Event' : 'Participate Now',
+                    onPressed: _isJoining ? null : _toggleParticipation,
                   ),
                 ),
               ],

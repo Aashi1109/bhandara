@@ -40,20 +40,37 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final meta = json['meta'] != null
+        ? UserMeta.fromJson(json['meta'] as Map<String, dynamic>)
+        : null;
+
+    // avatarUrl: server stores it as profilePic JSONB {url: ...} or direct avatarUrl string
+    String? avatarUrl = json['avatarUrl'] as String?;
+    if (avatarUrl == null && json['profilePic'] is Map) {
+      avatarUrl = (json['profilePic'] as Map<String, dynamic>)['url'] as String?;
+    }
+
+    // isSocialLogin: derived from meta.auth.provider (not 'email' = social)
+    final provider = meta?.auth?.provider ??
+        (json['meta'] as Map<String, dynamic>?)?['provider'] as String?;
+    final isSocialLogin =
+        provider != null && provider != 'email' && provider.isNotEmpty;
+
     return User(
       id: json['id'] as String,
       email: json['email'] as String,
       name: json['name'] as String?,
       username: json['username'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
+      avatarUrl: avatarUrl,
       bio: json['bio'] as String?,
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
+          ? DateTime.tryParse(json['createdAt'] as String)
           : null,
-      meta: json['meta'] != null ? UserMeta.fromJson(json['meta']) : null,
-      isSocialLogin: json['isSocialLogin'] as bool? ?? false,
+      meta: meta,
+      isSocialLogin: isSocialLogin,
     );
   }
+
   final String id;
   final String email;
   final String? name;
