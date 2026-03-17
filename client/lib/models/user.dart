@@ -1,8 +1,10 @@
 class UserAuthMeta {
   UserAuthMeta({required this.provider});
+
   factory UserAuthMeta.fromJson(Map<String, dynamic> json) {
     return UserAuthMeta(provider: json['provider'] as String? ?? 'email');
   }
+
   final String provider;
 
   Map<String, dynamic> toJson() => {'provider': provider};
@@ -10,6 +12,7 @@ class UserAuthMeta {
 
 class UserMeta {
   UserMeta({this.auth, this.hasOnboarded = false});
+
   factory UserMeta.fromJson(Map<String, dynamic> json) {
     return UserMeta(
       auth: json['auth'] != null
@@ -18,6 +21,7 @@ class UserMeta {
       hasOnboarded: json['hasOnboarded'] as bool? ?? false,
     );
   }
+
   final UserAuthMeta? auth;
   final bool hasOnboarded;
 
@@ -47,7 +51,8 @@ class User {
     // avatarUrl: server stores it as profilePic JSONB {url: ...} or direct avatarUrl string
     String? avatarUrl = json['avatarUrl'] as String?;
     if (avatarUrl == null && json['profilePic'] is Map) {
-      avatarUrl = (json['profilePic'] as Map<String, dynamic>)['url'] as String?;
+      avatarUrl =
+      (json['profilePic'] as Map<String, dynamic>)['url'] as String?;
     }
 
     // isSocialLogin: derived from meta.auth.provider (not 'email' = social)

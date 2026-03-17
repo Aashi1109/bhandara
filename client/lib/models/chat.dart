@@ -63,7 +63,7 @@ class Message {
     String? senderAvatar = userObj?['avatarUrl'] as String?;
     if (senderAvatar == null && userObj?['profilePic'] is Map) {
       senderAvatar =
-          (userObj!['profilePic'] as Map<String, dynamic>)['url'] as String?;
+      (userObj!['profilePic'] as Map<String, dynamic>)['url'] as String?;
     }
 
     return Message(

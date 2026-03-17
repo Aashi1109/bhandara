@@ -102,7 +102,9 @@ class GoogleMapsService implements MapProviderService {
     required String address,
     int limit = 5,
   }) async {
-    if (_apiKey.isEmpty || address.trim().isEmpty) return const [];
+    if (_apiKey.isEmpty || address.trim().isEmpty) {
+      return const [];
+    }
 
     final response = await _dio.get<dynamic>(
       'https://maps.googleapis.com/maps/api/geocode/json',
@@ -126,7 +128,9 @@ class GoogleMapsService implements MapProviderService {
     double? proximityLongitude,
     int limit = 5,
   }) async {
-    if (_apiKey.isEmpty || query.trim().isEmpty) return const [];
+    if (_apiKey.isEmpty || query.trim().isEmpty) {
+      return const [];
+    }
 
     final params = <String, dynamic>{'input': query, 'key': _apiKey};
     if (proximityLatitude != null && proximityLongitude != null) {

@@ -15,6 +15,7 @@ import '../widgets/tabs.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
+
   static const String routePath = '/profile-setup';
 
   @override
@@ -62,7 +63,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authProvider).isLoading;
+    final isLoading = ref
+        .watch(authProvider)
+        .isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.surface,

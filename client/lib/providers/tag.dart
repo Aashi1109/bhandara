@@ -6,8 +6,7 @@ import '../services/tag.dart';
 part 'tag.g.dart';
 
 @riverpod
-Future<List<Tag>> tags(
-  Ref ref, {
+Future<List<Tag>> tags(Ref ref, {
   bool rootOnly = false,
   String? parentId,
 }) => tagService.getTags(rootOnly: rootOnly, parentId: parentId);

@@ -7,6 +7,7 @@ import '../widgets/button.dart';
 
 class MediaPreviewScreen extends StatefulWidget {
   const MediaPreviewScreen({super.key, this.items = const []});
+
   static const String routePath = '/media-preview';
   final List<MediaItem> items;
 
@@ -23,21 +24,21 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
     final displayItems = widget.items.isNotEmpty
         ? widget.items
         : [
-            MediaItem(
-              id: '1',
-              url: 'https://picsum.photos/seed/food1/600/400',
-              thumbnail: 'https://picsum.photos/seed/food1/100/100',
-              type: 'image',
-              name: 'Signature Dish',
-            ),
-            MediaItem(
-              id: '2',
-              url: 'https://picsum.photos/seed/food2/600/400',
-              thumbnail: 'https://picsum.photos/seed/food2/100/100',
-              type: 'image',
-              name: 'Chef Specials',
-            ),
-          ];
+      MediaItem(
+        id: '1',
+        url: 'https://picsum.photos/seed/food1/600/400',
+        thumbnail: 'https://picsum.photos/seed/food1/100/100',
+        type: 'image',
+        name: 'Signature Dish',
+      ),
+      MediaItem(
+        id: '2',
+        url: 'https://picsum.photos/seed/food2/600/400',
+        thumbnail: 'https://picsum.photos/seed/food2/100/100',
+        type: 'image',
+        name: 'Chef Specials',
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.surface,

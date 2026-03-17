@@ -1,484 +1,487 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
-import { createClient } from "@supabase/supabase-js";
-import { faker } from "@faker-js/faker";
-import dotenv from "dotenv";
-import fs from "fs/promises";
-import path, { dirname } from "path";
+/* eslint-disable no-console */
+import { faker } from '@faker-js/faker';
+import dotenv from 'dotenv';
+import type { Transaction } from 'sequelize';
 
+import { disconnect, getDBConnection } from '@/connections/db';
 import {
   EAccessLevel,
+  EAuthProvider,
+  EEventParticipantStatus,
   EEventStatus,
   EEventType,
-  EThreadType,
-} from "@/definitions/enums";
-import { getUUIDv7 } from "@/helpers";
-import { fileURLToPath } from "url";
-import { MediaService } from "@/features";
-import { MEDIA_FILE_BUCKET_NAME } from "@/features/media/constants";
-import { TAG_TABLE_NAME } from "@/features/tags/constants";
+} from '@/definitions/enums';
+import { getUUIDv7 } from '@/helpers';
+import AuthService from '@/features/auth/service';
+import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
+import { ACHIEVEMENT_DEFINITIONS } from '@/features/achievements/constants';
+import { Activity } from '@/features/activity/model';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import { Event } from '@/features/events/model';
+import { fallbackTagSeeds } from './clusterSeedConfig';
+import { Message } from '@/features/messages/model';
+import { Reaction } from '@/features/reactions/model';
+import { Tag } from '@/features/tags/model';
+import { Thread } from '@/features/threads/model';
+import { User } from '@/features/users/model';
+import {
+  buildAddress,
+  buildEventLocation,
+  buildSeedStats,
+  buildTimings,
+  formatRange,
+  getOrCreateMetrics,
+  parseOptions,
+  resolveRange,
+  type SeedOptions,
+  type UserMetrics,
+} from './seederUtils';
 
 dotenv.config();
 
-const mediaService = new MediaService();
+type SeededEventRow = {
+  id: string;
+  name: string;
+  createdBy: string;
+};
 
-const foodEventTags = [
-  {
-    name: "Food Festival",
-    value: "food-festival",
-    description:
-      "Large-scale events celebrating food, often with multiple vendors.",
-    icon: "🎪",
-    color: "#FF5733",
-  },
-  {
-    name: "Cooking Class",
-    value: "cooking-class",
-    description: "Events where participants learn how to cook specific dishes.",
-    icon: "👩‍🍳",
-    color: "#FFA500",
-  },
-  {
-    name: "Tasting Event",
-    value: "tasting-event",
-    description: "Events focused on sampling various foods or beverages.",
-    icon: "🍷",
-    color: "#800080",
-  },
-  {
-    name: "Wine Pairing",
-    value: "wine-pairing",
-    description: "Events centered around pairing wines with specific dishes.",
-    icon: "🍇",
-    color: "#B10DC9",
-  },
-  {
-    name: "Street Food",
-    value: "street-food",
-    description: "Events featuring popular street foods from around the world.",
-    icon: "🌮",
-    color: "#E67E22",
-  },
-  {
-    name: "Vegan Event",
-    value: "vegan-event",
-    description: "Events dedicated to vegan food and culture.",
-    icon: "🥦",
-    color: "#27AE60",
-  },
-  {
-    name: "Food Truck Rally",
-    value: "food-truck-rally",
-    description:
-      "Gatherings of multiple food trucks offering various cuisines.",
-    icon: "🚚",
-    color: "#2980B9",
-  },
-  {
-    name: "Dessert Tasting",
-    value: "dessert-tasting",
-    description:
-      "Events focusing on cakes, pastries, and other sweet delights.",
-    icon: "🍰",
-    color: "#FFC0CB",
-  },
-  {
-    name: "Barbecue",
-    value: "barbecue",
-    description: "Events centered around grilled and smoked meats.",
-    icon: "🍖",
-    color: "#8B0000",
-  },
-  {
-    name: "Cultural Cuisine",
-    value: "cultural-cuisine",
-    description: "Celebrating traditional dishes from different cultures.",
-    icon: "🌍",
-    color: "#34495E",
-  },
-  {
-    name: "Farm to Table",
-    value: "farm-to-table",
-    description: "Events promoting local and sustainable food sourcing.",
-    icon: "🌱",
-    color: "#2ECC71",
-  },
-  {
-    name: "Chef's Table",
-    value: "chefs-table",
-    description: "Exclusive dining experiences with curated menus.",
-    icon: "🍽️",
-    color: "#D4AC0D",
-  },
-  {
-    name: "Beer Tasting",
-    value: "beer-tasting",
-    description: "Sampling craft beers and learning about brewing.",
-    icon: "🍺",
-    color: "#F1C40F",
-  },
-  {
-    name: "Cocktail Night",
-    value: "cocktail-night",
-    description: "Evenings dedicated to cocktails and mixology.",
-    icon: "🍸",
-    color: "#9B59B6",
-  },
-  {
-    name: "Brunch Social",
-    value: "brunch-social",
-    description: "Casual brunches for socializing and networking.",
-    icon: "🥞",
-    color: "#F39C12",
-  },
-];
+type SeededThreadRow = {
+  id: string;
+  createdBy: string;
+};
 
-// Init Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+type SeededMessageRow = {
+  id: string;
+  userId: string;
+};
 
-const trueOrFalse = () => faker.helpers.arrayElement([true, false]);
+type SeededReactionRow = {
+  id: string;
+  userId: string;
+  contentId: string;
+  emoji: string;
+};
 
-async function main() {
-  await supabase.rpc("begin");
-  const { data: insertedTags, error: tagErr } = await supabase
-    .from(TAG_TABLE_NAME)
-    .insert(foodEventTags)
-    .select();
+type SeededAuthUser = {
+  authUserId: string;
+  email: string;
+  password: string;
+  name: string;
+  gender: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  expiresIn: number;
+};
 
-  if (tagErr) throw tagErr;
+type SeededUserRow = {
+  id: string;
+  email: string;
+  name: string;
+};
 
-  console.log(
-    `Inserted predefined ${insertedTags?.length} tags to ${TAG_TABLE_NAME}`
-  );
+const REACTION_EMOJIS = ['❤️', '🔥', '👏', '🍲', '😋', '🙌'];
 
-  const { data: users, error: userErr } = await supabase
-    .from("Users")
-    .select("id");
-  if (userErr || !users || users.length === 0)
-    throw new Error("No users found in Users table");
-
-  const eventsPayload = [...Array(5)].map(() => ({
-    name: faker.company.name(),
-    description: faker.lorem.paragraph(),
-    location: {
-      coordinates: {
-        latitude: faker.location.latitude(),
-        longitude: faker.location.longitude(),
-      },
-      address: faker.location.streetAddress(),
-      venue: faker.location.city(),
-    },
-    participants: [],
-    verifiers: [],
-    type: faker.helpers.arrayElement(Object.values(EEventType)),
-    createdBy: faker.helpers.arrayElement(users).id,
-    status: faker.helpers.arrayElement(Object.values(EEventStatus)),
-    capacity: faker.number.int({ min: 10, max: 200 }),
-  }));
-
-  const { data: events, error: eventErr } = await supabase
-    .from("Events")
-    .insert(eventsPayload)
-    .select();
-  if (eventErr) throw eventErr;
-
-  const uploadedMedias = await seedMedia({
-    folderData: events.map((event) => ({
-      id: event.id,
-      userId: event.createdBy,
-    })),
-    subPath: "assets/events",
+async function ensureTags(transaction: Transaction) {
+  await Tag.bulkCreate(fallbackTagSeeds, {
+    transaction,
+    ignoreDuplicates: true,
   });
 
-  const [
-    { data: eventMediaJunctionInsertResponse, error: eventMediaErr },
-    { data: eventTagsJunction, error: eventTagsErr },
-  ] = await Promise.all([
-    supabase
-      .from("EventMedia")
-      .insert(
-        uploadedMedias.map((media) => ({
-          mediaId: media.mediaId,
-          eventId: media.parentId,
-        }))
-      )
-      .select(),
-    supabase
-      .from("EventTags")
-      .insert(
-        events.flatMap((event) => {
-          // Get random number of tags (1-10) for this event
-          const numTags = faker.number.int({ min: 1, max: 10 });
-          // Get random unique tags for this event
-          const eventTags = faker.helpers.arrayElements(insertedTags, numTags);
-          // Map to junction table format
-          return eventTags.map((tag) => ({
-            eventId: event.id,
-            tagId: tag.id,
-          }));
-        })
-      )
-      .select(),
-  ]);
+  return Tag.findAll({
+    attributes: ['id'],
+    raw: true,
+    transaction,
+  });
+}
 
-  if (eventMediaErr) throw eventMediaErr;
-  if (eventTagsErr) throw eventTagsErr;
+async function createAuthUsers(options: SeedOptions) {
+  const authService = new AuthService();
+  const createdUsers: SeededAuthUser[] = [];
+  const totalUsers = resolveRange(options.users);
+  const redirectTo = process.env.SUPABASE_AUTH_REDIRECT_URL || 'http://localhost:3000';
 
-  console.log(
-    `Added ${eventMediaJunctionInsertResponse.length} rows to EventMedia`,
-    `Added ${eventTagsJunction.length} rows to EventTags`
-  );
+  for (let index = 0; index < totalUsers; index += 1) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const name = `${firstName} ${lastName}`;
+    const emailSlug = `${firstName}.${lastName}`.toLowerCase().replace(/[^a-z0-9]+/g, '.');
+    const uniqueSuffix = faker.string.alphanumeric({ length: 4 }).toLowerCase();
+    const email = `${options.emailPrefix}.${emailSlug}.${uniqueSuffix}@bhandara.dev`;
+    const gender = faker.helpers.arrayElement(['male', 'female', 'non-binary']);
 
-  // Create Threads for each event
-  const threadsPayload = events.map((event, index) => ({
-    type: faker.helpers.arrayElement(Object.values(EThreadType)),
-    status: faker.helpers.arrayElement(Object.values(EAccessLevel)),
-    visibility: faker.helpers.arrayElement(Object.values(EAccessLevel)),
-    eventId: event.id,
-    lockHistory: {},
-    createdAt: new Date(Date.now() + index),
-    updatedAt: new Date(Date.now() + index),
-  }));
+    const signUpData = await authService.signUpNewUser(email, options.password, redirectTo);
+    const sessionData = signUpData.session
+      ? signUpData
+      : await authService.signInWithEmail(email, options.password);
 
-  const { data: threads, error: threadErr } = await supabase
-    .from("Threads")
-    .insert(threadsPayload)
-    .select("id, eventId");
-  if (threadErr) throw threadErr;
+    if (!signUpData.user || !sessionData.session) {
+      throw new Error(`Failed to create auth user for ${email}`);
+    }
 
-  // Create Messages with parentId nesting
-  for (const thread of threads) {
-    const rootMessages: { id: string }[] = [];
-
-    const messagesMedia = await seedMedia({
-      folderData: Array({ length: 100 }).map(() => ({
-        id: null,
-        userId: faker.helpers.arrayElement(users).id,
-        parentPath: thread.eventId,
-      })),
-      subPath: "assets/messages",
+    createdUsers.push({
+      authUserId: signUpData.user.id,
+      email,
+      password: options.password,
+      name,
+      gender,
+      accessToken: sessionData.session.access_token,
+      refreshToken: sessionData.session.refresh_token,
+      expiresAt: new Date(new Date(0).setUTCSeconds(sessionData.session.expires_at)).toISOString(),
+      expiresIn: sessionData.session.expires_in,
     });
+  }
 
-    // Insert root-level messages
-    const rootPayload = [...Array(faker.number.int({ min: 3, max: 20 }))].map(
-      (_, index) => {
-        const content = { text: faker.lorem.sentence() };
+  return {
+    createdUsers,
+  };
+}
 
-        const haveDynamicContent = trueOrFalse();
-        const insertImages = trueOrFalse();
-        const insertVideo = trueOrFalse();
+async function deleteAuthUsers(userIds: string[]) {
+  if (userIds.length === 0) return;
+  console.warn(
+    `Database transaction rolled back, but ${userIds.length} Supabase auth users may still exist because the seeder is using non-admin auth signup.`,
+  );
+}
 
-        if (haveDynamicContent) {
-          if (insertImages) {
-            content["media"] = [
-              ...(content?.media || []),
-              ...faker.helpers.arrayElements(
-                messagesMedia
-                  .filter((m) => m.mediaType === "image")
-                  .map((m) => m.mediaId),
-                faker.number.int({ min: 1, max: 3 })
-              ),
-            ];
-          }
+async function seedFreshDatabase(options: SeedOptions) {
+  const sequelize = getDBConnection();
+  await sequelize.authenticate();
 
-          if (insertVideo) {
-            content["media"] = [
-              ...(content?.media || []),
-              ...faker.helpers.arrayElements(
-                messagesMedia
-                  .filter((m) => m.mediaType === "video")
-                  .map((m) => m.mediaId),
-                faker.number.int({ min: 1, max: 3 })
-              ),
-            ];
-          }
-        }
+  const { createdUsers } = await createAuthUsers(options);
+  const authUserIds = createdUsers.map((user) => user.authUserId);
+  const transaction = await sequelize.transaction();
+  const stats = buildSeedStats();
 
-        return {
+  try {
+    const availableTags = await ensureTags(transaction);
+    const tagIds = availableTags.map((tag) => tag.id);
+    const createdUserRows: SeededUserRow[] = [];
+    const createdEvents: SeededEventRow[] = [];
+    const createdThreads: SeededThreadRow[] = [];
+    const createdMessages: SeededMessageRow[] = [];
+    const metricsByUserId = new Map<string, UserMetrics>();
+
+    for (const authUser of createdUsers) {
+      const userRow = await User.create(
+        {
           id: getUUIDv7(),
-          userId: faker.helpers.arrayElement(users).id,
-          parentId: null,
-          content,
-          createdAt: new Date(Date.now() + index),
-          updatedAt: new Date(Date.now() + index),
-          threadId: thread.id,
-        };
-      }
-    );
+          name: authUser.name,
+          email: authUser.email,
+          gender: authUser.gender,
+          address: buildAddress(),
+          isVerified: true,
+          profilePic: null,
+          username: faker.internet.username().toLowerCase(),
+          password: null,
+          meta: {
+            auth: {
+              provider: EAuthProvider.Email,
+              supabaseUserId: authUser.authUserId,
+              accessToken: authUser.accessToken,
+              refreshToken: authUser.refreshToken,
+              expiresAt: authUser.expiresAt,
+              expiresIn: authUser.expiresIn,
+            },
+            hasOnboarded: true,
+          },
+        },
+        { transaction },
+      );
 
-    rootMessages.push(...rootPayload.map((m) => ({ id: m.id })));
+      createdUserRows.push({
+        id: userRow.id,
+        email: userRow.email,
+        name: userRow.name,
+      });
+      stats.usersCreated += 1;
+    }
 
-    const { error: rootErr } = await supabase
-      .from("Messages")
-      .insert(rootPayload);
-    if (rootErr) throw rootErr;
+    for (const user of createdUserRows) {
+      const eventsForUser = resolveRange(options.eventsPerUser);
+      for (let eventIndex = 0; eventIndex < eventsForUser; eventIndex += 1) {
+        const tagSampleSize = Math.min(resolveRange(options.tagsPerEvent), tagIds.length);
+        const eventTags = faker.helpers.arrayElements(tagIds, tagSampleSize);
+        const participantCandidates = createdUserRows.filter((candidate) => candidate.id !== user.id);
+        const participants = faker.helpers
+          .arrayElements(
+            participantCandidates,
+            Math.min(participantCandidates.length, faker.number.int({ min: 0, max: 4 })),
+          )
+          .map((participant) => ({
+            user: participant.id,
+            status: faker.helpers.arrayElement([EEventParticipantStatus.Confirmed, EEventParticipantStatus.Pending]),
+          }));
 
-    // Insert child replies to random root messages
-    const repliesPayload = [
-      ...Array(faker.number.int({ min: 3, max: 1000 })),
-    ].map((_, index) => {
-      const content = { text: faker.lorem.sentence() };
+        const event = await Event.create(
+          {
+            name: `${faker.company.name()} ${faker.helpers.arrayElement(['Bhandara', 'Dinner', 'Tasting', 'Meetup'])}`,
+            description: faker.lorem.paragraph(),
+            location: buildEventLocation(),
+            participants,
+            verifiers: [],
+            type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
+            createdBy: user.id,
+            status: faker.helpers.arrayElement([EEventStatus.Upcoming, EEventStatus.Draft]),
+            capacity: faker.number.int({ min: 50, max: 200 }),
+            tags: eventTags,
+            media: [],
+            timings: buildTimings(),
+          },
+          { transaction },
+        );
+        stats.eventsCreated += 1;
+        createdEvents.push({
+          id: event.id,
+          name: event.name,
+          createdBy: user.id,
+        });
+        getOrCreateMetrics(metricsByUserId, user.id).eventCreated += 1;
 
-      const haveDynamicContent = trueOrFalse();
-      const insertImages = trueOrFalse();
-      const insertVideo = trueOrFalse();
+        const threadsForEvent = resolveRange(options.threadsPerEvent);
+        for (let threadIndex = 0; threadIndex < threadsForEvent; threadIndex += 1) {
+          const thread = await Thread.create(
+            {
+              visibility: EAccessLevel.Public,
+              parentId: null,
+              eventId: event.id,
+              lockHistory: [],
+              createdBy: user.id,
+            },
+            { transaction },
+          );
+          stats.threadsCreated += 1;
+          createdThreads.push({
+            id: thread.id,
+            createdBy: user.id,
+          });
 
-      if (haveDynamicContent) {
-        if (insertImages) {
-          content["media"] = [
-            ...(content?.media || []),
-            ...faker.helpers.arrayElements(
-              messagesMedia
-                .filter((m) => m.mediaType === "image")
-                .map((m) => m.mediaId),
-              faker.number.int({ min: 1, max: 3 })
-            ),
-          ];
+          const rootMessageIds: string[] = [];
+          const messagesForThread = resolveRange(options.messagesPerThread);
+          for (let messageIndex = 0; messageIndex < messagesForThread; messageIndex += 1) {
+            const shouldReply = rootMessageIds.length > 0 && faker.datatype.boolean({ probability: 0.35 });
+            const message = await Message.create(
+              {
+                id: getUUIDv7(),
+                userId: faker.helpers.arrayElement(createdUserRows).id,
+                parentId: shouldReply ? faker.helpers.arrayElement(rootMessageIds) : null,
+                content: {
+                  text: faker.lorem.sentences({ min: 1, max: 2 }),
+                },
+                isEdited: false,
+                threadId: thread.id,
+              },
+              { transaction },
+            );
+
+            if (!shouldReply) {
+              rootMessageIds.push(message.id);
+            }
+            createdMessages.push({
+              id: message.id,
+              userId: message.userId,
+            });
+            getOrCreateMetrics(metricsByUserId, message.userId).messageCreated += 1;
+            stats.messagesCreated += 1;
+          }
         }
+      }
+    }
 
-        if (insertVideo) {
-          content["media"] = [
-            ...(content?.media || []),
-            ...faker.helpers.arrayElements(
-              messagesMedia
-                .filter((m) => m.mediaType === "video")
-                .map((m) => m.mediaId),
-              faker.number.int({ min: 1, max: 3 })
-            ),
-          ];
+    const contentIds = [
+      ...createdEvents.map((event) => event.id),
+      ...createdThreads.map((thread) => thread.id),
+      ...createdMessages.map((message) => message.id),
+    ];
+
+    const reactionRows: SeededReactionRow[] = [];
+    if (contentIds.length > 0 && createdUserRows.length > 0) {
+      for (const user of createdUserRows) {
+        const reactionCount = faker.number.int({
+          min: 0,
+          max: Math.min(contentIds.length, Math.max(3, Math.ceil(contentIds.length * 0.15))),
+        });
+
+        if (reactionCount === 0) continue;
+
+        const chosenContentIds = faker.helpers.arrayElements(contentIds, reactionCount);
+        for (const contentId of chosenContentIds) {
+          const reaction = await Reaction.create(
+            {
+              id: getUUIDv7(),
+              userId: user.id,
+              contentId,
+              emoji: faker.helpers.arrayElement(REACTION_EMOJIS),
+            },
+            { transaction },
+          );
+
+          reactionRows.push({
+            id: reaction.id,
+            userId: reaction.userId,
+            contentId: reaction.contentId,
+            emoji: reaction.emoji,
+          });
+          getOrCreateMetrics(metricsByUserId, user.id).reactionCreated += 1;
+          stats.reactionsCreated += 1;
         }
       }
+    }
 
+    const achievementRows = [];
+    const achievementProgressRows = createdUserRows.map((user) => {
+      const metrics = getOrCreateMetrics(metricsByUserId, user.id);
       return {
         id: getUUIDv7(),
-        userId: faker.helpers.arrayElement(users).id,
-        parentId: faker.helpers.arrayElement(rootMessages).id,
-        content,
-        threadId: thread.id,
-        isEdited: false,
-        createdAt: new Date(Date.now() + index),
-        updatedAt: new Date(Date.now() + index),
+        userId: user.id,
+        metrics: {
+          'event.created': metrics.eventCreated,
+          'message.created': metrics.messageCreated,
+          'reaction.created': metrics.reactionCreated,
+          streak: {
+            current: metrics.streakCurrent,
+            longest: Math.max(metrics.streakLongest, metrics.streakCurrent),
+            lastActiveDate: new Date().toISOString().slice(0, 10),
+          },
+        },
       };
     });
 
-    const { error: replyErr } = await supabase
-      .from("Messages")
-      .insert(repliesPayload);
-    if (replyErr) throw replyErr;
-  }
+    for (const user of createdUserRows) {
+      const metrics = getOrCreateMetrics(metricsByUserId, user.id);
+      for (const definition of ACHIEVEMENT_DEFINITIONS) {
+        const value =
+          definition.type === 'streak'
+            ? metrics.streakCurrent
+            : definition.metric === 'event.created'
+              ? metrics.eventCreated
+              : definition.metric === 'message.created'
+                ? metrics.messageCreated
+                : metrics.reactionCreated;
 
-  console.log("✅ Seed complete with nested parentId messages.");
-  await supabase.rpc("commit");
-}
+        if (value < definition.threshold) continue;
 
-async function seedMedia({
-  folderData,
-  subPath,
-}: {
-  folderData: { id: string; userId: string; parentPath?: string }[];
-  subPath: string;
-}) {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const assetsPath = path.join(__dirname, subPath);
-
-  const entries = await fs.readdir(assetsPath, { withFileTypes: true });
-
-  // Filter only files
-  const files = entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
-
-  const uploadMediaData = [];
-
-  const uploadConfig = folderData.map((f) => ({
-    ...f,
-    numUploads: faker.number.int({ min: 0, max: files.length }),
-  }));
-
-  const uploadPromises = uploadConfig.flatMap(async (_data) => {
-    const uploads = [];
-
-    const filesToUpload = faker.helpers.arrayElements(files, _data.numUploads);
-    const _promises = filesToUpload.map(async (f, i) => {
-      // For each upload, randomly select a file from the available files
-      const filePath = path.join(assetsPath, f);
-      const fileBuffer = await fs.readFile(filePath);
-
-      const mimeType = getMimeType(f);
-      if (!mimeType) {
-        console.error(`❌ Failed to get mime type for ${f}`);
-        return [];
-      }
-
-      try {
-        // Step 1: Get signed URL
-        const pathJoinParams = [_data.parentPath, _data.id, f].filter(Boolean);
-
-        const { data: signedUrl } = await mediaService.getSignedUrlForUpload({
-          bucket: MEDIA_FILE_BUCKET_NAME,
-          path: path.join(...pathJoinParams),
-          mimeType,
-          options: {
-            size: fileBuffer.length,
-            name: `${i}_${path.basename(f)}`,
-            type: mimeType.split("/")[0],
-            uploader: _data.userId,
+        achievementRows.push({
+          id: getUUIDv7(),
+          userId: user.id,
+          key: definition.key,
+          title: definition.title,
+          description: definition.description,
+          icon: definition.icon || null,
+          metadata: {
+            threshold: definition.threshold,
+            metric: definition.metric,
+            type: definition.type,
+            value,
           },
+          unlockedAt: faker.date.recent({ days: 14 }),
         });
-
-        await fetch(signedUrl.signedUrl, {
-          method: "PUT",
-          headers: { "Content-Type": mimeType },
-          body: fileBuffer,
-        });
-
-        console.log(`✅ Uploaded ${i}_${f} to ${signedUrl.path}`);
-        uploads.push({
-          mediaId: signedUrl.row.id,
-          parentId: _data.id,
-          mediaType: signedUrl.row.type,
-        });
-      } catch (error) {
-        console.error(`Error uploading file`, error);
       }
+    }
+
+    if (achievementProgressRows.length > 0) {
+      await AchievementProgress.bulkCreate(achievementProgressRows, { transaction });
+    }
+
+    if (achievementRows.length > 0) {
+      await UserAchievement.bulkCreate(achievementRows, { transaction });
+      stats.achievementsCreated = achievementRows.length;
+    }
+
+    const activityRows = [
+      ...createdEvents.map((event) => ({
+        id: getUUIDv7(),
+        actorId: event.createdBy,
+        recipientId: null,
+        type: EActivityType.EventCreated,
+        entityType: EActivityEntityType.Event,
+        entityId: event.id,
+        payload: { name: event.name },
+        visibility: EActivityVisibility.Public,
+        readAt: null,
+      })),
+      ...createdMessages.map((message) => ({
+        id: getUUIDv7(),
+        actorId: message.userId,
+        recipientId: null,
+        type: EActivityType.MessageCreated,
+        entityType: EActivityEntityType.Message,
+        entityId: message.id,
+        payload: {},
+        visibility: EActivityVisibility.Public,
+        readAt: null,
+      })),
+      ...reactionRows.map((reaction) => ({
+        id: getUUIDv7(),
+        actorId: reaction.userId,
+        recipientId: null,
+        type: EActivityType.ReactionCreated,
+        entityType: EActivityEntityType.Reaction,
+        entityId: reaction.id,
+        payload: {
+          emoji: reaction.emoji,
+          contentId: reaction.contentId,
+        },
+        visibility: EActivityVisibility.Public,
+        readAt: null,
+      })),
+      ...achievementRows.map((achievement) => ({
+        id: getUUIDv7(),
+        actorId: achievement.userId,
+        recipientId: achievement.userId,
+        type: EActivityType.AchievementUnlocked,
+        entityType: EActivityEntityType.Achievement,
+        entityId: achievement.id,
+        payload: {
+          key: achievement.key,
+          title: achievement.title,
+          description: achievement.description,
+          icon: achievement.icon,
+        },
+        visibility: EActivityVisibility.Private,
+        readAt: null,
+      })),
+    ];
+
+    if (activityRows.length > 0) {
+      await Activity.bulkCreate(activityRows, { transaction });
+      stats.activitiesCreated = activityRows.length;
+    }
+
+    await transaction.commit();
+
+    console.log(
+      `Created ${stats.usersCreated} users via Supabase email/password auth (requested range ${formatRange(options.users)}).`,
+    );
+    console.log(`Created ${stats.eventsCreated} events from per-user range ${formatRange(options.eventsPerUser)}.`);
+    console.log(
+      `Created ${stats.threadsCreated} threads from per-event range ${formatRange(options.threadsPerEvent)}.`,
+    );
+    console.log(
+      `Created ${stats.messagesCreated} messages from per-thread range ${formatRange(options.messagesPerThread)}.`,
+    );
+    console.log(`Created ${stats.reactionsCreated} reactions.`);
+    console.log(`Created ${stats.achievementsCreated} unlocked achievements.`);
+    console.log(`Created ${stats.activitiesCreated} activity records.`);
+    console.log('Seeded login credentials:');
+    createdUserRows.forEach((user) => {
+      console.log(`- ${user.email} / ${options.password}`);
     });
-    await Promise.all(_promises);
-    return uploads;
-  });
-
-  const results = await Promise.all(uploadPromises);
-  uploadMediaData.push(...results.flatMap((i) => i));
-
-  return uploadMediaData;
+  } catch (error) {
+    await transaction.rollback();
+    await deleteAuthUsers(authUserIds);
+    throw error;
+  } finally {
+    await disconnect();
+  }
 }
 
-function getMimeType(fileName) {
-  const ext = path.extname(fileName).toLowerCase();
-  const mimeMap = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".gif": "image/gif",
-    ".webp": "image/webp",
-    ".mp4": "video/mp4",
-    ".mov": "video/quicktime",
-    ".mp3": "audio/mpeg",
-    ".wav": "audio/wav",
-  };
-  return mimeMap[ext];
+async function main() {
+  const options = parseOptions(process.argv.slice(2));
+  await seedFreshDatabase(options);
 }
 
-main()
-  .then(() => {
-    console.log("✅ Seeding complete");
-    process.exit(0);
-  })
-  .catch(async (err) => {
-    await supabase.rpc("rollback");
-    console.error("❌ Seeding failed:", err.message);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error('Fresh database seed failed:', error);
+  disconnect().finally(() => process.exit(1));
+});

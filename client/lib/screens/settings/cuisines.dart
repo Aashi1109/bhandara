@@ -14,6 +14,7 @@ class Cuisine {
     required this.description,
     required this.icon,
   });
+
   final String id;
   final String name;
   final String description;
@@ -22,6 +23,7 @@ class Cuisine {
 
 class CuisineInterestsScreen extends StatefulWidget {
   const CuisineInterestsScreen({super.key});
+
   static const String routePath = '/settings/cuisines';
 
   @override
@@ -120,7 +122,7 @@ class _CuisineInterestsScreenState extends State<CuisineInterestsScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: cuisines.length,
                     separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final cuisine = cuisines[index];
                       final isSelected = _selectedIds.contains(cuisine.id);
@@ -140,14 +142,14 @@ class _CuisineInterestsScreenState extends State<CuisineInterestsScreen> {
                             ),
                             boxShadow: isSelected
                                 ? [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
+                              BoxShadow(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.05,
+                                ),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
                                 : null,
                           ),
                           child: Row(
@@ -212,10 +214,10 @@ class _CuisineInterestsScreenState extends State<CuisineInterestsScreen> {
                                 ),
                                 child: isSelected
                                     ? const Icon(
-                                        LucideIcons.check,
-                                        size: 14,
-                                        color: AppColors.surface,
-                                      )
+                                  LucideIcons.check,
+                                  size: 14,
+                                  color: AppColors.surface,
+                                )
                                     : null,
                               ),
                             ],

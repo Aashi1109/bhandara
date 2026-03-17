@@ -10,6 +10,7 @@ import '../settings.dart';
 
 class PasswordSettingsScreen extends StatefulWidget {
   const PasswordSettingsScreen({super.key});
+
   static const String routePath = '/settings/password';
 
   @override

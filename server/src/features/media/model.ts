@@ -1,18 +1,13 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { MEDIA_TABLE_NAME } from "./constants";
-import { EMediaType, EAccessLevel } from "@/definitions/enums";
-import type { IMedia } from "@/definitions/types";
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import { MEDIA_TABLE_NAME } from './constants';
+import { EMediaType, EAccessLevel } from '@/definitions/enums';
+import type { IMedia } from '@/definitions/types';
 
 type MediaAttributes = Omit<
   IMedia,
-  | "createdAt"
-  | "updatedAt"
-  | "deletedAt"
-  | "path"
-  | "publicUrl"
-  | "publicUrlExpiresAt"
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'path' | 'publicUrl' | 'publicUrlExpiresAt'
 >;
 
 export class Media extends Model<MediaAttributes, MediaAttributes> {
@@ -26,11 +21,11 @@ export class Media extends Model<MediaAttributes, MediaAttributes> {
   declare mimeType?: string | null;
   declare duration?: number | null;
   declare uploader: string;
-  declare storage: IMedia["storage"];
+  declare storage: IMedia['storage'];
   declare access: EAccessLevel;
   declare metadata: Record<string, any>;
   declare publicUrl?: string;
-  declare publicUrlExpiresAt?: IMedia["publicUrlExpiresAt"];
+  declare publicUrlExpiresAt?: IMedia['publicUrlExpiresAt'];
   declare path?: string;
   declare createdAt: Date;
   declare updatedAt: Date;
@@ -58,7 +53,6 @@ Media.init(
     uploader: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
     },
     storage: { type: DataTypes.JSONB, allowNull: false },
     access: {
@@ -68,20 +62,16 @@ Media.init(
     metadata: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
   },
   {
-    modelName: "Media",
+    modelName: 'Media',
     tableName: MEDIA_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
     indexes: [
       {
-        name: "idx_media_url",
-        fields: ["url"],
+        name: 'idx_media_url',
+        fields: ['url'],
       },
     ],
-  }
+  },
 );
-
-(async () => {
-  await Media.sync({ alter: false });
-})();

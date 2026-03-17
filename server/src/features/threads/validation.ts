@@ -1,14 +1,9 @@
 import { validateSchema } from '@/helpers';
-import { EAccessLevel, EThreadType } from '@/definitions/enums';
+import { EAccessLevel } from '@/definitions/enums';
 import { THREAD_TABLE_NAME } from './constants';
 const threadSchema = {
   type: 'object',
   properties: {
-    type: {
-      type: 'string',
-      enum: Object.values(EThreadType),
-      errorMessage: `Type must be either ${Object.values(EThreadType).join(',')}`,
-    },
     createdBy: {
       type: 'string',
       format: 'uuid',
@@ -25,31 +20,33 @@ const threadSchema = {
       errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
     },
     lockHistory: {
-      type: 'object',
-      properties: {
-        lockedBy: {
-          type: 'string',
-          format: 'uuid',
-          errorMessage: 'LockedBy must be a valid UUID',
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          lockedBy: {
+            type: 'string',
+            format: 'uuid',
+            errorMessage: 'LockedBy must be a valid UUID',
+          },
+          lockedAt: {
+            type: 'string',
+            format: 'date-time',
+            errorMessage: 'LockedAt must be a valid date-time',
+          },
         },
-        lockedAt: {
-          type: 'string',
-          format: 'date-time',
-          errorMessage: 'LockedAt must be a valid date-time',
-        },
+        required: ['lockedBy', 'lockedAt'],
+        additionalProperties: false,
       },
-      required: ['lockedBy', 'lockedAt'],
-      additionalProperties: false,
-      errorMessage: "Each lock event must have 'lockedBy' and 'lockedAt'",
+      errorMessage: 'Lock history must be an array of lock entries',
     },
   },
-  required: ['type', 'createdBy', 'visibility'],
+  required: ['createdBy', 'visibility'],
   additionalProperties: false,
   errorMessage: {
     type: 'Thread data must be an object',
     required: {
-      type: 'Type is required',
-      status: 'Status is required',
+      createdBy: 'Creator is required',
       visibility: 'Visibility is required',
     },
   },
@@ -64,22 +61,30 @@ const updateSchema = {
       errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
     },
     lockHistory: {
-      type: ['object', 'null'],
-      properties: {
-        lockedBy: {
-          type: 'string',
-          format: 'uuid',
-          errorMessage: 'LockedBy must be a valid UUID',
+      oneOf: [
+        {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              lockedBy: {
+                type: 'string',
+                format: 'uuid',
+                errorMessage: 'LockedBy must be a valid UUID',
+              },
+              lockedAt: {
+                type: 'string',
+                format: 'date-time',
+                errorMessage: 'LockedAt must be a valid date-time',
+              },
+            },
+            required: ['lockedBy', 'lockedAt'],
+            additionalProperties: false,
+          },
         },
-        lockedAt: {
-          type: 'string',
-          format: 'date-time',
-          errorMessage: 'LockedAt must be a valid date-time',
-        },
-      },
-      required: ['lockedBy', 'lockedAt'],
-      additionalProperties: false,
-      errorMessage: "Each lock event must have 'lockedBy' and 'lockedAt'",
+        { type: 'null' },
+      ],
+      errorMessage: 'Lock history must be an array or null',
     },
   },
   additionalProperties: false,

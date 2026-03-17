@@ -17,6 +17,7 @@ import 'chat.dart';
 
 class ThreadScreen extends StatefulWidget {
   const ThreadScreen({super.key, required this.id});
+
   static const String routePath = '/thread/:id';
   final String id;
 
@@ -110,140 +111,143 @@ class _ThreadScreenState extends State<ThreadScreen> {
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                  ),
+                )
                     : SingleChildScrollView(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Original message
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.muted,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.border),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Original message
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColors.muted,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          borderRadius: BorderRadius.circular(50),
-                                        ),
-                                        child: const Text(
-                                          'ORIGINAL',
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 2,
-                                            color: AppColors.surface,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _originalMessage?.senderName ?? 'Unknown',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _originalMessage?.content ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.5,
-                                    ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(50),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _originalMessage != null
-                                        ? DateFormat('hh:mm a').format(
-                                            _originalMessage!.createdAt,
-                                          )
-                                        : '',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 1,
-                                    height: 24,
-                                    color: AppColors.border,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    '${_replies.length} REPL${_replies.length == 1 ? 'Y' : 'IES'}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
+                                  child: const Text(
+                                    'ORIGINAL',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
                                       letterSpacing: 2,
-                                      color: AppColors.mutedForeground,
+                                      color: AppColors.surface,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            if (_replies.isEmpty)
-                              const Center(
-                                child: Text(
-                                  'No replies yet. Be the first to reply!',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors.mutedForeground,
                                   ),
                                 ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _originalMessage?.senderName ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _originalMessage?.content ?? '',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _originalMessage != null
+                                  ? DateFormat('hh:mm a').format(
+                                _originalMessage!.createdAt,
                               )
-                            else
-                              ...List.generate(_replies.length, (i) {
-                                final reply = _replies[i];
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    top: i > 0 ? 24 : 0,
-                                  ),
-                                  child: _reply(
-                                    reply.senderAvatar ??
-                                        'https://picsum.photos/seed/${reply.senderId}/100/100',
-                                    reply.senderName ?? 'User',
-                                    reply.content,
-                                    DateFormat('hh:mm a').format(
-                                      reply.createdAt,
-                                    ),
-                                    0,
-                                    null,
-                                  ),
-                                );
-                              }),
+                                  : '',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 1,
+                              height: 24,
+                              color: AppColors.border,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${_replies.length} REPL${_replies.length == 1
+                                  ? 'Y'
+                                  : 'IES'}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2,
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_replies.isEmpty)
+                        const Center(
+                          child: Text(
+                            'No replies yet. Be the first to reply!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                        )
+                      else
+                        ...List.generate(_replies.length, (i) {
+                          final reply = _replies[i];
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              top: i > 0 ? 24 : 0,
+                            ),
+                            child: _reply(
+                              reply.senderAvatar ??
+                                  'https://picsum.photos/seed/${reply
+                                      .senderId}/100/100',
+                              reply.senderName ?? 'User',
+                              reply.content,
+                              DateFormat('hh:mm a').format(
+                                reply.createdAt,
+                              ),
+                              0,
+                              null,
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -255,7 +259,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
               isVisible: _isInputVisible,
               placeholder: 'Reply to thread...',
               onSend: (msg, mediaIds) async {
-                if (msg.trim().isNotEmpty || mediaIds.isNotEmpty) {
+                if (msg
+                    .trim()
+                    .isNotEmpty || mediaIds.isNotEmpty) {
                   try {
                     // Send message and await acknowledgment
                     await socketService.sendMessage(
@@ -285,14 +291,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
-  Widget _reply(
-    String avatar,
-    String name,
-    String text,
-    String time,
-    int likes,
-    String? photo,
-  ) {
+  Widget _reply(String avatar,
+      String name,
+      String text,
+      String time,
+      int likes,
+      String? photo,) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

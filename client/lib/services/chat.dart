@@ -8,8 +8,7 @@ import 'base.dart';
 class ChatService extends BaseService {
   final Dio _dio = apiService.dio;
 
-  Future<PaginatedResponse<Thread>> getEventThreads(
-    String eventId, {
+  Future<PaginatedResponse<Thread>> getEventThreads(String eventId, {
     int? page,
     int? limit,
   }) async {
@@ -20,7 +19,7 @@ class ChatService extends BaseService {
       );
       return PaginatedResponse<Thread>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (e) => Thread.fromJson(e! as Map<String, dynamic>),
+            (e) => Thread.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch event threads');
@@ -29,8 +28,7 @@ class ChatService extends BaseService {
     }
   }
 
-  Future<Thread> createThread(
-    String eventId, {
+  Future<Thread> createThread(String eventId, {
     String? title,
     String type = 'general',
   }) async {
@@ -55,7 +53,7 @@ class ChatService extends BaseService {
       );
       return PaginatedResponse<Thread>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (e) => Thread.fromJson(e! as Map<String, dynamic>),
+            (e) => Thread.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch threads');
@@ -64,8 +62,7 @@ class ChatService extends BaseService {
     }
   }
 
-  Future<PaginatedResponse<Message>> getMessages(
-    String threadId, {
+  Future<PaginatedResponse<Message>> getMessages(String threadId, {
     int? page,
     int? limit,
   }) async {
@@ -76,7 +73,7 @@ class ChatService extends BaseService {
       );
       return PaginatedResponse<Message>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (e) => Message.fromJson(e! as Map<String, dynamic>),
+            (e) => Message.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch messages');
@@ -85,12 +82,11 @@ class ChatService extends BaseService {
     }
   }
 
-  Future<PaginatedResponse<Message>> getChildMessages(
-    String threadId,
-    String parentId, {
-    int? page,
-    int? limit,
-  }) async {
+  Future<PaginatedResponse<Message>> getChildMessages(String threadId,
+      String parentId, {
+        int? page,
+        int? limit,
+      }) async {
     try {
       final response = await _dio.get(
         Api.threadChildMessages(threadId, parentId),
@@ -98,7 +94,7 @@ class ChatService extends BaseService {
       );
       return PaginatedResponse<Message>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (e) => Message.fromJson(e! as Map<String, dynamic>),
+            (e) => Message.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch replies');
@@ -107,13 +103,12 @@ class ChatService extends BaseService {
     }
   }
 
-  Future<Message> sendMessage(
-    String threadId,
-    String content, {
-    String? type,
-    List<String>? mediaIds,
-    String? parentId,
-  }) async {
+  Future<Message> sendMessage(String threadId,
+      String content, {
+        String? type,
+        List<String>? mediaIds,
+        String? parentId,
+      }) async {
     try {
       final response = await _dio.post(
         Api.threadMessages(threadId),
@@ -131,11 +126,9 @@ class ChatService extends BaseService {
     }
   }
 
-  Future<Message> updateMessage(
-    String threadId,
-    String messageId,
-    String content,
-  ) async {
+  Future<Message> updateMessage(String threadId,
+      String messageId,
+      String content,) async {
     try {
       final response = await _dio.put(
         Api.threadMessage(threadId, messageId),

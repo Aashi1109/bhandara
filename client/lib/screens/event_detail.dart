@@ -22,6 +22,7 @@ import 'chat.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.id});
+
   static const String routePath = '/event/:id';
   final String id;
 
@@ -61,7 +62,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   void _checkIfJoined() {
-    final currentUser = ref.read(userProfileProvider).value;
+    final currentUser = ref
+        .read(userProfileProvider)
+        .value;
     if (currentUser == null || _event == null) return;
     final participants = _event!.participants ?? [];
     setState(() {
@@ -177,7 +180,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       CachedNetworkImage(
                         imageUrl: _event!.media?.isNotEmpty == true
                             ? _event!.media!.first.url
-                            : 'https://picsum.photos/seed/${_event!.id}/800/800',
+                            : 'https://picsum.photos/seed/${_event!
+                            .id}/800/800',
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: 420,
@@ -211,7 +215,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             children: [
                               _circleButton(
                                 LucideIcons.arrowLeft,
-                                () => context.go(ExploreScreen.routePath),
+                                    () => context.go(ExploreScreen.routePath),
                               ),
                               Row(
                                 children: [
@@ -355,7 +359,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   ),
                                   child: CachedNetworkImage(
                                     imageUrl:
-                                        'https://picsum.photos/seed/host/100/100',
+                                    'https://picsum.photos/seed/host/100/100',
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -416,12 +420,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               ),
                             ),
                             GestureDetector(
-                              onTap: () => context.go(
-                                ChatScreen.routePath.replaceAll(
-                                  ':id',
-                                  _event!.id.toString(),
-                                ),
-                              ),
+                              onTap: () =>
+                                  context.go(
+                                    ChatScreen.routePath.replaceAll(
+                                      ':id',
+                                      _event!.id.toString(),
+                                    ),
+                                  ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -588,7 +593,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         ),
                                         child: CachedNetworkImage(
                                           imageUrl:
-                                              'https://picsum.photos/seed/user${i + 1}/100/100',
+                                          'https://picsum.photos/seed/user${i +
+                                              1}/100/100',
                                           fit: BoxFit.cover,
                                         ),
                                       ),
@@ -650,9 +656,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       size: AppButtonSize.lg,
                       icon: const Icon(LucideIcons.messageCircle),
                       label: 'Chat',
-                      onPressed: () => context.go(
-                        ChatScreen.routePath.replaceAll(':id', widget.id),
-                      ),
+                      onPressed: () =>
+                          context.go(
+                            ChatScreen.routePath.replaceAll(':id', widget.id),
+                          ),
                     ),
                   ),
                 ),
@@ -663,18 +670,18 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     size: AppButtonSize.lg,
                     icon: _isJoining
                         ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: AppColors.surface,
-                              strokeWidth: 2,
-                            ),
-                          )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: AppColors.surface,
+                        strokeWidth: 2,
+                      ),
+                    )
                         : Icon(
-                            _hasJoined
-                                ? LucideIcons.logOut
-                                : LucideIcons.utensils,
-                          ),
+                      _hasJoined
+                          ? LucideIcons.logOut
+                          : LucideIcons.utensils,
+                    ),
                     label: _hasJoined ? 'Leave Event' : 'Participate Now',
                     onPressed: _isJoining ? null : _toggleParticipation,
                   ),

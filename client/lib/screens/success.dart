@@ -9,6 +9,7 @@ import 'explore.dart';
 
 class SuccessScreen extends StatelessWidget {
   const SuccessScreen({super.key});
+
   static const String routePath = '/success';
 
   @override
@@ -83,7 +84,7 @@ class SuccessScreen extends StatelessWidget {
                                   ),
                                   child: CachedNetworkImage(
                                     imageUrl:
-                                        'https://picsum.photos/seed/burrito/200/200',
+                                    'https://picsum.photos/seed/burrito/200/200',
                                     width: 80,
                                     height: 80,
                                     fit: BoxFit.cover,

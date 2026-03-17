@@ -1,7 +1,7 @@
-import { getDBConnection } from "@/connections/db";
-import { EEventStatus, EEventType } from "@/definitions/enums";
-import { getUUIDv7 } from "@/helpers";
-import { DataTypes, Model } from "sequelize";
+import { getDBConnection } from '@/connections/db';
+import { EEventStatus, EEventType } from '@/definitions/enums';
+import { getUUIDv7 } from '@/helpers';
+import { DataTypes, Model } from 'sequelize';
 import {
   type IEvent,
   type ILocation,
@@ -10,13 +10,12 @@ import {
   type IVerifier,
   type IBaseUser,
   type IReaction,
-  ITag,
-} from "@/definitions/types";
+} from '@/definitions/types';
 
 const sequelize = getDBConnection();
 
 // Create a type that makes timestamp fields optional for model attributes
-type EventAttributes = Omit<IEvent, "createdAt" | "updatedAt" | "deletedAt">;
+type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
 /**
  * Sequelize model representing an event. Complex fields like location and
@@ -33,18 +32,18 @@ export class Event extends Model<EventAttributes, EventAttributes> {
   declare createdBy: string;
   declare status: EEventStatus;
   declare capacity: number;
-  declare tags: IEvent["tags"];
+  declare tags: IEvent['tags'];
   declare media: IMedia[];
   declare createdAt: Date;
   declare updatedAt: Date;
   declare deletedAt?: Date;
-  declare timings: IEvent["timings"];
+  declare timings: IEvent['timings'];
 
   declare creator?: IBaseUser;
   declare reactions?: IReaction[];
 }
 
-export const EVENT_TABLE_NAME = "Events";
+export const EVENT_TABLE_NAME = 'Events';
 
 Event.init(
   {
@@ -83,8 +82,8 @@ Event.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: "Users",
-        key: "id",
+        model: 'Users',
+        key: 'id',
       },
     },
     status: {
@@ -112,25 +111,21 @@ Event.init(
     },
   },
   {
-    modelName: "Event",
+    modelName: 'Event',
     tableName: EVENT_TABLE_NAME,
     sequelize,
     timestamps: true,
     paranoid: true,
     indexes: [
       {
-        name: "events_location_gix",
-        using: "GIST",
+        name: 'events_location_gix',
+        using: 'GIST',
         fields: [
           sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("location"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("location"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`
+            `ST_SetSRID(ST_MakePoint(CAST("location"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("location"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`,
           ),
         ],
       },
     ],
-  }
+  },
 );
-
-(async () => {
-  await Event.sync({ alter: false });
-})();

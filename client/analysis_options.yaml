@@ -19,7 +19,6 @@ analyzer:
 linter:
   rules:
     - always_declare_return_types
-    - always_require_non_null_named_parameters
     - annotate_overrides
     - avoid_init_to_null
     - avoid_null_checks_in_equality_operators
@@ -62,7 +61,6 @@ linter:
     - prefer_const_declarations
     - prefer_const_literals_to_create_immutables
     - prefer_contains
-    - prefer_equal_for_default_values
     - prefer_final_fields
     - prefer_final_locals
     - prefer_for_elements_to_map_fromIterable

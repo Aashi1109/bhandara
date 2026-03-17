@@ -6,7 +6,6 @@ import type {
   EEventType,
   EMediaProvider,
   EMediaType,
-  EThreadType,
 } from '@/definitions/enums';
 
 // Base Interface for Timestamps
@@ -65,7 +64,6 @@ export interface ILockHistory {
 // Base Thread Interface
 export interface IBaseThread extends ITimeStamp {
   id: string;
-  type: EThreadType;
   visibility: EAccessLevel;
   lockHistory: ILockHistory[];
   parentId?: string | null;

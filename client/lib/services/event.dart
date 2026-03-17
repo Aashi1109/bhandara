@@ -16,7 +16,7 @@ class EventService extends BaseService {
       );
       return PaginatedResponse<Event>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (e) => Event.fromJson(e! as Map<String, dynamic>),
+            (e) => Event.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch events');
@@ -80,10 +80,8 @@ class EventService extends BaseService {
     }
   }
 
-  Future<Event> verifyAttendance(
-    String eventId,
-    Map<String, double> coordinates,
-  ) async {
+  Future<Event> verifyAttendance(String eventId,
+      Map<String, double> coordinates,) async {
     try {
       final response = await _dio.post(
         Api.verifyEvent(eventId),

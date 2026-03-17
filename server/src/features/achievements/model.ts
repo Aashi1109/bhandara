@@ -1,26 +1,14 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import type { IAchievementProgress, IUserAchievement } from "@/definitions/types";
-import {
-  ACHIEVEMENT_PROGRESS_TABLE_NAME,
-  USER_ACHIEVEMENT_TABLE_NAME,
-} from "./constants";
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import type { IAchievementProgress, IUserAchievement } from '@/definitions/types';
+import { ACHIEVEMENT_PROGRESS_TABLE_NAME, USER_ACHIEVEMENT_TABLE_NAME } from './constants';
 
-type UserAchievementAttributes = Omit<
-  IUserAchievement,
-  "createdAt" | "updatedAt" | "deletedAt"
->;
+type UserAchievementAttributes = Omit<IUserAchievement, 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
-type AchievementProgressAttributes = Omit<
-  IAchievementProgress,
-  "createdAt" | "updatedAt" | "deletedAt"
->;
+type AchievementProgressAttributes = Omit<IAchievementProgress, 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
-export class UserAchievement extends Model<
-  UserAchievementAttributes,
-  UserAchievementAttributes
-> {
+export class UserAchievement extends Model<UserAchievementAttributes, UserAchievementAttributes> {
   declare id: string;
   declare userId: string;
   declare key: string;
@@ -34,10 +22,7 @@ export class UserAchievement extends Model<
   declare deletedAt?: Date;
 }
 
-export class AchievementProgress extends Model<
-  AchievementProgressAttributes,
-  AchievementProgressAttributes
-> {
+export class AchievementProgress extends Model<AchievementProgressAttributes, AchievementProgressAttributes> {
   declare id: string;
   declare userId: string;
   declare metrics: Record<string, any>;
@@ -56,7 +41,7 @@ UserAchievement.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
     key: {
       type: DataTypes.TEXT,
@@ -86,13 +71,13 @@ UserAchievement.init(
     },
   },
   {
-    modelName: "UserAchievement",
+    modelName: 'UserAchievement',
     tableName: USER_ACHIEVEMENT_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
-    indexes: [{ unique: true, fields: ["userId", "key"] }, { fields: ["userId", "unlockedAt"] }],
-  }
+    indexes: [{ unique: true, fields: ['userId', 'key'] }, { fields: ['userId', 'unlockedAt'] }],
+  },
 );
 
 AchievementProgress.init(
@@ -106,7 +91,7 @@ AchievementProgress.init(
       type: DataTypes.UUID,
       allowNull: false,
       unique: true,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
     metrics: {
       type: DataTypes.JSONB,
@@ -115,17 +100,10 @@ AchievementProgress.init(
     },
   },
   {
-    modelName: "AchievementProgress",
+    modelName: 'AchievementProgress',
     tableName: ACHIEVEMENT_PROGRESS_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
-  }
+  },
 );
-
-(async () => {
-  await Promise.all([
-    UserAchievement.sync({ alter: false }),
-    AchievementProgress.sync({ alter: false }),
-  ]);
-})();

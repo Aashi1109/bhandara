@@ -8,6 +8,7 @@ import '../settings.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
+
   static const String routePath = '/settings/notifications';
 
   @override
@@ -46,7 +47,7 @@ class _NotificationsSettingsScreenState
                     'New Food Events',
                     'ALERTS FOR EVENTS NEAR YOU',
                     _events,
-                    (val) => setState(() => _events = val),
+                        (val) => setState(() => _events = val),
                   ),
                   const SizedBox(height: 12),
                   _notificationItem(
@@ -54,7 +55,7 @@ class _NotificationsSettingsScreenState
                     'Chat Messages',
                     'WHEN SOMEONE MESSAGES YOU',
                     _chat,
-                    (val) => setState(() => _chat = val),
+                        (val) => setState(() => _chat = val),
                   ),
                   const SizedBox(height: 12),
                   _notificationItem(
@@ -62,7 +63,7 @@ class _NotificationsSettingsScreenState
                     'Thread Replies',
                     'UPDATES ON YOUR COMMENTS',
                     _replies,
-                    (val) => setState(() => _replies = val),
+                        (val) => setState(() => _replies = val),
                   ),
                   const SizedBox(height: 12),
                   _notificationItem(
@@ -70,7 +71,7 @@ class _NotificationsSettingsScreenState
                     'Event Reminders',
                     'BEFORE AN EVENT STARTS',
                     _reminders,
-                    (val) => setState(() => _reminders = val),
+                        (val) => setState(() => _reminders = val),
                   ),
                 ],
               ),
@@ -109,13 +110,11 @@ class _NotificationsSettingsScreenState
     );
   }
 
-  Widget _notificationItem(
-    IconData icon,
-    String title,
-    String description,
-    bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+  Widget _notificationItem(IconData icon,
+      String title,
+      String description,
+      bool value,
+      ValueChanged<bool> onChanged,) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

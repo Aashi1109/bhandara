@@ -1,9 +1,9 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { TAG_TABLE_NAME } from "./constants";
-import type { ITag } from "@/definitions/types";
-type TagAttributes = Omit<ITag, "createdAt" | "updatedAt" | "deletedAt">;
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import { TAG_TABLE_NAME } from './constants';
+import type { ITag } from '@/definitions/types';
+type TagAttributes = Omit<ITag, 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
 export class Tag extends Model<TagAttributes, TagAttributes> {
   declare id: string;
@@ -34,22 +34,18 @@ Tag.init(
     color: { type: DataTypes.TEXT },
     parentId: {
       type: DataTypes.UUID,
-      references: { model: "Tags", key: "id" },
+      references: { model: 'Tags', key: 'id' },
     },
     createdBy: {
       type: DataTypes.UUID,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
   },
   {
-    modelName: "Tag",
+    modelName: 'Tag',
     tableName: TAG_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
-  }
+  },
 );
-
-(async () => {
-  await Tag.sync({ alter: false });
-})();

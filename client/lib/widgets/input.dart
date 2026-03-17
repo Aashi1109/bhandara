@@ -3,6 +3,7 @@ import '../theme/theme.dart';
 
 class ValidationRule<T> {
   const ValidationRule({required this.value, required this.message});
+
   final T value;
   final String message;
 }
@@ -53,6 +54,7 @@ class AppInput extends StatefulWidget {
     this.maxLines = 1,
     this.minLines,
   });
+
   final String? label;
   final String? placeholder;
   final String? error;
@@ -91,9 +93,10 @@ class _AppInputState extends State<AppInput> {
   }
 
   void _validate(String value) {
-    if (widget.validations == null) return;
-
-    final rules = widget.validations!;
+    final rules = widget.validations;
+    if (rules == null) {
+      return;
+    }
     String? newError;
 
     // Required check: exactly matches react-hook-form logic

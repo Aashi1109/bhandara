@@ -12,6 +12,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.showBorder = true,
   });
+
   final String title;
   final bool showBack;
   final VoidCallback? onBack;
@@ -26,7 +27,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
+        top: MediaQuery
+            .of(context)
+            .padding
+            .top + 8,
         left: 24,
         right: 24,
         bottom: 16,
@@ -44,29 +48,29 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             alignment: Alignment.centerLeft,
             child: showBack
                 ? GestureDetector(
-                    onTap: onBack ?? () => Navigator.maybePop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        LucideIcons.arrowLeft,
-                        size: 20,
-                        color: AppColors.primary,
-                      ),
+              onTap: onBack ?? () => Navigator.maybePop(context),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                  )
+                  ],
+                ),
+                child: const Icon(
+                  LucideIcons.arrowLeft,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+            )
                 : const SizedBox(width: 40),
           ),
           Text(

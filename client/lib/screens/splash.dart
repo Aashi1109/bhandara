@@ -15,6 +15,7 @@ import 'auth.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
+
   static const String routePath = '/';
 
   @override

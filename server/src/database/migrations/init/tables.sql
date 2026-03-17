@@ -1,11 +1,4 @@
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- Enable PostGIS for spatial functions
-CREATE EXTENSION IF NOT EXISTS postgis;
-
 -- Enums
-CREATE TYPE "ThreadType" AS ENUM ('discussion', 'qna');
 CREATE TYPE "AccessLevel" AS ENUM ('public', 'private', 'restricted');
 CREATE TYPE "MediaType" AS ENUM ('image', 'video', 'audio', 'document');
 CREATE TYPE "EventType" AS ENUM ('organized', 'custom');
@@ -49,6 +42,9 @@ CREATE TABLE "Users" (
     "isVerified" BOOLEAN NOT NULL DEFAULT FALSE,
     "profilePic" JSONB NULL,
     "mediaId" UUID NULL, -- Foreign key will be added later
+    "username" TEXT NULL,
+    "password" TEXT NULL,
+    "meta" JSONB NOT NULL DEFAULT '{}'::JSONB,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -61,20 +57,20 @@ ALTER TABLE "Users" ADD CONSTRAINT "Users_mediaId_fkey" FOREIGN KEY ("mediaId") 
 -- Thread Table
 CREATE TABLE "Threads" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
-    "type" "ThreadType" NOT NULL,
-    "status" "AccessLevel" NOT NULL,
     "visibility" "AccessLevel" NOT NULL,
+    "parentId" UUID NULL REFERENCES "Threads"("id"),
     "eventId" UUID, -- Foreign key will be added later
-    "lockHistory" JSONB DEFAULT '{}'::JSONB,
+    "lockHistory" JSONB NOT NULL DEFAULT '[]'::JSONB,
+    "createdBy" UUID NULL REFERENCES "Users"("id"),
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
 );
 
 COMMENT ON COLUMN "Threads"."lockHistory" IS '{
-"lockedBy": "string", -- ID of the user who locked the thread
-"lockedAt": "string" -- Timestamp of when the thread was locked
-}';
+ "lockedBy": "string", -- ID of the user who locked the thread
+ "lockedAt": "string" -- Timestamp of when the thread was locked
+}[]';
 
 -- Event Table
 CREATE TABLE "Events" (
@@ -87,7 +83,10 @@ CREATE TABLE "Events" (
     "type" "EventType" NOT NULL,
     "createdBy" UUID NOT NULL REFERENCES "Users"("id"),
     "status" "EventStatus" NOT NULL,
-    "capacity" INTEGER NOT NULL,
+    "capacity" INTEGER NULL,
+    "tags" JSONB NOT NULL DEFAULT '[]'::JSONB,
+    "media" JSONB NOT NULL DEFAULT '[]'::JSONB,
+    "timings" JSONB NOT NULL,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -99,7 +98,9 @@ COMMENT ON COLUMN "Events"."location" IS '{
 "latitude": "number",
 "longitude": "number"
 },
-"venue": "string | null"
+"venue": "string | null",
+"latitude": "number | null",
+"longitude": "number | null"
 }';
 
 COMMENT ON COLUMN "Events"."participants" IS '{
@@ -147,34 +148,6 @@ CREATE TABLE "Tags" (
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
 );
 
--- Junction Table: Event-Tags
-CREATE TABLE "EventTags" (
-    "eventId" UUID NOT NULL REFERENCES "Events"("id") ON DELETE CASCADE,
-    "tagId" UUID NOT NULL REFERENCES "Tags"("id") ON DELETE CASCADE,
-    PRIMARY KEY ("eventId", "tagId"),
-    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
-    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
-    "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
-);
-
-COMMENT ON TABLE "EventTags" IS 'Junction table for many-to-many relationship between Events and Tags';
-COMMENT ON COLUMN "EventTags"."eventId" IS 'ID of the event';
-COMMENT ON COLUMN "EventTags"."tagId" IS 'ID of the tag';
-
--- Junction Table: Event-Media
-CREATE TABLE "EventMedia" (
-    "eventId" UUID NOT NULL REFERENCES "Events"("id") ON DELETE CASCADE,
-    "mediaId" UUID NOT NULL REFERENCES "Media"("id") ON DELETE CASCADE,
-    PRIMARY KEY ("eventId", "mediaId"),
-    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
-    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
-    "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
-);
-
-COMMENT ON TABLE "EventMedia" IS 'Junction table for many-to-many relationship between Events and Media';
-COMMENT ON COLUMN "EventMedia"."eventId" IS 'ID of the event';
-COMMENT ON COLUMN "EventMedia"."mediaId" IS 'ID of the media';
-
 -- Activity Table
 CREATE TABLE "Activities" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
@@ -221,4 +194,53 @@ CREATE TABLE "AchievementProgress" (
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL
+);
+
+-- Reactions
+CREATE TABLE "Reactions" (
+    "id" UUID PRIMARY KEY DEFAULT uuidv7(),
+    "contentId" TEXT NOT NULL,
+    "emoji" TEXT NOT NULL,
+    "userId" UUID NOT NULL REFERENCES "Users"("id"),
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+    "deletedAt" TIMESTAMPTZ NULL
+);
+
+CREATE INDEX "reactions_contentId_idx" ON "Reactions"("contentId");
+
+-- Search results
+CREATE TYPE "enum_SearchResults_type" AS ENUM ('event', 'user', 'tag');
+
+CREATE TABLE "SearchResults" (
+    "id" UUID PRIMARY KEY DEFAULT uuidv7(),
+    "type" "enum_SearchResults_type" NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NULL,
+    "imageUrl" TEXT NULL,
+    "metadata" JSONB NOT NULL DEFAULT '{}'::JSONB,
+    "relevanceScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "deletedAt" TIMESTAMPTZ NULL
+);
+
+CREATE INDEX "events_location_gix" ON "Events" USING GIST (
+  ST_SetSRID(
+    ST_MakePoint(
+      CAST(COALESCE("location"->'coordinates'->>'longitude', "location"->>'longitude') AS DOUBLE PRECISION),
+      CAST(COALESCE("location"->'coordinates'->>'latitude', "location"->>'latitude') AS DOUBLE PRECISION)
+    ),
+    4326
+  )
+);
+
+CREATE INDEX "users_address_gix" ON "Users" USING GIST (
+  ST_SetSRID(
+    ST_MakePoint(
+      CAST("address"->'coordinates'->>'longitude' AS DOUBLE PRECISION),
+      CAST("address"->'coordinates'->>'latitude' AS DOUBLE PRECISION)
+    ),
+    4326
+  )
 );

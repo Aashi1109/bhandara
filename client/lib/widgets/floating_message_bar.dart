@@ -14,6 +14,7 @@ class ChatAttachment {
     this.isVideo = false,
     this.isUploading = false,
   });
+
   final String id;
   final String? mediaId; // Null if still uploading
   final String name;
@@ -42,6 +43,7 @@ class FloatingMessageBar extends StatefulWidget {
     required this.onSend,
     this.isVisible = true,
   });
+
   final String placeholder;
   final Function(String message, List<String> mediaIds) onSend;
   final bool isVisible;
@@ -56,11 +58,13 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
 
   void _handleSend() {
     final allUploaded = _attachments.every(
-      (a) => a.mediaId != null && !a.isUploading,
+          (a) => a.mediaId != null && !a.isUploading,
     );
     if (!allUploaded) return;
 
-    if (_controller.text.trim().isNotEmpty || _attachments.isNotEmpty) {
+    if (_controller.text
+        .trim()
+        .isNotEmpty || _attachments.isNotEmpty) {
       final mediaIds = _attachments.map((a) => a.mediaId!).toList();
       widget.onSend(_controller.text, mediaIds);
       _controller.clear();
@@ -81,7 +85,10 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
       if (file == null) return;
 
       final attachment = ChatAttachment(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: DateTime
+            .now()
+            .millisecondsSinceEpoch
+            .toString(),
         name: file.name,
         localPath: file.path,
         isVideo: isVideo,
@@ -137,8 +144,10 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
   @override
   Widget build(BuildContext context) {
     final canSend =
-        (_controller.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
-        _attachments.every((a) => !a.isUploading);
+        (_controller.text
+            .trim()
+            .isNotEmpty || _attachments.isNotEmpty) &&
+            _attachments.every((a) => !a.isUploading);
 
     return AnimatedSlide(
       offset: widget.isVisible ? Offset.zero : const Offset(0, 1),
@@ -152,7 +161,10 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
             24,
             0,
             24,
-            MediaQuery.of(context).padding.bottom + 16,
+            MediaQuery
+                .of(context)
+                .padding
+                .bottom + 16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -208,7 +220,8 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      itemBuilder: (context) => [
+                      itemBuilder: (context) =>
+                      [
                         const PopupMenuItem(
                           value: false,
                           child: ListTile(

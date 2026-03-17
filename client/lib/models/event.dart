@@ -44,13 +44,15 @@ class Event {
     // media: may be string IDs or full objects
     List<Media>? media;
     if (json['media'] != null) {
-      media = (json['media'] as List).whereType<Map<String, dynamic>>().map(Media.fromJson).toList();
+      media = (json['media'] as List).whereType<Map<String, dynamic>>().map(
+          Media.fromJson).toList();
     }
 
     // tags: may be string IDs or full objects
     List<Tag>? tags;
     if (json['tags'] != null) {
-      tags = (json['tags'] as List).whereType<Map<String, dynamic>>().map(Tag.fromJson).toList();
+      tags = (json['tags'] as List).whereType<Map<String, dynamic>>().map(
+          Tag.fromJson).toList();
     }
 
     return Event(

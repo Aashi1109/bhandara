@@ -1,14 +1,11 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { USER_TABLE_NAME } from "./constants";
-import type { IBaseUser } from "@/definitions/types";
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import { USER_TABLE_NAME } from './constants';
+import type { IBaseUser } from '@/definitions/types';
 
 const sequelize = getDBConnection();
-type UserAttributes = Omit<
-  IBaseUser,
-  "createdAt" | "updatedAt" | "deletedAt" | "media" | "profilePic"
-> & {
+type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'deletedAt' | 'media' | 'profilePic'> & {
   profilePic: Record<string, any> | null;
   media?: any;
 };
@@ -50,32 +47,27 @@ User.init(
     profilePic: { type: DataTypes.JSONB },
     mediaId: {
       type: DataTypes.UUID,
-      references: { model: "Media", key: "id" },
     },
     username: { type: DataTypes.TEXT },
     password: { type: DataTypes.TEXT },
     meta: { type: DataTypes.JSONB, defaultValue: {} },
   },
   {
-    modelName: "User",
+    modelName: 'User',
     tableName: USER_TABLE_NAME,
     sequelize,
     timestamps: true,
     paranoid: true,
     indexes: [
       {
-        name: "users_address_gix",
-        using: "GIST",
+        name: 'users_address_gix',
+        using: 'GIST',
         fields: [
           sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("address"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("address"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`
+            `ST_SetSRID(ST_MakePoint(CAST("address"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("address"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`,
           ),
         ],
       },
     ],
-  }
+  },
 );
-
-(async () => {
-  await User.sync({ alter: false });
-})();

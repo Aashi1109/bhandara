@@ -7,8 +7,7 @@ enum SnackBarType { info, error, warning, success }
 class AppSnackBar {
   static OverlayEntry? _currentEntry;
 
-  static void show(
-    BuildContext context, {
+  static void show(BuildContext context, {
     required String message,
     SnackBarType type = SnackBarType.info,
     Duration duration = const Duration(seconds: 3),
@@ -40,16 +39,17 @@ class AppSnackBar {
     }
 
     _currentEntry = OverlayEntry(
-      builder: (context) => _TopSnackBar(
-        message: message,
-        backgroundColor: backgroundColor,
-        icon: icon,
-        duration: duration,
-        onDismiss: () {
-          _currentEntry?.remove();
-          _currentEntry = null;
-        },
-      ),
+      builder: (context) =>
+          _TopSnackBar(
+            message: message,
+            backgroundColor: backgroundColor,
+            icon: icon,
+            duration: duration,
+            onDismiss: () {
+              _currentEntry?.remove();
+              _currentEntry = null;
+            },
+          ),
     );
 
     overlay.insert(_currentEntry!);
@@ -127,7 +127,10 @@ class _TopSnackBarState extends State<_TopSnackBar>
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
+      top: MediaQuery
+          .of(context)
+          .padding
+          .top + 16,
       left: 16,
       right: 16,
       child: Material(

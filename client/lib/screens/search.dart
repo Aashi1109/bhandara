@@ -14,6 +14,7 @@ import 'event_detail.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
+
   static const String routePath = '/search';
 
   @override
@@ -72,7 +73,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _search(String query) async {
-    if (query.trim().length < 2) return;
+    if (query.trim().length < 2) {
+      return;
+    }
     _debounce?.cancel();
     setState(() {
       _isLoading = true;
@@ -349,7 +352,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       width: 96,
                       height: 96,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _placeholderImage(result),
+                      errorWidget: (_, _, _) => _placeholderImage(result),
                     )
                   : _placeholderImage(result),
             ),

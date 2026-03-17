@@ -4,6 +4,7 @@ import '../theme/theme.dart';
 
 class PasswordRequirement {
   PasswordRequirement({required this.label, required this.met});
+
   final String label;
   final bool met;
 }
@@ -13,24 +14,25 @@ class PasswordRequirements extends StatelessWidget {
 
   final String password;
 
-  List<PasswordRequirement> get requirements => [
-    PasswordRequirement(
-      label: 'At least 8 characters',
-      met: password.length >= 8,
-    ),
-    PasswordRequirement(
-      label: 'One uppercase letter',
-      met: password.contains(RegExp(r'[A-Z]')),
-    ),
-    PasswordRequirement(
-      label: 'One number',
-      met: password.contains(RegExp(r'[0-9]')),
-    ),
-    PasswordRequirement(
-      label: 'One special character',
-      met: password.contains(RegExp(r'[^A-Za-z0-9]')),
-    ),
-  ];
+  List<PasswordRequirement> get requirements =>
+      [
+        PasswordRequirement(
+          label: 'At least 8 characters',
+          met: password.length >= 8,
+        ),
+        PasswordRequirement(
+          label: 'One uppercase letter',
+          met: password.contains(RegExp(r'[A-Z]')),
+        ),
+        PasswordRequirement(
+          label: 'One number',
+          met: password.contains(RegExp(r'[0-9]')),
+        ),
+        PasswordRequirement(
+          label: 'One special character',
+          met: password.contains(RegExp(r'[^A-Za-z0-9]')),
+        ),
+      ];
 
   bool get allMet => requirements.every((r) => r.met);
 

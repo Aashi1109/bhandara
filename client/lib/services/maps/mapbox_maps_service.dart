@@ -46,7 +46,9 @@ class MapboxMapsService implements MapProviderService {
     required String address,
     int limit = 5,
   }) async {
-    if (_accessToken.isEmpty || address.trim().isEmpty) return const [];
+    if (_accessToken.isEmpty || address.trim().isEmpty) {
+      return const [];
+    }
 
     final encoded = Uri.encodeComponent(address);
     final response = await _dio.get<dynamic>(
@@ -72,7 +74,9 @@ class MapboxMapsService implements MapProviderService {
     double? proximityLongitude,
     int limit = 5,
   }) async {
-    if (_accessToken.isEmpty || query.trim().isEmpty) return const [];
+    if (_accessToken.isEmpty || query.trim().isEmpty) {
+      return const [];
+    }
 
     final encoded = Uri.encodeComponent(query);
     final params = <String, dynamic>{

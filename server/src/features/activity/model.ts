@@ -1,14 +1,10 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import type { IActivity } from "@/definitions/types";
-import {
-  ACTIVITY_TABLE_NAME,
-  EActivityEntityType,
-  EActivityVisibility,
-} from "./constants";
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import type { IActivity } from '@/definitions/types';
+import { ACTIVITY_TABLE_NAME, EActivityEntityType, EActivityVisibility } from './constants';
 
-type ActivityAttributes = Omit<IActivity, "createdAt" | "updatedAt" | "deletedAt">;
+type ActivityAttributes = Omit<IActivity, 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
 export class Activity extends Model<ActivityAttributes, ActivityAttributes> {
   declare id: string;
@@ -35,12 +31,12 @@ Activity.init(
     actorId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
     recipientId: {
       type: DataTypes.UUID,
       allowNull: true,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
     type: {
       type: DataTypes.TEXT,
@@ -70,20 +66,16 @@ Activity.init(
     },
   },
   {
-    modelName: "Activity",
+    modelName: 'Activity',
     tableName: ACTIVITY_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
     indexes: [
-      { fields: ["actorId", "createdAt"] },
-      { fields: ["recipientId", "createdAt"] },
-      { fields: ["entityType", "entityId"] },
-      { fields: ["type"] },
+      { fields: ['actorId', 'createdAt'] },
+      { fields: ['recipientId', 'createdAt'] },
+      { fields: ['entityType', 'entityId'] },
+      { fields: ['type'] },
     ],
-  }
+  },
 );
-
-(async () => {
-  await Activity.sync({ alter: false });
-})();

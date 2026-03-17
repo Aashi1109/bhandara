@@ -24,7 +24,7 @@ import { isEmpty } from "@/utils";
 import { getDistanceInMeters } from "@/helpers";
 import { setPlatformNamespace, emitSocketEvent } from "./emitter";
 import { EAllowedReactionTables } from "@/features/reactions/constants";
-import { EAccessLevel, EThreadType, EEventStatus } from "@/definitions/enums";
+import { EAccessLevel, EEventStatus } from "@/definitions/enums";
 import ActivityService from "@/features/activity/service";
 import {
   EActivityEntityType,
@@ -523,7 +523,6 @@ export function initializeSocket(server: http.Server) {
 
           const newThread = await threadService.create({
             eventId,
-            type: EThreadType.Discussion,
             createdBy: socketUserId,
             visibility: EAccessLevel.Public,
           });

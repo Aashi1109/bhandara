@@ -25,6 +25,7 @@ class AppMapView extends StatefulWidget {
     required this.manager,
     required this.initialCameraPosition,
     this.markers = const <Marker>{},
+    this.circles = const <Circle>{},
     this.mapType = MapType.normal,
     this.zoomControlsEnabled = false,
     this.myLocationButtonEnabled = false,
@@ -33,6 +34,8 @@ class AppMapView extends StatefulWidget {
     this.mapStyle,
     this.onMapReady,
     this.onTap,
+    this.onCameraMove,
+    this.onCameraIdle,
   });
 
   /// Initial camera target and zoom when the map first renders.
@@ -40,6 +43,9 @@ class AppMapView extends StatefulWidget {
 
   /// Markers rendered on the map.
   final Set<Marker> markers;
+
+  /// Circles rendered on the map.
+  final Set<Circle> circles;
 
   /// Google map visual type (normal, satellite, terrain, hybrid).
   final MapType mapType;
@@ -68,6 +74,12 @@ class AppMapView extends StatefulWidget {
   /// Callback fired when user taps the map.
   final ValueChanged<LatLng>? onTap;
 
+  /// Callback fired when camera position changes.
+  final ValueChanged<CameraPosition>? onCameraMove;
+
+  /// Callback fired once camera stops moving.
+  final VoidCallback? onCameraIdle;
+
   @override
   State<AppMapView> createState() => _AppMapViewState();
 }
@@ -78,6 +90,7 @@ class _AppMapViewState extends State<AppMapView> {
     return GoogleMap(
       initialCameraPosition: widget.initialCameraPosition,
       markers: widget.markers,
+      circles: widget.circles,
       mapType: widget.mapType,
       zoomControlsEnabled: widget.zoomControlsEnabled,
       myLocationButtonEnabled: widget.myLocationButtonEnabled,
@@ -85,6 +98,8 @@ class _AppMapViewState extends State<AppMapView> {
       padding: widget.padding,
       style: widget.mapStyle ?? widget.manager.nativeMapStyle,
       onTap: widget.onTap,
+      onCameraMove: widget.onCameraMove,
+      onCameraIdle: widget.onCameraIdle,
       onMapCreated: (controller) {
         widget.onMapReady?.call(controller);
       },

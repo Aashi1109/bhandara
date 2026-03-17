@@ -103,10 +103,8 @@ class FileService {
     }
   }
 
-  Future<bool> updateMedia(
-    String mediaId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<bool> updateMedia(String mediaId,
+      Map<String, dynamic> data,) async {
     try {
       final response = await _dio.patch(Api.media(mediaId), data: data);
       return response.statusCode == 200;

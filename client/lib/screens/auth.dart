@@ -21,6 +21,7 @@ import 'explore.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
+
   static const String routePath = '/auth';
 
   @override
@@ -138,7 +139,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               setState(() {
                                 _isEmailValid =
                                     error == null &&
-                                    _emailController.text.isNotEmpty;
+                                        _emailController.text.isNotEmpty;
                               });
                             },
                           ),
@@ -208,7 +209,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   child: ClipOval(
                                     child: CachedNetworkImage(
                                       imageUrl:
-                                          'https://picsum.photos/seed/google/24/24',
+                                      'https://picsum.photos/seed/google/24/24',
                                       width: 20,
                                       height: 20,
                                     ),

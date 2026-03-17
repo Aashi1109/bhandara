@@ -19,6 +19,7 @@ import 'explore.dart';
 
 class PreferencesScreen extends ConsumerStatefulWidget {
   const PreferencesScreen({super.key});
+
   static const String routePath = '/preferences';
 
   @override
@@ -127,7 +128,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
         _selectedLocation = latLng;
         _locationLabel = address?.formattedAddress.isNotEmpty == true
             ? address!.formattedAddress
-            : '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+            : '${position.latitude.toStringAsFixed(4)}, ${position.longitude
+            .toStringAsFixed(4)}';
         _hasLocationAccess = true;
         _isLocating = false;
       });
@@ -219,19 +221,21 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                         }).toList(),
                       );
                     },
-                    loading: () => const Center(
+                    loading: () =>
+                    const Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppColors.primary,
                         ),
                       ),
                     ),
-                    error: (err, stack) => Center(
-                      child: Text(
-                        'Failed to load categories: ${err.toString()}',
-                        style: const TextStyle(color: AppColors.error),
-                      ),
-                    ),
+                    error: (err, stack) =>
+                        Center(
+                          child: Text(
+                            'Failed to load categories: ${err.toString()}',
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        ),
                   ),
                   const SizedBox(height: 40),
                   // ... (Location section remains same)
@@ -489,20 +493,22 @@ class TagHierarchy extends ConsumerWidget {
           ],
         );
       },
-      loading: () => TagChip(
-        tag: tag,
-        selectionState: selected.contains(tag.id)
-            ? SelectionState.all
-            : SelectionState.none,
-        onToggle: () => onToggleExpanded(tag.id),
-        showExpand: true,
-        isExpanded: isExpanded,
-      ),
-      error: (e, s) => TagChip(
-        tag: tag,
-        selectionState: SelectionState.none,
-        onToggle: () => onToggleExpanded(tag.id),
-      ),
+      loading: () =>
+          TagChip(
+            tag: tag,
+            selectionState: selected.contains(tag.id)
+                ? SelectionState.all
+                : SelectionState.none,
+            onToggle: () => onToggleExpanded(tag.id),
+            showExpand: true,
+            isExpanded: isExpanded,
+          ),
+      error: (e, s) =>
+          TagChip(
+            tag: tag,
+            selectionState: SelectionState.none,
+            onToggle: () => onToggleExpanded(tag.id),
+          ),
     );
   }
 }
@@ -554,12 +560,12 @@ class TagChip extends StatelessWidget {
           ),
           boxShadow: isSelected
               ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ]
               : null,
         ),
         child: Material(
@@ -640,11 +646,12 @@ class TagChip extends StatelessWidget {
             height: isSmall ? 14 : 16,
             fit: BoxFit.contain,
             placeholder: (context, url) => const SizedBox.shrink(),
-            errorWidget: (context, url, error) => Icon(
-              LucideIcons.utensils,
-              size: isSmall ? 14 : 16,
-              color: active ? AppColors.surface : AppColors.primary,
-            ),
+            errorWidget: (context, url, error) =>
+                Icon(
+                  LucideIcons.utensils,
+                  size: isSmall ? 14 : 16,
+                  color: active ? AppColors.surface : AppColors.primary,
+                ),
           ),
         ),
       );

@@ -14,7 +14,10 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentPath = GoRouterState.of(context).uri.path;
+    final currentPath = GoRouterState
+        .of(context)
+        .uri
+        .path;
 
     final items = [
       _NavItem(ExploreScreen.routePath, LucideIcons.compass, 'Explore'),
@@ -147,6 +150,7 @@ class AppBottomNav extends StatelessWidget {
 
 class _NavItem {
   _NavItem(this.path, this.icon, this.label, {this.isAction = false});
+
   final String path;
   final IconData icon;
   final String label;

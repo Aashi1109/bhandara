@@ -20,6 +20,7 @@ class AppButton extends StatefulWidget {
     this.loadable = false,
     this.mainAxisAlignment = MainAxisAlignment.center,
   });
+
   final AppButtonVariant variant;
   final AppButtonSize size;
   final dynamic Function()? onPressed;
@@ -161,70 +162,70 @@ class _AppButtonState extends State<AppButton> {
     final content = showOnlyLoading
         ? loadingIndicator
         : widget.child ??
-              Row(
-                mainAxisSize: widget.fullWidth
-                    ? MainAxisSize.max
-                    : MainAxisSize.min,
-                mainAxisAlignment: widget.mainAxisAlignment,
-                children: [
-                  if (widget.icon != null && !isLoading) ...[
-                    IconTheme(
-                      data: IconThemeData(
-                        color: _foregroundColor,
-                        size: _fontSize + 4,
-                      ),
-                      child: widget.icon!,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (widget.label != null)
-                    Flexible(
-                      child: Text(
-                        widget.label!,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: _fontSize,
-                          fontWeight: FontWeight.w700,
-                          color: _foregroundColor,
-                        ),
-                      ),
-                    ),
-                  if (widget.iconRight != null && !isLoading) ...[
-                    const SizedBox(width: 8),
-                    IconTheme(
-                      data: IconThemeData(
-                        color: _foregroundColor,
-                        size: _fontSize + 4,
-                      ),
-                      child: widget.iconRight!,
-                    ),
-                  ],
-                  if (showBeside) ...[
-                    const SizedBox(width: 8),
-                    loadingIndicator,
-                  ],
-                ],
-              );
+        Row(
+          mainAxisSize: widget.fullWidth
+              ? MainAxisSize.max
+              : MainAxisSize.min,
+          mainAxisAlignment: widget.mainAxisAlignment,
+          children: [
+            if (widget.icon != null && !isLoading) ...[
+              IconTheme(
+                data: IconThemeData(
+                  color: _foregroundColor,
+                  size: _fontSize + 4,
+                ),
+                child: widget.icon!,
+              ),
+              const SizedBox(width: 8),
+            ],
+            if (widget.label != null)
+              Flexible(
+                child: Text(
+                  widget.label!,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: _fontSize,
+                    fontWeight: FontWeight.w700,
+                    color: _foregroundColor,
+                  ),
+                ),
+              ),
+            if (widget.iconRight != null && !isLoading) ...[
+              const SizedBox(width: 8),
+              IconTheme(
+                data: IconThemeData(
+                  color: _foregroundColor,
+                  size: _fontSize + 4,
+                ),
+                child: widget.iconRight!,
+              ),
+            ],
+            if (showBeside) ...[
+              const SizedBox(width: 8),
+              loadingIndicator,
+            ],
+          ],
+        );
 
     return GestureDetector(
       onTap: isLoading
           ? null
           : () async {
-              if (widget.onPressed == null) return;
+        if (widget.onPressed == null) return;
 
-              if (widget.loadable) {
-                if (mounted) setState(() => _internalLoading = true);
-              }
+        if (widget.loadable) {
+          if (mounted) setState(() => _internalLoading = true);
+        }
 
-              try {
-                await widget.onPressed!();
-              } finally {
-                if (mounted && widget.loadable) {
-                  setState(() => _internalLoading = false);
-                }
-              }
-            },
+        try {
+          await widget.onPressed!();
+        } finally {
+          if (mounted && widget.loadable) {
+            setState(() => _internalLoading = false);
+          }
+        }
+      },
       child: Container(
         height: _height,
         width: widget.fullWidth ? double.infinity : null,

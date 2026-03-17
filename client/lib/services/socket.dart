@@ -11,11 +11,13 @@ class SocketService {
   final _storage = SecureStorage(namespace: 'auth');
 
   final _messageController = StreamController<Map<String, dynamic>>.broadcast();
+
   Stream<Map<String, dynamic>> get messages => _messageController.stream;
 
   final Map<int, Completer<dynamic>> _ackHandlers = {};
   int _ackCounter = 0;
   bool _isConnected = false;
+
   bool get isConnected => _isConnected;
 
   static const String namespace = '/platform';

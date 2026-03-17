@@ -1,7 +1,7 @@
-import { Sequelize } from "sequelize";
-import config from "@/config";
-import logger from "@/logger";
-import { DB_CONNECTION_NAMES } from "@/constants";
+import { Sequelize } from 'sequelize';
+import config from '@/config';
+import logger from '@/logger';
+import { DB_CONNECTION_NAMES } from '@/constants';
 
 const postgresConnection: Partial<Record<DB_CONNECTION_NAMES, Sequelize>> = {};
 export const getConnections = () => postgresConnection;
@@ -11,9 +11,9 @@ const connect = (name: DB_CONNECTION_NAMES) => {
     logging: (msg, duration) =>
       logger.debug({
         message: msg,
-        duration: typeof duration === "number" ? duration : null,
+        duration: typeof duration === 'number' ? duration : null,
       }),
-    benchmark: process.env.NODE_ENV !== "production",
+    benchmark: process.env.NODE_ENV !== 'production',
     retry: {
       max: 5,
       match: [
@@ -34,18 +34,18 @@ const connect = (name: DB_CONNECTION_NAMES) => {
       idle: 10000,
     },
     dialectOptions: {
-      application_name: config.infrastructure.appName || "Local",
-      fallback_application_name: "Bhandara",
+      application_name: config.infrastructure.appName || 'Local',
+      fallback_application_name: 'Bhandara',
     },
   });
 
   // Add ping method to the sequelize instance
   sequelize.ping = async () => {
     try {
-      await sequelize.query("SELECT 1");
+      await sequelize.query('SELECT 1');
       return true;
     } catch (error) {
-      logger.error("Database ping failed:", error);
+      logger.error('Database ping failed:', error);
       throw error;
     }
   };
@@ -54,9 +54,10 @@ const connect = (name: DB_CONNECTION_NAMES) => {
 };
 
 export async function disconnect() {
-  const disconnecting = [];
-  for (const name of Object.keys(postgresConnection)) {
-    disconnecting.push(postgresConnection[name].destroy());
+  const disconnecting: Promise<void>[] = [];
+  for (const connection of Object.values(postgresConnection)) {
+    if (!connection) continue;
+    disconnecting.push(connection.close());
   }
   return Promise.all(disconnecting);
 }

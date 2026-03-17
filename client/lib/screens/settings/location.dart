@@ -14,6 +14,7 @@ import '../settings.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   const LocationSettingsScreen({super.key});
+
   static const String routePath = '/settings/location';
 
   @override

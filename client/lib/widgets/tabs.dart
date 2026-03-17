@@ -3,6 +3,7 @@ import '../theme/theme.dart';
 
 class AppTabItem<T> {
   const AppTabItem({required this.label, required this.value, this.icon});
+
   final String label;
   final T value;
   final String? icon;
@@ -46,12 +47,12 @@ class AppTabs<T> extends StatelessWidget {
                   ),
                   boxShadow: isSelected
                       ? [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
                       : null,
                 ),
                 child: Row(

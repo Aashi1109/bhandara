@@ -1,7 +1,7 @@
 // Only import what's needed for tracing initialization
-import "@/instrument";
-import { initializeTracing, shutdownTracing } from "@/config/tracing.config";
-import * as Sentry from "@sentry/node";
+import '@/instrument';
+import { initializeTracing, shutdownTracing } from '@/config/tracing.config';
+import * as Sentry from '@sentry/node';
 
 async function startServer() {
   try {
@@ -16,25 +16,25 @@ async function startServer() {
       { initializeSocket },
       { initializeMediaRealtime },
       { getDBConnection },
+      { ensureDatabaseSchema },
       { getRedisConnection },
     ] = await Promise.all([
-      import("@/app"),
-      import("@/config"),
-      import("@/logger"),
-      import("@/socket"),
-      import("@/supabase/realtime"),
-      import("./connections/db"),
-      import("./connections/redis"),
+      import('@/app'),
+      import('@/config'),
+      import('@/logger'),
+      import('@/socket'),
+      import('@/supabase/realtime'),
+      import('./connections/db/index'),
+      import('./connections/db/initSchema'),
+      import('./connections/redis'),
     ]);
 
-    const http = await import("http");
+    const http = await import('http');
 
-    const [db, redis] = await Promise.all([
-      getDBConnection(),
-      getRedisConnection(),
-    ]);
+    const [db, redis] = await Promise.all([getDBConnection(), getRedisConnection()]);
 
     await Promise.all([await redis.ping(), await db.ping()]);
+    await ensureDatabaseSchema(db);
 
     const app = createServer();
 
@@ -55,7 +55,7 @@ async function startServer() {
 
 startServer();
 
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   Sentry.flush(2000)
     .then(() => {
       return shutdownTracing();

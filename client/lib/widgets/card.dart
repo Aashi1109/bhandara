@@ -15,6 +15,7 @@ class AppCard extends StatelessWidget {
     this.border,
     this.backgroundColor,
   });
+
   final Widget child;
   final AppCardVariant variant;
   final AppCardPadding padding;

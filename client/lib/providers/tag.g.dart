@@ -67,21 +67,20 @@ class TagsFamily extends Family<AsyncValue<List<Tag>>> {
 class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
   /// See also [tags].
   TagsProvider({bool rootOnly = false, String? parentId})
-    : this._internal(
+      : this._internal(
         (ref) => tags(ref as TagsRef, rootOnly: rootOnly, parentId: parentId),
-        from: tagsProvider,
-        name: r'tagsProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$tagsHash,
-        dependencies: TagsFamily._dependencies,
-        allTransitiveDependencies: TagsFamily._allTransitiveDependencies,
-        rootOnly: rootOnly,
-        parentId: parentId,
-      );
+    from: tagsProvider,
+    name: r'tagsProvider',
+    debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+        ? null
+        : _$tagsHash,
+    dependencies: TagsFamily._dependencies,
+    allTransitiveDependencies: TagsFamily._allTransitiveDependencies,
+    rootOnly: rootOnly,
+    parentId: parentId,
+  );
 
-  TagsProvider._internal(
-    super._createNotifier, {
+  TagsProvider._internal(super._createNotifier, {
     required super.name,
     required super.dependencies,
     required super.allTransitiveDependencies,
@@ -99,7 +98,7 @@ class TagsProvider extends AutoDisposeFutureProvider<List<Tag>> {
     return ProviderOverride(
       origin: this,
       override: TagsProvider._internal(
-        (ref) => create(ref as TagsRef),
+            (ref) => create(ref as TagsRef),
         from: from,
         name: null,
         dependencies: null,
@@ -149,6 +148,7 @@ class _TagsProviderElement extends AutoDisposeFutureProviderElement<List<Tag>>
 
   @override
   bool get rootOnly => (origin as TagsProvider).rootOnly;
+
   @override
   String? get parentId => (origin as TagsProvider).parentId;
 }

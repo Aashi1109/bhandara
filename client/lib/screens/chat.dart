@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.id});
+
   static const String routePath = '/chat/:id';
   final String id;
 
@@ -141,45 +142,45 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: _isLoadingMessages
                     ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                  ),
+                )
                     : _messages.isEmpty
                     ? const Center(
-                        child: Text(
-                          'No messages yet. Start the conversation!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      )
+                  child: Text(
+                    'No messages yet. Start the conversation!',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                )
                     : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = _messages[index];
-                          if (index == 0) {
-                            return Column(
-                              children: [
-                                _buildTimestamp(
-                                  DateFormat(
-                                    'MMMM dd, hh:mm a',
-                                  ).format(msg.createdAt),
-                                ),
-                                const SizedBox(height: 24),
-                                _renderMessage(msg),
-                              ],
-                            );
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 32),
-                            child: _renderMessage(msg),
-                          );
-                        },
-                      ),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = _messages[index];
+                    if (index == 0) {
+                      return Column(
+                        children: [
+                          _buildTimestamp(
+                            DateFormat(
+                              'MMMM dd, hh:mm a',
+                            ).format(msg.createdAt),
+                          ),
+                          const SizedBox(height: 24),
+                          _renderMessage(msg),
+                        ],
+                      );
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 32),
+                      child: _renderMessage(msg),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -191,7 +192,9 @@ class _ChatScreenState extends State<ChatScreen> {
               isVisible: _isInputVisible,
               onSend: (msg, mediaIds) async {
                 if (_isThreadLocked) return;
-                if (msg.trim().isNotEmpty || mediaIds.isNotEmpty) {
+                if (msg
+                    .trim()
+                    .isNotEmpty || mediaIds.isNotEmpty) {
                   try {
                     // Send message using standardized emit
                     await socketService.emit(SocketEvents.messageCreated, {
@@ -218,7 +221,10 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
+        top: MediaQuery
+            .of(context)
+            .padding
+            .top + 8,
         left: 20,
         right: 20,
         bottom: 16,
@@ -230,7 +236,8 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.canPop()
+            onTap: () =>
+            context.canPop()
                 ? context.pop()
                 : context.go(ExploreScreen.routePath),
             child: Container(
@@ -397,21 +404,21 @@ class _ChatScreenState extends State<ChatScreen> {
             border: Border.all(color: AppColors.border),
             image: imageUrl != null
                 ? DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                  )
+              image: NetworkImage(imageUrl),
+              fit: BoxFit.cover,
+            )
                 : null,
           ),
           alignment: Alignment.center,
           child: imageUrl == null
               ? Text(
-                  initials ?? '',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                )
+            initials ?? '',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
+            ),
+          )
               : null,
         ),
         const SizedBox(width: 12),
@@ -489,9 +496,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   if (hasThread) ...[
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () => context.push(
-                        ThreadScreen.routePath.replaceAll(':id', '1'),
-                      ),
+                      onTap: () =>
+                          context.push(
+                            ThreadScreen.routePath.replaceAll(':id', '1'),
+                          ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -518,9 +526,10 @@ class _ChatScreenState extends State<ChatScreen> {
               if (hasThread) ...[
                 const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () => context.push(
-                    ThreadScreen.routePath.replaceAll(':id', '1'),
-                  ),
+                  onTap: () =>
+                      context.push(
+                        ThreadScreen.routePath.replaceAll(':id', '1'),
+                      ),
                   child: _buildThreadCard(),
                 ),
               ],

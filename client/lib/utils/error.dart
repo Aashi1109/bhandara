@@ -1,5 +1,4 @@
-String extractExceptionMessage(
-  Object e, [
+String extractExceptionMessage(Object e, [
   String fallback = 'An unexpected error occurred',
 ]) {
   final msg = e.toString();

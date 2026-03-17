@@ -3,14 +3,12 @@ CREATE OR REPLACE FUNCTION create_event_with_associations(
   tag_ids UUID[],
   media_ids UUID[]
 )
-RETURNS "Event" AS $$
+RETURNS "Events" AS $$
 DECLARE
-  new_event "Event";
-  qna_thread_id UUID;
-  discussion_thread_id UUID;
+  new_event "Events";
 BEGIN
   -- Step 1: Insert the Event
-  INSERT INTO "Event" (
+  INSERT INTO "Events" (
     "name",
     "description",
     "location",
@@ -19,66 +17,54 @@ BEGIN
     "type",
     "createdBy",
     "status",
-    "capacity"
+    "capacity",
+    "tags",
+    "media",
+    "timings"
   )
   VALUES (
     event_data->>'name',
     event_data->>'description',
-    event_data->'location',
-    event_data->'participants',
-    event_data->'verifiers',
+    COALESCE(event_data->'location', '{}'::JSONB),
+    COALESCE(event_data->'participants', '[]'::JSONB),
+    COALESCE(event_data->'verifiers', '[]'::JSONB),
     (event_data->>'type')::"EventType",
     (event_data->>'createdBy')::UUID,
     (event_data->>'status')::"EventStatus",
-    (event_data->>'capacity')::INTEGER
+    NULLIF(event_data->>'capacity', '')::INTEGER,
+    COALESCE(to_jsonb(tag_ids), '[]'::JSONB),
+    COALESCE(to_jsonb(media_ids), '[]'::JSONB),
+    event_data->'timings'
   )
   RETURNING * INTO new_event;
 
   -- Step 2: Create the Q&A Thread
-  INSERT INTO "Thread" (
-    "type",
-    "status",
+  INSERT INTO "Threads" (
     "visibility",
     "lockHistory",
-    "eventId"
+    "eventId",
+    "createdBy"
   )
   VALUES (
-    'qna',
     'public',
-    'public',
-    '{}'::JSONB,
-    new_event.id
-  )
-  RETURNING id INTO qna_thread_id;
+    '[]'::JSONB,
+    new_event.id,
+    (event_data->>'createdBy')::UUID
+  );
 
   -- Step 3: Create the Discussion Thread
-  INSERT INTO "Thread" (
-    "type",
-    "status",
+  INSERT INTO "Threads" (
     "visibility",
     "lockHistory",
-    "eventId"
+    "eventId",
+    "createdBy"
   )
   VALUES (
-    'discussion',
     'public',
-    'public',
-    '{}'::JSONB,
-    new_event.id
-  )
-  RETURNING id INTO discussion_thread_id;
-
-  -- Step 4: Associate Tags with the Event
-  IF array_length(tag_ids, 1) > 0 THEN
-    INSERT INTO "EventTags" ("eventId", "tagId")
-    SELECT new_event.id, unnest(tag_ids);
-  END IF;
-
-  -- Step 5: Associate Media with the Event
-  IF array_length(media_ids, 1) > 0 THEN
-    INSERT INTO "EventMedia" ("eventId", "mediaId")
-    SELECT new_event.id, unnest(media_ids);
-  END IF;
+    '[]'::JSONB,
+    new_event.id,
+    (event_data->>'createdBy')::UUID
+  );
 
   -- Return the newly created Event
   RETURN new_event;

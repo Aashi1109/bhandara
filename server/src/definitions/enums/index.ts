@@ -32,11 +32,6 @@ export enum EEventStatus {
   Cancelled = "cancelled",
 }
 
-export enum EThreadType {
-  Discussion = "discussion",
-  QnA = "qna",
-}
-
 export enum EAccessLevel {
   Public = "public",
   Private = "private",

@@ -27,11 +27,12 @@ class UserProfile extends _$UserProfile {
 
     state = const AsyncLoading();
 
-    state = await AsyncValue.guard(() => userService.updateUser(
-      currentUser.id,
-      {'name': name, 'bio': bio, 'avatarId': avatarId}
-        ..removeWhere((k, v) => v == null),
-    ));
+    state = await AsyncValue.guard(() =>
+        userService.updateUser(
+          currentUser.id,
+          {'name': name, 'bio': bio, 'avatarId': avatarId}
+            ..removeWhere((k, v) => v == null),
+        ));
   }
 
   Future<void> updateAvatar({ImageSource source = ImageSource.gallery}) async {

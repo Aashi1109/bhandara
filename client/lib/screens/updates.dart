@@ -6,6 +6,7 @@ import '../widgets/bottom_nav.dart';
 
 class UpdatesScreen extends StatelessWidget {
   const UpdatesScreen({super.key});
+
   static const String routePath = '/updates';
 
   @override
@@ -148,14 +149,12 @@ class UpdatesScreen extends StatelessWidget {
     );
   }
 
-  Widget _notif(
-    IconData icon,
-    String title,
-    String body,
-    String time,
-    bool unread,
-    Color accentColor,
-  ) {
+  Widget _notif(IconData icon,
+      String title,
+      String body,
+      String time,
+      bool unread,
+      Color accentColor,) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),

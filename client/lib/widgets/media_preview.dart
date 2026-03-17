@@ -122,39 +122,39 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                           borderRadius: BorderRadius.circular(24),
                           child: item.type == 'image'
                               ? ColorFiltered(
-                                  colorFilter: const ColorFilter.matrix([
-                                    0.2126,
-                                    0.7152,
-                                    0.0722,
-                                    0,
-                                    0,
-                                    0.2126,
-                                    0.7152,
-                                    0.0722,
-                                    0,
-                                    0,
-                                    0.2126,
-                                    0.7152,
-                                    0.0722,
-                                    0,
-                                    0,
-                                    0,
-                                    0,
-                                    0,
-                                    1,
-                                    0,
-                                  ]),
-                                  child: Image.network(
-                                    item.url,
-                                    fit: BoxFit.contain,
-                                  ),
-                                )
+                            colorFilter: const ColorFilter.matrix([
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                            ]),
+                            child: Image.network(
+                              item.url,
+                              fit: BoxFit.contain,
+                            ),
+                          )
                               : Container(
-                                  color: AppColors.muted,
-                                  child: const Center(
-                                    child: Icon(LucideIcons.play, size: 64),
-                                  ),
-                                ),
+                            color: AppColors.muted,
+                            child: const Center(
+                              child: Icon(LucideIcons.play, size: 64),
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -238,7 +238,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                     shrinkWrap: true,
                     itemCount: widget.items.length,
                     separatorBuilder: (context, index) =>
-                        const SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       final item = widget.items[index];
                       final isSelected = index == _currentIndex;

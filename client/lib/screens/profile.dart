@@ -13,6 +13,7 @@ import 'settings.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
   static const String routePath = '/profile';
 
   @override
@@ -33,7 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await userService.getCurrentUser();
-      if (mounted) setState(() { _user = user; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }

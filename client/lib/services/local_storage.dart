@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorage {
   LocalStorage({this.namespace});
+
   final String? namespace;
   static SharedPreferences? _prefs;
   static Completer<SharedPreferences>? _initCompleter;

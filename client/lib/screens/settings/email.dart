@@ -10,6 +10,7 @@ import '../settings.dart';
 
 class EmailSettingsScreen extends StatelessWidget {
   const EmailSettingsScreen({super.key});
+
   static const String routePath = '/settings/email';
 
   @override

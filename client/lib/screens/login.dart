@@ -18,6 +18,7 @@ import 'explore.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.extra});
+
   static const String routePath = '/login';
   final Map<String, dynamic>? extra;
 
@@ -77,10 +78,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isNewUser = ref.watch(loginFlowProvider).data['id'] == null;
+    final bool isNewUser = ref
+        .watch(loginFlowProvider)
+        .data['id'] == null;
     debugPrint('isNewUser: $isNewUser');
 
-    final email = ref.watch(loginFlowProvider).email ?? 'User';
+    final email = ref
+        .watch(loginFlowProvider)
+        .email ?? 'User';
     final initial = email.isNotEmpty && email != 'User'
         ? email[0].toUpperCase()
         : 'U';
@@ -269,8 +274,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           fullWidth: true,
                           label: 'Log In',
                           onPressed:
-                              (_passwordController.text.isEmpty ||
-                                  (isNewUser && !passwordRequirements.allMet))
+                          (_passwordController.text.isEmpty ||
+                              (isNewUser && !passwordRequirements.allMet))
                               ? null
                               : _handleLogin,
                           loadable: !isNewUser,

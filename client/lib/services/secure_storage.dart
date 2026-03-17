@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
   SecureStorage({this.namespace});
+
   final String? namespace;
   final _storage = const FlutterSecureStorage();
 

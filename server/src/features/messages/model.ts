@@ -1,18 +1,15 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { MESSAGE_TABLE_NAME } from "./constants";
-import type { IMessage } from "@/definitions/types";
-type MessageAttributes = Omit<
-  IMessage,
-  "createdAt" | "updatedAt" | "deletedAt" | "user" | "reactions"
->;
+import { getDBConnection } from '@/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/helpers';
+import { MESSAGE_TABLE_NAME } from './constants';
+import type { IMessage } from '@/definitions/types';
+type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'deletedAt' | 'user' | 'reactions'>;
 
 export class Message extends Model<MessageAttributes, MessageAttributes> {
   declare id: string;
   declare userId: string;
   declare parentId: string | null;
-  declare content: IMessage["content"];
+  declare content: IMessage['content'];
   declare isEdited: boolean;
   declare threadId: string;
   declare createdAt: Date;
@@ -32,11 +29,11 @@ Message.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
     },
     parentId: {
       type: DataTypes.UUID,
-      references: { model: "Messages", key: "id" },
+      references: { model: 'Messages', key: 'id' },
     },
     content: { type: DataTypes.JSONB, allowNull: false },
     isEdited: {
@@ -47,18 +44,14 @@ Message.init(
     threadId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Threads", key: "id" },
+      references: { model: 'Threads', key: 'id' },
     },
   },
   {
-    modelName: "Message",
+    modelName: 'Message',
     tableName: MESSAGE_TABLE_NAME,
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
-  }
+  },
 );
-
-(async () => {
-  await Message.sync({ alter: false });
-})();

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -8,7 +11,7 @@ import '../widgets/button.dart';
 import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/map_view.dart';
+import '../widgets/explore_event_map.dart';
 import '../services/event.dart';
 import '../models/event.dart';
 import '../services/socket.dart';
@@ -20,6 +23,7 @@ import 'event_detail.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
+
   static const String routePath = '/explore';
 
   @override
@@ -34,7 +38,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Event? _selectedEvent;
   bool _isLoading = true;
   bool _isLocationEnabled = true;
-  GoogleMapController? _mapController;
+  LatLng? _userLocation;
   final MapManager _mapManager = MapManager(type: MapProviderType.google);
 
   final _filters = [
@@ -60,10 +64,37 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Future<void> _refreshLocationPermission() async {
     final status = await LocationPermissionService.currentStatus();
+    final hasAccess = LocationPermissionService.hasAccess(status);
+    if (hasAccess) {
+      await _loadCurrentLocation();
+    }
     if (!mounted) return;
     setState(() {
-      _isLocationEnabled = LocationPermissionService.hasAccess(status);
+      _isLocationEnabled = hasAccess;
+      if (!hasAccess) {
+        _userLocation = null;
+      }
     });
+  }
+
+  Future<void> _loadCurrentLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _userLocation = LatLng(position.latitude, position.longitude);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _userLocation = null;
+      });
+    }
   }
 
   Future<void> _loadEvents() async {
@@ -128,17 +159,22 @@ class _ExploreScreenState extends State<ExploreScreen>
       body: Stack(
         children: [
           Positioned.fill(
-            child: AppMapView(
+            child: ExploreEventMap(
               manager: _mapManager,
-              initialCameraPosition: CameraPosition(
-                target: _getInitialMapCenter(),
-                zoom: 13,
-              ),
-              markers: _buildMarkers(),
-              zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-              myLocationEnabled: _isLocationEnabled,
-              onMapReady: (controller) => _mapController = controller,
+              events: _events,
+              selectedEvent: _selectedEvent,
+              userLocation: _userLocation,
+              onEventSelected: (event) {
+                setState(() {
+                  _selectedEvent = event;
+                  _showDetails = true;
+                });
+              },
+              onClusterFocusStart: () {
+                setState(() {
+                  _showDetails = false;
+                });
+              },
             ),
           ),
 
@@ -220,7 +256,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         scrollDirection: Axis.horizontal,
                         itemCount: _filters.length,
                         separatorBuilder: (context, index) =>
-                            const SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         itemBuilder: (context, i) {
                           final f = _filters[i];
                           final isFirst = i == 0;
@@ -239,14 +275,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                               boxShadow: isFirst
                                   ? [
-                                      BoxShadow(
-                                        color: AppColors.primary.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ]
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
                                   : null,
                             ),
                             child: Row(
@@ -319,26 +355,6 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ),
           ),
-
-          // Map controls
-          Positioned(
-            right: 20,
-            top: MediaQuery.of(context).size.height * 0.5 - 60,
-            child: Column(
-              children: [
-                _mapControl(LucideIcons.plus, false, onTap: _zoomIn),
-                const SizedBox(height: 12),
-                _mapControl(LucideIcons.minus, false, onTap: _zoomOut),
-                const SizedBox(height: 8),
-                _mapControl(
-                  LucideIcons.locateFixed,
-                  true,
-                  onTap: _focusOnSelectedEvent,
-                ),
-              ],
-            ),
-          ),
-
           // Event card (bottom sheet)
           if (_showDetails && _selectedEvent != null)
             Positioned(
@@ -357,8 +373,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                           borderRadius: BorderRadius.circular(16),
                           child: CachedNetworkImage(
                             imageUrl:
-                                _selectedEvent!.media?.firstOrNull?.url ??
-                                'https://picsum.photos/seed/${_selectedEvent!.id}/200/200',
+                            _selectedEvent!.media?.firstOrNull?.url ??
+                                'https://picsum.photos/seed/${_selectedEvent!
+                                    .id}/200/200',
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
@@ -393,7 +410,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${_selectedEvent!.status.toUpperCase()} · Free Entry',
+                                    '${_selectedEvent!.status
+                                        .toUpperCase()} · Free Entry',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -453,7 +471,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           scrollDirection: Axis.horizontal,
                           itemCount: _selectedEvent!.tags!.length,
                           separatorBuilder: (context, index) =>
-                              const SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           itemBuilder: (_, i) =>
                               _tag(_selectedEvent!.tags![i].name.toUpperCase()),
                         ),
@@ -468,12 +486,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                             size: AppButtonSize.lg,
                             icon: const Icon(LucideIcons.navigation),
                             label: 'Get Directions',
-                            onPressed: () => context.go(
-                              EventDetailScreen.routePath.replaceAll(
-                                ':id',
-                                _selectedEvent!.id.toString(),
-                              ),
-                            ),
+                            onPressed: () =>
+                                context.go(
+                                  EventDetailScreen.routePath.replaceAll(
+                                    ':id',
+                                    _selectedEvent!.id.toString(),
+                                  ),
+                                ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -512,102 +531,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     return '${diff.inMinutes} mins remaining';
   }
 
-  LatLng _getInitialMapCenter() {
-    for (final event in _events) {
-      final lat = event.location.latitude;
-      final lng = event.location.longitude;
-      if (lat != null && lng != null) {
-        return LatLng(lat, lng);
-      }
-    }
-    return const LatLng(21.1458, 79.0882);
-  }
-
-  Set<Marker> _buildMarkers() {
-    final markers = <Marker>{};
-    for (final event in _events) {
-      final lat = event.location.latitude;
-      final lng = event.location.longitude;
-      if (lat == null || lng == null) continue;
-
-      final isSelected = _selectedEvent?.id == event.id;
-      markers.add(
-        Marker(
-          markerId: MarkerId(event.id),
-          position: LatLng(lat, lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            isSelected ? BitmapDescriptor.hueOrange : BitmapDescriptor.hueRose,
-          ),
-          infoWindow: InfoWindow(title: event.name),
-          onTap: () {
-            setState(() {
-              _selectedEvent = event;
-              _showDetails = true;
-            });
-          },
-        ),
-      );
-    }
-    return markers;
-  }
-
-  Future<void> _zoomIn() async {
-    final controller = _mapController;
-    if (controller == null) return;
-    final zoom = await controller.getZoomLevel();
-    await controller.animateCamera(
-      CameraUpdate.zoomTo((zoom + 1).clamp(2, 20).toDouble()),
-    );
-  }
-
-  Future<void> _zoomOut() async {
-    final controller = _mapController;
-    if (controller == null) return;
-    final zoom = await controller.getZoomLevel();
-    await controller.animateCamera(
-      CameraUpdate.zoomTo((zoom - 1).clamp(2, 20).toDouble()),
-    );
-  }
-
-  Future<void> _focusOnSelectedEvent() async {
-    final controller = _mapController;
-    if (controller == null) return;
-    final event = _selectedEvent;
-    final lat = event?.location.latitude;
-    final lng = event?.location.longitude;
-    final target = lat != null && lng != null
-        ? LatLng(lat, lng)
-        : _getInitialMapCenter();
-    await controller.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
-  }
-
-  Widget _mapControl(IconData icon, bool isPrimary, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: isPrimary ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: isPrimary ? null : Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isPrimary ? AppColors.surface : AppColors.primary,
-        ),
-      ),
-    );
-  }
-
   Widget _tag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -640,7 +563,10 @@ class _ExploreScreenState extends State<ExploreScreen>
           left: 0,
           right: 0,
           child: Container(
-            height: MediaQuery.of(context).size.height * 0.85,
+            height: MediaQuery
+                .of(context)
+                .size
+                .height * 0.85,
             decoration: const BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
@@ -726,18 +652,18 @@ class _ExploreScreenState extends State<ExploreScreen>
                           spacing: 8,
                           runSpacing: 8,
                           children:
-                              [
-                                    'Street Food',
-                                    'Bakery',
-                                    'Vegan',
-                                    'Desserts',
-                                    'Beverages',
-                                  ]
-                                  .map(
-                                    (c) =>
-                                        _chipButton(c, selected: c == 'Bakery'),
-                                  )
-                                  .toList(),
+                          [
+                            'Street Food',
+                            'Bakery',
+                            'Vegan',
+                            'Desserts',
+                            'Beverages',
+                          ]
+                              .map(
+                                (c) =>
+                                _chipButton(c, selected: c == 'Bakery'),
+                          )
+                              .toList(),
                         ),
                         const SizedBox(height: 32),
                         _sectionLabel('DIETARY NEEDS'),
@@ -747,11 +673,12 @@ class _ExploreScreenState extends State<ExploreScreen>
                           ('Gluten-Free', LucideIcons.wheat),
                           ('Halal', LucideIcons.utensilsCrossed),
                         ].map(
-                          (d) => _dietaryItem(
-                            d.$1,
-                            d.$2,
-                            selected: d.$1 == 'Halal',
-                          ),
+                              (d) =>
+                              _dietaryItem(
+                                d.$1,
+                                d.$2,
+                                selected: d.$1 == 'Halal',
+                              ),
                         ),
                         const SizedBox(height: 32),
                         _sectionLabel('TIMING'),
@@ -842,12 +769,12 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         boxShadow: selected
             ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ]
             : null,
       ),
       child: Text(
@@ -922,12 +849,12 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         boxShadow: selected
             ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ]
             : null,
       ),
       child: Column(
@@ -961,6 +888,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
 class _Filter {
   _Filter(this.id, this.name, this.icon);
+
   final String id;
   final String name;
   final IconData? icon;

@@ -46,7 +46,7 @@ class UserService extends BaseService {
       );
       return PaginatedResponse<User>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-        (json) => User.fromJson(json! as Map<String, dynamic>),
+            (json) => User.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch user');

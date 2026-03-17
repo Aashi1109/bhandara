@@ -1,10 +1,8 @@
 class ApiResponse<T> {
   ApiResponse({this.data, this.error});
 
-  factory ApiResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object? json) fromJsonT,
-  ) {
+  factory ApiResponse.fromJson(Map<String, dynamic> json,
+      T Function(Object? json) fromJsonT,) {
     return ApiResponse<T>(
       data: json['data'] != null ? fromJsonT(json['data']) : null,
       error: json['error'] is String
@@ -14,6 +12,7 @@ class ApiResponse<T> {
           : null,
     );
   }
+
   final T? data;
   final String? error;
 }
@@ -21,10 +20,8 @@ class ApiResponse<T> {
 class PaginatedResponse<T> {
   PaginatedResponse({required this.items, required this.pagination});
 
-  factory PaginatedResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object? json) fromJsonT,
-  ) {
+  factory PaginatedResponse.fromJson(Map<String, dynamic> json,
+      T Function(Object? json) fromJsonT,) {
     final itemsJson = json['items'] as List<dynamic>? ?? [];
     final paginationJson = json['pagination'] as Map<String, dynamic>?;
 
@@ -33,14 +30,15 @@ class PaginatedResponse<T> {
       pagination: paginationJson != null
           ? Pagination.fromJson(paginationJson)
           : Pagination(
-              total: itemsJson.length,
-              page: 1,
-              limit: itemsJson.length,
-              totalPages: 1,
-              hasNext: false,
-            ),
+        total: itemsJson.length,
+        page: 1,
+        limit: itemsJson.length,
+        totalPages: 1,
+        hasNext: false,
+      ),
     );
   }
+
   final List<T> items;
   final Pagination pagination;
 }
@@ -65,6 +63,7 @@ class Pagination {
       next: json['next'] as String?,
     );
   }
+
   final int total;
   final int page;
   final int limit;
