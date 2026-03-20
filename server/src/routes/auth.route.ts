@@ -1,16 +1,4 @@
 import { Router } from 'express';
-/**
- * @openapi
- * components:
- *   schemas:
- *     AuthResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *         data:
- *           type: object
- */
 import {
   logOut,
   session,
@@ -34,6 +22,7 @@ const router = Router();
  *   post:
  *     tags: [Auth]
  *     summary: User login
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -60,6 +49,7 @@ router.post('/login', validateRequest('AUTH_LOGIN', schemas.login), asyncHandler
  *   get:
  *     tags: [Auth]
  *     summary: Google OAuth callback
+ *     security: []
  *     responses:
  *       200:
  *         description: OAuth success
@@ -70,10 +60,11 @@ router.get('/google/callback', asyncHandler(googleCallback));
  * /auth/google:
  *   get:
  *     tags: [Auth]
- *     summary: Redirect to Google OAuth
+ *     summary: Get Google OAuth redirect URL
+ *     security: []
  *     responses:
- *       302:
- *         description: Redirect
+ *       200:
+ *         description: OAuth URL
  */
 router.get('/google', asyncHandler(googleAuth));
 /**
@@ -82,6 +73,7 @@ router.get('/google', asyncHandler(googleAuth));
  *   post:
  *     tags: [Auth]
  *     summary: Sign up user
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -104,6 +96,7 @@ router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHand
  *   post:
  *     tags: [Auth]
  *     summary: Signin with OAuth id token
+ *     security: []
  *     responses:
  *       200:
  *         description: Signin success

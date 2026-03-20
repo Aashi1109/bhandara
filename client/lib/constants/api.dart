@@ -7,8 +7,7 @@ class Api {
   static const String session = '/auth/session';
   static const String sessions = '/auth/sessions';
 
-  static String deleteSession(String sessionId) =>
-      '/auth/session/$sessionId';
+  static String deleteSession(String sessionId) => '/auth/session/$sessionId';
 
   // User endpoints
   static const String users = '/users';
@@ -21,6 +20,15 @@ class Api {
   static const String getUserByQuery = '/users/query';
 
   static String userInterests(String userId) => '/users/$userId/interests';
+  static String userActivity(String userId) => '/users/$userId/activity';
+  static String userAchievements(String userId) =>
+      '/users/$userId/achievements';
+  static String userAchievementProgress(String userId) =>
+      '/users/$userId/achievements/progress';
+  static const String myUpdates = '/users/me/updates';
+  static const String markAllMyUpdatesRead = '/users/me/updates/read-all';
+  static String markMyUpdateRead(String activityId) =>
+      '/users/me/updates/$activityId/read';
 
   // Event endpoints
   static const String events = '/events';
@@ -75,4 +83,14 @@ class Api {
   // Search endpoints
   static const String search = '/search';
   static const String searchSuggestions = '/search/suggestions';
+
+  // Engagement endpoints
+  static String engagement(String entityType, String entityId) =>
+      '/engagement/$entityType/$entityId';
+
+  static String engagementRating(String entityType, String entityId) =>
+      '/engagement/$entityType/$entityId/rating';
+
+  static String engagementRatings(String entityType, String entityId) =>
+      '/engagement/$entityType/$entityId/ratings';
 }

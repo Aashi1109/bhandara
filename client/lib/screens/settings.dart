@@ -5,7 +5,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 import '../widgets/header.dart';
 import '../widgets/button.dart';
-import '../services/auth.dart';
+import '../services/user.dart';
+import '../providers/auth.dart';
 import '../providers/user.dart';
 import 'profile.dart';
 import 'settings/profile_details.dart';
@@ -14,6 +15,9 @@ import 'settings/password.dart';
 import 'settings/cuisines.dart';
 import 'settings/location.dart';
 import 'settings/notifications.dart';
+import 'settings/data_privacy.dart';
+import 'settings/help_support.dart';
+import 'settings/about.dart';
 import 'auth.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -28,9 +32,27 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _locationSharing = true;
   bool _isSigningOut = false;
+  bool _didSyncLocationSharing = false;
+
+  Future<void> _updateShareLocation(bool value) async {
+    final user = ref.read(userProfileProvider).value;
+    if (user == null) return;
+
+    setState(() => _locationSharing = value);
+    await ref.read(userProfileProvider.notifier).updateUserData({
+      'meta': {...?user.meta?.toJson(), 'shareLocation': value},
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(userProfileProvider);
+    final user = userAsync.value;
+    if (!_didSyncLocationSharing && user?.meta?.shareLocation != null) {
+      _locationSharing = user!.meta!.shareLocation!;
+      _didSyncLocationSharing = true;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -48,7 +70,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Profile summary
                   Builder(
                     builder: (context) {
-                      final user = ref.watch(userProfileProvider).value;
                       return Row(
                         children: [
                           Stack(
@@ -68,7 +89,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, _, _) => Icon(
                                             LucideIcons.user,
-                                            size: 32,
+                                            size: AppIconSizes.xl,
                                             color: AppColors.mutedForeground
                                                 .withValues(alpha: 0.4),
                                           ),
@@ -76,7 +97,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       : Center(
                                           child: Icon(
                                             LucideIcons.user,
-                                            size: 32,
+                                            size: AppIconSizes.xl,
                                             color: AppColors.mutedForeground
                                                 .withValues(alpha: 0.4),
                                           ),
@@ -103,7 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     ),
                                     child: const Icon(
                                       LucideIcons.edit2,
-                                      size: 12,
+                                      size: AppIconSizes.xs,
                                       color: AppColors.surface,
                                     ),
                                   ),
@@ -149,16 +170,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _settingItem(
                       LucideIcons.mail,
                       'Email',
-                      'alex.johnson@example.com',
+                      user?.email ?? '',
                       onTap: () => context.go(EmailSettingsScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
-                      LucideIcons.lock,
-                      'Change Password',
-                      'Update your security',
-                      onTap: () => context.go(PasswordSettingsScreen.routePath),
+                      LucideIcons.alignLeft,
+                      'Bio',
+                      user?.bio?.trim().isNotEmpty == true
+                          ? user!.bio!.trim()
+                          : 'Add a short bio',
+                      onTap: () => context.go(ProfileDetailsScreen.routePath),
+                      showBorder: !(user?.isSocialLogin ?? false),
                     ),
+                    if (!(user?.isSocialLogin ?? false))
+                      _settingItem(
+                        LucideIcons.lock,
+                        'Change Password',
+                        'Update your security',
+                        onTap: () =>
+                            context.go(PasswordSettingsScreen.routePath),
+                      ),
                   ]),
                   const SizedBox(height: 32),
 
@@ -166,17 +198,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _sectionLabel('PREFERENCES'),
                   const SizedBox(height: 12),
                   _settingContainer([
-                    _settingItem(
-                      LucideIcons.utensils,
-                      'Cuisine Interests',
-                      'Vegan, Asian',
-                      onTap: () => context.go(CuisineInterestsScreen.routePath),
-                      showBorder: true,
+                    FutureBuilder(
+                      future: user != null
+                          ? userService.getUserInterests(user.id)
+                          : Future.value(const []),
+                      builder: (context, snapshot) {
+                        final interests = snapshot.data ?? const [];
+                        final label = interests.isEmpty
+                            ? 'No cuisines selected'
+                            : interests
+                                  .map((tag) => tag.name)
+                                  .take(2)
+                                  .join(', ');
+                        return _settingItem(
+                          LucideIcons.utensils,
+                          'Cuisine Interests',
+                          label,
+                          onTap: () =>
+                              context.go(CuisineInterestsScreen.routePath),
+                          showBorder: true,
+                        );
+                      },
                     ),
                     _settingItem(
                       LucideIcons.mapPin,
                       'Default Location',
-                      'San Francisco',
+                      user?.address?.label.isNotEmpty == true
+                          ? user!.address!.label
+                          : 'Not set',
                       onTap: () => context.go(LocationSettingsScreen.routePath),
                       showBorder: true,
                     ),
@@ -199,14 +248,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       'Share Location',
                       'Visible on active events',
                       _locationSharing,
-                      (val) => setState(() => _locationSharing = val),
+                      _updateShareLocation,
                       showBorder: true,
                     ),
                     _settingItem(
                       LucideIcons.shield,
                       'Data & Privacy',
                       'Your data controls',
-                      onTap: () => {},
+                      onTap: () => context.go(DataPrivacyScreen.routePath),
                     ),
                   ]),
                   const SizedBox(height: 32),
@@ -219,14 +268,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LucideIcons.helpCircle,
                       'Help & Support',
                       'FAQs and guides',
-                      onTap: () => {},
+                      onTap: () => context.go(HelpSupportScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
                       LucideIcons.info,
                       'About App',
                       'v2.4.0',
-                      onTap: () => {},
+                      onTap: () => context.go(AboutAppScreen.routePath),
                     ),
                   ]),
                   const SizedBox(height: 32),
@@ -236,24 +285,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     variant: AppButtonVariant.secondary,
                     size: AppButtonSize.xl,
                     fullWidth: true,
+                    loadable: true,
                     onPressed: _isSigningOut
                         ? null
                         : () async {
                             setState(() => _isSigningOut = true);
-                            await authService.logout();
-                            ref
-                                .read(userProfileProvider.notifier)
-                                .setUser(null);
-                            if (!context.mounted) return;
-                            context.go(AuthScreen.routePath);
+                            try {
+                              await ref.read(authProvider.notifier).logout();
+                              if (!context.mounted) return;
+                              context.go(AuthScreen.routePath);
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isSigningOut = false);
+                              }
+                            }
                           },
-                    icon: _isSigningOut
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(LucideIcons.logOut, size: 20),
+                    icon: const Icon(
+                      LucideIcons.logOut,
+                      size: AppIconSizes.defaultSize,
+                    ),
                     label: 'Sign Out',
                   ),
                   const SizedBox(height: 24),
@@ -327,6 +377,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               : null,
         ),
         child: Row(
+          spacing: 12,
           children: [
             Container(
               width: 32,
@@ -335,9 +386,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 color: AppColors.muted,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 16, color: AppColors.mutedForeground),
+              child: Icon(
+                icon,
+                size: AppIconSizes.m,
+                color: AppColors.mutedForeground,
+              ),
             ),
-            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +417,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const Icon(
               LucideIcons.chevronRight,
-              size: 16,
+              size: AppIconSizes.m,
               color: AppColors.mutedForeground,
             ),
           ],
@@ -388,6 +442,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             : null,
       ),
       child: Row(
+        spacing: 12,
         children: [
           Container(
             width: 32,
@@ -396,9 +451,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               color: AppColors.muted,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 16, color: AppColors.mutedForeground),
+            child: Icon(
+              icon,
+              size: AppIconSizes.m,
+              color: AppColors.mutedForeground,
+            ),
           ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

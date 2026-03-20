@@ -8,17 +8,29 @@ import { emitSocketEvent } from "@/socket/emitter";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
 import EventService from "@/features/events/service";
 import MessageService from "@/features/messages/service";
+import EntityEngagementService from "@/features/engagement/service";
 
 const threadsService = new ThreadsService();
 const eventService = new EventService();
 const messageService = new MessageService();
+const entityEngagementService = new EntityEngagementService();
+const asString = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+const getViewerIp = (req: ICustomRequest) => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return req.socket.remoteAddress || null;
+};
 
 export const getThreads = async (
   req: ICustomRequest & IRequestPagination,
   res: Response
 ) => {
   const threads = await threadsService.getAll({}, req.pagination);
-  return res.status(200).json(threads);
+  return res.status(200).json({ data: threads });
 };
 
 export const createThread = async (req: ICustomRequest, res: Response) => {
@@ -28,16 +40,23 @@ export const createThread = async (req: ICustomRequest, res: Response) => {
     (thread as any).event = event;
   }
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, { data: thread });
-  return res.status(201).json(thread);
+  return res.status(201).json({ data: thread });
 };
 
 export const getThread = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
   const { includeMessages } = req.query;
   const thread = await threadsService.getById(threadId);
   if (isEmpty(thread)) {
     throw new NotFoundError("Thread not found");
   }
+
+  await entityEngagementService.trackView("threads", threadId, {
+    userId: req.user.id,
+    ip: getViewerIp(req),
+    userAgent: req.headers["user-agent"] || null,
+  });
 
   // parse into boolean or number to get the number of messages to include, default 1 if `includeMessages` is boolean
   const parsedIncludeMessages =
@@ -58,31 +77,32 @@ export const getThread = async (req: ICustomRequest, res: Response) => {
     (thread as any).messages = messages.items;
   }
 
-  return res.status(200).json({ data: thread, error: null });
+  return res.status(200).json({ data: thread });
 };
 
 export const updateThread = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
   const thread = await threadsService.update(threadId, req.body, true);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UPDATED, {
     data: { id: threadId, ...req.body },
-    error: null,
-  });
-  return res.status(200).json(thread);
+    });
+  return res.status(200).json({ data: thread });
 };
 
 export const deleteThread = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
   const thread = await threadsService.delete(threadId);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_DELETED, {
     data: { id: threadId },
-    error: null,
-  });
-  return res.status(200).json(thread);
+    });
+  return res.status(200).json({ data: thread });
 };
 
 export const lockThread = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
   const userId = req.user.id;
 
   const thread = await threadsService.lockThread(threadId, userId);
@@ -93,17 +113,16 @@ export const lockThread = async (req: ICustomRequest, res: Response) => {
       lockHistory: thread.lockHistory,
       lockedBy: userId,
     },
-    error: null,
-  });
+    });
 
   return res.status(200).json({
     data: thread,
-    error: null,
-  });
+    });
 };
 
 export const unlockThread = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
   const userId = req.user.id;
 
   const thread = await threadsService.unlockThread(threadId, userId);
@@ -114,11 +133,9 @@ export const unlockThread = async (req: ICustomRequest, res: Response) => {
       lockHistory: thread.lockHistory,
       unlockedBy: userId,
     },
-    error: null,
-  });
+    });
 
   return res.status(200).json({
     data: thread,
-    error: null,
-  });
+    });
 };

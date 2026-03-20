@@ -1,20 +1,16 @@
-import type { IActivity, IPaginationParams } from "@/definitions/types";
-import { findAllWithPagination } from "@/utils/dbUtils";
-import { Activity } from "./model";
-import { Op } from "sequelize";
-import UserService from "@/features/users/service";
-import { EActivityVisibility } from "./constants";
+import type { IActivity, IPaginationParams } from '@/definitions/types';
+import { findAllWithPagination } from '@/utils/dbUtils';
+import { Activity } from './model';
+import { Op } from 'sequelize';
+import UserService from '@/features/users/service';
+import { EActivityVisibility } from './constants';
 import {
   deleteActivityCache,
   deleteUserActivityCache,
   deleteUserUpdatesCache,
   getActivityCache,
-  getUserActivityCache,
-  getUserUpdatesCache,
   setActivityCache,
-  setUserActivityCache,
-  setUserUpdatesCache,
-} from "./helpers";
+} from './helpers';
 
 class ActivityService {
   private readonly userService: UserService;
@@ -41,9 +37,7 @@ class ActivityService {
     await Promise.all([
       setActivityCache(activity.id, activity),
       deleteUserActivityCache(activity.actorId),
-      activity.recipientId
-        ? deleteUserUpdatesCache(activity.recipientId)
-        : Promise.resolve(),
+      activity.recipientId ? deleteUserUpdatesCache(activity.recipientId) : Promise.resolve(),
     ]);
 
     return activity;
@@ -55,16 +49,11 @@ class ActivityService {
     options: {
       includePrivate?: boolean;
       types?: string[];
-    } = {}
+    } = {},
   ) {
-    const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 10;
+    const next = pagination.next ?? null;
     const includePrivate = options.includePrivate ?? false;
-
-    if (!options.types?.length && !includePrivate) {
-      const cached = await getUserActivityCache(userId, page, limit);
-      if (cached) return cached;
-    }
 
     const where: Record<string, any> = { actorId: userId };
     if (!includePrivate) where.visibility = EActivityVisibility.Public;
@@ -74,7 +63,7 @@ class ActivityService {
 
     const actorIds = Array.from(new Set((data.items || []).map((item) => item.actorId)));
     const recipientIds = Array.from(
-      new Set((data.items || []).map((item) => item.recipientId).filter(Boolean))
+      new Set((data.items || []).map((item) => item.recipientId).filter(Boolean)),
     ) as string[];
 
     const users = await this.userService.getUserProfiles([...actorIds, ...recipientIds]);
@@ -90,10 +79,6 @@ class ActivityService {
       pagination: data.pagination,
     };
 
-    if (!options.types?.length && !includePrivate) {
-      await setUserActivityCache(userId, page, limit, result);
-    }
-
     return result;
   }
 
@@ -103,16 +88,11 @@ class ActivityService {
     options: {
       unreadOnly?: boolean;
       types?: string[];
-    } = {}
+    } = {},
   ) {
-    const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 10;
+    const next = pagination.next ?? null;
     const unreadOnly = options.unreadOnly ?? false;
-
-    if (!options.types?.length) {
-      const cached = await getUserUpdatesCache(userId, page, limit, unreadOnly);
-      if (cached) return cached;
-    }
 
     const where: Record<string, any> = { recipientId: userId };
 
@@ -139,10 +119,6 @@ class ActivityService {
       pagination: data.pagination,
     };
 
-    if (!options.types?.length) {
-      await setUserUpdatesCache(userId, page, limit, unreadOnly, result);
-    }
-
     return result;
   }
 
@@ -159,10 +135,7 @@ class ActivityService {
     await row.update({ readAt: new Date() });
     const updated = row.toJSON() as IActivity;
 
-    await Promise.all([
-      setActivityCache(updated.id, updated),
-      deleteUserUpdatesCache(userId),
-    ]);
+    await Promise.all([setActivityCache(updated.id, updated), deleteUserUpdatesCache(userId)]);
 
     return updated;
   }
@@ -175,7 +148,7 @@ class ActivityService {
           recipientId: userId,
           readAt: { [Op.is]: null },
         },
-      }
+      },
     );
 
     await deleteUserUpdatesCache(userId);

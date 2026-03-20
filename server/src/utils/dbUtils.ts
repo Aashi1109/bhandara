@@ -1,10 +1,62 @@
-import { type FindOptions, type Model, type ModelStatic, Op } from 'sequelize';
+import { type FindOptions, type Model, type ModelStatic, Op, type WhereOptions } from 'sequelize';
 import type { IPaginationParams, PaginatedResult } from '@/definitions/types';
 
 /**
- * Retrieve records with pagination, supporting both cursor and offset modes.
- * Now accepts full Sequelize FindOptions for maximum flexibility.
+ * Retrieve records with cursor-based pagination only.
  */
+export interface PaginationCursorPayload {
+  sortValue: string;
+}
+
+const toCursorDateValue = (value: string) => new Date(value);
+
+export function encodePaginationCursor(sortValue: Date | string): string {
+  const normalizedSortValue = sortValue instanceof Date ? sortValue.toISOString() : String(sortValue);
+  return Buffer.from(JSON.stringify({ sortValue: normalizedSortValue } satisfies PaginationCursorPayload)).toString('base64url');
+}
+
+export function decodePaginationCursor(cursor: string | null | undefined): PaginationCursorPayload | null {
+  if (!cursor) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<PaginationCursorPayload>;
+    if (!decoded.sortValue) {
+      return null;
+    }
+    return { sortValue: decoded.sortValue };
+  } catch {
+    return null;
+  }
+}
+
+export function buildCursorPaginationWhere(
+  existingWhere: WhereOptions | undefined,
+  cursor: PaginationCursorPayload | null,
+  sortBy: IPaginationParams['sortBy'],
+  sortOrder: IPaginationParams['sortOrder'],
+): WhereOptions | undefined {
+  if (!cursor) {
+    return existingWhere;
+  }
+
+  const operator = sortOrder === 'asc' ? Op.gt : Op.lt;
+  const sortValue = sortBy === 'createdAt' || sortBy === 'updatedAt' ? toCursorDateValue(cursor.sortValue) : cursor.sortValue;
+
+  const cursorWhere: WhereOptions = {
+    [sortBy]: { [operator]: sortValue },
+  };
+
+  if (!existingWhere) {
+    return cursorWhere;
+  }
+
+  return {
+    [Op.and]: [existingWhere, cursorWhere],
+  };
+}
+
 export async function findAllWithPagination<T extends Model>(
   model: ModelStatic<T>,
   findOptions: FindOptions = {},
@@ -12,24 +64,23 @@ export async function findAllWithPagination<T extends Model>(
   select?: string,
   modifyOptions?: (opts: FindOptions) => FindOptions,
 ): Promise<PaginatedResult<T>> {
-  const { limit = 10, page = 1, next = null, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+  const { limit = 10, next = null, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
 
   const _pagination = {
     limit: limit ?? 10,
-    page: page ?? 1,
     next: next ?? null,
     sortBy: sortBy ?? 'createdAt',
     sortOrder: sortOrder ?? 'desc',
   };
-
-  const isCursorMode = !!next;
+  const cursor = decodePaginationCursor(_pagination.next);
+  const upperSortOrder = _pagination.sortOrder.toUpperCase();
 
   // Start with the provided findOptions and merge pagination logic
   const options: FindOptions = {
     raw: true,
-    ...findOptions, // Spread the provided options first
-    order: findOptions.order || [[_pagination.sortBy, _pagination.sortOrder.toUpperCase()]],
-    limit,
+    ...findOptions,
+    order: findOptions.order || [[_pagination.sortBy, upperSortOrder], ['id', upperSortOrder]],
+    limit: _pagination.limit + 1,
   };
 
   // Select specific fields
@@ -37,25 +88,8 @@ export async function findAllWithPagination<T extends Model>(
     options.attributes = select.split(',').map((s) => s.trim());
   }
 
-  // Cursor-based pagination
-  if (isCursorMode) {
-    // Merge cursor condition with existing where clause
-    const cursorCondition = {
-      [_pagination.sortBy]: {
-        [_pagination.sortOrder === 'asc' ? Op.gt : Op.lt]: _pagination.next,
-      },
-    };
-
-    if (findOptions.where) {
-      options.where = {
-        [Op.and]: [findOptions.where, cursorCondition],
-      };
-    } else {
-      options.where = cursorCondition;
-    }
-  } else {
-    // Offset-based pagination
-    options.offset = (_pagination.page - 1) * _pagination.limit;
+  if (cursor) {
+    options.where = buildCursorPaginationWhere(findOptions.where, cursor, _pagination.sortBy, _pagination.sortOrder);
   }
 
   // Allow user-defined modification
@@ -64,30 +98,24 @@ export async function findAllWithPagination<T extends Model>(
   }
 
   const { rows, count } = await model.findAndCountAll(options);
-
-  const totalPages = Math.ceil(count / _pagination.limit);
+  const normalizedRows = rows.slice(0, _pagination.limit) as T[];
+  const hasNext = rows.length > _pagination.limit;
 
   const paginationResult = {
-    limit,
+    limit: _pagination.limit,
     total: count,
-    totalPages,
+    hasNext,
+    next:
+      hasNext && normalizedRows.length
+        ? encodePaginationCursor(
+            normalizedRows[normalizedRows.length - 1][_pagination.sortBy] as Date | string,
+          )
+        : null,
+    sortBy: _pagination.sortBy,
+    sortOrder: _pagination.sortOrder,
   } as IPaginationParams;
 
-  if (isCursorMode) {
-    // For cursor pagination, check if we got exactly the limit (indicating more results)
-    const hasNext = rows.length === _pagination.limit;
-    paginationResult.next = hasNext ? rows[rows.length - 1][_pagination.sortBy] : null;
-    paginationResult.hasNext = hasNext;
-  } else {
-    // For offset pagination, calculate hasNext based on total count and current page
-    const hasNext = _pagination.page < totalPages;
-
-    paginationResult.page = _pagination.page;
-    paginationResult.hasNext = hasNext;
-    paginationResult.next = hasNext ? rows[rows.length - 1][_pagination.sortBy] : null;
-  }
-
-  const items = rows as T[];
+  const items = normalizedRows;
 
   return { items, pagination: paginationResult };
 }

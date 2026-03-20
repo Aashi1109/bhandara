@@ -47,6 +47,18 @@ export const CACHE_NAMESPACE_CONFIG = {
     namespace: "achievements",
     ttl: 900,
   },
+  Engagement: {
+    namespace: "engagement",
+    ttl: 3600 * 24 * 30,
+  },
+  RateLimit: {
+    namespace: "rate-limit",
+    ttl: 3600,
+  },
+  EntityStats: {
+    namespace: "entity-stats",
+    ttl: 3600 * 24 * 30,
+  },
 };
 
 export enum DB_CONNECTION_NAMES {

@@ -1,6 +1,6 @@
-import type { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
-import { jnparse, jnstringify } from "@/utils";
-import { getRedisConnection } from "@/connections";
+import type { Redis } from '@upstash/redis'; // TODO: Uncomment on prod
+import { jnstringify, safeJsonParse } from '@/utils';
+import { getRedisConnection } from '@/connections';
 
 interface RedisCacheConfig {
   redisClient?: Redis;
@@ -45,15 +45,11 @@ class RedisCache {
    */
   withCache(methodOptions: MethodCacheOptions = {}): (...args: unknown[]) => unknown {
     // Capture redis instance variables in closure
-    const {redisClient} = this;
-    const {cacheNamespace} = this;
+    const { redisClient } = this;
+    const { cacheNamespace } = this;
     const defaultTTL = this.defaultTTLSeconds;
 
-    return function (
-      target: any,
-      methodName: string,
-      descriptor: PropertyDescriptor
-    ) {
+    return function (target: any, methodName: string, descriptor: PropertyDescriptor) {
       const originalMethod = descriptor.value;
       const _options: MethodCacheOptions = {
         timeToLiveSeconds: defaultTTL,
@@ -81,16 +77,8 @@ class RedisCache {
           const databaseResult = await originalMethod.apply(this, methodArgs);
 
           // Cache the result if successful
-          if (
-            !methodOptions.skipCacheSet &&
-            databaseResult &&
-            !databaseResult.error
-          )
-            await redisClient.setex(
-              cacheKey,
-              _options.timeToLiveSeconds!,
-              JSON.stringify(databaseResult)
-            );
+          if (!methodOptions.skipCacheSet && databaseResult && !databaseResult.error)
+            await redisClient.setex(cacheKey, _options.timeToLiveSeconds!, JSON.stringify(databaseResult));
 
           return databaseResult;
         } catch (error) {
@@ -111,7 +99,7 @@ class RedisCache {
         await this.redisClient.del(...matchingKeys);
       }
     } catch (error) {
-      console.error("Redis cache invalidation failed:", error);
+      console.error('Redis cache invalidation failed:', error);
     }
   }
 
@@ -128,13 +116,24 @@ class RedisCache {
   async getItem<T>(key: string): Promise<T | null> {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
     const result = await this.redisClient.get(namespacedKey);
-    return result === "string" ? jnparse(result) : (result as T | null);
+    return typeof result === 'string' ? safeJsonParse(result) : (result as T | null);
   }
 
   setHKey(key: string, field: string, value: any, ttl?: number) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
     const pipeLine = this.redisClient.pipeline();
     pipeLine.hset(namespacedKey, { [field]: jnstringify(value) });
+    if (ttl) pipeLine.expire(namespacedKey, ttl);
+    return pipeLine.exec();
+  }
+
+  setHKeys(key: string, values: Record<string, any>, ttl?: number) {
+    const namespacedKey = `${this.cacheNamespace}:${key}`;
+    const pipeLine = this.redisClient.pipeline();
+    pipeLine.hset(
+      namespacedKey,
+      Object.fromEntries(Object.entries(values).map(([field, value]) => [field, jnstringify(value)])),
+    );
     if (ttl) pipeLine.expire(namespacedKey, ttl);
     return pipeLine.exec();
   }
@@ -169,6 +168,14 @@ class RedisCache {
     return this.redisClient.hdel(namespacedKey, field);
   }
 
+  incrementHKey(key: string, field: string, by: number = 1, ttl?: number) {
+    const namespacedKey = `${this.cacheNamespace}:${key}`;
+    const pipeLine = this.redisClient.pipeline();
+    pipeLine.hincrby(namespacedKey, field, by);
+    if (ttl) pipeLine.expire(namespacedKey, ttl);
+    return pipeLine.exec();
+  }
+
   getPipeline() {
     return this.redisClient.pipeline();
   }
@@ -181,25 +188,23 @@ class RedisCache {
    */
   cacheWrapper<T extends (...args: any[]) => Promise<any>>(
     fn: T,
-    options: MethodCacheOptions = {}
+    options: MethodCacheOptions = {},
   ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
     // const redisClient = this.redisClient;
     // const cacheNamespace = this.cacheNamespace;
     // const defaultTTL = this.defaultTTLSeconds;
 
-     
     return async function (this: any, ...args: Parameters<T>): Promise<ReturnType<T>> {
       const keyPart = options.customKeyGenerator
         ? options.customKeyGenerator(args)
         : `${fn.name}:${JSON.stringify(args)}`;
-       
+
       const cacheKey = `${this.cacheNamespace}:${keyPart}`;
-       
+
       const ttl = options.timeToLiveSeconds || this.defaultTTLSeconds;
 
       try {
         if (!options.skipCacheGet) {
-           
           const cachedResult = await this.getItem(cacheKey);
           if (cachedResult) return cachedResult;
         }
@@ -207,7 +212,6 @@ class RedisCache {
         const result = await fn(...args);
 
         if (!options.skipCacheSet && result && !result.error) {
-           
           await this.setItem(cacheKey, result, ttl);
         }
 

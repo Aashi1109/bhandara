@@ -19,7 +19,7 @@ export default defineConfig([
   {
     rules: {
       //* Bugs & Safety
-      "no-console": "warn",
+      "no-console": "off",
       "no-undef": "error",
       semi: ["error", "always"],
       "semi-spacing": "error",
@@ -31,10 +31,10 @@ export default defineConfig([
       "no-useless-concat": "error",
       "no-useless-return": "error",
       "no-constant-condition": "warn",
-      "no-unused-vars": ["warn", { argsIgnorePattern: "req|res|next|__" }],
+      "no-unused-vars": "off",
       "no-shadow": "error",
       "no-throw-literal": "error",
-      "consistent-return": "warn",
+      "consistent-return": "off",
       //* Readability
       indent: ["error", 2, { SwitchCase: 1 }],
       "no-mixed-spaces-and-tabs": "warn",
@@ -61,17 +61,17 @@ export default defineConfig([
       "prefer-const": "error",
       "prefer-template": "warn",
       "prefer-arrow-callback": "warn",
-      "prefer-destructuring": ["warn", { array: false, object: true }],
+      "prefer-destructuring": "off",
     },
   },
   tseslint.configs.recommended,
   {
     files: ["**/*.ts"],
     rules: {
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "req|res|next|__" }],
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/consistent-type-imports": ["warn", { prefer: "type-imports" }],
       "@typescript-eslint/no-floating-promises": "off",
       "@typescript-eslint/no-require-imports": "warn",

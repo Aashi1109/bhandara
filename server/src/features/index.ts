@@ -9,6 +9,7 @@ export { default as AuthService } from "./auth/service";
 export { default as ReactionService } from "./reactions/service";
 export { default as ActivityService } from "./activity/service";
 export { default as AchievementService } from "./achievements/service";
+export { default as SavedEntityService } from "./saves/service";
 export { RedisCache };
 
 export * from "./users/helpers";

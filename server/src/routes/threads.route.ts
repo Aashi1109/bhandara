@@ -1,24 +1,3 @@
-/**
- * @openapi
- * components:
- *   schemas:
- *     Thread:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         eventId:
- *           type: string
- *         type:
- *           type: string
- *     Message:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         content:
- *           type: object
- */
 import { Router } from 'express';
 import { asyncHandler, paginationParser, sessionParser, userParser, validateRequest } from '@/middlewares';
 

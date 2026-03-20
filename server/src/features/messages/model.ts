@@ -2,7 +2,7 @@ import { getDBConnection } from '@/connections/db';
 import { DataTypes, Model } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
 import { MESSAGE_TABLE_NAME } from './constants';
-import type { IMessage } from '@/definitions/types';
+import type { IMessage, IMessageStats } from '@/definitions/types';
 type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'deletedAt' | 'user' | 'reactions'>;
 
 export class Message extends Model<MessageAttributes, MessageAttributes> {
@@ -12,6 +12,7 @@ export class Message extends Model<MessageAttributes, MessageAttributes> {
   declare content: IMessage['content'];
   declare isEdited: boolean;
   declare threadId: string;
+  declare stats: IMessageStats;
   declare createdAt: Date;
   declare updatedAt: Date;
   declare deletedAt?: Date;
@@ -41,6 +42,11 @@ Message.init(
       allowNull: false,
       defaultValue: false,
     },
+    stats: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+    },
     threadId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -53,5 +59,8 @@ Message.init(
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
+    indexes: [
+      { name: 'messages_updatedAt_idx', fields: ['updatedAt'] },
+    ],
   },
 );

@@ -1,9 +1,17 @@
-import { validateSchema } from "@/helpers";
-import {
-  REACTION_TABLE_NAME,
-  COMMON_EMOJIS,
-  EAllowedReactionTables,
-} from "./constants";
+import { ajv, validateSchema } from "@/helpers";
+import { REACTION_TABLE_NAME, EAllowedReactionTables } from "./constants";
+
+ajv.addFormat("emoji", {
+  type: "string",
+  validate: (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (/[A-Za-z]/.test(trimmed)) return false;
+    return /[\p{Extended_Pictographic}\p{Emoji_Presentation}\p{Regional_Indicator}\uFE0F\u200D]/u.test(
+      trimmed
+    );
+  },
+});
 
 const allowedContentPaths = Object.values(EAllowedReactionTables);
 const basePattern = `^(${allowedContentPaths.join("|")})\\/[0-9a-fA-F-]{36}$`;
@@ -20,8 +28,9 @@ const reactionSchema = {
     },
     emoji: {
       type: "string",
-      enum: COMMON_EMOJIS,
-      errorMessage: "emoji must be one of the supported emojis",
+      format: "emoji",
+      minLength: 1,
+      errorMessage: "emoji must be a valid emoji",
     },
     userId: {
       type: "string",
@@ -53,8 +62,9 @@ const updateSchema = {
     },
     emoji: {
       type: "string",
-      enum: COMMON_EMOJIS,
-      errorMessage: "emoji must be one of the supported emojis",
+      format: "emoji",
+      minLength: 1,
+      errorMessage: "emoji must be a valid emoji",
     },
     userId: {
       type: "string",

@@ -27,19 +27,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingSlide(
       title: 'Find Free Food',
       description:
-      'Discover hidden gems and ongoing events sharing free meals in your local neighborhood.',
+          'Discover hidden gems and ongoing events sharing free meals in your local neighborhood.',
       icon: LucideIcons.mapPin,
     ),
     _OnboardingSlide(
       title: 'Share with Others',
       description:
-      'Help your community by sharing live food events you encounter in real-time.',
+          'Help your community by sharing live food events you encounter in real-time.',
       icon: LucideIcons.heart,
     ),
     _OnboardingSlide(
       title: 'Join the Community',
       description:
-      'Connect with neighbors and build a stronger, more sustainable network together.',
+          'Connect with neighbors and build a stronger, more sustainable network together.',
       icon: LucideIcons.users,
     ),
   ];
@@ -139,7 +139,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: AppColors.muted,
             shape: BoxShape.circle,
           ),
-          child: Icon(slide.icon, size: 80, color: AppColors.primary),
+          child: Icon(
+            slide.icon,
+            size: AppIconSizes.display,
+            color: AppColors.primary,
+          ),
         ),
         const SizedBox(height: 40),
         Text(

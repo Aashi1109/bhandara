@@ -19,17 +19,20 @@ import {
 import { BadRequestError, ForbiddenError } from "@/exceptions";
 
 import MessageService from "@/features/messages/service";
+import EntityStatsService from "@/features/stats/service";
 
 class ThreadsService {
   private readonly getCache = getThreadCache;
   private readonly setCache = setThreadCache;
   private readonly deleteCache = deleteThreadCache;
   private readonly messageService: MessageService;
+  private readonly entityStatsService: EntityStatsService;
 
   private readonly populateFields = ["messages"];
 
   constructor() {
     this.messageService = new MessageService();
+    this.entityStatsService = new EntityStatsService();
   }
 
   private async populateThread(thread: IBaseThread, fields: string[]) {
@@ -87,6 +90,11 @@ class ThreadsService {
       created;
     if (thread) {
       await this.setCache((thread as any).id, thread as any);
+      await this.entityStatsService.incrementEventStat(
+        (thread as IBaseThread).eventId,
+        "threadCount",
+        1
+      );
     }
     if (populate && thread) {
       thread = await this.getById(thread.id);
@@ -96,11 +104,15 @@ class ThreadsService {
 
   async getById(id: string) {
     const cached = await this.getCache(id);
-    if (cached) return cached as any;
+    if (cached) {
+      return this.entityStatsService.hydrateThread(cached as IBaseThread);
+    }
 
     const res = await Thread.findByPk(id, { raw: true });
     if (res) await this.setCache(id, res as any);
-    return res as any;
+    return res
+      ? this.entityStatsService.hydrateThread(res as IBaseThread)
+      : (res as any);
   }
 
   async update<U extends Partial<IBaseThread>>(
@@ -135,7 +147,11 @@ class ThreadsService {
     pagination?: Partial<IPaginationParams>,
     select?: string
   ) {
-    return findAllWithPagination(Thread, { where }, pagination, select);
+    const data = await findAllWithPagination(Thread, { where }, pagination, select);
+    if (data.items?.length) {
+      await this.entityStatsService.hydrateThreads(data.items as IBaseThread[]);
+    }
+    return data;
   }
 
   async delete(id: string) {
@@ -143,7 +159,13 @@ class ThreadsService {
     if (!row) return null;
     await row.destroy();
     await this.deleteCache(id);
-    return row.toJSON() as any;
+    const deletedThread = row.toJSON() as IBaseThread;
+    await this.entityStatsService.incrementEventStat(
+      deletedThread.eventId,
+      "threadCount",
+      -1
+    );
+    return deletedThread as any;
   }
 
   /**

@@ -21,13 +21,13 @@ const errorHandler = (
   // Check if the error is an instance of CustomError
   if (!(err instanceof CustomError)) {
     // If not a CustomError, send a generic internal server error response
-    res.status(err?.status || 500).json({
+    return res.status(err?.status || 500).json({
+      data: null,
       error: {
         message: err.message || "Internal server error. Try again later",
         type: err.name || "InternalServerError",
         status: err.status || 500,
       },
-      success: false,
     });
   } else {
     const customError = err as CustomError;
@@ -49,7 +49,7 @@ const errorHandler = (
     // Send a JSON response with the appropriate status code and error message
     return res
       .status(customError.status)
-      .json({ error: response, success: false });
+      .json({ data: null, error: response });
   }
 };
 

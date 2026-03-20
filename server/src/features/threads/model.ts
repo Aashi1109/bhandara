@@ -3,7 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
 import { THREAD_TABLE_NAME } from './constants';
 import { EAccessLevel } from '@/definitions/enums';
-import type { IBaseThread, ILockHistory } from '@/definitions/types';
+import type { IBaseThread, ILockHistory, IThreadStats } from '@/definitions/types';
 
 type ThreadAttributes = Omit<IBaseThread, 'createdAt' | 'updatedAt' | 'deletedAt' | 'messages' | 'creator'>;
 
@@ -13,6 +13,7 @@ export class Thread extends Model<ThreadAttributes, ThreadAttributes> {
   declare parentId?: string | null;
   declare eventId: string;
   declare lockHistory: ILockHistory[];
+  declare stats: IThreadStats;
   declare createdAt: Date;
   declare updatedAt: Date;
   declare deletedAt?: Date;
@@ -42,6 +43,11 @@ Thread.init(
       references: { model: 'Events', key: 'id' },
     },
     lockHistory: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+    stats: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+    },
     createdBy: {
       type: DataTypes.UUID,
       references: { model: 'Users', key: 'id' },
@@ -53,5 +59,8 @@ Thread.init(
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
+    indexes: [
+      { name: 'threads_updatedAt_idx', fields: ['updatedAt'] },
+    ],
   },
 );

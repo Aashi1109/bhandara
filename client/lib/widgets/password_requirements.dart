@@ -38,6 +38,7 @@ class PasswordRequirements extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
@@ -48,7 +49,7 @@ class PasswordRequirements extends StatelessWidget {
               children: [
                 Icon(
                   req.met ? LucideIcons.check : LucideIcons.x,
-                  size: 16,
+                  size: AppIconSizes.m,
                   color: req.met
                       ? AppColors.primary
                       : AppColors.mutedForeground,
@@ -56,9 +57,7 @@ class PasswordRequirements extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   req.label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  style: typography.bodyMD.copyWith(
                     color: req.met
                         ? AppColors.primary
                         : AppColors.mutedForeground,

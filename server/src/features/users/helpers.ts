@@ -156,6 +156,16 @@ export const getSafeUser = (user: IBaseUser) => {
   return { ..._user, isSocialLogin: provider !== 'email' };
 };
 
+export const getPublicUser = (user: IBaseUser) => {
+  const safe = getSafeUser(user) as Record<string, any>;
+  delete safe.email;
+  delete safe.gender;
+  delete safe.address;
+  delete safe.meta;
+  delete safe.mediaId;
+  return safe;
+};
+
 export const getLeanUser = (user: IBaseUser) => {
   const safe = getSafeUser(user);
   const { id, name, createdAt, deletedAt, username, email } = safe;

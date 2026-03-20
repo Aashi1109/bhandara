@@ -161,6 +161,9 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     for (final cluster in clusters) {
       if (cluster.isCluster) {
         final clusterIcon = _resolveClusterMarker(cluster.count);
+        if (clusterIcon == null) {
+          continue;
+        }
         markers.add(
           Marker(
             markerId: MarkerId(
@@ -170,9 +173,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
             position: cluster.center,
             anchor: const Offset(0.5, 0.5),
             zIndexInt: 2,
-            icon:
-            clusterIcon ??
-                (_eventMarkerIcon ?? BitmapDescriptor.defaultMarker),
+            icon: clusterIcon,
             onTap: () => _focusOnCluster(cluster),
           ),
         );
@@ -181,13 +182,17 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
       final event = cluster.primaryEvent;
       final isSelected = widget.selectedEvent?.id == event.id;
+      final eventIcon = isSelected
+          ? _selectedEventMarkerIcon
+          : _eventMarkerIcon;
+      if (eventIcon == null) {
+        continue;
+      }
       markers.add(
         Marker(
           markerId: MarkerId(event.id),
           position: cluster.center,
-          icon: isSelected
-              ? (_selectedEventMarkerIcon ?? BitmapDescriptor.defaultMarker)
-              : (_eventMarkerIcon ?? BitmapDescriptor.defaultMarker),
+          icon: eventIcon,
           infoWindow: InfoWindow(title: event.name),
           onTap: () => widget.onEventSelected(event),
         ),
@@ -195,14 +200,14 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     }
 
     final userLocation = widget.userLocation;
-    if (userLocation != null) {
+    if (userLocation != null && _userLocationMarkerIcon != null) {
       markers.add(
         Marker(
           markerId: const MarkerId('user_location'),
           position: userLocation,
           anchor: const Offset(0.5, 0.5),
           zIndexInt: 3,
-          icon: _userLocationMarkerIcon ?? BitmapDescriptor.defaultMarker,
+          icon: _userLocationMarkerIcon!,
         ),
       );
     }
@@ -299,7 +304,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         ),
         child: Icon(
           icon,
-          size: 20,
+          size: AppIconSizes.defaultSize,
           color: isPrimary ? AppColors.surface : AppColors.primary,
         ),
       ),

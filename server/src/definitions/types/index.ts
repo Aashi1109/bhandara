@@ -32,6 +32,7 @@ export interface IBaseUser extends ITimeStamp {
   meta: Record<string, any>;
   profilePic: Record<string, any> | null;
   mediaId: string | null | IMedia;
+  bio?: string | null;
   username?: string;
   media?: IMedia;
 }
@@ -51,6 +52,7 @@ export interface IMessage extends ITimeStamp {
   content: IMessageContent;
   isEdited: boolean;
   threadId: string;
+  stats?: IMessageStats;
   user?: IBaseUser;
   reactions?: IReaction[];
 }
@@ -68,6 +70,7 @@ export interface IBaseThread extends ITimeStamp {
   lockHistory: ILockHistory[];
   parentId?: string | null;
   eventId: string;
+  stats?: IThreadStats;
   messages?: IMessage[];
 
   createdBy: string;
@@ -102,8 +105,94 @@ export interface IEvent extends ITimeStamp {
   capacity: number;
   tags: ITag[] | string[]; // Array of tag IDs
   media: IMedia[] | string[]; // Array of media IDs
+  stats?: IEventStats;
   reactions?: IReaction[];
   timings: { start: Date; end: Date };
+}
+
+export interface IEventStats {
+  reactionCount: number;
+  threadCount: number;
+  participantCount: number;
+  verifierCount: number;
+  mediaCount: number;
+  tagCount: number;
+  viewCount?: number;
+  ratingCount?: number;
+  ratingAverage?: number;
+}
+
+export interface IThreadStats {
+  reactionCount: number;
+  messageCount: number;
+  viewCount?: number;
+  ratingCount?: number;
+  ratingAverage?: number;
+}
+
+export interface IMessageStats {
+  reactionCount: number;
+  replyCount: number;
+  viewCount?: number;
+  ratingCount?: number;
+  ratingAverage?: number;
+}
+
+export interface IEntityRatingHistogram {
+  "1": number;
+  "2": number;
+  "3": number;
+  "4": number;
+  "5": number;
+}
+
+export interface IEntityEngagementStats {
+  viewCount: number;
+  ratingCount: number;
+  ratingAverage: number;
+  ratingHistogram: IEntityRatingHistogram;
+}
+
+export interface IEntityEngagementSummary extends IEntityEngagementStats {
+  currentUserRating: number | null;
+  currentUserReview: string | null;
+  currentUserReviewedAt: Date | string | null;
+}
+
+export interface IEntityEngagement extends ITimeStamp {
+  id: string;
+  entityType: string;
+  entityId: string;
+  stats: IEntityEngagementStats;
+}
+
+export interface IEntityRating extends ITimeStamp {
+  id: string;
+  entityType: string;
+  entityId: string;
+  userId: string;
+  value: number;
+  review?: string | null;
+  user?: IBaseUser;
+}
+
+export interface ISavedEntity extends ITimeStamp {
+  id: string;
+  userId: string;
+  entityType: 'event' | 'thread' | 'message';
+  entityId: string;
+}
+
+export interface IEntitySaveSummary {
+  entityType: ISavedEntity['entityType'];
+  entityId: string;
+  saved: boolean;
+  saveCount: number;
+  savedAt: Date | string | null;
+}
+
+export interface ISavedEntityListItem extends ISavedEntity {
+  entity: IEvent | IBaseThread | IMessage | null;
 }
 
 export interface IVerifier {
@@ -197,11 +286,9 @@ export interface IAchievementProgress extends ITimeStamp {
 
 export interface IPaginationParams {
   limit: number;
-  page: number;
   next: string | null;
   hasNext?: boolean;
   total?: number;
-  totalPages?: number;
   sortBy: 'createdAt' | 'updatedAt';
   sortOrder: 'asc' | 'desc';
   startDate?: Date;

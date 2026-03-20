@@ -1,23 +1,4 @@
-/**
- * @openapi
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         name:
- *           type: string
- *         email:
- *           type: string
- *         username:
- *           type: string
- *         profilePic:
- *           type: object
- *           nullable: true
- */
-import { asyncHandler, paginationParser, sessionParser, userParser, validateRequest } from '@/middlewares';
+import { asyncHandler, paginationParser, rateLimit, sessionParser, userParser, validateRequest } from '@/middlewares';
 import { Router } from 'express';
 import {
   getAllUser,
@@ -47,6 +28,8 @@ const router = Router();
  *   get:
  *     tags: [Users]
  *     summary: Find user by email or username
+ *     description: Public lookup endpoint with IP-based rate limiting. Returns a public-safe user shape without email.
+ *     security: []
  *     parameters:
  *       - in: query
  *         name: email
@@ -65,11 +48,21 @@ const router = Router();
  *               type: object
  *               properties:
  *                 data:
- *                   $ref: '#/components/schemas/User'
+ *                   $ref: '#/components/schemas/PublicUser'
  *                 error:
  *                   nullable: true
+ *       429:
+ *         $ref: '#/components/responses/RateLimited'
  */
-router.get('/query', asyncHandler(getUserByQuery));
+router.get(
+  '/query',
+  rateLimit({
+    keyPrefix: 'public-user-query',
+    limit: 10,
+    windowSeconds: 60,
+  }),
+  asyncHandler(getUserByQuery),
+);
 
 router.use([sessionParser, userParser]);
 
@@ -81,9 +74,10 @@ router.use([sessionParser, userParser]);
  *     summary: List users
  *     parameters:
  *       - in: query
- *         name: page
+ *         name: next
  *         schema:
- *           type: integer
+ *           type: string
+ *           nullable: true
  *       - in: query
  *         name: limit
  *         schema:
@@ -111,11 +105,7 @@ router
    *     tags: [Users]
    *     summary: Get user by ID
    *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
+   *       - $ref: '#/components/parameters/UserIdParam'
    *     responses:
    *       200:
    *         description: Success
@@ -128,11 +118,7 @@ router
    *     tags: [Users]
    *     summary: Delete user
    *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
+   *       - $ref: '#/components/parameters/UserIdParam'
    *     responses:
    *       200:
    *         description: Deleted
@@ -145,11 +131,7 @@ router
    *     tags: [Users]
    *     summary: Update user
    *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
+   *       - $ref: '#/components/parameters/UserIdParam'
    *     requestBody:
    *       required: true
    *       content:
@@ -169,11 +151,7 @@ router
  *     tags: [Users]
  *     summary: Get user interests
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
+ *       - $ref: '#/components/parameters/UserIdParam'
  *     responses:
  *       200:
  *         description: List of interests

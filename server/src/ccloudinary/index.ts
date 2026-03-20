@@ -41,7 +41,7 @@ class CloudinaryService {
       const res = await cloudinary.uploader.destroy(publicId, {
         invalidate: true,
       });
-      return { data: res, error: null };
+      return { data: res };
     } catch (error) {
       return { data: null as any, error };
     }

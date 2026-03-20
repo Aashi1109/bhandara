@@ -1,41 +1,3 @@
-/**
- * @openapi
- * components:
- *   schemas:
- *     Event:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         name:
- *           type: string
- *         description:
- *           type: string
- *         location:
- *           type: object
- *         status:
- *           type: string
- *         tags:
- *           type: array
- *           items:
- *             type: object
- *     Thread:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         eventId:
- *           type: string
- *         type:
- *           type: string
- *     Message:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         content:
- *           type: object
- */
 import { Router } from 'express';
 import {
   asyncHandler,
@@ -115,7 +77,7 @@ router.use([sessionParser, userParser]);
  */
 router
   .route('/')
-  .get(asyncHandler(getEvents))
+  .get([paginationParser], asyncHandler(getEvents))
   .post(validateRequest('EVENT_CREATE', eventSchema), asyncHandler(createEvent));
 
 router

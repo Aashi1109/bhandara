@@ -8,10 +8,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
-import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/explore_event_map.dart';
+import '../widgets/explore_search_bar.dart';
 import '../services/event.dart';
 import '../models/event.dart';
 import '../services/socket.dart';
@@ -32,14 +32,17 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen>
     with WidgetsBindingObserver {
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   bool _showDetails = false;
   bool _isFilterOpen = false;
   List<Event> _events = [];
   Event? _selectedEvent;
   bool _isLoading = true;
+  bool _isSelectedEventLoading = false;
   bool _isLocationEnabled = true;
   LatLng? _userLocation;
   final MapManager _mapManager = MapManager(type: MapProviderType.google);
+  int _selectedEventRequestVersion = 0;
 
   final _filters = [
     _Filter('ongoing', 'Ongoing Now', LucideIcons.timer),
@@ -100,7 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
     try {
-      final result = await eventService.getEvents();
+      final result = await eventService.getEvents(limit: 50);
       if (mounted) {
         setState(() {
           _events = result.items;
@@ -110,16 +113,57 @@ class _ExploreScreenState extends State<ExploreScreen>
           }
           _isLoading = false;
         });
+        if (_selectedEvent != null) {
+          unawaited(
+            _hydrateSelectedEvent(
+              _selectedEvent!,
+              _selectedEventRequestVersion,
+            ),
+          );
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
-    _connectSocket();
+    _listenToSocketMessages();
   }
 
-  void _connectSocket() {
-    socketService.connect('explore'); // Or appropriate ID
-    socketService.messages.listen((event) {
+  Future<void> _hydrateSelectedEvent(Event event, int requestVersion) async {
+    if (!mounted) return;
+    setState(() => _isSelectedEventLoading = true);
+
+    try {
+      final preview = await eventService.getEventPreview(event.id);
+      if (!mounted || requestVersion != _selectedEventRequestVersion) return;
+
+      final merged = event.merge(preview);
+      setState(() {
+        _selectedEvent = merged;
+        _isSelectedEventLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestVersion != _selectedEventRequestVersion) return;
+      setState(() => _isSelectedEventLoading = false);
+    }
+  }
+
+  void _selectEvent(Event event) {
+    final requestVersion = ++_selectedEventRequestVersion;
+
+    setState(() {
+      _selectedEvent = event;
+      _showDetails = true;
+      _isSelectedEventLoading = false;
+    });
+
+    if (!event.hasPreviewData) {
+      _hydrateSelectedEvent(event, requestVersion);
+    }
+  }
+
+  void _listenToSocketMessages() {
+    _socketSubscription?.cancel();
+    _socketSubscription = socketService.messages.listen((event) {
       if (!mounted) return;
 
       final eventName = event['event'];
@@ -135,9 +179,9 @@ class _ExploreScreenState extends State<ExploreScreen>
           final updatedEvent = Event.fromJson(eventData);
           final index = _events.indexWhere((e) => e.id == updatedEvent.id);
           if (index != -1) {
-            _events[index] = updatedEvent;
+            _events[index] = _events[index].merge(updatedEvent);
             if (_selectedEvent?.id == updatedEvent.id) {
-              _selectedEvent = updatedEvent;
+              _selectedEvent = _selectedEvent!.merge(updatedEvent);
             }
           }
         } else if (eventName == SocketEvents.eventDeleted) {
@@ -164,12 +208,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               events: _events,
               selectedEvent: _selectedEvent,
               userLocation: _userLocation,
-              onEventSelected: (event) {
-                setState(() {
-                  _selectedEvent = event;
-                  _showDetails = true;
-                });
-              },
+              onEventSelected: _selectEvent,
               onClusterFocusStart: () {
                 setState(() {
                   _showDetails = false;
@@ -196,56 +235,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: AppInput(
-                              placeholder: 'Find food events...',
-                              icon: Icon(LucideIcons.search, size: 20),
-                              height: 40,
-                              borderRadius: 12,
-                              hasBorder: false,
-                              backgroundColor: AppColors.transparent,
-                            ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 32,
-                            color: AppColors.border,
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => setState(() => _isFilterOpen = true),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                LucideIcons.slidersHorizontal,
-                                size: 20,
-                                color: AppColors.surface,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    ExploreSearchBar(
+                      onOpenFilters: () => setState(() => _isFilterOpen = true),
                     ),
                     const SizedBox(height: 12),
 
@@ -256,7 +247,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         scrollDirection: Axis.horizontal,
                         itemCount: _filters.length,
                         separatorBuilder: (context, index) =>
-                        const SizedBox(width: 12),
+                            const SizedBox(width: 12),
                         itemBuilder: (context, i) {
                           final f = _filters[i];
                           final isFirst = i == 0;
@@ -275,14 +266,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                               boxShadow: isFirst
                                   ? [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
+                                      BoxShadow(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
                                   : null,
                             ),
                             child: Row(
@@ -290,7 +281,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 if (f.icon != null) ...[
                                   Icon(
                                     f.icon,
-                                    size: 16,
+                                    size: AppIconSizes.m,
                                     color: isFirst
                                         ? AppColors.surface
                                         : AppColors.primary,
@@ -332,7 +323,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           children: [
                             Icon(
                               LucideIcons.alertTriangle,
-                              size: 16,
+                              size: AppIconSizes.m,
                               color: AppColors.warning,
                             ),
                             SizedBox(width: 8),
@@ -362,8 +353,9 @@ class _ExploreScreenState extends State<ExploreScreen>
               left: 20,
               right: 20,
               child: AppCard(
-                padding: AppCardPadding.lg,
+                padding: AppCardPadding.sm,
                 child: Column(
+                  spacing: 12,
                   children: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,9 +365,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                           borderRadius: BorderRadius.circular(16),
                           child: CachedNetworkImage(
                             imageUrl:
-                            _selectedEvent!.media?.firstOrNull?.url ??
-                                'https://picsum.photos/seed/${_selectedEvent!
-                                    .id}/200/200',
+                                _selectedEvent!.media?.firstOrNull?.url ??
+                                'https://picsum.photos/seed/${_selectedEvent!.id}/200/200',
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
@@ -386,14 +377,41 @@ class _ExploreScreenState extends State<ExploreScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _selectedEvent!.name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.2,
-                                  color: AppColors.primary,
-                                ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _selectedEvent!.name,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _showDetails = false),
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.muted,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        LucideIcons.x,
+                                        size: AppIconSizes.m,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Row(
@@ -409,13 +427,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    '${_selectedEvent!.status
-                                        .toUpperCase()} · Free Entry',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.mutedForeground,
+                                  Expanded(
+                                    child: Text(
+                                      '${_selectedEvent!.status.toUpperCase()} · Free Entry',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.mutedForeground,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -425,16 +446,20 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 children: [
                                   const Icon(
                                     LucideIcons.timer,
-                                    size: 16,
+                                    size: AppIconSizes.m,
                                     color: AppColors.primary,
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    _getRelativeTime(_selectedEvent!.endTime),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
+                                  Expanded(
+                                    child: Text(
+                                      _getRelativeTime(_selectedEvent!.endTime),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -442,28 +467,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                             ],
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => setState(() => _showDetails = false),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              LucideIcons.x,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 20),
 
                     // Tags
-                    if (_selectedEvent!.tags != null)
+                    if (_selectedEvent!.tags?.isNotEmpty == true)
                       SizedBox(
                         height: 28,
                         child: ListView.separated(
@@ -471,12 +479,40 @@ class _ExploreScreenState extends State<ExploreScreen>
                           scrollDirection: Axis.horizontal,
                           itemCount: _selectedEvent!.tags!.length,
                           separatorBuilder: (context, index) =>
-                          const SizedBox(width: 8),
+                              const SizedBox(width: 8),
                           itemBuilder: (_, i) =>
                               _tag(_selectedEvent!.tags![i].name.toUpperCase()),
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        _engagementMeta(
+                          LucideIcons.eye,
+                          '${_selectedEvent!.stats?.viewCount ?? 0} views',
+                        ),
+                        Flexible(
+                          child: _engagementMeta(
+                            LucideIcons.star,
+                            _selectedEvent!.stats != null &&
+                                    _selectedEvent!.stats!.ratingCount > 0
+                                ? '${_selectedEvent!.stats!.ratingAverage.toStringAsFixed(1)} (${_selectedEvent!.stats!.ratingCount})'
+                                : 'No ratings',
+                          ),
+                        ),
+                        if (_isSelectedEventLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
 
                     // Action buttons
                     Row(
@@ -486,13 +522,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                             size: AppButtonSize.lg,
                             icon: const Icon(LucideIcons.navigation),
                             label: 'Get Directions',
-                            onPressed: () =>
-                                context.go(
-                                  EventDetailScreen.routePath.replaceAll(
-                                    ':id',
-                                    _selectedEvent!.id.toString(),
-                                  ),
-                                ),
+                            onPressed: () => context.go(
+                              EventDetailScreen.routePath.replaceAll(
+                                ':id',
+                                _selectedEvent!.id.toString(),
+                              ),
+                              extra: _selectedEvent,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -501,7 +537,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           size: AppButtonSize.lg,
                           child: Icon(
                             LucideIcons.share2,
-                            size: 20,
+                            size: AppIconSizes.defaultSize,
                             color: AppColors.primary,
                           ),
                         ),
@@ -549,6 +585,28 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
   }
 
+  Widget _engagementMeta(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 6,
+      children: [
+        Icon(icon, size: AppIconSizes.s, color: AppColors.mutedForeground),
+        Flexible(
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFilterDrawer() {
     return Stack(
       children: [
@@ -563,10 +621,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           left: 0,
           right: 0,
           child: Container(
-            height: MediaQuery
-                .of(context)
-                .size
-                .height * 0.85,
+            height: MediaQuery.of(context).size.height * 0.85,
             decoration: const BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
@@ -608,7 +663,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           ),
                           child: const Icon(
                             LucideIcons.x,
-                            size: 16,
+                            size: AppIconSizes.m,
                             color: AppColors.primary,
                           ),
                         ),
@@ -652,18 +707,18 @@ class _ExploreScreenState extends State<ExploreScreen>
                           spacing: 8,
                           runSpacing: 8,
                           children:
-                          [
-                            'Street Food',
-                            'Bakery',
-                            'Vegan',
-                            'Desserts',
-                            'Beverages',
-                          ]
-                              .map(
-                                (c) =>
-                                _chipButton(c, selected: c == 'Bakery'),
-                          )
-                              .toList(),
+                              [
+                                    'Street Food',
+                                    'Bakery',
+                                    'Vegan',
+                                    'Desserts',
+                                    'Beverages',
+                                  ]
+                                  .map(
+                                    (c) =>
+                                        _chipButton(c, selected: c == 'Bakery'),
+                                  )
+                                  .toList(),
                         ),
                         const SizedBox(height: 32),
                         _sectionLabel('DIETARY NEEDS'),
@@ -673,12 +728,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                           ('Gluten-Free', LucideIcons.wheat),
                           ('Halal', LucideIcons.utensilsCrossed),
                         ].map(
-                              (d) =>
-                              _dietaryItem(
-                                d.$1,
-                                d.$2,
-                                selected: d.$1 == 'Halal',
-                              ),
+                          (d) => _dietaryItem(
+                            d.$1,
+                            d.$2,
+                            selected: d.$1 == 'Halal',
+                          ),
                         ),
                         const SizedBox(height: 32),
                         _sectionLabel('TIMING'),
@@ -769,12 +823,12 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         boxShadow: selected
             ? [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ]
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
             : null,
       ),
       child: Text(
@@ -797,6 +851,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
+        spacing: 12,
         children: [
           Container(
             width: 32,
@@ -807,11 +862,10 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
             child: Icon(
               icon,
-              size: 16,
+              size: AppIconSizes.m,
               color: selected ? AppColors.surface : AppColors.mutedForeground,
             ),
           ),
-          const SizedBox(width: 12),
           Expanded(
             child: Text(
               name,
@@ -830,7 +884,11 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ),
             child: selected
-                ? const Icon(LucideIcons.x, size: 12, color: AppColors.surface)
+                ? const Icon(
+                    LucideIcons.x,
+                    size: AppIconSizes.xs,
+                    color: AppColors.surface,
+                  )
                 : null,
           ),
         ],
@@ -849,22 +907,22 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         boxShadow: selected
             ? [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ]
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ]
             : null,
       ),
       child: Column(
+        spacing: 12,
         children: [
           Icon(
             icon,
-            size: 24,
+            size: AppIconSizes.l,
             color: selected ? AppColors.surface : AppColors.mutedForeground,
           ),
-          const SizedBox(height: 12),
           Text(
             label.toUpperCase(),
             style: TextStyle(
@@ -881,6 +939,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   @override
   void dispose() {
+    _socketSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

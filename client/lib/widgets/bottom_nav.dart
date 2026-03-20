@@ -14,10 +14,7 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentPath = GoRouterState
-        .of(context)
-        .uri
-        .path;
+    final currentPath = GoRouterState.of(context).uri.path;
 
     final items = [
       _NavItem(ExploreScreen.routePath, LucideIcons.compass, 'Explore'),
@@ -74,7 +71,7 @@ class AppBottomNav extends StatelessWidget {
                   ),
                   child: const Icon(
                     LucideIcons.plus,
-                    size: 24,
+                    size: AppIconSizes.l,
                     color: AppColors.surface,
                   ),
                 ),
@@ -101,6 +98,7 @@ class AppBottomNav extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
                   children: [
                     Container(
                       width: 32,
@@ -111,11 +109,10 @@ class AppBottomNav extends StatelessWidget {
                       ),
                       child: Icon(
                         item.icon,
-                        size: 16,
+                        size: AppIconSizes.m,
                         color: AppColors.surface,
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Text(
                       item.label,
                       style: const TextStyle(
@@ -136,7 +133,7 @@ class AppBottomNav extends StatelessWidget {
                 height: 40,
                 child: Icon(
                   item.icon,
-                  size: 24,
+                  size: AppIconSizes.l,
                   color: AppColors.mutedForeground,
                 ),
               ),

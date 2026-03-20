@@ -19,6 +19,7 @@ export class User extends Model<UserAttributes, UserAttributes> {
   declare isVerified: boolean;
   declare profilePic: Record<string, any> | null;
   declare mediaId: string | null;
+  declare bio: string | null;
   declare username?: string;
   declare password: string | null;
   declare meta: Record<string, any>;
@@ -48,6 +49,7 @@ User.init(
     mediaId: {
       type: DataTypes.UUID,
     },
+    bio: { type: DataTypes.TEXT, allowNull: true },
     username: { type: DataTypes.TEXT },
     password: { type: DataTypes.TEXT },
     meta: { type: DataTypes.JSONB, defaultValue: {} },
@@ -59,6 +61,10 @@ User.init(
     timestamps: true,
     paranoid: true,
     indexes: [
+      {
+        name: 'users_updatedAt_idx',
+        fields: ['updatedAt'],
+      },
       {
         name: 'users_address_gix',
         using: 'GIST',

@@ -54,7 +54,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                         ),
                         child: const Icon(
                           LucideIcons.lock,
-                          size: 32,
+                          size: AppIconSizes.xl,
                           color: AppColors.primary,
                         ),
                       ),
@@ -91,7 +91,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       onTap: () => setState(() => _showCurrent = !_showCurrent),
                       child: Icon(
                         _showCurrent ? LucideIcons.eyeOff : LucideIcons.eye,
-                        size: 20,
+                        size: AppIconSizes.defaultSize,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -106,7 +106,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       onTap: () => setState(() => _showNew = !_showNew),
                       child: Icon(
                         _showNew ? LucideIcons.eyeOff : LucideIcons.eye,
-                        size: 20,
+                        size: AppIconSizes.defaultSize,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -156,7 +156,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       onTap: () => setState(() => _showConfirm = !_showConfirm),
                       child: Icon(
                         _showConfirm ? LucideIcons.eyeOff : LucideIcons.eye,
-                        size: 20,
+                        size: AppIconSizes.defaultSize,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -193,15 +193,15 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
 
   Widget _requirementItem(String label, bool met) {
     return Row(
+      spacing: 8,
       children: [
         Icon(
           met ? LucideIcons.check : LucideIcons.x,
-          size: 14,
+          size: AppIconSizes.s,
           color: met
               ? AppColors.primary
               : AppColors.mutedForeground.withValues(alpha: 0.4),
         ),
-        const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(

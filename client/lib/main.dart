@@ -6,6 +6,7 @@ import 'router.dart';
 import 'services/local_storage.dart';
 import 'services/location_permission.dart';
 import 'widgets/app_dialog.dart';
+import 'widgets/app_session_coordinator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,11 +61,13 @@ class _FoodyAppState extends State<FoodyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Foody',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.theme,
-      routerConfig: router,
+    return AppSessionCoordinator(
+      child: MaterialApp.router(
+        title: 'Foody',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.theme,
+        routerConfig: router,
+      ),
     );
   }
 }

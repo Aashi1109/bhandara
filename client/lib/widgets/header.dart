@@ -6,6 +6,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppHeader({
     super.key,
     required this.title,
+    this.subtitle,
     this.showBack = true,
     this.onBack,
     this.rightElement,
@@ -14,26 +15,30 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   });
 
   final String title;
+  final String? subtitle;
   final bool showBack;
   final VoidCallback? onBack;
   final Widget? rightElement;
   final Color? backgroundColor;
   final bool showBorder;
 
+  String get _subtitleText => subtitle?.trim() ?? '';
+  bool get _hasSubtitle => _subtitleText.isNotEmpty;
+
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize {
+    return Size.fromHeight(_hasSubtitle ? 84 : 64);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery
-            .of(context)
-            .padding
-            .top + 8,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 24,
         right: 24,
-        bottom: 16,
+        bottom: _hasSubtitle ? 12 : 16,
       ),
       decoration: BoxDecoration(
         color: backgroundColor ?? AppColors.surface.withValues(alpha: 0.9),
@@ -48,38 +53,47 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             alignment: Alignment.centerLeft,
             child: showBack
                 ? GestureDetector(
-              onTap: onBack ?? () => Navigator.maybePop(context),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                    onTap: onBack ?? () => Navigator.maybePop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        LucideIcons.arrowLeft,
+                        size: AppIconSizes.defaultSize,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  LucideIcons.arrowLeft,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
-              ),
-            )
+                  )
                 : const SizedBox(width: 40),
           ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              Text(
+                title,
+                style: typography.titleMD,
+              ),
+              if (_hasSubtitle)
+                Text(
+                  _subtitleText,
+                  style: typography.labelSM.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+            ],
           ),
           Align(
             alignment: Alignment.centerRight,

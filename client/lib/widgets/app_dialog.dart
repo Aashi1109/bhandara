@@ -75,6 +75,7 @@ class _AppDialogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -96,20 +97,12 @@ class _AppDialogCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+            style: typography.titleMD,
           ),
           const SizedBox(height: 8),
           Text(
             message,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.mutedForeground,
-            ),
+            style: typography.bodyMD.copyWith(color: AppColors.mutedForeground),
           ),
           const SizedBox(height: 20),
           Row(

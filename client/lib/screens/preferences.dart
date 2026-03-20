@@ -10,9 +10,11 @@ import '../widgets/button.dart';
 import '../widgets/header.dart';
 import '../widgets/map_view.dart';
 import '../providers/tag.dart';
+import '../providers/user.dart';
 import '../models/event.dart';
 import '../services/location_permission.dart';
 import '../services/maps/map_manager.dart';
+import '../services/maps/map_marker_factory.dart';
 import '../services/maps/map_provider_type.dart';
 
 import 'explore.dart';
@@ -36,11 +38,41 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
   String _locationLabel = 'San Francisco, CA';
   bool _isLocating = false;
   bool _hasLocationAccess = false;
+  bool _isSaving = false;
+  bool _didHydrateFromProfile = false;
+  BitmapDescriptor? _locationMarkerIcon;
 
   @override
   void initState() {
     super.initState();
+    _loadMarkerIcon();
     _useCurrentLocation();
+  }
+
+  Future<void> _loadMarkerIcon() async {
+    final icon = await MapMarkerFactory.createUserLocationMarker();
+    if (!mounted) return;
+    setState(() => _locationMarkerIcon = icon);
+  }
+
+  void _hydrateFromUser() {
+    final user = ref.read(userProfileProvider).value;
+    if (_didHydrateFromProfile || user == null) return;
+
+    final interestIds = user.meta?.interests ?? const <String>[];
+    _selected.addAll(interestIds);
+
+    if (user.address != null) {
+      _selectedLocation = LatLng(
+        user.address!.latitude ?? _fallbackLocation.latitude,
+        user.address!.longitude ?? _fallbackLocation.longitude,
+      );
+      _locationLabel = user.address!.label.isNotEmpty
+          ? user.address!.label
+          : _locationLabel;
+    }
+
+    _didHydrateFromProfile = true;
   }
 
   void _toggle(Tag tag, List<Tag>? children) {
@@ -128,8 +160,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
         _selectedLocation = latLng;
         _locationLabel = address?.formattedAddress.isNotEmpty == true
             ? address!.formattedAddress
-            : '${position.latitude.toStringAsFixed(4)}, ${position.longitude
-            .toStringAsFixed(4)}';
+            : '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
         _hasLocationAccess = true;
         _isLocating = false;
       });
@@ -145,6 +176,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _hydrateFromUser();
     final tagsAsync = ref.watch(tagsProvider(rootOnly: true));
 
     return Scaffold(
@@ -221,21 +253,19 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                         }).toList(),
                       );
                     },
-                    loading: () =>
-                    const Center(
+                    loading: () => const Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppColors.primary,
                         ),
                       ),
                     ),
-                    error: (err, stack) =>
-                        Center(
-                          child: Text(
-                            'Failed to load categories: ${err.toString()}',
-                            style: const TextStyle(color: AppColors.error),
-                          ),
-                        ),
+                    error: (err, stack) => Center(
+                      child: Text(
+                        'Failed to load categories: ${err.toString()}',
+                        style: const TextStyle(color: AppColors.error),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 40),
                   // ... (Location section remains same)
@@ -306,13 +336,12 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                           _mapController = controller;
                         },
                         markers: {
-                          Marker(
-                            markerId: const MarkerId('preferences-location'),
-                            position: _selectedLocation,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                              BitmapDescriptor.hueRose,
+                          if (_locationMarkerIcon != null)
+                            Marker(
+                              markerId: const MarkerId('preferences-location'),
+                              position: _selectedLocation,
+                              icon: _locationMarkerIcon!,
                             ),
-                          ),
                         },
                         zoomControlsEnabled: false,
                         myLocationButtonEnabled: false,
@@ -360,7 +389,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                         ),
                         child: const Icon(
                           LucideIcons.edit2,
-                          size: 16,
+                          size: AppIconSizes.m,
                           color: AppColors.primary,
                         ),
                       ),
@@ -397,9 +426,45 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
       child: AppButton(
         size: AppButtonSize.lg,
         fullWidth: true,
-        label: 'Complete Setup',
+        label: _isSaving ? 'Saving...' : 'Complete Setup',
         iconRight: const Icon(LucideIcons.arrowRight),
-        onPressed: () => context.go(ExploreScreen.routePath),
+        onPressed: _isSaving
+            ? null
+            : () async {
+                final user = ref.read(userProfileProvider).value;
+                if (user == null) {
+                  context.go(ExploreScreen.routePath);
+                  return;
+                }
+
+                setState(() => _isSaving = true);
+                try {
+                  final previous = user.meta?.interests.toSet() ?? <String>{};
+                  final current = _selected.toSet();
+
+                  await ref.read(userProfileProvider.notifier).updateUserData({
+                    'interests': {
+                      'added': current.difference(previous).toList(),
+                      'deleted': previous.difference(current).toList(),
+                    },
+                    'hasOnboarded': true,
+                    'address': {
+                      'address': _locationLabel,
+                      'coordinates': {
+                        'latitude': _selectedLocation.latitude,
+                        'longitude': _selectedLocation.longitude,
+                      },
+                    },
+                  });
+
+                  if (!mounted) return;
+                  context.go(ExploreScreen.routePath);
+                } finally {
+                  if (mounted) {
+                    setState(() => _isSaving = false);
+                  }
+                }
+              },
       ),
     );
   }
@@ -493,22 +558,20 @@ class TagHierarchy extends ConsumerWidget {
           ],
         );
       },
-      loading: () =>
-          TagChip(
-            tag: tag,
-            selectionState: selected.contains(tag.id)
-                ? SelectionState.all
-                : SelectionState.none,
-            onToggle: () => onToggleExpanded(tag.id),
-            showExpand: true,
-            isExpanded: isExpanded,
-          ),
-      error: (e, s) =>
-          TagChip(
-            tag: tag,
-            selectionState: SelectionState.none,
-            onToggle: () => onToggleExpanded(tag.id),
-          ),
+      loading: () => TagChip(
+        tag: tag,
+        selectionState: selected.contains(tag.id)
+            ? SelectionState.all
+            : SelectionState.none,
+        onToggle: () => onToggleExpanded(tag.id),
+        showExpand: true,
+        isExpanded: isExpanded,
+      ),
+      error: (e, s) => TagChip(
+        tag: tag,
+        selectionState: SelectionState.none,
+        onToggle: () => onToggleExpanded(tag.id),
+      ),
     );
   }
 }
@@ -560,12 +623,12 @@ class TagChip extends StatelessWidget {
           ),
           boxShadow: isSelected
               ? [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ]
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Material(
@@ -595,7 +658,7 @@ class TagChip extends StatelessWidget {
                     const SizedBox(width: 6),
                     const Icon(
                       LucideIcons.check,
-                      size: 12,
+                      size: AppIconSizes.xs,
                       color: AppColors.surface,
                     ),
                   ],
@@ -606,7 +669,7 @@ class TagChip extends StatelessWidget {
                       turns: isExpanded ? 0.5 : 0,
                       child: Icon(
                         LucideIcons.chevronDown,
-                        size: 16,
+                        size: AppIconSizes.m,
                         color: isSelected
                             ? AppColors.surface
                             : AppColors.primary,
@@ -646,12 +709,11 @@ class TagChip extends StatelessWidget {
             height: isSmall ? 14 : 16,
             fit: BoxFit.contain,
             placeholder: (context, url) => const SizedBox.shrink(),
-            errorWidget: (context, url, error) =>
-                Icon(
-                  LucideIcons.utensils,
-                  size: isSmall ? 14 : 16,
-                  color: active ? AppColors.surface : AppColors.primary,
-                ),
+            errorWidget: (context, url, error) => Icon(
+              LucideIcons.utensils,
+              size: isSmall ? 14 : 16,
+              color: active ? AppColors.surface : AppColors.primary,
+            ),
           ),
         ),
       );

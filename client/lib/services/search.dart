@@ -36,25 +36,29 @@ class SearchResult {
 class SearchService extends BaseService {
   final Dio _dio = apiService.dio;
 
-  Future<PaginatedResponse<SearchResult>> search(String query, {
-    int page = 1,
+  Future<PaginatedResponse<SearchResult>> search(
+    String query, {
+    String? next,
     int limit = 20,
     Map<String, dynamic>? filters,
   }) async {
     try {
+      final queryParameters = <String, dynamic>{'query': query, 'limit': limit};
+      if (next != null) {
+        queryParameters['next'] = next;
+      }
+      if (filters != null) {
+        queryParameters.addAll(filters);
+      }
+
       final response = await _dio.get(
         Api.search,
-        queryParameters: {
-          'query': query,
-          'page': page,
-          'limit': limit,
-          if (filters != null) ...filters,
-        },
+        queryParameters: queryParameters,
       );
 
       return PaginatedResponse<SearchResult>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-            (json) => SearchResult.fromJson(json! as Map<String, dynamic>),
+        (json) => SearchResult.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Search failed');

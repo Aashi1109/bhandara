@@ -42,6 +42,7 @@ CREATE TABLE "Users" (
     "isVerified" BOOLEAN NOT NULL DEFAULT FALSE,
     "profilePic" JSONB NULL,
     "mediaId" UUID NULL, -- Foreign key will be added later
+    "bio" TEXT NULL,
     "username" TEXT NULL,
     "password" TEXT NULL,
     "meta" JSONB NOT NULL DEFAULT '{}'::JSONB,
@@ -61,6 +62,7 @@ CREATE TABLE "Threads" (
     "parentId" UUID NULL REFERENCES "Threads"("id"),
     "eventId" UUID, -- Foreign key will be added later
     "lockHistory" JSONB NOT NULL DEFAULT '[]'::JSONB,
+    "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
     "createdBy" UUID NULL REFERENCES "Users"("id"),
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
@@ -86,6 +88,7 @@ CREATE TABLE "Events" (
     "capacity" INTEGER NULL,
     "tags" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "media" JSONB NOT NULL DEFAULT '[]'::JSONB,
+    "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
     "timings" JSONB NOT NULL,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
@@ -118,6 +121,7 @@ CREATE TABLE "Messages" (
     "parentId" UUID NULL REFERENCES "Messages"("id"),
     "content" JSONB NOT NULL, -- Unified field for text or richObject
     "isEdited" BOOLEAN NOT NULL DEFAULT FALSE,
+    "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
     "threadId" UUID NOT NULL REFERENCES "Threads"("id"),
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
@@ -165,9 +169,12 @@ CREATE TABLE "Activities" (
 );
 
 CREATE INDEX "activities_actorId_createdAt_idx" ON "Activities"("actorId", "createdAt");
+CREATE INDEX "activities_actorId_updatedAt_idx" ON "Activities"("actorId", "updatedAt");
 CREATE INDEX "activities_recipientId_createdAt_idx" ON "Activities"("recipientId", "createdAt");
+CREATE INDEX "activities_recipientId_updatedAt_idx" ON "Activities"("recipientId", "updatedAt");
 CREATE INDEX "activities_entityType_entityId_idx" ON "Activities"("entityType", "entityId");
 CREATE INDEX "activities_type_idx" ON "Activities"("type");
+CREATE INDEX "activities_updatedAt_idx" ON "Activities"("updatedAt");
 
 -- User achievements and progress
 CREATE TABLE "UserAchievements" (
@@ -208,6 +215,11 @@ CREATE TABLE "Reactions" (
 );
 
 CREATE INDEX "reactions_contentId_idx" ON "Reactions"("contentId");
+CREATE INDEX "users_updatedAt_idx" ON "Users"("updatedAt");
+CREATE INDEX "threads_updatedAt_idx" ON "Threads"("updatedAt");
+CREATE INDEX "events_updatedAt_idx" ON "Events"("updatedAt");
+CREATE INDEX "messages_updatedAt_idx" ON "Messages"("updatedAt");
+CREATE INDEX "tags_updatedAt_idx" ON "Tags"("updatedAt");
 
 -- Search results
 CREATE TYPE "enum_SearchResults_type" AS ENUM ('event', 'user', 'tag');

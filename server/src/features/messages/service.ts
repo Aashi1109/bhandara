@@ -12,6 +12,7 @@ import UserService from "@/features/users/service";
 import { BadRequestError } from "@/exceptions";
 import ReactionService from "@/features/reactions/service";
 import { Op } from "sequelize";
+import EntityStatsService from "@/features/stats/service";
 
 // Note: Thread data is intentionally not populated here to avoid
 // circular dependencies between services. Controllers should fetch
@@ -20,6 +21,7 @@ class MessageService {
   private readonly mediaService: MediaService;
   private readonly userService: UserService;
   private readonly reactionService: ReactionService;
+  private readonly entityStatsService: EntityStatsService;
 
   private readonly populateFields = ["user", "reactions", "media"];
 
@@ -27,6 +29,7 @@ class MessageService {
     this.mediaService = new MediaService();
     this.userService = new UserService();
     this.reactionService = new ReactionService();
+    this.entityStatsService = new EntityStatsService();
   }
 
   private async populateMessage(message: IMessage, fields: string[]) {
@@ -58,9 +61,9 @@ class MessageService {
       resolved[key] = r.status === "fulfilled" ? r.value : null;
     });
 
-    if (fields.includes("user")) message.user = resolved.user?.data || null;
+    if (fields.includes("user")) message.user = resolved.user || null;
     if (fields.includes("reactions"))
-      message.reactions = resolved.reactions?.data || [];
+      message.reactions = resolved.reactions || [];
     if (fields.includes("media") && resolved.media) {
       message.content = {
         ...message.content,
@@ -121,6 +124,8 @@ class MessageService {
       })
     );
 
+    await this.entityStatsService.hydrateMessages(messagesWithChildren || []);
+
     return {
       items: messagesWithChildren || [],
       pagination: parentPagination,
@@ -172,6 +177,7 @@ class MessageService {
         msg.reactions = reactionResults[idx];
       });
 
+      await this.entityStatsService.hydrateMessages(userPopulatedMessages);
       return { items: userPopulatedMessages, pagination: data.pagination };
     }
     return data;
@@ -199,6 +205,21 @@ class MessageService {
       created;
     if (populate && msg) {
       msg = await this.getById(msg.id, populate);
+    } else if (msg) {
+      await Promise.all([
+        this.entityStatsService.incrementThreadStat(msg.threadId, "messageCount", 1),
+        msg.parentId
+          ? this.entityStatsService.incrementMessageStat(msg.parentId, "replyCount", 1)
+          : Promise.resolve(),
+      ]);
+    }
+    if (msg && populate) {
+      await Promise.all([
+        this.entityStatsService.incrementThreadStat(msg.threadId, "messageCount", 1),
+        msg.parentId
+          ? this.entityStatsService.incrementMessageStat(msg.parentId, "replyCount", 1)
+          : Promise.resolve(),
+      ]);
     }
     return msg as IMessage;
   }
@@ -239,18 +260,33 @@ class MessageService {
           ? this.populateFields
           : this.populateFields.filter((f) =>
               (populate as string[]).includes(f)
-            );
+          );
       const populated = await this.populateMessage(data as IMessage, fields);
-      return populated;
+      return this.entityStatsService.hydrateMessage(populated);
     }
-    return data as any;
+    return data ? this.entityStatsService.hydrateMessage(data as IMessage) : (data as any);
   }
 
   async delete(id: string) {
     const row = await Message.findByPk(id);
     if (!row) return null;
     await row.destroy();
-    return row.toJSON() as any;
+    const deletedMessage = row.toJSON() as IMessage;
+    await Promise.all([
+      this.entityStatsService.incrementThreadStat(
+        deletedMessage.threadId,
+        "messageCount",
+        -1
+      ),
+      deletedMessage.parentId
+        ? this.entityStatsService.incrementMessageStat(
+            deletedMessage.parentId,
+            "replyCount",
+            -1
+          )
+        : Promise.resolve(),
+    ]);
+    return deletedMessage as any;
   }
 }
 

@@ -20,8 +20,16 @@ class UserProfile extends _$UserProfile {
   Future<void> updateProfile({
     String? name,
     String? bio,
-    String? avatarId,
+    String? mediaId,
   }) async {
+    await updateUserData({
+      'name': name,
+      'bio': bio,
+      'mediaId': mediaId,
+    }..removeWhere((k, v) => v == null));
+  }
+
+  Future<void> updateUserData(Map<String, dynamic> data) async {
     final currentUser = state.value;
     if (currentUser == null) return;
 
@@ -30,8 +38,7 @@ class UserProfile extends _$UserProfile {
     state = await AsyncValue.guard(() =>
         userService.updateUser(
           currentUser.id,
-          {'name': name, 'bio': bio, 'avatarId': avatarId}
-            ..removeWhere((k, v) => v == null),
+          data,
         ));
   }
 
@@ -41,7 +48,7 @@ class UserProfile extends _$UserProfile {
 
     final avatarId = await fileService.uploadFile(image, bucket: 'avatars');
     if (avatarId != null) {
-      await updateProfile(avatarId: avatarId);
+      await updateProfile(mediaId: avatarId);
     }
   }
 

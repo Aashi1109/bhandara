@@ -7,9 +7,7 @@ import {
 import {
   deleteUserAchievementsCache,
   getUserAchievementProgressCache,
-  getUserAchievementsCache,
   setUserAchievementProgressCache,
-  setUserAchievementsCache,
 } from "./helpers";
 import { EActivityEntityType, EActivityType, EActivityVisibility } from "@/features/activity/constants";
 import ActivityService from "@/features/activity/service";
@@ -26,18 +24,13 @@ class AchievementService {
   }
 
   async getUserAchievements(userId: string): Promise<IUserAchievement[]> {
-    const cached = await getUserAchievementsCache(userId);
-    if (cached) return cached;
-
     const rows = await UserAchievement.findAll({
       where: { userId },
       order: [["unlockedAt", "DESC"]],
       raw: true,
     });
 
-    const achievements = rows as IUserAchievement[];
-    await setUserAchievementsCache(userId, achievements);
-    return achievements;
+    return rows as IUserAchievement[];
   }
 
   async getUserProgress(userId: string): Promise<IAchievementProgress> {

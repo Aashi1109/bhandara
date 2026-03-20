@@ -14,9 +14,9 @@ import {
   MessageService,
   ReactionService,
   ThreadService,
-  getExplorePage,
-  setExplorePage,
-  deleteExplorePage,
+  getExploreCursor,
+  setExploreCursor,
+  deleteExploreCursor,
   buildExploreSections,
 } from "@/features";
 import { BadRequestError, NotFoundError, ForbiddenError } from "@/exceptions";
@@ -422,10 +422,7 @@ export function initializeSocket(server: http.Server) {
                 `Reaction not found ${reaction} for user`
               );
 
-            const deletedReaction = await reactionService.delete(
-              previousReaction.id,
-              true
-            );
+            const deletedReaction = await reactionService.delete(previousReaction.id);
 
             emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, {
               data: {
@@ -458,12 +455,12 @@ export function initializeSocket(server: http.Server) {
         (socket as any).exploreAbort = abortController;
 
         try {
-          let page = ((await getExplorePage(socketUserId)) || 1) as number;
+          let nextCursor = (await getExploreCursor(socketUserId)) || null;
 
           while (!abortController.signal.aborted) {
             const { items, pagination } = await eventService.getAll(
               { status: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
-              { limit: 10, page }
+              { limit: 10, next: nextCursor }
             );
 
             let radius = 100;
@@ -493,12 +490,11 @@ export function initializeSocket(server: http.Server) {
               if (abortController.signal.aborted) break;
               emitSocketEvent(PLATFORM_SOCKET_EVENTS.EXPLORE, {
                 data: section,
-                error: null,
-              });
+                });
             }
 
-            await setExplorePage(socketUserId, page);
-            page += 1;
+            await setExploreCursor(socketUserId, pagination.next ?? null);
+            nextCursor = pagination.next ?? null;
 
             if (!pagination.hasNext) break;
           }
@@ -551,8 +547,7 @@ export function initializeSocket(server: http.Server) {
 
           emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, {
             data: { ...newThread, event: eventResponse },
-            error: null,
-          });
+            });
           cb({ data: true });
         } catch (error) {
           logger.error(`Error sending new message`, error);
@@ -566,7 +561,7 @@ export function initializeSocket(server: http.Server) {
       socket.on(PLATFORM_SOCKET_EVENTS.DISCONNECT, async () => {
         const ctrl = (socket as any).exploreAbort;
         if (ctrl) ctrl.abort();
-        await deleteExplorePage(socketUserId);
+        await deleteExploreCursor(socketUserId);
       });
     }
   );

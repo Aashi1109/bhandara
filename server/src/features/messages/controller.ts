@@ -13,11 +13,23 @@ import {
   EActivityVisibility,
 } from "@/features/activity/constants";
 import AchievementService from "@/features/achievements/service";
+import EntityEngagementService from "@/features/engagement/service";
 
 const messagesService = new MessageService();
 const threadsService = new ThreadsService();
 const activityService = new ActivityService();
 const achievementService = new AchievementService();
+const entityEngagementService = new EntityEngagementService();
+const asString = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+const getViewerIp = (req: ICustomRequest) => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return req.socket.remoteAddress || null;
+};
 
 export const getMessages = async (
   req: ICustomRequest & IRequestPagination,
@@ -34,12 +46,12 @@ export const getMessages = async (
   );
   return res.status(200).json({
     data: messages,
-    error: null,
-  });
+    });
 };
 
 export const createMessage = async (req: ICustomRequest, res: Response) => {
-  const threadId = req.params.threadId as string;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError("Thread not found");
 
   // Check if the thread (or its parent chain) is locked before creating a message
   const lockStatus = await threadsService.isThreadChainLocked(threadId);
@@ -50,7 +62,7 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
   }
 
   const message = await messagesService.create(
-    pick({ ...req.body, threadId, isEdited: true }, [
+    pick({ ...req.body, userId: req.user.id, threadId, isEdited: false }, [
       "userId",
       "content",
       "parentId",
@@ -75,16 +87,15 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
   ]);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
     data: message,
-    error: null,
-  });
+    });
   return res.status(200).json({
     data: message,
-    error: null,
-  });
+    });
 };
 
 export const updateMessage = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError("Message not found");
 
   // Get the message to check its thread
   const existingMessage = await messagesService.getById(messageId);
@@ -106,16 +117,15 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
   );
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
     data: { id: messageId, ...req.body },
-    error: null,
-  });
+    });
   return res.status(200).json({
     data: message,
-    error: null,
-  });
+    });
 };
 
 export const deleteMessage = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError("Message not found");
 
   // Get the message to check its thread
   const existingMessage = await messagesService.getById(messageId);
@@ -133,30 +143,36 @@ export const deleteMessage = async (req: ICustomRequest, res: Response) => {
   const message = await messagesService.delete(messageId);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, {
     data: { id: messageId },
-    error: null,
-  });
+    });
   return res.status(200).json({
     data: message,
-    error: null,
-  });
+    });
 };
 
 export const getMessageById = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError("Message not found");
   const message = await messagesService.getById(messageId, true);
   if (isEmpty(message)) throw new NotFoundError("Message not found");
 
+  await entityEngagementService.trackView("messages", messageId, {
+    userId: req.user.id,
+    ip: getViewerIp(req),
+    userAgent: req.headers["user-agent"] || null,
+  });
+
   return res.status(200).json({
     data: message,
-    error: null,
-  });
+    });
 };
 
 export const getChildMessages = async (
   req: ICustomRequest & IRequestPagination,
   res: Response
 ) => {
-  const { parentId, threadId } = req.params;
+  const parentId = asString(req.params.parentId);
+  const threadId = asString(req.params.threadId);
+  if (!parentId || !threadId) throw new NotFoundError("Message not found");
   const messages = await messagesService.getChildren(
     threadId,
     parentId,
@@ -164,6 +180,5 @@ export const getChildMessages = async (
   );
   return res.status(200).json({
     data: messages,
-    error: null,
-  });
+    });
 };

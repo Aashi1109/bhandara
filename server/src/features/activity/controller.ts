@@ -26,7 +26,7 @@ export const getUserActivity = async (
     types,
   });
 
-  return res.status(200).json({ data, error: null });
+  return res.status(200).json({ data });
 };
 
 export const getMyUpdates = async (
@@ -47,7 +47,7 @@ export const getMyUpdates = async (
     types,
   });
 
-  return res.status(200).json({ data, error: null });
+  return res.status(200).json({ data });
 };
 
 export const markUpdateAsRead = async (req: ICustomRequest, res: Response) => {
@@ -56,7 +56,7 @@ export const markUpdateAsRead = async (req: ICustomRequest, res: Response) => {
 
   if (!data) throw new NotFoundError("Activity not found");
 
-  return res.status(200).json({ data, error: null });
+  return res.status(200).json({ data });
 };
 
 export const markAllUpdatesAsRead = async (
@@ -64,5 +64,5 @@ export const markAllUpdatesAsRead = async (
   res: Response
 ) => {
   const data = await activityService.markAllAsRead(req.user.id);
-  return res.status(200).json({ data, error: null });
+  return res.status(200).json({ data });
 };

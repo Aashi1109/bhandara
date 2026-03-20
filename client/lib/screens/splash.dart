@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foody_mobile/screens/preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/theme.dart';
 import '../services/secure_storage.dart';
 import '../services/local_storage.dart';
 import '../services/auth.dart';
+import '../services/socket.dart';
 import '../providers/user.dart';
 
 import 'explore.dart';
@@ -27,6 +27,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+  bool _isCheckingSession = true;
 
   @override
   void initState() {
@@ -72,6 +73,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
         if (user != null) {
           ref.read(userProfileProvider.notifier).setUser(user);
+          await socketService.startAuthenticatedSession();
+          if (!mounted) return;
 
           if (user.meta?.hasOnboarded ?? false) {
             context.go(ExploreScreen.routePath);
@@ -79,6 +82,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             context.go(PreferencesScreen.routePath);
           }
         } else {
+          await socketService.endAuthenticatedSession();
           ref.read(userProfileProvider.notifier).setUser(null);
           await authService.logout();
           if (!mounted) return;
@@ -86,6 +90,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         }
       } catch (_) {
         // Invalid session
+        await socketService.endAuthenticatedSession();
         ref.read(userProfileProvider.notifier).setUser(null);
         await authService.logout();
         if (!mounted) return;
@@ -93,12 +98,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       }
     } else {
       // No active session
+      await socketService.endAuthenticatedSession();
       ref.read(userProfileProvider.notifier).setUser(null);
+      if (!mounted) return;
       if (onboarded) {
         context.go(AuthScreen.routePath);
       } else {
         context.go(OnboardingScreen.routePath);
       }
+    }
+
+    if (mounted) {
+      setState(() => _isCheckingSession = false);
     }
   }
 
@@ -110,6 +121,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -124,16 +136,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     scale: _scaleAnimation.value,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
                       children: [
                         RichText(
                           text: TextSpan(
-                            style: GoogleFonts.playfairDisplay(
-                              fontSize: 90,
-                              fontWeight: FontWeight.w700,
-                              fontStyle: FontStyle.italic,
-                              letterSpacing: -5,
-                              color: AppColors.primary,
-                            ),
+                            style: typography.displayXL,
                             children: const [
                               TextSpan(text: 'Foody'),
                               TextSpan(
@@ -143,14 +150,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'FIND YOUR NEXT MEAL',
-                          style: TextStyle(
+                          style: typography.overline.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 8,
-                            color: AppColors.mutedForeground,
                           ),
                         ),
                       ],
@@ -158,6 +163,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                 );
               },
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 40,
+            child: SafeArea(
+              top: false,
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: _isCheckingSession ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

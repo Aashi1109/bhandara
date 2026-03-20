@@ -16,8 +16,7 @@ export const getUserAchievements = async (
       items,
       definitions: achievementService.getDefinitions(),
     },
-    error: null,
-  });
+    });
 };
 
 export const getUserAchievementProgress = async (
@@ -29,6 +28,5 @@ export const getUserAchievementProgress = async (
 
   return res.status(200).json({
     data,
-    error: null,
-  });
+    });
 };

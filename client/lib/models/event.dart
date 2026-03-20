@@ -12,7 +12,10 @@ class Event {
     this.media,
     this.tags,
     this.participants,
+    this.verifiers,
+    this.creator,
     this.capacity,
+    this.stats,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -31,11 +34,17 @@ class Event {
 
     // participants: [{user: string|object, status: string}] — extract user IDs
     List<String>? participants;
+    List<EventUser>? participantUsers;
     if (json['participants'] != null) {
+      participantUsers = [];
       participants = (json['participants'] as List).map((p) {
         if (p is Map) {
           final user = p['user'];
-          return user is Map ? user['id'] as String : user as String;
+          if (user is Map<String, dynamic>) {
+            participantUsers!.add(EventUser.fromJson(user));
+            return user['id'] as String;
+          }
+          return user as String;
         }
         return p as String;
       }).toList();
@@ -55,6 +64,17 @@ class Event {
           Tag.fromJson).toList();
     }
 
+    final creator = json['creator'] is Map<String, dynamic>
+        ? EventUser.fromJson(json['creator'] as Map<String, dynamic>)
+        : null;
+    final verifiers = (json['verifiers'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(EventVerifier.fromJson)
+        .toList();
+    final stats = json['stats'] is Map<String, dynamic>
+        ? EventStats.fromJson(json['stats'] as Map<String, dynamic>)
+        : null;
+
     return Event(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -67,10 +87,83 @@ class Event {
       location: Location.fromJson(json['location'] as Map<String, dynamic>),
       media: media,
       tags: tags,
-      participants: participants,
+      participants: participantUsers?.isNotEmpty == true ? participantUsers : participants,
+      verifiers: verifiers,
+      creator: creator,
       capacity: json['capacity'] as int?,
+      stats: stats,
     );
   }
+
+  Event copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? status,
+    String? type,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? createdBy,
+    Location? location,
+    List<Media>? media,
+    List<Tag>? tags,
+    List<dynamic>? participants,
+    List<EventVerifier>? verifiers,
+    EventUser? creator,
+    int? capacity,
+    EventStats? stats,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      type: type ?? this.type,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      createdBy: createdBy ?? this.createdBy,
+      location: location ?? this.location,
+      media: media ?? this.media,
+      tags: tags ?? this.tags,
+      participants: participants ?? this.participants,
+      verifiers: verifiers ?? this.verifiers,
+      creator: creator ?? this.creator,
+      capacity: capacity ?? this.capacity,
+      stats: stats ?? this.stats,
+    );
+  }
+
+  Event merge(Event other) {
+    return copyWith(
+      id: other.id,
+      name: other.name,
+      description: other.description ?? description,
+      status: other.status,
+      type: other.type,
+      startTime: other.startTime,
+      endTime: other.endTime,
+      createdBy: other.createdBy,
+      location: other.location,
+      media: other.media ?? media,
+      tags: other.tags ?? tags,
+      participants: other.participants ?? participants,
+      verifiers: other.verifiers ?? verifiers,
+      creator: other.creator ?? creator,
+      capacity: other.capacity ?? capacity,
+      stats: other.stats ?? stats,
+    );
+  }
+
+  bool get hasPreviewData =>
+      (media?.isNotEmpty ?? false) ||
+      (tags?.isNotEmpty ?? false) ||
+      stats != null;
+
+  bool get hasFullDetail =>
+      description != null ||
+      creator != null ||
+      (participants?.isNotEmpty ?? false) ||
+      (verifiers?.isNotEmpty ?? false);
 
   final String id;
   final String name;
@@ -83,8 +176,97 @@ class Event {
   final Location location;
   final List<Media>? media;
   final List<Tag>? tags;
-  final List<String>? participants;
+  final List<dynamic>? participants;
+  final List<EventVerifier>? verifiers;
+  final EventUser? creator;
   final int? capacity;
+  final EventStats? stats;
+}
+
+class EventStats {
+  EventStats({
+    required this.reactionCount,
+    required this.threadCount,
+    required this.participantCount,
+    required this.verifierCount,
+    required this.mediaCount,
+    required this.tagCount,
+    required this.viewCount,
+    required this.ratingCount,
+    required this.ratingAverage,
+  });
+
+  factory EventStats.fromJson(Map<String, dynamic> json) {
+    return EventStats(
+      reactionCount: (json['reactionCount'] as num?)?.toInt() ?? 0,
+      threadCount: (json['threadCount'] as num?)?.toInt() ?? 0,
+      participantCount: (json['participantCount'] as num?)?.toInt() ?? 0,
+      verifierCount: (json['verifierCount'] as num?)?.toInt() ?? 0,
+      mediaCount: (json['mediaCount'] as num?)?.toInt() ?? 0,
+      tagCount: (json['tagCount'] as num?)?.toInt() ?? 0,
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
+      ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
+      ratingAverage: (json['ratingAverage'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final int reactionCount;
+  final int threadCount;
+  final int participantCount;
+  final int verifierCount;
+  final int mediaCount;
+  final int tagCount;
+  final int viewCount;
+  final int ratingCount;
+  final double ratingAverage;
+}
+
+class EventUser {
+  EventUser({
+    required this.id,
+    this.name,
+    this.avatarUrl,
+  });
+
+  factory EventUser.fromJson(Map<String, dynamic> json) {
+    String? avatarUrl = json['avatarUrl'] as String?;
+    if (avatarUrl == null && json['profilePic'] is Map) {
+      avatarUrl =
+          (json['profilePic'] as Map<String, dynamic>)['url'] as String?;
+    }
+
+    return EventUser(
+      id: json['id'] as String,
+      name: json['name'] as String?,
+      avatarUrl: avatarUrl,
+    );
+  }
+
+  final String id;
+  final String? name;
+  final String? avatarUrl;
+}
+
+class EventVerifier {
+  EventVerifier({
+    required this.user,
+    this.verifiedAt,
+  });
+
+  factory EventVerifier.fromJson(Map<String, dynamic> json) {
+    final rawUser = json['user'];
+    return EventVerifier(
+      user: rawUser is Map<String, dynamic>
+          ? EventUser.fromJson(rawUser)
+          : EventUser(id: rawUser as String, name: null, avatarUrl: null),
+      verifiedAt: json['verifiedAt'] != null
+          ? DateTime.tryParse(json['verifiedAt'] as String)
+          : null,
+    );
+  }
+
+  final EventUser user;
+  final DateTime? verifiedAt;
 }
 
 class Location {

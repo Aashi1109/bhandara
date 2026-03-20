@@ -1,20 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../theme/theme.dart';
-import '../../widgets/header.dart';
-import '../../widgets/button.dart';
-import '../../widgets/input.dart';
 
+import '../../providers/user.dart';
+import '../../theme/theme.dart';
+import '../../widgets/button.dart';
+import '../../widgets/header.dart';
+import '../../widgets/input.dart';
+import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
-class EmailSettingsScreen extends StatelessWidget {
+class EmailSettingsScreen extends ConsumerStatefulWidget {
   const EmailSettingsScreen({super.key});
 
   static const String routePath = '/settings/email';
 
   @override
+  ConsumerState<EmailSettingsScreen> createState() =>
+      _EmailSettingsScreenState();
+}
+
+class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _didHydrate = false;
+  String _initialEmail = '';
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProfileProvider).value;
+    if (!_didHydrate && user != null) {
+      _emailController.text = user.email;
+      _initialEmail = user.email;
+      _didHydrate = true;
+    }
+
+    final isDirty = _emailController.text.trim() != _initialEmail.trim();
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -38,7 +66,7 @@ class EmailSettingsScreen extends StatelessWidget {
                       ),
                       child: const Icon(
                         LucideIcons.mail,
-                        size: 32,
+                        size: AppIconSizes.xl,
                         color: AppColors.primary,
                       ),
                     ),
@@ -52,21 +80,22 @@ class EmailSettingsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Current: alex.johnson@example.com',
-                      style: TextStyle(
+                    Text(
+                      'Current: ${user?.email ?? ''}',
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: AppColors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 48),
-                    const AppInput(
+                    AppInput(
                       placeholder: 'Enter new email address',
                       keyboardType: TextInputType.emailAddress,
                       height: 64,
                       borderRadius: 16,
-                      // We can add text centering logic if needed, but AppInput standard is fine
+                      controller: _emailController,
+                      onChanged: (_) => setState(() {}),
                     ),
                   ],
                 ),
@@ -79,7 +108,15 @@ class EmailSettingsScreen extends StatelessWidget {
               size: AppButtonSize.xl,
               fullWidth: true,
               label: 'Save Changes',
-              onPressed: () {},
+              onPressed: isDirty
+                  ? () {
+                      AppSnackBar.show(
+                        context,
+                        message: 'Email updates are not available yet.',
+                        type: SnackBarType.warning,
+                      );
+                    }
+                  : null,
             ),
           ),
         ],

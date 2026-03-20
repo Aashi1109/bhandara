@@ -205,7 +205,7 @@ const eventUpdateSchema = {
 const validateEventCreate = validateSchema(`${EVENT_TABLE_NAME}_CREATE`, eventSchema);
 
 // Custom timing validation function
-const validateTimings = (timings: { start: string; end: string }) => {
+const validateTimings = (timings: { start: string | Date; end: string | Date }) => {
   if (!timings || !timings.start || !timings.end) {
     throw new BadRequestError('Start time and end time are required');
   }
@@ -233,7 +233,7 @@ const validateTimings = (timings: { start: string; end: string }) => {
 };
 
 // Enhanced validation function that includes timing validation
-const validateEventCreateWithTiming = <T extends { timings?: { start: string; end: string } }, R>(
+const validateEventCreateWithTiming = <T extends { timings?: { start: string | Date; end: string | Date } }, R>(
   data: T,
   callback: (validData: T) => R,
 ): R => {

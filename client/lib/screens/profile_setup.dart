@@ -63,9 +63,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref
-        .watch(authProvider)
-        .isLoading;
+    final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -170,7 +168,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                 ),
                                 child: const Icon(
                                   LucideIcons.camera,
-                                  size: 16,
+                                  size: AppIconSizes.m,
                                   color: AppColors.surface,
                                 ),
                               ),

@@ -7,6 +7,7 @@ import {
   type ILocation,
   type IMedia,
   type IParticipant,
+  type IEventStats,
   type IVerifier,
   type IBaseUser,
   type IReaction,
@@ -34,6 +35,7 @@ export class Event extends Model<EventAttributes, EventAttributes> {
   declare capacity: number;
   declare tags: IEvent['tags'];
   declare media: IMedia[];
+  declare stats: IEventStats;
   declare createdAt: Date;
   declare updatedAt: Date;
   declare deletedAt?: Date;
@@ -105,6 +107,11 @@ Event.init(
       allowNull: false,
       defaultValue: [],
     },
+    stats: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+    },
     timings: {
       type: DataTypes.JSONB,
       allowNull: false,
@@ -117,6 +124,10 @@ Event.init(
     timestamps: true,
     paranoid: true,
     indexes: [
+      {
+        name: 'events_updatedAt_idx',
+        fields: ['updatedAt'],
+      },
       {
         name: 'events_location_gix',
         using: 'GIST',

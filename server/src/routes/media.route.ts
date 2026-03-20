@@ -8,18 +8,6 @@ import {
   getMediaPublicUrls,
   getPublicSignedUploadUrl,
 } from '@/features/media/controller';
-/**
- * @openapi
- * components:
- *   schemas:
- *     Media:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         url:
- *           type: string
- */
 import { asyncHandler, sessionParser, userParser, validateRequest } from '@/middlewares';
 import { Router } from 'express';
 import { mediaUpdateSchema } from '@/features/media/validation';

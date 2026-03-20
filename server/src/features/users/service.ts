@@ -2,9 +2,10 @@ import type {
   IBaseUser,
   IMedia,
   IPaginationParams,
+  PaginatedResult,
   ITag,
 } from "@/definitions/types";
-import { type PaginatedResult, findAllWithPagination } from "@/utils/dbUtils";
+import { findAllWithPagination } from "@/utils/dbUtils";
 import { validateUserCreate, validateUserUpdate } from "./validation";
 import { User } from "./model";
 import {

@@ -16,3 +16,12 @@ SET meta = jsonb_set(
   )
 )
 WHERE meta->'auth' ? 'authProvider';
+
+CREATE INDEX IF NOT EXISTS "users_updatedAt_idx" ON "Users"("updatedAt");
+CREATE INDEX IF NOT EXISTS "threads_updatedAt_idx" ON "Threads"("updatedAt");
+CREATE INDEX IF NOT EXISTS "events_updatedAt_idx" ON "Events"("updatedAt");
+CREATE INDEX IF NOT EXISTS "messages_updatedAt_idx" ON "Messages"("updatedAt");
+CREATE INDEX IF NOT EXISTS "tags_updatedAt_idx" ON "Tags"("updatedAt");
+CREATE INDEX IF NOT EXISTS "activities_updatedAt_idx" ON "Activities"("updatedAt");
+CREATE INDEX IF NOT EXISTS "activities_actorId_updatedAt_idx" ON "Activities"("actorId", "updatedAt");
+CREATE INDEX IF NOT EXISTS "activities_recipientId_updatedAt_idx" ON "Activities"("recipientId", "updatedAt");

@@ -6,12 +6,47 @@ import { validateReactionCreate, validateReactionUpdate } from "./validation";
 import UserService from "@/features/users/service";
 import { isEmpty } from "@/utils";
 import logger from "@/logger";
+import EntityStatsService from "@/features/stats/service";
+import { EAllowedReactionTables } from "./constants";
 
 class ReactionService {
   private readonly userService: UserService;
+  private readonly entityStatsService: EntityStatsService;
 
   constructor() {
     this.userService = new UserService();
+    this.entityStatsService = new EntityStatsService();
+  }
+
+  private async updateReactionCounter(contentId: string, by: number) {
+    const [contentPath, entityId] = contentId.split("/");
+    if (!entityId) return;
+
+    if (contentPath === EAllowedReactionTables.Event) {
+      await this.entityStatsService.incrementEventStat(
+        entityId,
+        "reactionCount",
+        by
+      );
+      return;
+    }
+
+    if (contentPath === EAllowedReactionTables.Thread) {
+      await this.entityStatsService.incrementThreadStat(
+        entityId,
+        "reactionCount",
+        by
+      );
+      return;
+    }
+
+    if (contentPath === EAllowedReactionTables.Message) {
+      await this.entityStatsService.incrementMessageStat(
+        entityId,
+        "reactionCount",
+        by
+      );
+    }
   }
 
   async getById(id: string): Promise<IReaction | null> {
@@ -34,6 +69,9 @@ class ReactionService {
       const row = await Reaction.create(validData as Partial<IReaction>);
       return row.toJSON() as IReaction;
     });
+    if (res?.contentId) {
+      await this.updateReactionCounter(res.contentId, 1);
+    }
     return res as IReaction;
   }
 
@@ -60,7 +98,9 @@ class ReactionService {
     const row = await Reaction.findByPk(id);
     if (!row) return null;
     await row.destroy();
-    return row.toJSON() as IReaction;
+    const deletedReaction = row.toJSON() as IReaction;
+    await this.updateReactionCounter(deletedReaction.contentId, -1);
+    return deletedReaction;
   }
 
   async getReactions(contentId: string, userId?: string) {
@@ -87,6 +127,11 @@ class ReactionService {
   async deleteByQuery(where: Partial<IReaction>) {
     const matchingRows = await Reaction.findAll({ where });
     const deletedRow = await Reaction.destroy({ where });
+    await Promise.all(
+      matchingRows.map((row) =>
+        this.updateReactionCounter((row.toJSON() as IReaction).contentId, -1)
+      )
+    );
     logger.debug(`Deleted reaction rows: ${deletedRow}`);
     return matchingRows;
   }

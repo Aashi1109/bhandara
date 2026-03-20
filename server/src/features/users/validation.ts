@@ -71,6 +71,11 @@ const createSchema = {
       type: ['string', 'null'],
       errorMessage: 'Username must be a string or null',
     },
+    bio: {
+      type: ['string', 'null'],
+      maxLength: 280,
+      errorMessage: 'Bio must be a string or null',
+    },
   },
   required: ['name', 'email', 'gender'],
   additionalProperties: false,
@@ -131,6 +136,11 @@ const updateSchema = {
     username: {
       type: ['string', 'null'],
       errorMessage: 'Username must be a string or null',
+    },
+    bio: {
+      type: ['string', 'null'],
+      maxLength: 280,
+      errorMessage: 'Bio must be a string or null',
     },
     meta: {
       type: ['object', 'null'],

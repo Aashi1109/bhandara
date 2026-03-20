@@ -8,6 +8,14 @@ import logger from "@/logger";
 import { addVideoJob } from "@/queues/video";
 
 const mediaService = new MediaService();
+const asString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return typeof first === "string" ? first : undefined;
+  }
+  return undefined;
+};
 
 export const uploadFile = async (req: ICustomRequest, res: Response) => {
   const { file, path, bucket, mimeType, provider, format, ...rest } = req.body;
@@ -40,7 +48,7 @@ export const getSignedUploadUrl = async (
   const insertData = {
     path: uploadPath,
     bucket,
-    provider,
+    provider: provider as EMediaProvider | undefined,
     mimeType,
     options: {
       uploader: req.user.id,
@@ -91,16 +99,18 @@ export const createMediaData = async (req: ICustomRequest, res: Response) => {
 };
 
 export const deleteFile = async (req: ICustomRequest, res: Response) => {
-  const { mediaId } = req.params;
+  const mediaId = asString(req.params.mediaId);
+  if (!mediaId) throw new NotFoundError("Media not found");
   const existingMedia = await mediaService.delete(mediaId);
 
   if (isEmpty(existingMedia)) throw new NotFoundError("Media not found");
 
-  return res.status(200).json(existingMedia);
+  return res.status(200).json({ data: existingMedia });
 };
 
 export const getMediaById = async (req: ICustomRequest, res: Response) => {
-  const { mediaId } = req.params;
+  const mediaId = asString(req.params.mediaId);
+  if (!mediaId) throw new NotFoundError("Media not found");
   const data = await mediaService.getById(mediaId);
 
   if (isEmpty(data)) throw new NotFoundError("Media not found");
@@ -113,11 +123,12 @@ export const getMediaPublicUrl = async (req: ICustomRequest, res: Response) => {
   const signedUrl = await mediaService.getPublicUrl(path, bucket, provider);
   if (isEmpty(signedUrl)) throw new NotFoundError("Media not found at path");
 
-  return res.status(200).json(signedUrl);
+  return res.status(200).json({ data: signedUrl });
 };
 
 export const updateMedia = async (req: ICustomRequest, res: Response) => {
-  const { mediaId } = req.params;
+  const mediaId = asString(req.params.mediaId);
+  if (!mediaId) throw new NotFoundError("Media not found");
   const existingMedia = await mediaService.getById(mediaId);
 
   const updateData = pick(req.body, [
@@ -139,9 +150,10 @@ export const getMediaPublicUrls = async (
   req: ICustomRequest,
   res: Response
 ) => {
-  const { ids } = req.query;
+  const ids = asString(req.query.ids);
+  if (!ids) throw new NotFoundError("Media(s) not found at path");
   const signedUrls = await mediaService.getMediaByIds(
-    (ids as string).split(",")
+    ids.split(",")
   );
   if (isEmpty(signedUrls))
     throw new NotFoundError("Media(s) not found at path");
@@ -160,7 +172,7 @@ export const onUploadComplete = async (req: ICustomRequest, res: Response) => {
     if (media.mimeType?.startsWith("video")) {
       await addVideoJob(media.id, eventId);
     }
-    return res.status(200).json({ queued: true });
+    return res.status(200).json({ data: { queued: true } });
   }
 
   const { custom: { rid } = {} } = context || {};
@@ -174,5 +186,5 @@ export const onUploadComplete = async (req: ICustomRequest, res: Response) => {
 
   logger.debug(`Updated media ${updatedMedia.id}`);
 
-  return res.status(200).json({ success: true });
+  return res.status(200).json({ data: { updated: true } });
 };

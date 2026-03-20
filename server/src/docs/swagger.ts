@@ -9,8 +9,12 @@ export const swaggerOptions = {
       version: "1.0.0",
     },
     servers: [{ url: "/api" }],
+    security: [{ SessionCookieAuth: [] }],
   },
-  apis: [path.join(__dirname, "../routes/*.route*")],
+  apis: [
+    path.join(__dirname, "../routes/*.route*"),
+    path.join(__dirname, "./openapi/**/*.ts"),
+  ],
 };
 
 export const swaggerSpec = swaggerJsdoc(swaggerOptions);

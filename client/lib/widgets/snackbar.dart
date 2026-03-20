@@ -7,7 +7,8 @@ enum SnackBarType { info, error, warning, success }
 class AppSnackBar {
   static OverlayEntry? _currentEntry;
 
-  static void show(BuildContext context, {
+  static void show(
+    BuildContext context, {
     required String message,
     SnackBarType type = SnackBarType.info,
     Duration duration = const Duration(seconds: 3),
@@ -39,17 +40,16 @@ class AppSnackBar {
     }
 
     _currentEntry = OverlayEntry(
-      builder: (context) =>
-          _TopSnackBar(
-            message: message,
-            backgroundColor: backgroundColor,
-            icon: icon,
-            duration: duration,
-            onDismiss: () {
-              _currentEntry?.remove();
-              _currentEntry = null;
-            },
-          ),
+      builder: (context) => _TopSnackBar(
+        message: message,
+        backgroundColor: backgroundColor,
+        icon: icon,
+        duration: duration,
+        onDismiss: () {
+          _currentEntry?.remove();
+          _currentEntry = null;
+        },
+      ),
     );
 
     overlay.insert(_currentEntry!);
@@ -126,11 +126,9 @@ class _TopSnackBarState extends State<_TopSnackBar>
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Positioned(
-      top: MediaQuery
-          .of(context)
-          .padding
-          .top + 16,
+      top: MediaQuery.of(context).padding.top + 16,
       left: 16,
       right: 16,
       child: Material(
@@ -151,16 +149,18 @@ class _TopSnackBarState extends State<_TopSnackBar>
               ],
             ),
             child: Row(
+              spacing: 12,
               children: [
-                Icon(widget.icon, color: AppColors.surface, size: 20),
-                const SizedBox(width: 12),
+                Icon(
+                  widget.icon,
+                  color: AppColors.surface,
+                  size: AppIconSizes.defaultSize,
+                ),
                 Expanded(
                   child: Text(
                     widget.message,
-                    style: const TextStyle(
+                    style: typography.bodyMD.copyWith(
                       color: AppColors.surface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -170,7 +170,7 @@ class _TopSnackBarState extends State<_TopSnackBar>
                   child: const Icon(
                     LucideIcons.x,
                     color: AppColors.surface,
-                    size: 16,
+                    size: AppIconSizes.m,
                   ),
                 ),
               ],

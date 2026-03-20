@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import dotenv from 'dotenv';
 import { faker } from '@faker-js/faker';
 import { QueryTypes, type CreationAttributes } from 'sequelize';

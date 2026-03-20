@@ -9,6 +9,28 @@ class FileService {
   final ImagePicker _picker = ImagePicker();
 
   static const int maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
+  static const String defaultMediaBucket = 'event-files';
+  static const String avatarBucket = 'avatars';
+
+  String _resolveMediaType(String mimeType) {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'document';
+  }
+
+  String _resolveFormat(XFile file, String mimeType) {
+    final extension = file.name.contains('.')
+        ? file.name.split('.').last.trim().toLowerCase()
+        : '';
+
+    if (extension.isNotEmpty) {
+      return extension;
+    }
+
+    final mimeParts = mimeType.split('/');
+    return mimeParts.length > 1 ? mimeParts.last.toLowerCase() : 'bin';
+  }
 
   Future<XFile?> pickImage({ImageSource source = ImageSource.gallery}) async {
     try {
@@ -47,11 +69,16 @@ class FileService {
     return true;
   }
 
-  Future<String?> uploadFile(XFile file, {String bucket = 'media'}) async {
+  Future<String?> uploadFile(
+    XFile file, {
+    String bucket = defaultMediaBucket,
+  }) async {
     try {
       final fileName = file.name;
       final fileSize = await file.length();
       final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
+      final mediaType = _resolveMediaType(mimeType);
+      final format = _resolveFormat(file, mimeType);
 
       // 1. Get signed URL
       final signedUrlResponse = await _dio.post(
@@ -61,13 +88,22 @@ class FileService {
           'bucket': bucket,
           'mimeType': mimeType,
           'size': fileSize,
+          'name': fileName,
+          'type': mediaType,
+          'format': format,
         },
       );
 
       if (signedUrlResponse.statusCode != 200) return null;
 
-      final String signedUrl = signedUrlResponse.data['data']['signedUrl'];
-      final Map<String, dynamic> row = signedUrlResponse.data['data']['row'];
+      final data = signedUrlResponse.data['data'] as Map<String, dynamic>;
+      final signedUrl =
+          (data['signedUrl'] ?? data['url']) as String?;
+      final row = data['row'] as Map<String, dynamic>?;
+
+      if (signedUrl == null || row == null) {
+        throw Exception('Missing signed upload payload');
+      }
 
       // 2. Upload file to signed URL
       final fileBytes = await file.readAsBytes();
@@ -75,23 +111,43 @@ class FileService {
       final uploadDio = Dio();
       final uploadResponse = await uploadDio.put(
         signedUrl,
-        data: Stream.fromIterable([fileBytes]),
+        data: fileBytes,
         options: Options(
-          headers: {'Content-Type': mimeType, 'Content-Length': fileSize},
+          headers: {
+            'Content-Type': mimeType,
+            'Content-Length': fileSize,
+          },
+          validateStatus: (status) => status != null && status >= 200 && status < 300,
         ),
       );
 
-      if (uploadResponse.statusCode == 200) {
+      if ((uploadResponse.statusCode ?? 500) >= 200 &&
+          (uploadResponse.statusCode ?? 500) < 300) {
         return row['id']; // Return the media ID
       }
-      return null;
+      throw Exception('Upload failed with status ${uploadResponse.statusCode}');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final error = data['error'];
+        if (error is Map<String, dynamic> && error['message'] is String) {
+          throw Exception(error['message'] as String);
+        }
+        if (error is String) {
+          throw Exception(error);
+        }
+      }
+      throw Exception('Failed to upload file');
     } catch (e) {
-      return null;
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Failed to upload file');
     }
   }
 
   // Deprecated: use uploadFile
-  Future<String?> uploadImage(XFile file, {String bucket = 'avatars'}) =>
+  Future<String?> uploadImage(XFile file, {String bucket = avatarBucket}) =>
       uploadFile(file, bucket: bucket);
 
   Future<bool> deleteMedia(String mediaId) async {

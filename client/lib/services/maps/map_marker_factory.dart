@@ -16,13 +16,10 @@ class MapMarkerFactory {
       painter: (canvas, markerSize) {
         final center = Offset(markerSize / 2, markerSize / 2);
         final outerRadius = markerSize * 0.32;
-        final innerRadius = markerSize * 0.245;
+        final innerRadius = highlighted ? markerSize * 0.245 : markerSize * 0.255;
         final outerColor = highlighted
             ? const Color(0xFF121212)
-            : const Color(0xFFD6D6D6);
-        final ringColor = highlighted
-            ? Colors.white
-            : const Color(0xFF9D9D9D);
+            : const Color(0xFF3C3C3C);
         final innerColor = highlighted
             ? const Color(0xFF121212)
             : const Color(0xFF3C3C3C);
@@ -44,16 +41,20 @@ class MapMarkerFactory {
           ..style = PaintingStyle.fill;
         canvas.drawCircle(center, outerRadius, outerPaint);
 
-        final ringPaint = Paint()
-          ..color = ringColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = markerSize * 0.036;
-        canvas.drawCircle(center, outerRadius - markerSize * 0.04, ringPaint);
+        if (highlighted) {
+          final ringPaint = Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = markerSize * 0.036;
+          canvas.drawCircle(center, outerRadius - markerSize * 0.04, ringPaint);
+        }
 
-        final innerPaint = Paint()
-          ..color = innerColor
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(center, innerRadius, innerPaint);
+        if (highlighted) {
+          final innerPaint = Paint()
+            ..color = innerColor
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(center, innerRadius, innerPaint);
+        }
 
         final iconPainter = TextPainter(textDirection: TextDirection.ltr);
         iconPainter.text = TextSpan(
@@ -109,6 +110,102 @@ class MapMarkerFactory {
           ..color = Colors.white
           ..style = PaintingStyle.fill;
         canvas.drawCircle(center, dotRadius, dotPaint);
+      },
+    );
+  }
+
+  static Future<BitmapDescriptor> createMapPinMarker({
+    bool highlighted = false,
+    double size = 72,
+  }) {
+    return _renderMarker(
+      size: size,
+      painter: (canvas, markerSize) {
+        final fillColor = highlighted
+            ? const Color(0xFF121212)
+            : const Color(0xFF2E2E2E);
+        final accentColor = highlighted
+            ? Colors.white
+            : const Color(0xFFF3F3F3);
+        final shadowPaint = Paint()
+          ..color = Colors.black.withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+
+        final pinPath = Path();
+        final width = markerSize;
+        final height = markerSize;
+        pinPath.moveTo(width * 0.5, height * 0.96);
+        pinPath.cubicTo(
+          width * 0.32,
+          height * 0.72,
+          width * 0.16,
+          height * 0.56,
+          width * 0.16,
+          height * 0.36,
+        );
+        pinPath.cubicTo(
+          width * 0.16,
+          height * 0.16,
+          width * 0.31,
+          height * 0.04,
+          width * 0.5,
+          height * 0.04,
+        );
+        pinPath.cubicTo(
+          width * 0.69,
+          height * 0.04,
+          width * 0.84,
+          height * 0.16,
+          width * 0.84,
+          height * 0.36,
+        );
+        pinPath.cubicTo(
+          width * 0.84,
+          height * 0.56,
+          width * 0.68,
+          height * 0.72,
+          width * 0.5,
+          height * 0.96,
+        );
+        pinPath.close();
+
+        canvas.drawPath(
+          pinPath.shift(Offset(0, markerSize * 0.04)),
+          shadowPaint,
+        );
+
+        final fillPaint = Paint()
+          ..color = fillColor
+          ..style = PaintingStyle.fill;
+        canvas.drawPath(pinPath, fillPaint);
+
+        final innerCirclePaint = Paint()
+          ..color = accentColor.withValues(alpha: highlighted ? 0.18 : 0.14)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(
+          Offset(markerSize * 0.5, markerSize * 0.34),
+          markerSize * 0.18,
+          innerCirclePaint,
+        );
+
+        final iconPainter = TextPainter(textDirection: TextDirection.ltr);
+        iconPainter.text = TextSpan(
+          text: String.fromCharCode(Icons.place_rounded.codePoint),
+          style: TextStyle(
+            fontSize: markerSize * 0.22,
+            fontFamily: Icons.place_rounded.fontFamily,
+            package: Icons.place_rounded.fontPackage,
+            color: accentColor,
+          ),
+        );
+        iconPainter.layout();
+        iconPainter.paint(
+          canvas,
+          Offset(
+            markerSize * 0.5 - iconPainter.width / 2,
+            markerSize * 0.34 - iconPainter.height / 2,
+          ),
+        );
       },
     );
   }

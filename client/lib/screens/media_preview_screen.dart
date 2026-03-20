@@ -6,10 +6,15 @@ import '../widgets/media_preview.dart';
 import '../widgets/button.dart';
 
 class MediaPreviewScreen extends StatefulWidget {
-  const MediaPreviewScreen({super.key, this.items = const []});
+  const MediaPreviewScreen({
+    super.key,
+    this.items = const [],
+    this.initialIndex = 0,
+  });
 
   static const String routePath = '/media-preview';
   final List<MediaItem> items;
+  final int initialIndex;
 
   @override
   State<MediaPreviewScreen> createState() => _MediaPreviewScreenState();
@@ -24,21 +29,21 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
     final displayItems = widget.items.isNotEmpty
         ? widget.items
         : [
-      MediaItem(
-        id: '1',
-        url: 'https://picsum.photos/seed/food1/600/400',
-        thumbnail: 'https://picsum.photos/seed/food1/100/100',
-        type: 'image',
-        name: 'Signature Dish',
-      ),
-      MediaItem(
-        id: '2',
-        url: 'https://picsum.photos/seed/food2/600/400',
-        thumbnail: 'https://picsum.photos/seed/food2/100/100',
-        type: 'image',
-        name: 'Chef Specials',
-      ),
-    ];
+            MediaItem(
+              id: '1',
+              url: 'https://picsum.photos/seed/food1/600/400',
+              thumbnail: 'https://picsum.photos/seed/food1/100/100',
+              type: 'image',
+              name: 'Signature Dish',
+            ),
+            MediaItem(
+              id: '2',
+              url: 'https://picsum.photos/seed/food2/600/400',
+              thumbnail: 'https://picsum.photos/seed/food2/100/100',
+              type: 'image',
+              name: 'Chef Specials',
+            ),
+          ];
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -57,7 +62,7 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
                   ),
                   child: const Icon(
                     LucideIcons.maximize2,
-                    size: 40,
+                    size: AppIconSizes.xl,
                     color: AppColors.primary,
                   ),
                 ),
@@ -95,6 +100,7 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
             Positioned.fill(
               child: AppMediaPreview(
                 items: displayItems,
+                initialIndex: widget.initialIndex,
                 onClose: () => setState(() => _isOpen = false),
               ),
             ),
@@ -112,7 +118,10 @@ class _MediaPreviewScreenState extends State<MediaPreviewScreen> {
                     color: AppColors.muted,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(LucideIcons.arrowLeft, size: 20),
+                  child: const Icon(
+                    LucideIcons.arrowLeft,
+                    size: AppIconSizes.defaultSize,
+                  ),
                 ),
               ),
             ),

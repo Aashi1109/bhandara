@@ -8,11 +8,21 @@ import 'base.dart';
 class EventService extends BaseService {
   final Dio _dio = apiService.dio;
 
-  Future<PaginatedResponse<Event>> getEvents({String? status}) async {
+  Future<PaginatedResponse<Event>> getEvents({
+    String? status,
+    String? createdBy,
+    int? limit,
+    String? next,
+  }) async {
     try {
       final response = await _dio.get(
         Api.events,
-        queryParameters: {'status': status},
+        queryParameters: {
+          'status': status,
+          'createdBy': createdBy,
+          'limit': limit,
+          'next': next,
+        },
       );
       return PaginatedResponse<Event>.fromJson(
         response.data['data'] as Map<String, dynamic>,
@@ -31,6 +41,20 @@ class EventService extends BaseService {
       return Event.fromJson(response.data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch event');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Event> getEventPreview(String eventId) async {
+    try {
+      final response = await _dio.get(
+        Api.eventById(eventId),
+        queryParameters: const {'view': 'preview'},
+      );
+      return Event.fromJson(response.data['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch event preview');
     } catch (e) {
       rethrow;
     }

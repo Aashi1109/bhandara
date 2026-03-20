@@ -6,13 +6,13 @@ const exploreCache = new RedisCache({
   defaultTTLSeconds: CACHE_NAMESPACE_CONFIG.Explore.ttl,
 });
 
-export const getExplorePage = (userId: string) =>
-  exploreCache.getItem<number>(userId);
+export const getExploreCursor = (userId: string) =>
+  exploreCache.getItem<string | null>(userId);
 
-export const setExplorePage = (userId: string, page: number) =>
-  exploreCache.setItem(userId, page);
+export const setExploreCursor = (userId: string, next: string | null) =>
+  exploreCache.setItem(userId, next);
 
-export const deleteExplorePage = (userId: string) =>
+export const deleteExploreCursor = (userId: string) =>
   exploreCache.deleteItem(userId);
 
 export enum EExploreComponents {

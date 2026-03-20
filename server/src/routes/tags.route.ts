@@ -1,17 +1,3 @@
-/**
- * @openapi
- * components:
- *   schemas:
- *     Tag:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         name:
- *           type: string
- *         value:
- *           type: string
- */
 import { Router } from 'express';
 import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
 import { createTag, deleteTag, getSubTags, getTagById, getTags, updateTag } from '@/features/tags/controller';

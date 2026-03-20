@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
@@ -7,17 +9,22 @@ import '../theme/theme.dart';
 import '../widgets/floating_message_bar.dart';
 import 'explore.dart';
 import 'thread.dart';
+import 'event_detail.dart';
 import '../services/socket.dart';
 import '../services/chat.dart';
 import '../widgets/snackbar.dart';
+import '../widgets/media_preview.dart';
 import '../models/chat.dart';
 import 'package:intl/intl.dart';
+import '../services/user.dart';
+import '../models/user.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.id});
+  const ChatScreen({super.key, required this.id, this.eventId});
 
   static const String routePath = '/chat/:id';
   final String id;
+  final String? eventId;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -25,17 +32,52 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   bool _isInputVisible = true;
   bool _isThreadLocked = false;
   bool _isLoadingMessages = true;
   final List<Message> _messages = [];
+  User? _currentUser;
+
+  List<_ChatMessageGroup> get _messageGroups {
+    if (_messages.isEmpty) {
+      return const [];
+    }
+
+    final sorted = [..._messages]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final groups = <_ChatMessageGroup>[];
+
+    for (final message in sorted) {
+      if (groups.isEmpty || !_isSameDay(groups.last.date, message.createdAt)) {
+        groups.add(
+          _ChatMessageGroup(date: message.createdAt, messages: [message]),
+        );
+      } else {
+        groups.last.messages.add(message);
+      }
+    }
+
+    return groups;
+  }
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
+    _loadCurrentUser();
     _loadMessages();
-    _connectSocket();
+    _listenToSocketMessages();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await userService.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
@@ -53,9 +95,9 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _connectSocket() async {
-    await socketService.connect(widget.id);
-    socketService.messages.listen((event) {
+  Future<void> _listenToSocketMessages() async {
+    await _socketSubscription?.cancel();
+    _socketSubscription = socketService.messages.listen((event) {
       if (!mounted) return;
 
       final eventName = event['event'];
@@ -64,9 +106,28 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         if (eventName == SocketEvents.messageCreated) {
           final message = Message.fromJson(eventData);
-          if (!_messages.any((m) => m.id == message.id)) {
+          final optimisticIndex = _messages.indexWhere(
+            (m) => m.parentId == null && _isOptimisticMatch(m, message),
+          );
+          if (optimisticIndex != -1) {
+            _messages[optimisticIndex] = message;
+          } else if (message.parentId == null &&
+              !_messages.any((m) => m.id == message.id)) {
             _messages.add(message);
             _scrollToBottom();
+          } else if (message.parentId != null) {
+            final parentIndex = _messages.indexWhere(
+              (m) => m.id == message.parentId,
+            );
+            if (parentIndex != -1) {
+              final parent = _messages[parentIndex];
+              final hasReply = parent.children.any((c) => c.id == message.id);
+              if (!hasReply) {
+                _messages[parentIndex] = parent.copyWith(
+                  children: [...parent.children, message],
+                );
+              }
+            }
           }
         } else if (eventName == SocketEvents.messageUpdated) {
           final updatedMsg = Message.fromJson(eventData);
@@ -77,6 +138,13 @@ class _ChatScreenState extends State<ChatScreen> {
         } else if (eventName == SocketEvents.messageDeleted) {
           final messageId = eventData['id'];
           _messages.removeWhere((m) => m.id == messageId);
+        } else if (eventName == SocketEvents.reactionCreated ||
+            eventName == SocketEvents.reactionUpdated ||
+            eventName == SocketEvents.reactionDeleted) {
+          _applyReactionEvent(
+            eventName as String,
+            eventData as Map<String, dynamic>,
+          );
         } else if (eventName == SocketEvents.threadLocked) {
           final threadId = eventData['id'];
           if (threadId == widget.id) {
@@ -122,11 +190,136 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    final eventId = widget.eventId;
+    if (eventId != null && eventId.isNotEmpty) {
+      context.go(EventDetailScreen.routePath.replaceAll(':id', eventId));
+      return;
+    }
+
+    context.go(ExploreScreen.routePath);
+  }
+
+  String _buildLocalMessageId() =>
+      'local_${DateTime.now().microsecondsSinceEpoch}';
+
+  Message _createOptimisticMessage(
+    String text,
+    List<ChatAttachment> attachments,
+  ) {
+    final user = _currentUser;
+    final localId = _buildLocalMessageId();
+    return Message(
+      id: localId,
+      localId: localId,
+      threadId: widget.id,
+      senderId: user?.id ?? '',
+      content: text.trim(),
+      createdAt: DateTime.now(),
+      senderName: user?.name ?? 'You',
+      senderAvatar: user?.avatarUrl,
+      media: attachments
+          .map(
+            (attachment) => MessageMedia(
+              id: attachment.mediaId ?? '',
+              url: attachment.url ?? '',
+              type: attachment.isVideo ? 'video' : 'image',
+            ),
+          )
+          .toList(),
+      retryMediaIds: attachments
+          .map((attachment) => attachment.mediaId)
+          .whereType<String>()
+          .toList(),
+      localPreviewPaths: attachments
+          .map((attachment) => attachment.localPath)
+          .toList(),
+      deliveryStatus: MessageDeliveryStatus.pending,
+    );
+  }
+
+  bool _sameMediaIds(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
+
+  bool _isOptimisticMatch(Message local, Message server) {
+    if (local.deliveryStatus == MessageDeliveryStatus.sent) return false;
+    return local.threadId == server.threadId &&
+        local.parentId == server.parentId &&
+        local.senderId.isNotEmpty &&
+        local.senderId == server.senderId &&
+        local.content == server.content &&
+        _sameMediaIds(local.retryMediaIds, server.retryMediaIds) &&
+        local.createdAt.difference(server.createdAt).inSeconds.abs() <= 30;
+  }
+
+  Future<void> _sendOptimisticMessage(Message optimistic) async {
+    try {
+      final message = await chatService.sendMessage(
+        widget.id,
+        optimistic.content,
+        mediaIds: optimistic.retryMediaIds,
+      );
+      if (!mounted) return;
+      setState(() {
+        final index = _messages.indexWhere(
+          (m) => m.localId == optimistic.localId,
+        );
+        if (index != -1) {
+          _messages[index] = message;
+        } else if (!_messages.any((m) => m.id == message.id)) {
+          _messages.add(message);
+        }
+      });
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        final index = _messages.indexWhere(
+          (m) => m.localId == optimistic.localId,
+        );
+        if (index != -1) {
+          _messages[index] = _messages[index].copyWith(
+            deliveryStatus: MessageDeliveryStatus.failed,
+          );
+        }
+      });
+      AppSnackBar.show(
+        context,
+        message: 'Failed to send message',
+        type: SnackBarType.error,
+      );
+    }
+  }
+
+  void _retryMessage(Message message) {
+    final retrying = message.copyWith(
+      deliveryStatus: MessageDeliveryStatus.pending,
+      createdAt: DateTime.now(),
+    );
+    setState(() {
+      final index = _messages.indexWhere((m) => m.localId == message.localId);
+      if (index != -1) {
+        _messages[index] = retrying;
+      }
+    });
+    _sendOptimisticMessage(retrying);
+  }
+
   @override
   void dispose() {
+    _socketSubscription?.cancel();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
-    socketService.disconnect();
     super.dispose();
   }
 
@@ -142,45 +335,67 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: _isLoadingMessages
                     ? const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                  ),
-                )
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      )
                     : _messages.isEmpty
                     ? const Center(
-                  child: Text(
-                    'No messages yet. Start the conversation!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.mutedForeground,
-                    ),
-                  ),
-                )
-                    : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    if (index == 0) {
-                      return Column(
-                        children: [
-                          _buildTimestamp(
-                            DateFormat(
-                              'MMMM dd, hh:mm a',
-                            ).format(msg.createdAt),
+                        child: Text(
+                          'No messages yet. Start the conversation!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mutedForeground,
                           ),
-                          const SizedBox(height: 24),
-                          _renderMessage(msg),
+                        ),
+                      )
+                    : CustomScrollView(
+                        controller: _scrollController,
+                        slivers: [
+                          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                          ..._messageGroups.expand(
+                            (group) => [
+                              SliverPersistentHeader(
+                                pinned: true,
+                                delegate: _ChatDateHeaderDelegate(
+                                  child: _buildTimestamp(
+                                    _formatStickyDate(group.date),
+                                  ),
+                                ),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  24,
+                                  12,
+                                  24,
+                                  0,
+                                ),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    final msg = group.messages[index];
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        top: index == 0 ? 0 : 32,
+                                        bottom:
+                                            index == group.messages.length - 1
+                                            ? 24
+                                            : 0,
+                                      ),
+                                      child: _renderMessage(msg),
+                                    );
+                                  }, childCount: group.messages.length),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: 120),
+                          ),
                         ],
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 32),
-                      child: _renderMessage(msg),
-                    );
-                  },
-                ),
+                      ),
               ),
             ],
           ),
@@ -190,25 +405,15 @@ class _ChatScreenState extends State<ChatScreen> {
             right: 0,
             child: FloatingMessageBar(
               isVisible: _isInputVisible,
-              onSend: (msg, mediaIds) async {
+              onSend: (msg, attachments) async {
                 if (_isThreadLocked) return;
-                if (msg
-                    .trim()
-                    .isNotEmpty || mediaIds.isNotEmpty) {
-                  try {
-                    // Send message using standardized emit
-                    await socketService.emit(SocketEvents.messageCreated, {
-                      'content': {'text': msg, 'mediaIds': mediaIds},
-                      'threadId': widget.id,
-                    });
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    AppSnackBar.show(
-                      context,
-                      message: 'Failed to send message: $e',
-                      type: SnackBarType.error,
-                    );
-                  }
+                if (msg.trim().isNotEmpty || attachments.isNotEmpty) {
+                  final optimistic = _createOptimisticMessage(msg, attachments);
+                  setState(() {
+                    _messages.add(optimistic);
+                  });
+                  _scrollToBottom();
+                  await _sendOptimisticMessage(optimistic);
                 }
               },
             ),
@@ -221,10 +426,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery
-            .of(context)
-            .padding
-            .top + 8,
+        top: MediaQuery.of(context).padding.top + 8,
         left: 20,
         right: 20,
         bottom: 16,
@@ -236,10 +438,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () =>
-            context.canPop()
-                ? context.pop()
-                : context.go(ExploreScreen.routePath),
+            onTap: _goBack,
             child: Container(
               width: 40,
               height: 40,
@@ -257,7 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: const Icon(
                 LucideIcons.arrowLeft,
-                size: 20,
+                size: AppIconSizes.defaultSize,
                 color: AppColors.primary,
               ),
             ),
@@ -313,7 +512,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 const Icon(
                   LucideIcons.bell,
-                  size: 20,
+                  size: AppIconSizes.defaultSize,
                   color: AppColors.primary,
                 ),
                 Positioned(
@@ -342,7 +541,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: const Icon(
               LucideIcons.moreHorizontal,
-              size: 20,
+              size: AppIconSizes.defaultSize,
               color: AppColors.surface,
             ),
           ),
@@ -352,13 +551,21 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _renderMessage(Message msg) {
+    final attachmentCount = msg.media.isNotEmpty
+        ? msg.media.length
+        : msg.retryMediaIds.length;
     return _buildMessage(
       name: msg.senderName ?? 'User',
       initials: msg.senderName?.split(' ').map((e) => e[0]).join('') ?? 'U',
       imageUrl: msg.senderAvatar,
       text: msg.content,
       time: DateFormat('hh:mm a').format(msg.createdAt),
-      hasThread: false, // For now
+      hasThread: msg.children.isNotEmpty,
+      threadMessage: msg,
+      status: msg.deliveryStatus,
+      onRetry: msg.hasFailed ? () => _retryMessage(msg) : null,
+      media: msg.media,
+      attachmentCount: attachmentCount,
     );
   }
 
@@ -383,6 +590,119 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatStickyDate(DateTime date) {
+    final now = DateTime.now();
+    if (_isSameDay(now, date)) {
+      return 'Today';
+    }
+
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (_isSameDay(yesterday, date)) {
+      return 'Yesterday';
+    }
+
+    return DateFormat('MMMM dd, yyyy').format(date);
+  }
+
+  void _applyReactionEvent(String eventName, Map<String, dynamic> eventData) {
+    if (eventData['contentPath'] != 'messages') {
+      return;
+    }
+
+    final messageId = eventData['id'] as String?;
+    final rawReaction = eventData['reaction'];
+    if (messageId == null || rawReaction is! Map<String, dynamic>) {
+      return;
+    }
+
+    final messageIndex = _messages.indexWhere(
+      (message) => message.id == messageId,
+    );
+    if (messageIndex == -1) {
+      return;
+    }
+
+    final reaction = MessageReaction.fromJson(rawReaction);
+    final reactions = List<MessageReaction>.from(
+      _messages[messageIndex].reactions,
+    );
+
+    switch (eventName) {
+      case SocketEvents.reactionCreated:
+      case SocketEvents.reactionUpdated:
+        final sameIdIndex = reactions.indexWhere(
+          (item) => item.id == reaction.id,
+        );
+        final sameUserIndex = reactions.indexWhere(
+          (item) => item.userId == reaction.userId,
+        );
+        if (sameIdIndex != -1) {
+          reactions[sameIdIndex] = reaction;
+        } else if (sameUserIndex != -1) {
+          reactions[sameUserIndex] = reaction;
+        } else {
+          reactions.add(reaction);
+        }
+        break;
+      case SocketEvents.reactionDeleted:
+        reactions.removeWhere((item) => item.id == reaction.id);
+        break;
+    }
+
+    _messages[messageIndex] = _messages[messageIndex].copyWith(
+      reactions: reactions,
+    );
+  }
+
+  List<MediaItem> _buildPreviewItems(List<MessageMedia> media) {
+    return media
+        .where((item) => item.url.isNotEmpty)
+        .map(
+          (item) => MediaItem(
+            id: item.id.isNotEmpty ? item.id : item.url,
+            url: item.url,
+            thumbnail: item.url,
+            type: item.type ?? 'image',
+            name: 'Attachment',
+          ),
+        )
+        .toList();
+  }
+
+  void _openMediaPreview(
+    List<MessageMedia> media, {
+    int initialIndex = 0,
+    String? reactionContentId,
+    List<MessageReaction> initialReactions = const [],
+    Future<List<MessageReaction>> Function()? loadReactions,
+  }) {
+    final items = _buildPreviewItems(media);
+    if (items.isEmpty) {
+      return;
+    }
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Media preview',
+      barrierColor: Colors.black54,
+      pageBuilder: (_, _, _) => AppMediaPreview(
+        items: items,
+        initialIndex: initialIndex,
+        reactionContentId: reactionContentId,
+        reactionContentPath: reactionContentId != null ? 'messages' : null,
+        initialReactions: initialReactions,
+        currentUserId: _currentUser?.id,
+        loadReactions: loadReactions,
+        onClose: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
   Widget _buildMessage({
     required String name,
     String? initials,
@@ -391,9 +711,23 @@ class _ChatScreenState extends State<ChatScreen> {
     required String text,
     required String time,
     bool hasThread = false,
+    Message? threadMessage,
+    MessageDeliveryStatus status = MessageDeliveryStatus.sent,
+    VoidCallback? onRetry,
+    List<MessageMedia> media = const [],
+    int attachmentCount = 0,
   }) {
+    final isPending = status == MessageDeliveryStatus.pending;
+    final isFailed = status == MessageDeliveryStatus.failed;
+    final imageMedia =
+        media.isNotEmpty &&
+            media.first.url.isNotEmpty &&
+            media.first.type == 'image'
+        ? media.first
+        : null;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
       children: [
         Container(
           width: 40,
@@ -404,29 +738,30 @@ class _ChatScreenState extends State<ChatScreen> {
             border: Border.all(color: AppColors.border),
             image: imageUrl != null
                 ? DecorationImage(
-              image: NetworkImage(imageUrl),
-              fit: BoxFit.cover,
-            )
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  )
                 : null,
           ),
           alignment: Alignment.center,
           child: imageUrl == null
               ? Text(
-            initials ?? '',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
-          )
+                  initials ?? '',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                )
               : null,
         ),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 4,
             children: [
               Row(
+                spacing: 8,
                 children: [
                   Text(
                     name,
@@ -436,8 +771,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: AppColors.primary,
                     ),
                   ),
-                  if (badge != null) ...[
-                    const SizedBox(width: 8),
+                  if (badge != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -457,33 +791,71 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.muted,
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
+              if (imageMedia != null)
+                GestureDetector(
+                  onTap: () => _openMediaPreview(
+                    media,
+                    reactionContentId: threadMessage?.id,
+                    initialReactions: threadMessage?.reactions ?? const [],
+                    loadReactions: threadMessage == null
+                        ? null
+                        : () async {
+                            final message = await chatService.getMessage(
+                              widget.id,
+                              threadMessage.id,
+                            );
+                            return message.reactions;
+                          },
                   ),
-                  border: Border.all(color: AppColors.border),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      imageMedia.url,
+                      width: 160,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+                  ),
                 ),
-                child: Text(
-                  text,
+              if (text.isNotEmpty || attachmentCount == 0)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    text.isEmpty && attachmentCount > 0
+                        ? 'Media attachment'
+                        : text,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              if (attachmentCount > 0) ...[
+                Text(
+                  '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    height: 1.5,
-                    color: AppColors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
                   ),
                 ),
-              ),
-              const SizedBox(height: 4),
+              ],
               Row(
+                spacing: 8,
                 children: [
                   Text(
                     time,
@@ -493,15 +865,65 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: AppColors.mutedForeground,
                     ),
                   ),
-                  if (hasThread) ...[
-                    const SizedBox(width: 8),
+                  if (isPending) ...[
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const Text(
+                      'Sending',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
+                  if (isFailed && onRetry != null) ...[
                     GestureDetector(
-                      onTap: () =>
-                          context.push(
-                            ThreadScreen.routePath.replaceAll(':id', '1'),
-                          ),
+                      onTap: onRetry,
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
+                        spacing: 4,
+                        children: [
+                          Icon(
+                            LucideIcons.rotateCcw,
+                            size: AppIconSizes.xs,
+                            color: AppColors.error,
+                          ),
+                          Text(
+                            'Retry',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (hasThread) ...[
+                    GestureDetector(
+                      onTap: () => context.push(
+                        ThreadScreen.routePath.replaceAll(
+                          ':id',
+                          threadMessage!.id,
+                        ),
+                        extra: {
+                          'threadId': widget.id,
+                          'chatId': widget.id,
+                          'eventId': widget.eventId,
+                          'message': threadMessage,
+                        },
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 4,
                         children: [
                           Text(
                             'Reply to thread',
@@ -511,10 +933,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: AppColors.primary,
                             ),
                           ),
-                          SizedBox(width: 4),
                           Icon(
                             LucideIcons.messageSquare,
-                            size: 12,
+                            size: AppIconSizes.xs,
                             color: AppColors.primary,
                           ),
                         ],
@@ -524,12 +945,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               if (hasThread) ...[
-                const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () =>
-                      context.push(
-                        ThreadScreen.routePath.replaceAll(':id', '1'),
-                      ),
+                  onTap: () => context.push(
+                    ThreadScreen.routePath.replaceAll(':id', threadMessage!.id),
+                    extra: {
+                      'threadId': widget.id,
+                      'chatId': widget.id,
+                      'eventId': widget.eventId,
+                      'message': threadMessage,
+                    },
+                  ),
                   child: _buildThreadCard(),
                 ),
               ],
@@ -550,12 +975,13 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
         children: [
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'THREAD: PARKING',
+                'THREAD',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
@@ -565,12 +991,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               Icon(
                 LucideIcons.externalLink,
-                size: 12,
+                size: AppIconSizes.xs,
                 color: AppColors.mutedForeground,
               ),
             ],
           ),
-          const SizedBox(height: 12),
           Row(
             children: [
               Container(
@@ -588,7 +1013,7 @@ class _ChatScreenState extends State<ChatScreen> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Is there free parking near the entrance?',
+                  'Open replies',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -600,7 +1025,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
           Row(
             children: [
               SizedBox(
@@ -646,9 +1070,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: AppColors.surface,
                             width: 2,
                           ),
-                          image: DecorationImage(
+                          image: const DecorationImage(
                             image: NetworkImage(
-                              'https://picsum.photos/seed/u$index/50/50',
+                              'https://picsum.photos/seed/thread/50/50',
                             ),
                             fit: BoxFit.cover,
                           ),
@@ -673,6 +1097,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
+      spacing: 8,
       children: [
         Container(
           width: double.infinity,
@@ -738,7 +1163,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   child: const Icon(
                     LucideIcons.plus,
-                    size: 16,
+                    size: AppIconSizes.m,
                     color: Colors.white,
                   ),
                 ),
@@ -746,7 +1171,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -782,5 +1206,43 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ],
     );
+  }
+}
+
+class _ChatMessageGroup {
+  const _ChatMessageGroup({required this.date, required this.messages});
+
+  final DateTime date;
+  final List<Message> messages;
+}
+
+class _ChatDateHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _ChatDateHeaderDelegate({required this.child});
+
+  final Widget child;
+
+  @override
+  double get minExtent => 44;
+
+  @override
+  double get maxExtent => 44;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: AppColors.surface.withValues(alpha: 0.92),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _ChatDateHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
   }
 }

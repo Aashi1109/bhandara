@@ -12,17 +12,15 @@ const paginationParser = (
     sortBy,
     sortOrder,
     next: _next,
-    page,
     startDate,
     endDate,
   } = req.query;
   const parsedLimit = +(limit ?? 10);
-  const parsedPageNumber = +(page ?? 1);
   const parsedSortBy =
-    sortBy !== "createdAt" && sortBy !== "updatedAt" ? null : sortBy;
+    sortBy !== "createdAt" && sortBy !== "updatedAt" ? "createdAt" : sortBy;
 
   const parsedSortOrder =
-    sortOrder !== "asc" && sortOrder !== "desc" ? null : sortOrder;
+    sortOrder !== "asc" && sortOrder !== "desc" ? "desc" : sortOrder;
 
   let parsedStartDate = startDate ? new Date(startDate as string) : null;
   let parsedEndDate = endDate ? new Date(endDate as string) : null;
@@ -40,7 +38,6 @@ const paginationParser = (
   // add parsed pagination parameters to request object
   req.pagination = {
     limit: parsedLimit,
-    page: parsedPageNumber,
     sortBy: parsedSortBy,
     sortOrder: parsedSortOrder,
     startDate: parsedStartDate,

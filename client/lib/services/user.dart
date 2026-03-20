@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import '../constants/api.dart';
 import 'api.dart';
+import '../models/achievement.dart';
 import '../models/api_response.dart';
+import '../models/event.dart';
 import '../models/user.dart';
 import 'base.dart';
 
@@ -13,6 +15,18 @@ class UserService extends BaseService {
       final response = await _dio.get(Api.session);
       final json = response.data['data'] as Map<String, dynamic>;
       return User.fromJson(json['user'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch user');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<User?> getUserById(String id) async {
+    try {
+      final response = await _dio.get(Api.getUserById(id));
+      final json = response.data['data'] as Map<String, dynamic>;
+      return User.fromJson(json);
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch user');
     } catch (e) {
@@ -46,7 +60,7 @@ class UserService extends BaseService {
       );
       return PaginatedResponse<User>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-            (json) => User.fromJson(json! as Map<String, dynamic>),
+        (json) => User.fromJson(json! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch user');
@@ -55,12 +69,33 @@ class UserService extends BaseService {
     }
   }
 
-  Future<List<dynamic>> getUserInterests(String userId) async {
+  Future<List<Tag>> getUserInterests(String userId) async {
     try {
       final response = await _dio.get(Api.userInterests(userId));
-      return response.data['data'] as List? ?? [];
+      final data = response.data['data'] as List? ?? [];
+      return data
+          .whereType<Map>()
+          .map((json) => Tag.fromJson(json.cast<String, dynamic>()))
+          .toList();
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch user interests');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<Achievement>> getUserAchievements(String userId) async {
+    try {
+      final response = await _dio.get(Api.userAchievements(userId));
+      final data = response.data['data'] as Map<String, dynamic>? ?? const {};
+      final items = data['items'] as List? ?? const [];
+
+      return items
+          .whereType<Map>()
+          .map((json) => Achievement.fromJson(json.cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch achievements');
     } catch (e) {
       rethrow;
     }

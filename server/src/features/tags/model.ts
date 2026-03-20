@@ -47,5 +47,8 @@ Tag.init(
     sequelize: getDBConnection(),
     timestamps: true,
     paranoid: true,
+    indexes: [
+      { name: 'tags_updatedAt_idx', fields: ['updatedAt'] },
+    ],
   },
 );

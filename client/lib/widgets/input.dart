@@ -162,26 +162,24 @@ class _AppInputState extends State<AppInput> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     final displayError = widget.error ?? _internalError;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
+      spacing: 8,
       children: [
         if (widget.label != null) ...[
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               widget.label!.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
+              style: typography.overline.copyWith(
                 color: AppColors.mutedForeground,
               ),
             ),
           ),
-          const SizedBox(height: 8),
         ],
         Container(
           height: widget.height,
@@ -197,13 +195,14 @@ class _AppInputState extends State<AppInput> {
                 : null,
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 16,
             children: [
               if (widget.icon != null) ...[
-                const SizedBox(width: 16),
                 IconTheme(
                   data: const IconThemeData(
                     color: AppColors.mutedForeground,
-                    size: 20,
+                    size: AppIconSizes.defaultSize,
                   ),
                   child: widget.icon!,
                 ),
@@ -221,16 +220,12 @@ class _AppInputState extends State<AppInput> {
                   keyboardType: widget.keyboardType,
                   maxLines: widget.maxLines,
                   minLines: widget.minLines,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  style: typography.bodyMD.copyWith(
                     color: AppColors.primary,
                   ),
                   decoration: InputDecoration(
                     hintText: widget.placeholder,
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                    hintStyle: typography.bodyMD.copyWith(
                       color: AppColors.mutedForeground.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
@@ -253,10 +248,7 @@ class _AppInputState extends State<AppInput> {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               displayError,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2,
+              style: typography.overline.copyWith(
                 color: AppColors.error,
               ),
             ),

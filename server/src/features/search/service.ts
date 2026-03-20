@@ -23,7 +23,7 @@ export interface ISearchFilters {
   };
   tags?: string[];
   limit?: number;
-  offset?: number;
+  next?: string | null;
 }
 
 export interface ISearchResult {
@@ -35,6 +35,7 @@ export interface ISearchResult {
   metadata: Record<string, any>;
   relevanceScore: number;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 class SearchService {
@@ -47,28 +48,30 @@ class SearchService {
     pagination: Partial<IPaginationParams> = {},
   ): Promise<PaginatedResult<ISearchResult>> {
     const limit = filters.limit || pagination.limit || 20;
-    const offset = filters.offset || ((pagination.page || 1) - 1) * limit;
+    const nextCursor = filters.next || pagination.next || null;
+    const startIndex = nextCursor ? this.decodeCursor(nextCursor) : 0;
+    const fetchLimit = startIndex + limit;
 
     const results: ISearchResult[] = [];
     let totalCount = 0;
 
     // Search events
     if (!filters.types || filters.types.includes('event')) {
-      const eventResults = await this.searchEvents(query, filters, limit, offset);
+      const eventResults = await this.searchEvents(query, filters, fetchLimit);
       results.push(...eventResults.data);
       totalCount += eventResults.total;
     }
 
     // Search users
     if (!filters.types || filters.types.includes('user')) {
-      const userResults = await this.searchUsers(query, filters, limit, offset);
+      const userResults = await this.searchUsers(query, filters, fetchLimit);
       results.push(...userResults.data);
       totalCount += userResults.total;
     }
 
     // Search tags
     if (!filters.types || filters.types.includes('tag')) {
-      const tagResults = await this.searchTags(query, filters, limit, offset);
+      const tagResults = await this.searchTags(query, filters, fetchLimit);
       results.push(...tagResults.data);
       totalCount += tagResults.total;
     }
@@ -76,28 +79,35 @@ class SearchService {
     // Sort by relevance score and recency
     results.sort((a, b) => {
       if (Math.abs(a.relevanceScore - b.relevanceScore) < 0.1) {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       }
       return b.relevanceScore - a.relevanceScore;
     });
 
-    const totalPages = Math.ceil(totalCount / limit);
-    const currentPage = Math.floor(offset / limit) + 1;
-    const hasNext = results.length > limit;
+    const items = results.slice(startIndex, startIndex + limit);
+    const nextIndex = startIndex + items.length;
+    const hasNext = nextIndex < results.length;
 
     return {
-      items: results.slice(0, limit),
+      items,
       pagination: {
         total: totalCount,
-        totalPages,
-        page: currentPage,
         limit,
         hasNext,
-        next: hasNext ? results[limit].id : null,
-        sortBy: 'createdAt',
+        next: hasNext ? this.encodeCursor(nextIndex) : null,
+        sortBy: 'updatedAt',
         sortOrder: 'desc',
       },
     };
+  }
+
+  private encodeCursor(index: number): string {
+    return Buffer.from(String(index), 'utf8').toString('base64url');
+  }
+
+  private decodeCursor(cursor: string): number {
+    const decoded = Number.parseInt(Buffer.from(cursor, 'base64url').toString('utf8'), 10);
+    return Number.isFinite(decoded) && decoded >= 0 ? decoded : 0;
   }
 
   /**
@@ -107,7 +117,6 @@ class SearchService {
     query: string,
     filters: ISearchFilters,
     limit: number,
-    offset: number,
   ): Promise<{ data: ISearchResult[]; total: number }> {
     const whereClause: any = {
       [Op.or]: [
@@ -163,10 +172,10 @@ class SearchService {
       };
     }
 
-    const { count, rows } = await Event.findAndCountAll({
+    const count = await Event.count({ where: whereClause });
+    const rows = await Event.findAll({
       where: whereClause,
       limit,
-      offset,
       order: [
         [
           Sequelize.literal(`CASE 
@@ -177,7 +186,8 @@ class SearchService {
         END`),
           'ASC',
         ],
-        ['createdAt', 'DESC'],
+        ['updatedAt', 'DESC'],
+        ['id', 'DESC'],
       ],
       include: [
         {
@@ -209,6 +219,7 @@ class SearchService {
         },
         relevanceScore,
         createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
       };
     });
 
@@ -222,7 +233,6 @@ class SearchService {
     query: string,
     filters: ISearchFilters,
     limit: number,
-    offset: number,
   ): Promise<{ data: ISearchResult[]; total: number }> {
     const whereClause = {
       [Op.or]: [
@@ -244,10 +254,10 @@ class SearchService {
       ],
     };
 
-    const { count, rows } = await User.findAndCountAll({
+    const count = await User.count({ where: whereClause });
+    const rows = await User.findAll({
       where: whereClause,
       limit,
-      offset,
       order: [
         [
           Sequelize.literal(`CASE 
@@ -258,7 +268,8 @@ class SearchService {
         END`),
           'ASC',
         ],
-        ['createdAt', 'DESC'],
+        ['updatedAt', 'DESC'],
+        ['id', 'DESC'],
       ],
     });
 
@@ -280,6 +291,7 @@ class SearchService {
         },
         relevanceScore,
         createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       };
     });
 
@@ -293,7 +305,6 @@ class SearchService {
     query: string,
     filters: ISearchFilters,
     limit: number,
-    offset: number,
   ): Promise<{ data: ISearchResult[]; total: number }> {
     const whereClause = {
       [Op.or]: [
@@ -310,10 +321,10 @@ class SearchService {
       ],
     };
 
-    const { count, rows } = await Tag.findAndCountAll({
+    const count = await Tag.count({ where: whereClause });
+    const rows = await Tag.findAll({
       where: whereClause,
       limit,
-      offset,
       order: [
         [
           Sequelize.literal(`CASE 
@@ -323,7 +334,8 @@ class SearchService {
         END`),
           'ASC',
         ],
-        ['createdAt', 'DESC'],
+        ['updatedAt', 'DESC'],
+        ['id', 'DESC'],
       ],
     });
 
@@ -342,6 +354,7 @@ class SearchService {
         },
         relevanceScore,
         createdAt: tag.createdAt,
+        updatedAt: tag.updatedAt,
       };
     });
 

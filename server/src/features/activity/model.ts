@@ -73,9 +73,12 @@ Activity.init(
     paranoid: true,
     indexes: [
       { fields: ['actorId', 'createdAt'] },
+      { fields: ['actorId', 'updatedAt'] },
       { fields: ['recipientId', 'createdAt'] },
+      { fields: ['recipientId', 'updatedAt'] },
       { fields: ['entityType', 'entityId'] },
       { fields: ['type'] },
+      { fields: ['updatedAt'] },
     ],
   },
 );

@@ -6,6 +6,7 @@ import { Media } from '@/features/media/model';
 import { MEDIA_TABLE_NAME } from '@/features/media/constants';
 import { Message } from '@/features/messages/model';
 import { Reaction } from '@/features/reactions/model';
+import { SavedEntity } from '@/features/saves/model';
 import { SearchResult } from '@/features/search/model';
 import { Tag } from '@/features/tags/model';
 import { Thread } from '@/features/threads/model';
@@ -21,6 +22,7 @@ const REGISTERED_MODELS = [
   Thread,
   Message,
   Reaction,
+  SavedEntity,
   Activity,
   UserAchievement,
   AchievementProgress,

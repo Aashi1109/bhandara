@@ -78,14 +78,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isNewUser = ref
-        .watch(loginFlowProvider)
-        .data['id'] == null;
+    final typography = context.appTypography;
+    final bool isNewUser = ref.watch(loginFlowProvider).data['id'] == null;
     debugPrint('isNewUser: $isNewUser');
 
-    final email = ref
-        .watch(loginFlowProvider)
-        .email ?? 'User';
+    final email = ref.watch(loginFlowProvider).email ?? 'User';
     final initial = email.isNotEmpty && email != 'User'
         ? email[0].toUpperCase()
         : 'U';
@@ -139,29 +136,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 32),
-                        const Text(
+                        Text(
                           'Welcome back',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -1,
-                            color: AppColors.primary,
-                          ),
+                          style: typography.heading2,
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Enter your password to continue',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.mutedForeground,
-                          ),
+                          style: typography.bodyLG,
                         ),
                         const SizedBox(height: 40),
 
                         // User Badge
-                        Center(
-                          child: Container(
+                        LayoutBuilder(
+                          builder: (context, constraints) => Container(
+                            width: constraints.maxWidth,
                             padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
                             decoration: BoxDecoration(
                               color: AppColors.surface,
@@ -178,7 +167,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ],
                             ),
                             child: Row(
-                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
                                   width: 32,
@@ -190,27 +178,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   child: Center(
                                     child: Text(
                                       initial,
-                                      style: const TextStyle(
+                                      style: typography.labelSM.copyWith(
                                         color: AppColors.surface,
-                                        fontSize: 10,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  email,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
+                                Expanded(
+                                  child: Text(
+                                    email,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: typography.labelMD,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 const Icon(
                                   LucideIcons.checkCircle2,
-                                  size: 16,
+                                  size: AppIconSizes.m,
                                   color: AppColors.accent,
                                 ),
                               ],
@@ -256,7 +243,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ? LucideIcons.eyeOff
                                   : LucideIcons.eye,
                               color: AppColors.mutedForeground,
-                              size: 20,
+                              size: AppIconSizes.defaultSize,
                             ),
                             onPressed: () =>
                                 setState(() => _showPassword = !_showPassword),
@@ -274,8 +261,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           fullWidth: true,
                           label: 'Log In',
                           onPressed:
-                          (_passwordController.text.isEmpty ||
-                              (isNewUser && !passwordRequirements.allMet))
+                              (_passwordController.text.isEmpty ||
+                                  (isNewUser && !passwordRequirements.allMet))
                               ? null
                               : _handleLogin,
                           loadable: !isNewUser,
@@ -283,13 +270,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 16),
                         TextButton(
                           onPressed: () {},
-                          child: const Text(
+                          child: Text(
                             'FORGOT PASSWORD?',
-                            style: TextStyle(
+                            style: typography.overline.copyWith(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.5,
-                              color: AppColors.mutedForeground,
                             ),
                           ),
                         ),
@@ -297,17 +283,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(40, 0, 40, 24),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
                   child: Text(
                     'Protected by reCAPTCHA and subject to the Privacy Policy and Terms of Service.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.mutedForeground,
-                      height: 1.5,
-                    ),
+                    style: typography.bodySM,
                   ),
                 ),
               ],

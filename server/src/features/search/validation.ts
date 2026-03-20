@@ -3,7 +3,7 @@ import { EEventStatus, EEventType } from "@/definitions/enums";
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),
-  page: Joi.number().integer().min(1).default(1),
+  next: Joi.string().allow(null, '').optional(),
   limit: Joi.number().integer().min(1).max(100).default(20),
   filters: Joi.object({
     types: Joi.array().items(Joi.string().valid("event", "user", "tag")),

@@ -16,13 +16,17 @@ import {
 } from "./helpers";
 import { NotFoundError } from "@/exceptions";
 import type { FindOptions } from "sequelize";
+import EntityStatsService from "@/features/stats/service";
 
 class TagService {
   private readonly getCache = getTagCache;
   private readonly setCache = setTagCache;
   private readonly deleteCache = deleteTagCache;
+  private readonly entityStatsService: EntityStatsService;
 
-  constructor() {}
+  constructor() {
+    this.entityStatsService = new EntityStatsService();
+  }
 
   async getById(id: string): Promise<ITag | null> {
     const cached = await this.getCache(id);
@@ -119,6 +123,23 @@ class TagService {
 
     await event.update({ tags: Array.from(tags) });
     await deleteEventTagsCache(eventId);
+    await this.entityStatsService.syncEventRowStats(event.toJSON() as IEvent);
+    return true;
+  }
+
+  async associateTag(eventId: string, tagId: string) {
+    const event = await Event.findByPk(eventId);
+    if (!event) throw new NotFoundError("Event not found");
+    const tags = new Set((event.tags || []) as string[]);
+
+    if (tags.has(tagId)) {
+      return true;
+    }
+
+    tags.add(tagId);
+    await event.update({ tags: Array.from(tags) });
+    await deleteEventTagsCache(eventId);
+    await this.entityStatsService.syncEventRowStats(event.toJSON() as IEvent);
     return true;
   }
 

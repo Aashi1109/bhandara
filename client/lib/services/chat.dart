@@ -8,14 +8,24 @@ import 'base.dart';
 class ChatService extends BaseService {
   final Dio _dio = apiService.dio;
 
+  Map<String, dynamic> _compactMap(Map<String, dynamic> input) {
+    final map = <String, dynamic>{};
+    input.forEach((key, value) {
+      if (value != null) {
+        map[key] = value;
+      }
+    });
+    return map;
+  }
+
   Future<PaginatedResponse<Thread>> getEventThreads(String eventId, {
-    int? page,
+    String? next,
     int? limit,
   }) async {
     try {
       final response = await _dio.get(
         Api.eventThreads(eventId),
-        queryParameters: {'page': ?page, 'limit': ?limit},
+        queryParameters: _compactMap({'next': next, 'limit': limit}),
       );
       return PaginatedResponse<Thread>.fromJson(
         response.data['data'] as Map<String, dynamic>,
@@ -35,7 +45,7 @@ class ChatService extends BaseService {
     try {
       final response = await _dio.post(
         Api.eventThreads(eventId),
-        data: {'title': ?title, 'type': type},
+        data: _compactMap({'title': title, 'type': type}),
       );
       return Thread.fromJson(response.data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -49,7 +59,7 @@ class ChatService extends BaseService {
     try {
       final response = await _dio.get(
         Api.threads,
-        queryParameters: {'eventId': ?eventId},
+        queryParameters: _compactMap({'eventId': eventId}),
       );
       return PaginatedResponse<Thread>.fromJson(
         response.data['data'] as Map<String, dynamic>,
@@ -63,13 +73,13 @@ class ChatService extends BaseService {
   }
 
   Future<PaginatedResponse<Message>> getMessages(String threadId, {
-    int? page,
+    String? next,
     int? limit,
   }) async {
     try {
       final response = await _dio.get(
         Api.threadMessages(threadId),
-        queryParameters: {'page': ?page, 'limit': ?limit},
+        queryParameters: _compactMap({'next': next, 'limit': limit}),
       );
       return PaginatedResponse<Message>.fromJson(
         response.data['data'] as Map<String, dynamic>,
@@ -84,13 +94,13 @@ class ChatService extends BaseService {
 
   Future<PaginatedResponse<Message>> getChildMessages(String threadId,
       String parentId, {
-        int? page,
+        String? next,
         int? limit,
       }) async {
     try {
       final response = await _dio.get(
         Api.threadChildMessages(threadId, parentId),
-        queryParameters: {'page': ?page, 'limit': ?limit},
+        queryParameters: _compactMap({'next': next, 'limit': limit}),
       );
       return PaginatedResponse<Message>.fromJson(
         response.data['data'] as Map<String, dynamic>,
@@ -103,6 +113,17 @@ class ChatService extends BaseService {
     }
   }
 
+  Future<Message> getMessage(String threadId, String messageId) async {
+    try {
+      final response = await _dio.get(Api.threadMessage(threadId, messageId));
+      return Message.fromJson(response.data['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch message');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Message> sendMessage(String threadId,
       String content, {
         String? type,
@@ -110,13 +131,22 @@ class ChatService extends BaseService {
         String? parentId,
       }) async {
     try {
+      final trimmedContent = content.trim();
+      final hasMedia = mediaIds != null && mediaIds.isNotEmpty;
+      final messageContent = hasMedia
+          ? _compactMap({
+              'text': trimmedContent.isEmpty ? null : trimmedContent,
+              'media': mediaIds,
+            })
+          : {'text': trimmedContent};
+
       final response = await _dio.post(
         Api.threadMessages(threadId),
-        data: {
-          'content': {'text': content, 'mediaIds': ?mediaIds},
-          'type': ?type,
-          'parentId': ?parentId,
-        },
+        data: _compactMap({
+          'content': messageContent,
+          'type': type,
+          'parentId': parentId,
+        }),
       );
       return Message.fromJson(response.data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {

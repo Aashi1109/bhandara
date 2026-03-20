@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { faker } from '@faker-js/faker';
 import dotenv from 'dotenv';
 import type { Transaction } from 'sequelize';

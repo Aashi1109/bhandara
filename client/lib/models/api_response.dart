@@ -31,9 +31,7 @@ class PaginatedResponse<T> {
           ? Pagination.fromJson(paginationJson)
           : Pagination(
         total: itemsJson.length,
-        page: 1,
         limit: itemsJson.length,
-        totalPages: 1,
         hasNext: false,
       ),
     );
@@ -46,9 +44,7 @@ class PaginatedResponse<T> {
 class Pagination {
   Pagination({
     required this.total,
-    required this.page,
     required this.limit,
-    required this.totalPages,
     required this.hasNext,
     this.next,
   });
@@ -56,18 +52,14 @@ class Pagination {
   factory Pagination.fromJson(Map<String, dynamic> json) {
     return Pagination(
       total: (json['total'] ?? 0) as int,
-      page: (json['page'] ?? 1) as int,
       limit: (json['limit'] ?? 10) as int,
-      totalPages: (json['totalPages'] ?? 0) as int,
       hasNext: (json['hasNext'] ?? false) as bool,
       next: json['next'] as String?,
     );
   }
 
   final int total;
-  final int page;
   final int limit;
-  final int totalPages;
   final bool hasNext;
   final String? next;
 }

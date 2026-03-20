@@ -22,6 +22,7 @@ class SocketEvents {
 
   // REACTIONs
   static const String reactionCreated = 'reaction:created';
+  static const String reactionUpdated = 'reaction:updated';
   static const String reactionDeleted = 'reaction:deleted';
 
   static const String userUpdated = 'user:updated';

@@ -42,7 +42,7 @@ class SuccessScreen extends StatelessWidget {
                       ),
                       child: const Icon(
                         LucideIcons.check,
-                        size: 48,
+                        size: AppIconSizes.hero,
                         color: AppColors.surface,
                       ),
                     ),
@@ -84,7 +84,7 @@ class SuccessScreen extends StatelessWidget {
                                   ),
                                   child: CachedNetworkImage(
                                     imageUrl:
-                                    'https://picsum.photos/seed/burrito/200/200',
+                                        'https://picsum.photos/seed/burrito/200/200',
                                     width: 80,
                                     height: 80,
                                     fit: BoxFit.cover,
@@ -145,7 +145,7 @@ class SuccessScreen extends StatelessWidget {
                                       children: [
                                         Icon(
                                           LucideIcons.mapPin,
-                                          size: 14,
+                                          size: AppIconSizes.s,
                                           color: AppColors.mutedForeground,
                                         ),
                                         SizedBox(width: 4),
@@ -179,7 +179,7 @@ class SuccessScreen extends StatelessWidget {
                                   children: [
                                     Icon(
                                       LucideIcons.clock,
-                                      size: 16,
+                                      size: AppIconSizes.m,
                                       color: AppColors.mutedForeground,
                                     ),
                                     SizedBox(width: 8),
@@ -220,7 +220,7 @@ class SuccessScreen extends StatelessWidget {
                                     const SizedBox(width: 6),
                                     Icon(
                                       LucideIcons.users,
-                                      size: 14,
+                                      size: AppIconSizes.s,
                                       color: AppColors.mutedForeground
                                           .withValues(alpha: 0.4),
                                     ),

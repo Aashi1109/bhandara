@@ -148,7 +148,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             ),
                             child: const Icon(
                               LucideIcons.arrowLeft,
-                              size: 20,
+                              size: AppIconSizes.defaultSize,
                               color: AppColors.primary,
                             ),
                           ),
@@ -158,7 +158,10 @@ class _SearchScreenState extends State<SearchScreen> {
                           child: AppInput(
                             controller: _controller,
                             placeholder: 'Search events, people, tags...',
-                            icon: const Icon(LucideIcons.search, size: 20),
+                            icon: const Icon(
+                              LucideIcons.search,
+                              size: AppIconSizes.defaultSize,
+                            ),
                             height: 48,
                             borderRadius: 50,
                             onChanged: (value) {
@@ -171,7 +174,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           padding: EdgeInsets.all(8),
                           child: Icon(
                             LucideIcons.slidersHorizontal,
-                            size: 24,
+                            size: AppIconSizes.l,
                             color: AppColors.primary,
                           ),
                         ),
@@ -261,7 +264,7 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Icon(
               LucideIcons.searchX,
-              size: 48,
+              size: AppIconSizes.hero,
               color: AppColors.mutedForeground,
             ),
             SizedBox(height: 16),
@@ -343,6 +346,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
+          spacing: 16,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -356,7 +360,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     )
                   : _placeholderImage(result),
             ),
-            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +425,7 @@ class _SearchScreenState extends State<SearchScreen> {
             : result.type == 'user'
             ? LucideIcons.user
             : LucideIcons.tag,
-        size: 32,
+        size: AppIconSizes.xl,
         color: AppColors.mutedForeground,
       ),
     );
@@ -433,7 +436,11 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(LucideIcons.search, size: 48, color: AppColors.mutedForeground),
+          Icon(
+            LucideIcons.search,
+            size: AppIconSizes.hero,
+            color: AppColors.mutedForeground,
+          ),
           SizedBox(height: 16),
           Text(
             'Search for events, people, or tags',

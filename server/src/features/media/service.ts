@@ -19,6 +19,7 @@ import logger from "@/logger";
 import { getUniqueFilename as getUniqueFilename } from "./utils";
 import { BadRequestError } from "@/exceptions";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import EntityStatsService from "@/features/stats/service";
 
 class MediaService {
   private readonly getCache = getMediaCache;
@@ -26,6 +27,7 @@ class MediaService {
   private readonly deleteCache = deleteMediaCache;
   private readonly _supabaseService = new SupabaseService();
   private readonly _cloudinaryService = new CloudinaryService();
+  private readonly entityStatsService = new EntityStatsService();
 
   async _getByIdNoCache(id: string) {
     const res = await Media.findByPk(id, { raw: true });
@@ -436,11 +438,15 @@ class MediaService {
   async createEventMediaJunctionRow(eventId: string, mediaId: string) {
     const event = (await Event.findByPk(eventId, { raw: true })) as any;
     const mediaSet = new Set((event?.media || []) as string[]);
+    const alreadyPresent = mediaSet.has(mediaId);
     mediaSet.add(mediaId);
     const [, rows] = await Event.update(
       { media: Array.from(mediaSet) as any } as any,
       { where: { id: eventId }, returning: true }
     );
+    if (!alreadyPresent && rows[0]) {
+      await this.entityStatsService.syncEventRowStats(rows[0].toJSON() as IEvent);
+    }
     return rows[0];
   }
 }

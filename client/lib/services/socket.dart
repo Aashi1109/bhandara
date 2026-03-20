@@ -2,33 +2,108 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:web_socket/web_socket.dart';
+
 import 'api.dart';
 import 'secure_storage.dart';
 
+typedef SocketConnector = Future<WebSocket> Function(Uri uri);
+typedef SocketTokenReader = Future<String?> Function();
+
+enum SocketConnectionStatus { disconnected, connecting, connected }
+
 class SocketService {
-  WebSocket? _channel;
-  final _storage = SecureStorage(namespace: 'auth');
-
-  final _messageController = StreamController<Map<String, dynamic>>.broadcast();
-
-  Stream<Map<String, dynamic>> get messages => _messageController.stream;
-
-  final Map<int, Completer<dynamic>> _ackHandlers = {};
-  int _ackCounter = 0;
-  bool _isConnected = false;
-
-  bool get isConnected => _isConnected;
+  SocketService({
+    SecureStorage? storage,
+    SocketConnector? connector,
+    SocketTokenReader? tokenReader,
+  }) : _storage = storage ?? SecureStorage(namespace: 'auth'),
+       _connector = connector ?? WebSocket.connect,
+       _tokenReader = tokenReader;
 
   static const String namespace = '/platform';
 
-  Future<void> connect(String eventId) async {
-    if (_isConnected) return;
+  final SecureStorage _storage;
+  final SocketConnector _connector;
+  final SocketTokenReader? _tokenReader;
 
-    final token = await _storage.read('token');
+  WebSocket? _channel;
+  final _messageController = StreamController<Map<String, dynamic>>.broadcast();
+  final _statusController =
+      StreamController<SocketConnectionStatus>.broadcast();
+  final Map<int, Completer<dynamic>> _ackHandlers = {};
 
-    // Engine.IO 4 connection URL
-    // Extract origin from baseUrl robustly
+  int _ackCounter = 0;
+  bool _isSessionActive = false;
+  bool _isDisconnecting = false;
+  Completer<void>? _connectCompleter;
+  Timer? _reconnectTimer;
+  SocketConnectionStatus _connectionStatus =
+      SocketConnectionStatus.disconnected;
+
+  Stream<Map<String, dynamic>> get messages => _messageController.stream;
+  Stream<SocketConnectionStatus> get connectionStatus =>
+      _statusController.stream;
+  bool get isConnected => _connectionStatus == SocketConnectionStatus.connected;
+  bool get isSessionActive => _isSessionActive;
+  SocketConnectionStatus get status => _connectionStatus;
+
+  Future<void> startAuthenticatedSession() async {
+    _isSessionActive = true;
+    _isDisconnecting = false;
+    _cancelReconnectTimer();
+
+    if (isConnected) {
+      return;
+    }
+    if (_connectCompleter != null) {
+      return _connectCompleter!.future;
+    }
+
+    _connectCompleter = Completer<void>();
+    _updateStatus(SocketConnectionStatus.connecting);
+    print('Socket authenticated session starting');
+
+    try {
+      await _connectInternal();
+      await _connectCompleter!.future;
+    } finally {
+      if (!(_connectCompleter?.isCompleted ?? true)) {
+        _connectCompleter?.complete();
+      }
+      _connectCompleter = null;
+    }
+  }
+
+  Future<void> endAuthenticatedSession() async {
+    print('Socket authenticated session ending');
+    _cancelReconnectTimer();
+    _isSessionActive = false;
+    _isDisconnecting = true;
+
+    final channel = _channel;
+    _channel = null;
+    _updateStatus(SocketConnectionStatus.disconnected);
+
+    await channel?.close();
+
+    if (!(_connectCompleter?.isCompleted ?? true)) {
+      _connectCompleter?.complete();
+    }
+    _connectCompleter = null;
+    _ackHandlers.forEach((id, c) => c.completeError('Socket disconnected'));
+    _ackHandlers.clear();
+  }
+
+  Future<void> _connectInternal() async {
+    final token = await (_tokenReader?.call() ?? _storage.read('token'));
+    if (token == null || token.isEmpty) {
+      _isSessionActive = false;
+      _updateStatus(SocketConnectionStatus.disconnected);
+      return;
+    }
+
     final baseUri = Uri.parse(ApiService.baseUrl);
     final wsScheme = baseUri.scheme == 'https' ? 'wss' : 'ws';
     final uri = Uri(
@@ -40,64 +115,57 @@ class SocketService {
     );
 
     try {
-      _channel = await WebSocket.connect(uri);
+      print('Socket opening transport connection to ${uri.host}:${uri.port}');
+      _channel = await _connector(uri);
+      print('Socket transport connection established');
 
       _channel!.events.listen(
         _handleIncomingData,
         onError: (error) {
           print('Socket Error: $error');
-          _onDisconnect(eventId);
+          _onDisconnect();
         },
         onDone: () {
           print('Socket Connection Closed');
-          _onDisconnect(eventId);
+          _onDisconnect();
         },
       );
     } catch (e) {
       print('Socket Connection Failed: $e');
-      _onDisconnect(eventId);
+      _onDisconnect();
     }
   }
 
   void _handleIncomingData(WebSocketEvent data) {
-    if (data is! TextDataReceived) return;
+    if (data is! TextDataReceived) {
+      return;
+    }
 
     final payload = data.text;
 
-    // Engine.IO Packet Types:
-    // 0: OPEN (Handshake)
-    // 1: CLOSE
-    // 2: PING
-    // 3: PONG
-    // 4: MESSAGE
-
     if (payload.startsWith('0')) {
-      // Handshake received, now join namespace
+      print('Socket transport handshake received, joining $namespace');
       _sendRaw('40$namespace,');
-      _isConnected = true;
+    } else if (payload.startsWith('40$namespace')) {
+      _updateStatus(SocketConnectionStatus.connected);
+      print('Socket namespace connection established for $namespace');
+      if (!(_connectCompleter?.isCompleted ?? true)) {
+        _connectCompleter?.complete();
+      }
     } else if (payload.startsWith('2')) {
-      // Received PING, send PONG
       _sendRaw('3');
     } else if (payload.startsWith('42$namespace,')) {
-      // Received a MESSAGE on our namespace
-      final payloadStr = payload.substring('42$namespace,'.length);
-      _processEvent(payloadStr);
+      _processEvent(payload.substring('42$namespace,'.length));
     } else if (payload.startsWith('43$namespace,')) {
-      // Received an ACKNOWLEDGMENT
-      final ackData = payload.substring('43$namespace,'.length);
-      _processAck(ackData);
+      _processAck(payload.substring('43$namespace,'.length));
     }
   }
 
   void _processEvent(String payloadStr) {
     try {
-      // Payload format: [<ackId>]["event", data]
-      // For simple messages without ackId: ["event", data]
-
       int? ackId;
       String jsonPart = payloadStr;
 
-      // Check if it starts with a digit (ackId)
       final match = RegExp(r'^(\d+)(.*)$').firstMatch(payloadStr);
       if (match != null) {
         ackId = int.parse(match.group(1)!);
@@ -108,10 +176,8 @@ class SocketService {
       final String eventName = eventData[0];
       final dynamic body = eventData[1];
 
-      // Broadcast to message stream
       _messageController.add({'event': eventName, 'data': body});
 
-      // If server requested an ack (not common for broadcasts but possible)
       if (ackId != null) {
         _sendRaw('43$namespace,$ackId[{"data":true}]');
       }
@@ -122,7 +188,6 @@ class SocketService {
 
   void _processAck(String ackData) {
     try {
-      // Format: <ackId>[data]
       final match = RegExp(r'^(\d+)(.*)$').firstMatch(ackData);
       if (match != null) {
         final ackId = int.parse(match.group(1)!);
@@ -138,11 +203,14 @@ class SocketService {
   }
 
   Future<dynamic> sendMessage(String event, Map<String, dynamic> data) {
+    if (!isConnected || _channel == null) {
+      return Future.error(StateError('Socket is not connected'));
+    }
+
     final completer = Completer<dynamic>();
     final ackId = _ackCounter++;
     _ackHandlers[ackId] = completer;
 
-    // Socket.IO Emit with Ack format: 42/namespace,<ackId>["event", data]
     final payload = jsonEncode([event, data]);
     _sendRaw('42$namespace,$ackId$payload');
 
@@ -160,28 +228,72 @@ class SocketService {
   }
 
   void _sendRaw(String message) {
-    if (_channel != null && _isConnected) {
-      _channel!.sendText(message);
-    }
+    _channel?.sendText(message);
   }
 
-  void _onDisconnect(String eventId) {
-    _isConnected = false;
+  void _onDisconnect() {
+    if (_connectionStatus == SocketConnectionStatus.disconnected &&
+        _channel == null &&
+        _connectCompleter == null) {
+      return;
+    }
+
+    print('Socket disconnected. sessionActive=$_isSessionActive');
+    _channel = null;
+    _updateStatus(SocketConnectionStatus.disconnected);
+
+    if (!(_connectCompleter?.isCompleted ?? true)) {
+      _connectCompleter?.complete();
+    }
+    _connectCompleter = null;
     _ackHandlers.forEach((id, c) => c.completeError('Socket disconnected'));
     _ackHandlers.clear();
 
-    // Auto-reconnect
-    Future.delayed(const Duration(seconds: 5), () => connect(eventId));
+    if (_isSessionActive && !_isDisconnecting) {
+      _scheduleReconnect();
+    }
   }
 
-  void disconnect() {
-    _channel?.close();
-    _isConnected = false;
+  void _scheduleReconnect() {
+    _cancelReconnectTimer();
+    print('Socket scheduling reconnect');
+    _reconnectTimer = Timer(const Duration(seconds: 5), () {
+      if (!_isSessionActive || _isDisconnecting) {
+        return;
+      }
+      print('Socket reconnect attempt');
+      unawaited(
+        startAuthenticatedSession().catchError((error) {
+          print('Socket reconnect failed: $error');
+        }),
+      );
+    });
+  }
+
+  void _cancelReconnectTimer() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+  }
+
+  void _updateStatus(SocketConnectionStatus status) {
+    if (_connectionStatus == status) {
+      return;
+    }
+    _connectionStatus = status;
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
+    }
   }
 
   void dispose() {
-    disconnect();
+    _cancelReconnectTimer();
+    _isSessionActive = false;
+    _isDisconnecting = true;
+    _channel?.close();
+    _channel = null;
+    _updateStatus(SocketConnectionStatus.disconnected);
     _messageController.close();
+    _statusController.close();
   }
 }
 

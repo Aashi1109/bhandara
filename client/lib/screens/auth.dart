@@ -3,6 +3,7 @@ import 'package:foody_mobile/models/user.dart';
 import 'package:foody_mobile/services/user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/login_flow.dart';
+import '../providers/auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,8 +14,6 @@ import '../widgets/card.dart';
 import '../widgets/header.dart';
 import '../widgets/snackbar.dart';
 import '../utils/error.dart';
-
-import '../services/auth.dart';
 
 import 'login.dart';
 import 'explore.dart';
@@ -52,8 +51,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         user = items.first;
       }
       ref.read(loginFlowProvider.notifier).update({
-        'email': _emailController.text,
         ...?user?.toJson(),
+        'email': _emailController.text,
       });
       if (mounted) {
         if (isUserExists) {
@@ -74,6 +73,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -91,24 +91,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Taste the\nNeighborhood',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        height: 1.1,
-                        letterSpacing: -0.5,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                    Text('Taste the\nNeighborhood', style: typography.heading1),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Join the exclusive community finding the best free food events near you.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: typography.bodyLG,
                     ),
                     const SizedBox(height: 48),
 
@@ -139,7 +126,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               setState(() {
                                 _isEmailValid =
                                     error == null &&
-                                        _emailController.text.isNotEmpty;
+                                    _emailController.text.isNotEmpty;
                               });
                             },
                           ),
@@ -154,26 +141,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
 
                           // Divider
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 32),
                             child: Row(
                               children: [
-                                Expanded(
+                                const Expanded(
                                   child: Divider(color: AppColors.border),
                                 ),
                                 Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     'OR CONNECT WITH',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 2,
-                                      color: AppColors.mutedForeground,
-                                    ),
+                                    style: typography.overline,
                                   ),
                                 ),
-                                Expanded(
+                                const Expanded(
                                   child: Divider(color: AppColors.border),
                                 ),
                               ],
@@ -189,7 +173,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   size: AppButtonSize.lg,
                                   onPressed: () async {
                                     try {
-                                      await authService.signInWithGoogle();
+                                      await ref
+                                          .read(authProvider.notifier)
+                                          .signInWithGoogle();
                                       if (context.mounted) {
                                         context.go(ExploreScreen.routePath);
                                       }
@@ -209,7 +195,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   child: ClipOval(
                                     child: CachedNetworkImage(
                                       imageUrl:
-                                      'https://picsum.photos/seed/google/24/24',
+                                          'https://picsum.photos/seed/google/24/24',
                                       width: 20,
                                       height: 20,
                                     ),
@@ -223,7 +209,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   size: AppButtonSize.lg,
                                   child: Icon(
                                     LucideIcons.apple,
-                                    size: 20,
+                                    size: AppIconSizes.defaultSize,
                                     color: AppColors.primary,
                                   ),
                                 ),
@@ -256,29 +242,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                               child: const Icon(
                                 LucideIcons.locateFixed,
-                                size: 20,
+                                size: AppIconSizes.defaultSize,
                                 color: AppColors.primary,
                               ),
                             ),
                             const SizedBox(width: 16),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Near Me Mode',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
+                                    style: typography.labelMD,
                                   ),
                                   Text(
                                     'Show events within 5km radius',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.mutedForeground,
-                                    ),
+                                    style: typography.bodySM,
                                   ),
                                 ],
                               ),
@@ -322,26 +301,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     Center(
                       child: RichText(
                         textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.mutedForeground,
-                          ),
+                        text: TextSpan(
+                          style: typography.bodySM,
                           children: [
-                            TextSpan(text: 'By joining, you agree to our '),
+                            const TextSpan(
+                              text: 'By joining, you agree to our ',
+                            ),
                             TextSpan(
                               text: 'Terms',
-                              style: TextStyle(
+                              style: typography.bodySM.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
-                            TextSpan(text: ' & '),
+                            const TextSpan(text: ' & '),
                             TextSpan(
                               text: 'Privacy Policy',
-                              style: TextStyle(
+                              style: typography.bodySM.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                                 decoration: TextDecoration.underline,

@@ -12,18 +12,25 @@ class SearchController {
       const { error, value } = validateSearchRequest(req.query);
       if (error) {
         return res.status(400).json({
-          success: false,
-          message: 'Invalid search parameters',
-          errors: error.details,
+          data: null,
+          error: {
+            message: 'Invalid search parameters',
+            details: error.details,
+            status: 400,
+          },
         });
       }
 
-      const { query, filters, page = 1, limit = 20 } = value;
+      const { query, filters, next = null, limit = 20 } = value;
+      const parsedLimit = Number(limit);
 
       if (!query || query.trim().length < 2) {
         return res.status(400).json({
-          success: false,
-          message: 'Search query must be at least 2 characters long',
+          data: null,
+          error: {
+            message: 'Search query must be at least 2 characters long',
+            status: 400,
+          },
         });
       }
 
@@ -45,21 +52,20 @@ class SearchController {
             }
           : undefined,
         tags: filters?.tags,
-        limit: parseInt(limit),
-        offset: (parseInt(page) - 1) * parseInt(limit),
+        limit: parsedLimit,
+        next: next ? String(next) : null,
       };
 
       const result = await SearchService.search(query.trim(), searchFilters, {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        limit: parsedLimit,
+        next: next ? String(next) : null,
       });
 
       logger.info(`Search performed: "${query}" returned ${result.items.length} results`);
 
       return res.status(200).json({
         data: result,
-        error: null,
-      });
+        });
     } catch (error: any) {
       logger.error('Search error:', error);
       return res.status(500).json({
@@ -78,8 +84,11 @@ class SearchController {
 
       if (!query || typeof query !== 'string' || query.trim().length < 1) {
         return res.status(400).json({
-          success: false,
-          message: 'Query parameter is required',
+          data: null,
+          error: {
+            message: 'Query parameter is required',
+            status: 400,
+          },
         });
       }
 
@@ -87,8 +96,7 @@ class SearchController {
 
       return res.status(200).json({
         data: suggestions,
-        error: null,
-      });
+        });
     } catch (error: any) {
       logger.error('Get suggestions error:', error);
       return res.status(500).json({
@@ -129,8 +137,7 @@ class SearchController {
 
       return res.status(200).json({
         data: options,
-        error: null,
-      });
+        });
     } catch (error: any) {
       logger.error('Get search options error:', error);
       return res.status(500).json({

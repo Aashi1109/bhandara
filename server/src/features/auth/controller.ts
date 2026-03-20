@@ -64,14 +64,13 @@ const login = async (req: Request, res: Response) => {
 
   return res.status(200).json({
     data: { session: { id: sessionId }, user },
-    success: true,
   });
 };
 
 const logOut = async (req: ICustomRequest, res: Response) => {
   await deleteUserSessionCache(req.user.id, req.cookies[config.sessionCookie.keyName]);
   res.clearCookie(config.sessionCookie.keyName);
-  return res.status(200).json({ data: 'Logout successful', success: true });
+  return res.status(200).json({ data: 'Logout successful' });
 };
 
 const session = (req: ICustomRequest, res: Response) => {
@@ -92,7 +91,11 @@ const googleAuth = async (req: Request, res: Response) => {
 
   if (error) throw new Error(error.message);
 
-  return res.redirect(data.url);
+  return res.status(200).json({
+    data: {
+      url: data.url,
+    },
+  });
 };
 
 const googleCallback = async (req: Request, res: Response) => {
@@ -112,7 +115,6 @@ const googleCallback = async (req: Request, res: Response) => {
       session: { id: sessionId },
       user,
     },
-    success: true,
   });
 };
 
@@ -165,7 +167,7 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
     maxAge: config.sessionCookie.maxAge,
   });
 
-  return res.status(200).json({ data: { session: { id: sessionId }, user }, success: true });
+  return res.status(200).json({ data: { session: { id: sessionId }, user } });
 };
 
 export const sessionsList = async (req: ICustomRequest, res: Response) => {
@@ -176,7 +178,7 @@ export const sessionsList = async (req: ICustomRequest, res: Response) => {
 export const deleteSession = async (req: ICustomRequest, res: Response) => {
   const { sessionId } = req.params;
   await deleteUserSessionCache(req.user.id, sessionId as string);
-  return res.status(200).json({ data: 'Session deleted', success: true });
+  return res.status(200).json({ data: 'Session deleted' });
 };
 
 export const signUp = async (req: Request, res: Response) => {
@@ -204,7 +206,6 @@ export const signUp = async (req: Request, res: Response) => {
 
   return res.status(200).json({
     data: { session: { id: sessionId }, user },
-    success: true,
   });
 };
 
@@ -217,7 +218,7 @@ export const signInWithGoogleIdToken = async (req: Request, res: Response) => {
 
   if (error) throw new Error(error.message);
 
-  return res.status(200).json({ data: null, success: true });
+  return res.status(200).json({ data: null });
 };
 
 export { login, logOut, session, googleAuth, googleCallback };

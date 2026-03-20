@@ -1,9 +1,8 @@
-/* eslint-disable no-console */
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
 
-import { disconnect, getDBConnection } from '@/connections/db';
+import { disconnect, getDBConnection } from '../src/connections/db';
 
 dotenv.config();
 
@@ -74,7 +73,7 @@ async function main() {
     throw new Error(`No .sql migration files found in ${migrationDirectory}.`);
   }
 
-  const sequelize = getDBConnection();
+  const sequelize = getDBConnection()!;
   await sequelize.authenticate();
 
   try {
