@@ -2,15 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
+import '../models/event.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/card.dart';
 import 'explore.dart';
 
 class SuccessScreen extends StatelessWidget {
-  const SuccessScreen({super.key});
+  const SuccessScreen({super.key, this.event});
 
   static const String routePath = '/success';
+
+  final Event? event;
+
+  String get _imageUrl =>
+      event?.media?.isNotEmpty == true
+          ? event!.media!.first.url
+          : 'https://picsum.photos/seed/burrito/200/200';
+
+  String get _categoryLabel {
+    final tag = event?.tags?.isNotEmpty == true ? event!.tags!.first.name : null;
+    if (tag != null && tag.isNotEmpty) return tag.toUpperCase();
+    return 'EVENT';
+  }
+
+  String get _title => event?.name ?? 'Event';
+
+  String get _locationLabel {
+    final address = event?.location.address.trim();
+    return address != null && address.isNotEmpty
+        ? address
+        : 'Location unavailable';
+  }
+
+  String get _timeRange {
+    final currentEvent = event;
+    if (currentEvent == null) return 'Time unavailable';
+    final formatter = DateFormat('h:mm a');
+    return '${formatter.format(currentEvent.startTime)} - ${formatter.format(currentEvent.endTime)}';
+  }
+
+  String get _participantLabel {
+    final currentEvent = event;
+    if (currentEvent == null) return '0';
+    final count =
+        currentEvent.stats?.participantCount ?? currentEvent.participants?.length ?? 0;
+    return '$count';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +122,7 @@ class SuccessScreen extends StatelessWidget {
                                     BlendMode.saturation,
                                   ),
                                   child: CachedNetworkImage(
-                                    imageUrl:
-                                        'https://picsum.photos/seed/burrito/200/200',
+                                    imageUrl: _imageUrl,
                                     width: 80,
                                     height: 80,
                                     fit: BoxFit.cover,
@@ -109,8 +147,8 @@ class SuccessScreen extends StatelessWidget {
                                               50,
                                             ),
                                           ),
-                                          child: const Text(
-                                            'MEALS',
+                                          child: Text(
+                                            _categoryLabel,
                                             style: TextStyle(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w900,
@@ -131,8 +169,8 @@ class SuccessScreen extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 4),
-                                    const Text(
-                                      'Free Breakfast Burritos',
+                                    Text(
+                                      _title,
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
@@ -141,20 +179,24 @@ class SuccessScreen extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    const Row(
+                                    Row(
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           LucideIcons.mapPin,
                                           size: AppIconSizes.s,
                                           color: AppColors.mutedForeground,
                                         ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Downtown Community Center',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.mutedForeground,
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _locationLabel,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.mutedForeground,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -175,17 +217,17 @@ class SuccessScreen extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Row(
+                                Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       LucideIcons.clock,
                                       size: AppIconSizes.m,
                                       color: AppColors.mutedForeground,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      '08:00 AM - 10:30 AM',
-                                      style: TextStyle(
+                                      _timeRange,
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.primary,
@@ -206,9 +248,9 @@ class SuccessScreen extends StatelessWidget {
                                           width: 2,
                                         ),
                                       ),
-                                      child: const Center(
+                                      child: Center(
                                         child: Text(
-                                          '+1',
+                                          _participantLabel,
                                           style: TextStyle(
                                             fontSize: 8,
                                             fontWeight: FontWeight.w900,

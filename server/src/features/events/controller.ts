@@ -91,9 +91,9 @@ export const updateEvent = async (req: ICustomRequest, res: Response) => {
     populate: true,
   });
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
-    data: { id: req.params.id, ...updatedEvent },
+    data: { id: req.params.eventId, ...updatedEvent },
     });
-  return res.status(200).json({ data: event });
+  return res.status(200).json({ data: updatedEvent });
 };
 
 export const deleteEvent = async (req: ICustomRequest, res: Response) => {

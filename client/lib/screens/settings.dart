@@ -255,7 +255,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LucideIcons.shield,
                       'Data & Privacy',
                       'Your data controls',
-                      onTap: () => context.go(DataPrivacyScreen.routePath),
+                      onTap: () => context.push(DataPrivacyScreen.routePath),
                     ),
                   ]),
                   const SizedBox(height: 32),

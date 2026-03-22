@@ -33,6 +33,7 @@ import 'screens/profile_badges.dart';
 import 'screens/my_events.dart';
 import 'widgets/media_preview.dart';
 import 'models/event.dart';
+import 'models/location_picker.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -91,6 +92,7 @@ final router = GoRouter(
         return EventRatingsScreen(
           eventId: state.pathParameters['id']!,
           eventName: extra['eventName'] as String? ?? 'Event',
+          isOwner: extra['isOwner'] as bool? ?? false,
         );
       },
     ),
@@ -108,11 +110,15 @@ final router = GoRouter(
     ),
     GoRoute(
       path: CreateEventScreen.routePath,
-      builder: (context, state) => const CreateEventScreen(),
+      builder: (context, state) => CreateEventScreen(
+        initialEvent: state.extra is Event ? state.extra as Event : null,
+      ),
     ),
     GoRoute(
       path: SuccessScreen.routePath,
-      builder: (context, state) => const SuccessScreen(),
+      builder: (context, state) => SuccessScreen(
+        event: state.extra is Event ? state.extra as Event : null,
+      ),
     ),
     GoRoute(
       path: ChatScreen.routePath,
@@ -154,7 +160,19 @@ final router = GoRouter(
     ),
     GoRoute(
       path: LocationSettingsScreen.routePath,
-      builder: (context, state) => const LocationSettingsScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final args = extra is LocationScreenArgs
+            ? extra
+            : const LocationScreenArgs();
+        return LocationSettingsScreen(
+          mode: args.mode,
+          initialLocation: args.initialLocation,
+          initialCameraLatitude: args.initialCameraLatitude,
+          initialCameraLongitude: args.initialCameraLongitude,
+          initialZoom: args.initialZoom,
+        );
+      },
     ),
     GoRoute(
       path: PasswordSettingsScreen.routePath,

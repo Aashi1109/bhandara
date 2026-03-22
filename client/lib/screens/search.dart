@@ -3,14 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../models/chat.dart';
 import '../theme/theme.dart';
-import '../widgets/input.dart';
+import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/card.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/explore_search_bar.dart';
+import '../services/save.dart';
 import '../services/search.dart';
+import '../utils/event_status.dart';
 
 import 'explore.dart';
+import 'chat.dart';
 import 'event_detail.dart';
+import 'thread.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -24,11 +30,13 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   List<SearchResult> _results = [];
+  List<SearchResult> _savedResults = [];
   List<String> _suggestions = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
   bool _hasSearched = false;
   int _totalResults = 0;
   String _activeFilter = 'All Results';
+  String? _errorMessage;
   Timer? _debounce;
 
   static const _filters = ['All Results', 'Events', 'Users', 'Tags'];
@@ -37,6 +45,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
+    _loadSavedResults();
   }
 
   @override
@@ -48,57 +57,97 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onQueryChanged() {
+    _debounce?.cancel();
     final query = _controller.text.trim();
+    final filtered = _applyFilters(query);
     if (query.isEmpty) {
       setState(() {
-        _results = [];
-        _suggestions = [];
+        _results = filtered;
+        _suggestions = _buildSuggestionsList(query);
         _hasSearched = false;
+        _totalResults = filtered.length;
       });
       return;
     }
     if (query.length >= 2) {
-      _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 400), () {
-        _fetchSuggestions(query);
+        if (!mounted) return;
+        setState(() {
+          _results = filtered;
+          _suggestions = _buildSuggestionsList(query);
+          _hasSearched = true;
+          _totalResults = filtered.length;
+        });
       });
     }
   }
 
-  Future<void> _fetchSuggestions(String query) async {
-    try {
-      final res = await searchService.getSuggestions(query);
-      if (mounted) setState(() => _suggestions = res);
-    } catch (_) {}
-  }
-
-  Future<void> _search(String query) async {
-    if (query.trim().length < 2) {
-      return;
-    }
-    _debounce?.cancel();
+  Future<void> _loadSavedResults() async {
     setState(() {
       _isLoading = true;
-      _hasSearched = true;
-      _suggestions = [];
+      _errorMessage = null;
     });
-
-    final filters = _activeFilter != 'All Results'
-        ? {'filters[types]': _activeFilter.toLowerCase()}
-        : null;
-
     try {
-      final res = await searchService.search(query.trim(), filters: filters);
-      if (mounted) {
-        setState(() {
-          _results = res.items;
-          _totalResults = res.pagination.total;
-          _isLoading = false;
-        });
-      }
+      final results = await saveService.getSavedResults();
+      if (!mounted) return;
+      setState(() {
+        _savedResults = results;
+        _results = _applyFilters(_controller.text.trim());
+        _suggestions = _buildSuggestionsList(_controller.text.trim());
+        _totalResults = _results.length;
+        _isLoading = false;
+      });
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to load saved items right now.';
+      });
     }
+  }
+
+  List<SearchResult> _applyFilters(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    return _savedResults.where((result) {
+      final matchesFilter =
+          _activeFilter == 'All Results' ||
+          (_activeFilter == 'Events' && result.type == 'event') ||
+          (_activeFilter == 'Users' && result.type == 'message') ||
+          (_activeFilter == 'Tags' && result.type == 'thread');
+      if (!matchesFilter) {
+        return false;
+      }
+
+      if (normalizedQuery.isEmpty) {
+        return true;
+      }
+
+      final metadata = result.metadata ?? const <String, dynamic>{};
+      final haystack = [
+        result.title,
+        result.description,
+        metadata['address'],
+        metadata['threadType'],
+        metadata['description'],
+      ].whereType<String>().join(' ').toLowerCase();
+      return haystack.contains(normalizedQuery);
+    }).toList();
+  }
+
+  List<String> _buildSuggestionsList(String query) {
+    if (query.trim().length < 2) {
+      return const [];
+    }
+
+    return _savedResults
+        .map((result) => result.title.trim())
+        .where((title) => title.isNotEmpty)
+        .where(
+          (title) => title.toLowerCase().contains(query.trim().toLowerCase()),
+        )
+        .toSet()
+        .take(5)
+        .toList();
   }
 
   @override
@@ -115,13 +164,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   top: MediaQuery.of(context).padding.top + 16,
                   left: 16,
                   right: 16,
-                  bottom: 16,
+                  bottom: 0,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.surface.withValues(alpha: 0.9),
-                  border: const Border(
-                    bottom: BorderSide(color: AppColors.border),
-                  ),
                 ),
                 child: Column(
                   children: [
@@ -155,27 +201,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: AppInput(
+                          child: ExploreSearchBar(
                             controller: _controller,
                             placeholder: 'Search events, people, tags...',
-                            icon: const Icon(
-                              LucideIcons.search,
-                              size: AppIconSizes.defaultSize,
-                            ),
-                            height: 48,
-                            borderRadius: 50,
-                            onChanged: (value) {
-                              // handled by listener
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            LucideIcons.slidersHorizontal,
-                            size: AppIconSizes.l,
-                            color: AppColors.primary,
+                            onChanged: (_) {},
                           ),
                         ),
                       ],
@@ -191,10 +220,18 @@ class _SearchScreenState extends State<SearchScreen> {
                             padding: const EdgeInsets.only(right: 8),
                             child: GestureDetector(
                               onTap: () {
-                                setState(() => _activeFilter = f);
-                                if (_controller.text.trim().length >= 2) {
-                                  _search(_controller.text.trim());
-                                }
+                                setState(() {
+                                  _activeFilter = f;
+                                  _results = _applyFilters(
+                                    _controller.text.trim(),
+                                  );
+                                  _totalResults = _results.length;
+                                  _suggestions = _buildSuggestionsList(
+                                    _controller.text.trim(),
+                                  );
+                                  _hasSearched =
+                                      _controller.text.trim().length >= 2;
+                                });
                               },
                               child: _chipBtn(f, _activeFilter == f),
                             ),
@@ -214,9 +251,11 @@ class _SearchScreenState extends State<SearchScreen> {
                           color: AppColors.primary,
                         ),
                       )
+                    : _errorMessage != null
+                    ? _buildErrorState()
                     : _suggestions.isNotEmpty && !_hasSearched
                     ? _buildSuggestions()
-                    : _hasSearched
+                    : _hasSearched || _results.isNotEmpty
                     ? _buildResults()
                     : _buildEmptyState(),
               ),
@@ -229,106 +268,86 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSuggestions() {
-    return ListView.builder(
+    return AppPullToRefresh(
+      onRefresh: _loadSavedResults,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-      itemCount: _suggestions.length,
-      itemBuilder: (context, index) {
-        final suggestion = _suggestions[index];
-        return ListTile(
-          leading: const Icon(
-            LucideIcons.search,
-            color: AppColors.mutedForeground,
-          ),
-          title: Text(
-            suggestion,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.primary,
+      child: Column(
+        children: [
+          for (final suggestion in _suggestions)
+            ListTile(
+              leading: const Icon(
+                LucideIcons.search,
+                color: AppColors.mutedForeground,
+              ),
+              title: Text(
+                suggestion,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary,
+                ),
+              ),
+              onTap: () {
+                _controller.text = suggestion;
+                _controller.selection = TextSelection.fromPosition(
+                  TextPosition(offset: suggestion.length),
+                );
+                _onQueryChanged();
+              },
             ),
-          ),
-          onTap: () {
-            _controller.text = suggestion;
-            _search(suggestion);
-          },
-        );
-      },
+        ],
+      ),
     );
   }
 
   Widget _buildResults() {
     if (_results.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.searchX,
-              size: AppIconSizes.hero,
-              color: AppColors.mutedForeground,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'No results found',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+      return AppPullToRefresh(
+        onRefresh: _loadSavedResults,
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.searchX,
+                size: AppIconSizes.hero,
+                color: AppColors.mutedForeground,
               ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Try a different search term',
-              style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
-            ),
-          ],
+              SizedBox(height: 16),
+              Text(
+                'No results found',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Try a different search term',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return SingleChildScrollView(
+    return AppPullToRefresh(
+      onRefresh: _loadSavedResults,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$_totalResults result${_totalResults != 1 ? 's' : ''} found',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => context.go(ExploreScreen.routePath),
-                  child: const Text(
-                    'Map View',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
           ..._results.map((result) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: GestureDetector(
                 onTap: () {
-                  if (result.type == 'event') {
-                    context.go(
-                      EventDetailScreen.routePath.replaceAll(':id', result.id),
-                    );
-                  }
+                  _openSavedItem(result);
                 },
                 child: _buildResultCard(result),
               ),
@@ -340,6 +359,25 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResultCard(SearchResult result) {
+    final metadata = result.metadata ?? const <String, dynamic>{};
+    final address = metadata['address'] as String?;
+    final rawStart = metadata['start'] as String?;
+    final rawEnd = metadata['end'] as String?;
+    final rawStatus = metadata['status'] as String?;
+    final startTime = rawStart != null ? DateTime.tryParse(rawStart) : null;
+    final endTime = rawEnd != null ? DateTime.tryParse(rawEnd) : null;
+    final resolvedStatus =
+        result.type == 'event' && startTime != null && endTime != null
+        ? deriveEventStatus(
+            startTime: startTime,
+            endTime: endTime,
+            currentStatus: rawStatus,
+          )
+        : null;
+    final secondaryText = startTime != null
+        ? '${_formatTime(startTime)}${address != null && address.isNotEmpty ? ' • $address' : ''}'
+        : result.description;
+
     return AppCard(
       padding: AppCardPadding.none,
       borderRadius: 24,
@@ -364,24 +402,24 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Text(
-                      result.type.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: AppColors.primary,
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _buildBadge(
+                        label: result.type.toUpperCase(),
+                        background: AppColors.primary.withValues(alpha: 0.1),
+                        foreground: AppColors.primary,
                       ),
-                    ),
+                      if (resolvedStatus != null)
+                        _buildBadge(
+                          label: formatEventStatusLabel(
+                            resolvedStatus,
+                          ).toUpperCase(),
+                          background: _statusBackground(resolvedStatus),
+                          foreground: _statusForeground(resolvedStatus),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -396,7 +434,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   if (result.description != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      result.description!,
+                      secondaryText ?? result.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -414,6 +452,55 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildBadge({
+    required String label,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(50),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.5,
+          color: foreground,
+        ),
+      ),
+    );
+  }
+
+  Color _statusBackground(String status) {
+    switch (status) {
+      case EventStatusValue.ongoing:
+        return AppColors.success.withValues(alpha: 0.14);
+      case EventStatusValue.completed:
+      case EventStatusValue.cancelled:
+        return AppColors.muted;
+      case EventStatusValue.upcoming:
+      default:
+        return AppColors.warning.withValues(alpha: 0.14);
+    }
+  }
+
+  Color _statusForeground(String status) {
+    switch (status) {
+      case EventStatusValue.ongoing:
+        return AppColors.success;
+      case EventStatusValue.upcoming:
+        return AppColors.warning;
+      case EventStatusValue.completed:
+      case EventStatusValue.cancelled:
+      default:
+        return AppColors.mutedForeground;
+    }
+  }
+
   Widget _placeholderImage(SearchResult result) {
     return Container(
       width: 96,
@@ -422,42 +509,116 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Icon(
         result.type == 'event'
             ? LucideIcons.calendar
-            : result.type == 'user'
-            ? LucideIcons.user
-            : LucideIcons.tag,
+            : result.type == 'message'
+            ? LucideIcons.messageCircle
+            : LucideIcons.messagesSquare,
         size: AppIconSizes.xl,
         color: AppColors.mutedForeground,
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            LucideIcons.search,
-            size: AppIconSizes.hero,
-            color: AppColors.mutedForeground,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Search for events, people, or tags',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+  Widget _buildErrorState() {
+    return AppPullToRefresh(
+      onRefresh: _loadSavedResults,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              LucideIcons.cloudOff,
+              size: AppIconSizes.hero,
+              color: AppColors.mutedForeground,
             ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Type at least 2 characters to search',
-            style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Unable to load saved items right now.',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _loadSavedResults,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildEmptyState() {
+    return AppPullToRefresh(
+      onRefresh: _loadSavedResults,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.search,
+              size: AppIconSizes.hero,
+              color: AppColors.mutedForeground,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Search your saved items',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Type at least 2 characters to search',
+              style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openSavedItem(SearchResult result) {
+    if (result.type == 'event') {
+      context.go(EventDetailScreen.routePath.replaceAll(':id', result.id));
+      return;
+    }
+
+    if (result.type == 'thread') {
+      context.go(
+        ChatScreen.routePath.replaceAll(':id', result.id),
+        extra: {'eventId': result.metadata?['eventId'] as String?},
+      );
+      return;
+    }
+
+    if (result.type == 'message') {
+      final rawMessage = result.metadata?['message'];
+      final threadId = result.metadata?['threadId'] as String?;
+      context.go(
+        ThreadScreen.routePath.replaceAll(':id', result.id),
+        extra: {
+          'threadId': threadId,
+          'message': rawMessage is Map<String, dynamic>
+              ? Message.fromJson(rawMessage)
+              : null,
+        },
+      );
+    }
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
   }
 
   Widget _chipBtn(String text, bool selected) {

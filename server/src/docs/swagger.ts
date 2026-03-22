@@ -12,8 +12,8 @@ export const swaggerOptions = {
     security: [{ SessionCookieAuth: [] }],
   },
   apis: [
-    path.join(__dirname, "../routes/*.route*"),
-    path.join(__dirname, "./openapi/**/*.ts"),
+    path.join(__dirname, '../routes/*.route.{ts,js}'),
+    path.join(__dirname, './openapi/**/*.{ts,js}'),
   ],
 };
 

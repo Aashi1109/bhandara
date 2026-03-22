@@ -1,5 +1,5 @@
-import { initializeTracing, shutdownTracing } from "@/config/tracing.config";
-import logger from "@/logger";
+import { initializeTracing, shutdownTracing } from '@/config/tracing.config';
+import logger from '@/logger';
 
 const workerType = process.env.WORKER_TYPE;
 
@@ -20,25 +20,25 @@ async function startWorker() {
 }
 
 // Graceful shutdown
-process.on("SIGTERM", async () => {
+process.on('SIGTERM', async () => {
   logger.info(`Shutting down ${workerType} worker...`);
   await shutdownTracing();
   process.exit(0);
 });
 
-process.on("SIGINT", async () => {
+process.on('SIGINT', async () => {
   logger.info(`Shutting down ${workerType} worker...`);
   await shutdownTracing();
   process.exit(0);
 });
 
 // Handle uncaught exceptions
-process.on("uncaughtException", (error) => {
+process.on('uncaughtException', (error) => {
   logger.error(`Uncaught exception in ${workerType} worker:`, error);
   process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
+process.on('unhandledRejection', (reason, promise) => {
   logger.error(`Unhandled rejection in ${workerType} worker:`, {
     reason,
     promise,

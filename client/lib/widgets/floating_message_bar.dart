@@ -1,52 +1,14 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/chat_attachment.dart';
 import '../theme/theme.dart';
 import '../services/file.dart';
+import 'attachment_pill.dart';
 import 'snackbar.dart';
 
-class ChatAttachment {
-  ChatAttachment({
-    required this.id,
-    this.mediaId,
-    required this.name,
-    this.url,
-    required this.localPath,
-    this.isVideo = false,
-    this.isUploading = false,
-    this.hasFailed = false,
-  });
-
-  final String id;
-  final String? mediaId; // Null if still uploading
-  final String name;
-  final String? url; // Public URL if uploaded
-  final String localPath;
-  final bool isVideo;
-  final bool isUploading;
-  final bool hasFailed;
-
-  ChatAttachment copyWith({
-    String? mediaId,
-    String? url,
-    bool? isUploading,
-    bool? hasFailed,
-  }) {
-    return ChatAttachment(
-      id: id,
-      mediaId: mediaId ?? this.mediaId,
-      name: name,
-      url: url ?? this.url,
-      localPath: localPath,
-      isVideo: isVideo,
-      isUploading: isUploading ?? this.isUploading,
-      hasFailed: hasFailed ?? this.hasFailed,
-    );
-  }
-}
+export '../models/chat_attachment.dart';
 
 class FloatingMessageBar extends StatefulWidget {
   const FloatingMessageBar({
@@ -157,6 +119,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: file.name,
         localPath: file.path,
+        sizeBytes: await file.length(),
         isVideo: isVideo,
         isUploading: true,
       );
@@ -182,9 +145,8 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
       final mediaId = await fileService.uploadFile(
         XFile(attachment.localPath, name: attachment.name),
       );
-      final previewUrl = mediaId != null
-          ? await fileService.getPublicUrl(mediaId)
-          : null;
+      final media = mediaId != null ? await fileService.getMediaById(mediaId) : null;
+      final previewUrl = (media?['publicUrl'] ?? media?['url']) as String?;
 
       if (!mounted) return;
       setState(() {
@@ -496,144 +458,10 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
   }
 
   Widget _buildAttachmentChip(ChatAttachment file) {
-    final hasError = file.hasFailed;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(50),
-        border: Border.all(
-          color: hasError
-              ? AppColors.error.withValues(alpha: 0.4)
-              : AppColors.border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 8,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: hasError
-                  ? AppColors.error.withValues(alpha: 0.12)
-                  : AppColors.muted,
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                ClipOval(
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: file.isVideo
-                        ? Container(
-                            color: hasError
-                                ? AppColors.error.withValues(alpha: 0.08)
-                                : AppColors.muted,
-                            alignment: Alignment.center,
-                            child: Icon(
-                              LucideIcons.video,
-                              size: AppIconSizes.m,
-                              color: hasError
-                                  ? AppColors.error
-                                  : AppColors.mutedForeground,
-                            ),
-                          )
-                        : Image.file(
-                            File(file.localPath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: hasError
-                                  ? AppColors.error.withValues(alpha: 0.08)
-                                  : AppColors.muted,
-                              alignment: Alignment.center,
-                              child: Icon(
-                                LucideIcons.image,
-                                size: AppIconSizes.m,
-                                color: hasError
-                                    ? AppColors.error
-                                    : AppColors.mutedForeground,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-                if (file.isUploading)
-                  const SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                if (file.hasFailed)
-                  Positioned.fill(
-                    child: Tooltip(
-                      message: 'Retry upload',
-                      child: Material(
-                        color: AppColors.transparent,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => _retryAttachment(file),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  AppColors.error.withValues(alpha: 0.32),
-                                  AppColors.primary.withValues(alpha: 0.72),
-                                ],
-                              ),
-                            ),
-                            child: const Icon(
-                              LucideIcons.rotateCcw,
-                              size: 20,
-                              color: AppColors.surface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 120),
-            child: Text(
-              file.name,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _removeAttachment(file.id),
-            child: const Icon(
-              LucideIcons.x,
-              size: AppIconSizes.s,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-        ],
-      ),
+    return AttachmentPill(
+      file: file,
+      onRetry: () => _retryAttachment(file),
+      onRemove: () => _removeAttachment(file.id),
     );
   }
 }

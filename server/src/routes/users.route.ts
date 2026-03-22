@@ -9,16 +9,8 @@ import {
   getUserInterests,
 } from '@/features/users/controller';
 import { updateSchema } from '@/features/users/validation';
-import {
-  getMyUpdates,
-  getUserActivity,
-  markAllUpdatesAsRead,
-  markUpdateAsRead,
-} from '@/features/activity/controller';
-import {
-  getUserAchievementProgress,
-  getUserAchievements,
-} from '@/features/achievements/controller';
+import { getMyUpdates, getUserActivity, markAllUpdatesAsRead, markUpdateAsRead } from '@/features/activity/controller';
+import { getUserAchievementProgress, getUserAchievements } from '@/features/achievements/controller';
 
 const router = Router();
 
@@ -85,6 +77,15 @@ router.use([sessionParser, userParser]);
  *     responses:
  *       200:
  *         description: Paginated users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedUsers'
+ *                 error:
+ *                   nullable: true
  */
 router.get('/', paginationParser, asyncHandler(getAllUser));
 
@@ -109,6 +110,15 @@ router
    *     responses:
    *       200:
    *         description: Success
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 error:
+   *                   nullable: true
    */
   .get(asyncHandler(getUserById))
   /**
@@ -122,6 +132,15 @@ router
    *     responses:
    *       200:
    *         description: Deleted
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 error:
+   *                   nullable: true
    */
   .delete(asyncHandler(deleteUser))
   /**
@@ -141,6 +160,15 @@ router
    *     responses:
    *       200:
    *         description: Updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/User'
+   *                 error:
+   *                   nullable: true
    */
   .patch(validateRequest('USER_UPDATE', updateSchema), asyncHandler(updateUser));
 
@@ -155,6 +183,17 @@ router
  *     responses:
  *       200:
  *         description: List of interests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Tag'
+ *                 error:
+ *                   nullable: true
  */
 router.get('/:id/interests', asyncHandler(getUserInterests));
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 import 'button.dart';
+import 'textarea.dart';
 
 enum ReviewEditorAction { submit, delete }
 
@@ -161,27 +162,13 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
               ),
             ],
             const SizedBox(height: 20),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: TextField(
-                controller: _controller,
-                maxLines: 5,
-                minLines: 5,
-                decoration: const InputDecoration(
-                  hintText: 'Write an optional review...',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                ),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
-                ),
-              ),
+            AppTextArea(
+              placeholder: 'Write an optional review...',
+              controller: _controller,
+              minLines: 5,
+              maxLines: 5,
+              borderRadius: 20,
+              backgroundColor: AppColors.muted.withValues(alpha: 0.45),
             ),
             const SizedBox(height: 20),
             Row(

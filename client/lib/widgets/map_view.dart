@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/maps/map_manager.dart';
 
@@ -36,6 +38,7 @@ class AppMapView extends StatefulWidget {
     this.onTap,
     this.onCameraMove,
     this.onCameraIdle,
+    this.gestureRecognizers = const <Factory<OneSequenceGestureRecognizer>>{},
   });
 
   /// Initial camera target and zoom when the map first renders.
@@ -80,6 +83,9 @@ class AppMapView extends StatefulWidget {
   /// Callback fired once camera stops moving.
   final VoidCallback? onCameraIdle;
 
+  /// Gesture recognizers passed through to the native map.
+  final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers;
+
   @override
   State<AppMapView> createState() => _AppMapViewState();
 }
@@ -97,6 +103,7 @@ class _AppMapViewState extends State<AppMapView> {
       myLocationEnabled: widget.myLocationEnabled,
       padding: widget.padding,
       style: widget.mapStyle ?? widget.manager.nativeMapStyle,
+      gestureRecognizers: widget.gestureRecognizers,
       onTap: widget.onTap,
       onCameraMove: widget.onCameraMove,
       onCameraIdle: widget.onCameraIdle,

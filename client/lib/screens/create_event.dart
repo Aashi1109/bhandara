@@ -1,26 +1,78 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+
+import '../models/chat_attachment.dart';
+import '../models/event.dart';
+import '../models/location_picker.dart';
 import '../models/user.dart';
+import '../providers/tag.dart';
 import '../providers/user.dart';
-import '../theme/theme.dart';
-import '../widgets/button.dart';
-import '../widgets/input.dart';
-import '../widgets/header.dart';
 import '../services/event.dart';
 import '../services/file.dart';
+import '../services/location_permission.dart';
+import '../services/maps/map_manager.dart';
+import '../services/maps/map_provider_type.dart';
 import '../services/tag.dart';
+import '../theme/theme.dart';
 import '../utils/error.dart';
+import '../utils/event_schedule.dart';
+import '../widgets/header.dart';
+import '../widgets/input.dart';
+import '../widgets/textarea.dart';
+import '../widgets/attachment_pill.dart';
+import '../widgets/map_view.dart';
+import '../widgets/media_preview.dart';
+import '../widgets/snackbar.dart';
 import 'explore.dart';
+import 'settings/location.dart';
 import 'success.dart';
 
+enum _MediaSourceAction { galleryImage, cameraImage, galleryVideo }
+
 class CreateEventScreen extends ConsumerStatefulWidget {
-  const CreateEventScreen({super.key});
+  const CreateEventScreen({
+    super.key,
+    this.initialEvent,
+    this.pickImage,
+    this.pickVideo,
+    this.uploadFile,
+    this.createEventRequest,
+    this.updateEventRequest,
+    this.resolveTagIds,
+    this.currentLocationResolver,
+    this.initialAttachments,
+    this.initialSelectedAttachmentIndex = 0,
+    this.initialLocation,
+    this.initialStartAt,
+    this.initialEndAt,
+  });
 
   static const String routePath = '/create';
+  static const int maxAttachments = 5;
+
+  final Event? initialEvent;
+  final Future<XFile?> Function(ImageSource source)? pickImage;
+  final Future<XFile?> Function()? pickVideo;
+  final Future<String?> Function(XFile file)? uploadFile;
+  final Future<void> Function(Map<String, dynamic> data)? createEventRequest;
+  final Future<Event?> Function(String eventId, Map<String, dynamic> data)?
+  updateEventRequest;
+  final Future<List<String>> Function(User user)? resolveTagIds;
+  final Future<UserAddress?> Function()? currentLocationResolver;
+  final List<ChatAttachment>? initialAttachments;
+  final int initialSelectedAttachmentIndex;
+  final UserAddress? initialLocation;
+  final DateTime? initialStartAt;
+  final DateTime? initialEndAt;
 
   @override
   ConsumerState<CreateEventScreen> createState() => _CreateEventScreenState();
@@ -29,52 +81,44 @@ class CreateEventScreen extends ConsumerStatefulWidget {
 class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _startTimeController = TextEditingController();
-  final _endTimeController = TextEditingController();
+  final DateFormat _dateFormat = DateFormat('EEE, d MMM');
+  final DateFormat _timeFormat = DateFormat('h:mm a');
+  final List<ChatAttachment> _attachments = [];
+  final MapManager _mapManager = MapManager(type: MapProviderType.google);
 
   bool _isLoading = false;
-  bool _isUploading = false;
+  bool _didHydrateLocation = false;
+  bool _didHydrateInitialEvent = false;
+  double _launchDragProgress = 0;
   String? _error;
-  String? _mediaId;
-  String? _localMediaPath;
-  bool _isLocalVideo = false;
+  String? _titleError;
+  String? _descriptionError;
+  String? _locationError;
+  String? _timingError;
+  String? _categoryError;
+  int _selectedAttachmentIndex = 0;
+  UserAddress? _selectedLocation;
+  LatLng? _locationPreviewTarget;
+  double _locationPreviewZoom = 14;
+  Tag? _selectedCategory;
+  late DateTime _startAt;
+  late DateTime _endAt;
 
-  DateTime _resolveTime({required String raw, required DateTime fallback}) {
-    final input = raw.trim();
-    if (input.isEmpty) return fallback;
+  Set<Factory<OneSequenceGestureRecognizer>> get _mapGestureRecognizers => {
+    Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
+    Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+  };
 
-    final match = RegExp(
-      r'^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$',
-    ).firstMatch(input);
-    if (match == null) return fallback;
+  bool get _hasUploadInProgress => _attachments.any((item) => item.isUploading);
+  bool get _hasFailedUploads => _attachments.any((item) => item.hasFailed);
+  bool get _canSubmit =>
+      !_isLoading && !_hasUploadInProgress && !_hasFailedUploads;
+  bool get _canDragLaunch => _canSubmit && !_isLoading;
+  bool get _isEditMode => widget.initialEvent != null;
+  String get _screenTitle => _isEditMode ? 'Edit Event' : 'Create Event';
+  String get _submitLabel => _isEditMode ? 'Update Event' : 'Launch Event';
 
-    final hour = int.tryParse(match.group(1) ?? '');
-    final minute = int.tryParse(match.group(2) ?? '0');
-    final period = (match.group(3) ?? '').toUpperCase();
-    if (hour == null || minute == null || hour < 1 || hour > 12) {
-      return fallback;
-    }
-
-    var normalizedHour = hour % 12;
-    if (period == 'PM') normalizedHour += 12;
-
-    final now = DateTime.now();
-    var resolved = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      normalizedHour,
-      minute,
-    );
-
-    if (resolved.isBefore(now)) {
-      resolved = resolved.add(const Duration(days: 1));
-    }
-
-    return resolved;
-  }
-
-  Future<List<String>> _resolveTagIds(User user) async {
+  Future<List<String>> _resolveDefaultTagIds(User user) async {
     final interestIds = user.meta?.interests ?? const <String>[];
     if (interestIds.isNotEmpty) return interestIds;
 
@@ -86,115 +130,700 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     throw Exception('At least one category tag is required to create an event');
   }
 
+  Future<String?> _uploadAttachmentFile(XFile file) {
+    final uploader = widget.uploadFile;
+    if (uploader != null) {
+      return uploader(file);
+    }
+    return fileService.uploadFile(file);
+  }
+
+  Future<XFile?> _pickImageFile(ImageSource source) {
+    final picker = widget.pickImage;
+    if (picker != null) {
+      return picker(source);
+    }
+    return fileService.pickImage(source: source);
+  }
+
+  Future<XFile?> _pickVideoFile() {
+    final picker = widget.pickVideo;
+    if (picker != null) {
+      return picker();
+    }
+    return fileService.pickVideo();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _attachments.addAll(
+      widget.initialAttachments ??
+          _seedAttachmentsFromEvent(widget.initialEvent),
+    );
+    _selectedAttachmentIndex = widget.initialSelectedAttachmentIndex;
+    _selectedLocation = widget.initialLocation;
+    if (widget.initialLocation?.latitude != null &&
+        widget.initialLocation?.longitude != null) {
+      _locationPreviewTarget = LatLng(
+        widget.initialLocation!.latitude!,
+        widget.initialLocation!.longitude!,
+      );
+    }
+    _didHydrateLocation = widget.initialLocation != null;
+    _startAt =
+        widget.initialStartAt ??
+        roundDateTimeToQuarterHour(
+          DateTime.now().add(const Duration(hours: 1)),
+        );
+    _endAt = widget.initialEndAt ?? _startAt.add(const Duration(hours: 2));
+    _hydrateInitialEvent();
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _startTimeController.dispose();
-    _endTimeController.dispose();
     super.dispose();
   }
 
+  void _handleTitleChanged(String value) {
+    if (_titleError == null && _error == null) return;
+    setState(() {
+      _titleError = null;
+      _error = null;
+    });
+  }
+
+  void _handleDescriptionChanged(String value) {
+    if (_descriptionError == null && _error == null) return;
+    setState(() {
+      _descriptionError = null;
+      _error = null;
+    });
+  }
+
+  void _hydrateInitialCategory(User? user, List<Tag> rootTags) {
+    if (_selectedCategory != null || rootTags.isEmpty) return;
+    final initialTagId = widget.initialEvent?.tags?.isNotEmpty == true
+        ? widget.initialEvent!.tags!.first.id
+        : null;
+    if (initialTagId != null) {
+      final matchedInitial = rootTags.cast<Tag?>().firstWhere(
+        (tag) => tag?.id == initialTagId,
+        orElse: () => null,
+      );
+      if (matchedInitial != null) {
+        _selectedCategory = matchedInitial;
+        return;
+      }
+    }
+    final interests = user?.meta?.interests ?? const <String>[];
+    final preferredId = interests.isNotEmpty ? interests.first : null;
+    final matched = preferredId == null
+        ? null
+        : rootTags.cast<Tag?>().firstWhere(
+            (tag) => tag?.id == preferredId,
+            orElse: () => null,
+          );
+    _selectedCategory = matched ?? rootTags.first;
+  }
+
   Future<void> _handleMediaSelection() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    if (_attachments.length >= CreateEventScreen.maxAttachments) {
+      AppSnackBar.info(
+        context,
+        'You can upload up to ${CreateEventScreen.maxAttachments} files.',
+      );
+      return;
+    }
+
+    final action = await showModalBottomSheet<_MediaSourceAction>(
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(LucideIcons.image, color: AppColors.primary),
-              title: const Text('Pick Image from Gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.camera, color: AppColors.primary),
-              title: const Text('Take Photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.video, color: AppColors.primary),
-              title: const Text('Upload Video (Max 10MB)'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickVideo();
-              },
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _mediaActionTile(
+                icon: LucideIcons.image,
+                title: 'Pick Image from Gallery',
+                onTap: () =>
+                    Navigator.pop(context, _MediaSourceAction.galleryImage),
+              ),
+              _mediaActionTile(
+                icon: LucideIcons.camera,
+                title: 'Take Photo',
+                onTap: () =>
+                    Navigator.pop(context, _MediaSourceAction.cameraImage),
+              ),
+              _mediaActionTile(
+                icon: LucideIcons.video,
+                title: 'Upload Video (Max 10MB)',
+                onTap: () =>
+                    Navigator.pop(context, _MediaSourceAction.galleryVideo),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
-    if (source != null) {
-      await _pickImage(source);
+    switch (action) {
+      case _MediaSourceAction.galleryImage:
+        await _addImage(ImageSource.gallery);
+        break;
+      case _MediaSourceAction.cameraImage:
+        await _addImage(ImageSource.camera);
+        break;
+      case _MediaSourceAction.galleryVideo:
+        await _addVideo();
+        break;
+      case null:
+        break;
     }
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final file = await fileService.pickImage(source: source);
-      if (file != null) {
-        setState(() {
-          _localMediaPath = file.path;
-          _isLocalVideo = false;
-          _isUploading = true;
-          _error = null;
-        });
+  Widget _mediaActionTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppColors.muted,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: AppColors.primary),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
 
-        final id = await fileService.uploadFile(file);
-        if (mounted) {
-          setState(() {
-            _mediaId = id;
-            _isUploading = false;
-          });
-        }
-      }
+  Future<void> _addImage(ImageSource source) async {
+    final file = await _pickImageFile(source);
+    if (file == null) return;
+    await _queueAttachment(file, isVideo: false);
+  }
+
+  Future<void> _addVideo() async {
+    final file = await _pickVideoFile();
+    if (file == null) return;
+    await _queueAttachment(file, isVideo: true);
+  }
+
+  Future<void> _queueAttachment(XFile file, {required bool isVideo}) async {
+    if (_attachments.length >= CreateEventScreen.maxAttachments) return;
+
+    final sizeBytes = await file.length();
+    final attachment = ChatAttachment(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: file.name,
+      localPath: file.path,
+      sizeBytes: sizeBytes,
+      isVideo: isVideo,
+      isUploading: true,
+    );
+
+    setState(() {
+      _error = null;
+      _attachments.add(attachment);
+      _selectedAttachmentIndex = _attachments.length - 1;
+    });
+
+    await _uploadAttachment(attachment);
+  }
+
+  Future<void> _uploadAttachment(ChatAttachment attachment) async {
+    try {
+      final mediaId = await _uploadAttachmentFile(
+        XFile(attachment.localPath, name: attachment.name),
+      );
+      if (!mounted) return;
+
+      setState(() {
+        final index = _attachments.indexWhere(
+          (item) => item.id == attachment.id,
+        );
+        if (index == -1) return;
+        _attachments[index] = _attachments[index].copyWith(
+          mediaId: mediaId,
+          isUploading: false,
+          hasFailed: false,
+        );
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-          _error = e.toString();
-        });
-      }
+      if (!mounted) return;
+      final message = extractExceptionMessage(e);
+
+      setState(() {
+        final index = _attachments.indexWhere(
+          (item) => item.id == attachment.id,
+        );
+        if (index == -1) return;
+        _attachments[index] = _attachments[index].copyWith(
+          isUploading: false,
+          hasFailed: true,
+        );
+        _error = null;
+      });
+      AppSnackBar.error(context, message);
     }
   }
 
-  Future<void> _pickVideo() async {
-    try {
-      final file = await fileService.pickVideo();
-      if (file != null) {
-        setState(() {
-          _localMediaPath = file.path;
-          _isLocalVideo = true;
-          _isUploading = true;
-          _error = null;
-        });
+  void _retryAttachment(ChatAttachment attachment) {
+    setState(() {
+      final index = _attachments.indexWhere((item) => item.id == attachment.id);
+      if (index == -1) return;
+      _attachments[index] = _attachments[index].copyWith(
+        isUploading: true,
+        hasFailed: false,
+      );
+      _error = null;
+    });
+    _uploadAttachment(attachment);
+  }
 
-        final id = await fileService.uploadFile(file);
-        if (mounted) {
-          setState(() {
-            _mediaId = id;
-            _isUploading = false;
-          });
+  void _removeAttachment(ChatAttachment attachment) {
+    setState(() {
+      final index = _attachments.indexWhere((item) => item.id == attachment.id);
+      if (index == -1) return;
+      _attachments.removeAt(index);
+      if (_attachments.isEmpty) {
+        _selectedAttachmentIndex = 0;
+      } else if (_selectedAttachmentIndex >= _attachments.length) {
+        _selectedAttachmentIndex = _attachments.length - 1;
+      } else if (_selectedAttachmentIndex > index) {
+        _selectedAttachmentIndex -= 1;
+      }
+    });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    try {
+      final resolved = widget.currentLocationResolver != null
+          ? await widget.currentLocationResolver!()
+          : await _resolveCurrentLocation();
+      if (!mounted || resolved == null) return;
+      setState(() {
+        _selectedLocation = resolved;
+        _didHydrateLocation = true;
+        if (resolved.latitude != null && resolved.longitude != null) {
+          _locationPreviewTarget = LatLng(
+            resolved.latitude!,
+            resolved.longitude!,
+          );
+          _locationPreviewZoom = 14;
         }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-          _error = e.toString();
-        });
-      }
+        _locationError = null;
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.error(context, 'Unable to get current location.');
     }
+  }
+
+  Future<UserAddress?> _resolveCurrentLocation() async {
+    var status = await LocationPermissionService.currentStatus();
+    if (!LocationPermissionService.hasAccess(status)) {
+      status = await LocationPermissionService.requestOnStartup();
+    }
+    if (!LocationPermissionService.hasAccess(status)) {
+      return null;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
+    final resolved = await _mapManager.getAddressFromCoordinates(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+    if (resolved == null) {
+      return UserAddress(
+        label:
+            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+    }
+
+    return UserAddress(
+      label: resolved.formattedAddress,
+      latitude: resolved.latitude,
+      longitude: resolved.longitude,
+    );
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await context.push<LocationPickerResult>(
+      LocationSettingsScreen.routePath,
+      extra: LocationScreenArgs(
+        mode: LocationSelectionMode.picker,
+        initialLocation: _selectedLocation,
+        initialCameraLatitude: _locationPreviewTarget?.latitude,
+        initialCameraLongitude: _locationPreviewTarget?.longitude,
+        initialZoom: _locationPreviewZoom,
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedLocation = result.location;
+        _didHydrateLocation = true;
+        _locationPreviewTarget = LatLng(
+          result.cameraLatitude,
+          result.cameraLongitude,
+        );
+        _locationPreviewZoom = result.zoom;
+        _locationError = null;
+        _error = null;
+      });
+    }
+  }
+
+  bool _validateForm() {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    String? titleError;
+    String? descriptionError;
+    String? locationError;
+    String? timingError;
+    String? categoryError;
+
+    if (title.isEmpty) {
+      titleError = 'Please enter an event title.';
+    } else if (title.length < 3) {
+      titleError = 'Title must be at least 3 characters.';
+    } else if (title.length > 80) {
+      titleError = 'Title must be 80 characters or less.';
+    }
+
+    if (description.isEmpty) {
+      descriptionError = 'Please add a short event description.';
+    } else if (description.length < 10) {
+      descriptionError = 'About Event must be at least 10 characters.';
+    } else if (description.length > 500) {
+      descriptionError = 'About Event must be 500 characters or less.';
+    }
+
+    if (_selectedLocation == null || _selectedLocation!.label.trim().isEmpty) {
+      locationError = 'Select an event location.';
+    }
+
+    if (_selectedCategory == null) {
+      categoryError = 'Select an event category.';
+    }
+
+    if (!_endAt.isAfter(_startAt)) {
+      timingError = 'End time must be after the start time.';
+    } else if (!_endAt.isAfter(DateTime.now())) {
+      timingError = 'Event end time must be in the future.';
+    } else if (_endAt.isAfter(_startAt.add(const Duration(days: 7)))) {
+      timingError = 'Event duration cannot exceed 7 days.';
+    }
+
+    setState(() {
+      _titleError = titleError;
+      _descriptionError = descriptionError;
+      _locationError = locationError;
+      _timingError = timingError;
+      _categoryError = categoryError;
+      _error =
+          titleError != null ||
+              descriptionError != null ||
+              locationError != null ||
+              timingError != null ||
+              categoryError != null
+          ? 'Fix the highlighted event details before continuing.'
+          : null;
+    });
+
+    return titleError == null &&
+        descriptionError == null &&
+        locationError == null &&
+        timingError == null &&
+        categoryError == null;
+  }
+
+  Future<void> _openCategoryPicker(List<Tag> categories) async {
+    final selectedId = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...categories.map((tag) {
+                final isSelected = _selectedCategory?.id == tag.id;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  title: Text(
+                    tag.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(
+                          LucideIcons.check,
+                          size: AppIconSizes.defaultSize,
+                          color: AppColors.primary,
+                        )
+                      : null,
+                  onTap: () => Navigator.pop(context, tag.id),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedId == null || !mounted) return;
+    final nextCategory = categories.firstWhere((tag) => tag.id == selectedId);
+    setState(() {
+      _selectedCategory = nextCategory;
+      _categoryError = null;
+      _error = null;
+    });
+  }
+
+  Future<ChatAttachment?> _resolveAttachmentPreview(int index) async {
+    if (index < 0 || index >= _attachments.length) return null;
+
+    final attachment = _attachments[index];
+    if (attachment.url != null && attachment.url!.isNotEmpty) {
+      return attachment;
+    }
+    if (attachment.mediaId == null || attachment.mediaId!.isEmpty) {
+      return attachment;
+    }
+
+    final media = await fileService.getMediaById(attachment.mediaId!);
+    final previewUrl = (media?['publicUrl'] ?? media?['url']) as String?;
+    if (!mounted || previewUrl == null || previewUrl.isEmpty) {
+      return attachment;
+    }
+
+    final updated = attachment.copyWith(url: previewUrl);
+    setState(() {
+      _attachments[index] = updated;
+    });
+    return updated;
+  }
+
+  Future<void> _openMediaPreview(int index) async {
+    if (_attachments.isEmpty) return;
+    final selected = await _resolveAttachmentPreview(index);
+    if (selected == null || !mounted) return;
+    if (selected.isUploading || selected.hasFailed) return;
+    if (selected.url == null || selected.url!.isEmpty) return;
+
+    final uploadedAttachments = _attachments
+        .where((file) => file.url != null && file.url!.isNotEmpty)
+        .toList();
+    final initialIndex = uploadedAttachments.indexWhere(
+      (file) => file.id == selected.id,
+    );
+    if (initialIndex == -1) return;
+
+    final items = uploadedAttachments.map((file) {
+      return MediaItem(
+        id: file.mediaId ?? file.id,
+        url: file.url!,
+        thumbnail: file.url!,
+        type: file.isVideo ? 'video' : 'image',
+        name: file.name,
+        sizeBytes: file.sizeBytes,
+      );
+    }).toList();
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Media preview',
+      barrierColor: Colors.black54,
+      pageBuilder: (_, _, _) => AppMediaPreview(
+        items: items,
+        initialIndex: initialIndex,
+        onClose: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
+  Future<void> _pickDateTime({required bool isStart}) async {
+    final seed = isStart ? _startAt : _endAt;
+    final firstDate = isStart
+        ? DateTime.now().subtract(const Duration(days: 7))
+        : DateTime(_startAt.year, _startAt.month, _startAt.day);
+    final lastDate = isStart
+        ? DateTime.now().add(const Duration(days: 30))
+        : _startAt.add(const Duration(days: 7));
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: seed,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: _datePickerThemeBuilder,
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(seed),
+      builder: _timePickerThemeBuilder,
+    );
+    if (pickedTime == null || !mounted) return;
+
+    final pickedDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (isStart) {
+      final normalizedStart = roundDateTimeToQuarterHour(pickedDateTime);
+      var normalizedEnd = normalizeEventEndDateTime(
+        start: normalizedStart,
+        proposedEnd: _endAt,
+      );
+      if (normalizedEnd == normalizedStart.add(const Duration(minutes: 30))) {
+        normalizedEnd = normalizedStart.add(const Duration(hours: 2));
+      }
+
+      setState(() {
+        _startAt = normalizedStart;
+        _endAt = normalizedEnd;
+        _timingError = null;
+        _error = null;
+      });
+      return;
+    }
+
+    final normalizedEnd = normalizeEventEndDateTime(
+      start: _startAt,
+      proposedEnd: pickedDateTime,
+    );
+    if (!pickedDateTime.isAfter(_startAt)) {
+      AppSnackBar.info(
+        context,
+        'End time was adjusted to stay after the start time.',
+      );
+    }
+    if (pickedDateTime.isAfter(_startAt.add(const Duration(days: 7)))) {
+      AppSnackBar.info(
+        context,
+        'End time was limited to 7 days after the start time.',
+      );
+    }
+
+    setState(() {
+      _endAt = normalizedEnd;
+      _timingError = null;
+      _error = null;
+    });
+  }
+
+  Widget _datePickerThemeBuilder(BuildContext context, Widget? child) {
+    const colorScheme = ColorScheme.light(
+      primary: AppColors.primary,
+      onPrimary: AppColors.surface,
+      surface: AppColors.surface,
+      onSurface: AppColors.primary,
+    );
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: colorScheme,
+        dialogTheme: const DialogThemeData(backgroundColor: AppColors.surface),
+      ),
+      child: child ?? const SizedBox.shrink(),
+    );
+  }
+
+  Widget _timePickerThemeBuilder(BuildContext context, Widget? child) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primary,
+          onPrimary: AppColors.surface,
+          surface: AppColors.surface,
+          onSurface: AppColors.primary,
+        ),
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: AppColors.surface,
+          dayPeriodBorderSide: const BorderSide(color: AppColors.border),
+          dayPeriodColor: AppColors.muted,
+          dayPeriodTextColor: AppColors.primary,
+          dialHandColor: AppColors.primary,
+          dialBackgroundColor: AppColors.muted,
+          hourMinuteColor: AppColors.muted,
+          hourMinuteTextColor: AppColors.primary,
+          entryModeIconColor: AppColors.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
+      ),
+      child: child ?? const SizedBox.shrink(),
+    );
   }
 
   Future<void> _handleCreate() async {
-    if (_titleController.text.isEmpty) {
-      setState(() => _error = 'Please enter a title');
+    if (!_validateForm()) return;
+    if (!_canSubmit) {
+      setState(() {
+        _error = _hasFailedUploads
+            ? 'Resolve failed uploads before creating the event.'
+            : 'Wait for uploads to finish before creating the event.';
+      });
       return;
     }
 
@@ -209,61 +838,120 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         throw Exception('You need to be signed in to create an event');
       }
 
-      final now = DateTime.now();
-      final startTime = _resolveTime(
-        raw: _startTimeController.text,
-        fallback: now.add(const Duration(hours: 1)),
-      );
-      var endTime = _resolveTime(
-        raw: _endTimeController.text,
-        fallback: startTime.add(const Duration(hours: 2)),
-      );
+      final tagIds = _selectedCategory != null
+          ? <String>[_selectedCategory!.id]
+          : await (widget.resolveTagIds ?? _resolveDefaultTagIds)(user);
+      final selectedLocation =
+          _selectedLocation ??
+          user.address ??
+          UserAddress(label: 'Location not set');
+      final uploadedMediaIds = _attachments
+          .map((item) => item.mediaId)
+          .whereType<String>()
+          .toList();
 
-      if (!endTime.isAfter(startTime)) {
-        endTime = startTime.add(const Duration(hours: 2));
-      }
-
-      final address = user.address ?? UserAddress(label: 'Location not set');
-      final tagIds = await _resolveTagIds(user);
-
-      await eventService.createEvent({
+      final payload = {
         'name': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'status': 'draft',
-        'type': 'custom',
-        'createdBy': user.id,
+        'type': widget.initialEvent?.type ?? 'custom',
+        'createdBy': widget.initialEvent?.createdBy ?? user.id,
         'timings': {
-          'start': startTime.toIso8601String(),
-          'end': endTime.toIso8601String(),
+          'start': _startAt.toUtc().toIso8601String(),
+          'end': _endAt.toUtc().toIso8601String(),
         },
-        if (_mediaId != null) 'media': [_mediaId],
+        if (uploadedMediaIds.isNotEmpty) 'media': uploadedMediaIds,
         'tags': tagIds,
         'location': {
-          'address': address.label,
+          'address': selectedLocation.label,
           'coordinates': {
-            if (address.latitude != null) 'latitude': address.latitude,
-            if (address.longitude != null) 'longitude': address.longitude,
+            if (selectedLocation.latitude != null)
+              'latitude': selectedLocation.latitude,
+            if (selectedLocation.longitude != null)
+              'longitude': selectedLocation.longitude,
           },
         },
-      });
+      };
 
-      if (mounted) {
+      if (_isEditMode) {
+        final updatedEvent = widget.updateEventRequest != null
+            ? await widget.updateEventRequest!(widget.initialEvent!.id, payload)
+            : await eventService.updateEvent(widget.initialEvent!.id, payload);
+        if (!mounted) return;
         setState(() => _isLoading = false);
-        context.go(SuccessScreen.routePath);
+        Navigator.of(context).pop(updatedEvent ?? widget.initialEvent);
+        return;
       }
+
+      if (widget.createEventRequest != null) {
+        await widget.createEventRequest!(payload);
+      } else {
+        final createdEvent = await eventService.createEvent(payload);
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        context.go(SuccessScreen.routePath, extra: createdEvent);
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      context.go(SuccessScreen.routePath);
     } catch (e) {
-      if (mounted) {
-        final message = extractExceptionMessage(e);
-        setState(() {
-          _isLoading = false;
-          _error = message;
-        });
-      }
+      if (!mounted) return;
+      final message = extractExceptionMessage(e);
+      setState(() {
+        _isLoading = false;
+        _error = null;
+      });
+      AppSnackBar.error(context, message);
     }
+  }
+
+  void _handleLaunchDragUpdate(DragUpdateDetails details, double maxTravel) {
+    if (!_canDragLaunch || maxTravel <= 0) return;
+
+    setState(() {
+      _launchDragProgress =
+          (_launchDragProgress + (details.delta.dx / maxTravel)).clamp(
+            0.0,
+            1.0,
+          );
+    });
+  }
+
+  Future<void> _handleLaunchDragEnd() async {
+    final shouldLaunch = _launchDragProgress >= 0.92 && _canDragLaunch;
+    if (!mounted) return;
+
+    if (shouldLaunch) {
+      setState(() {
+        _launchDragProgress = 1;
+      });
+      await _handleCreate();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _launchDragProgress = 0;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final userAsync = ref.watch(userProfileProvider);
+    final categoriesAsync = ref.watch(tagsProvider(rootOnly: true));
+    final user = userAsync.valueOrNull;
+    if (!_didHydrateLocation && user?.address != null) {
+      _selectedLocation = user!.address;
+      if (user.address?.latitude != null && user.address?.longitude != null) {
+        _locationPreviewTarget = LatLng(
+          user.address!.latitude!,
+          user.address!.longitude!,
+        );
+      }
+      _didHydrateLocation = true;
+    }
+    categoriesAsync.whenData((tags) => _hydrateInitialCategory(user, tags));
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -272,8 +960,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             child: Column(
               children: [
                 AppHeader(
-                  title: 'Create Event',
-                  onBack: () => context.go(ExploreScreen.routePath),
+                  title: _screenTitle,
+                  onBack: () => _isEditMode
+                      ? context.pop()
+                      : context.go(ExploreScreen.routePath),
                   rightElement: Container(
                     width: 40,
                     height: 40,
@@ -289,7 +979,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                   ),
                 ),
-                // Progress bar
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -313,327 +1002,23 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                   ),
                 ),
-
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      24,
-                      24,
-                      24,
-                      180,
-                    ), // Extra bottom padding for sticky footer
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 180),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (_error != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(
-                                color: AppColors.error,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                        _buildDetailsSection(
+                          categoriesAsync.valueOrNull ?? const [],
+                        ),
+                        const SizedBox(height: 24),
+                        _buildLocationCard(),
+                        const SizedBox(height: 24),
+                        _buildHeroPreview(),
+                        if (_attachments.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          _buildAttachmentPills(),
                         ],
-                        // Image/Video Upload Section
-                        GestureDetector(
-                          onTap: _isUploading ? null : _handleMediaSelection,
-                          child: Container(
-                            width: double.infinity,
-                            height: 192,
-                            decoration: BoxDecoration(
-                              color: AppColors.muted,
-                              borderRadius: BorderRadius.circular(32),
-                              border: Border.all(
-                                color: AppColors.border,
-                                width: 2,
-                              ),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: _isUploading
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                    ),
-                                  )
-                                : _localMediaPath != null
-                                ? Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      _isLocalVideo
-                                          ? const Center(
-                                              child: Icon(
-                                                LucideIcons.playCircle,
-                                                size: AppIconSizes.hero,
-                                                color: AppColors.primary,
-                                              ),
-                                            )
-                                          : Image.file(
-                                              File(_localMediaPath!),
-                                              fit: BoxFit.cover,
-                                            ),
-                                      Positioned(
-                                        top: 12,
-                                        right: 12,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.54,
-                                            ),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            LucideIcons.edit,
-                                            size: AppIconSizes.m,
-                                            color: AppColors.surface,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.2),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          LucideIcons.uploadCloud,
-                                          size: AppIconSizes.l,
-                                          color: AppColors.surface,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Upload Event Cover',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      const Text(
-                                        'TAP FOR IMAGE OR VIDEO (MAX 10MB)',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 2,
-                                          color: AppColors.mutedForeground,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        _sectionLabel('Location'),
-                        const SizedBox(height: 12),
-                        Container(
-                          height: 160,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: AppColors.muted,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: CustomPaint(
-                                  painter: _DotPatternPainter(),
-                                ),
-                              ),
-                              Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.primary,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        LucideIcons.mapPin,
-                                        size: AppIconSizes.defaultSize,
-                                        color: AppColors.surface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(50),
-                                        border: Border.all(
-                                          color: AppColors.border,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'TAP TO PINPOINT',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Form Details
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(40),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 16,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _sectionLabel('Event Details'),
-                              const SizedBox(height: 8),
-                              AppInput(
-                                placeholder:
-                                    'Event Title (e.g. Midnight Pizza)',
-                                height: 56,
-                                controller: _titleController,
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Category dropdown
-                              Container(
-                                height: 56,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.muted,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Select Category',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.mutedForeground,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      LucideIcons.chevronDown,
-                                      size: AppIconSizes.defaultSize,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Time inputs
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _sectionLabel('Starts'),
-                                        const SizedBox(height: 8),
-                                        AppInput(
-                                          placeholder: '08:00 AM',
-                                          height: 56,
-                                          controller: _startTimeController,
-                                          rightElement: const Icon(
-                                            LucideIcons.clock,
-                                            size: AppIconSizes.m,
-                                            color: AppColors.mutedForeground,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        _sectionLabel('Ends'),
-                                        const SizedBox(height: 8),
-                                        AppInput(
-                                          placeholder: '10:00 AM',
-                                          height: 56,
-                                          controller: _endTimeController,
-                                          rightElement: const Icon(
-                                            LucideIcons.clock,
-                                            size: AppIconSizes.m,
-                                            color: AppColors.mutedForeground,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Notes
-                              _sectionLabel('Notes'),
-                              const SizedBox(height: 8),
-                              AppInput(
-                                placeholder:
-                                    'Dietary info, access codes, etc...',
-                                height: 128,
-                                controller: _descriptionController,
-                                maxLines: 5,
-                                backgroundColor: AppColors.muted,
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -641,99 +1026,632 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               ],
             ),
           ),
-
-          // Sticky Footer
           Positioned(
             left: 24,
             right: 24,
             bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              onPressed: _isLoading ? null : _handleCreate,
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: AppColors.surface,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
-                          children: [
-                            Text(
-                              'Launch Event',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.surface,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Icon(
-                              LucideIcons.rocket,
-                              size: AppIconSizes.defaultSize,
-                              color: AppColors.surface,
-                            ),
-                          ],
-                        ),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            LucideIcons.arrowRight,
-                            size: AppIconSizes.m,
-                            color: AppColors.surface,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
+            child: _buildLaunchSlider(),
           ),
         ],
       ),
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2,
-          color: AppColors.mutedForeground,
+  Widget _buildLaunchSlider() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const horizontalPadding = 10.0;
+        const knobSize = 52.0;
+        final maxTravel =
+            constraints.maxWidth - (horizontalPadding * 2) - knobSize;
+        final startLeft = maxTravel / 2;
+        final endLeft = maxTravel;
+        final knobLeft =
+            horizontalPadding +
+            (lerpDouble(startLeft, endLeft, _launchDragProgress) ?? startLeft);
+
+        return GestureDetector(
+          key: const ValueKey('create_event_launch_slider'),
+          onHorizontalDragUpdate: (details) =>
+              _handleLaunchDragUpdate(details, maxTravel / 2),
+          onHorizontalDragEnd: (_) => _handleLaunchDragEnd(),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: _canDragLaunch
+                  ? AppColors.primary
+                  : AppColors.primary.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (_isLoading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: AppColors.surface,
+                      strokeWidth: 2,
+                    ),
+                  )
+                else
+                  IgnorePointer(
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 140),
+                      opacity: _launchDragProgress,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 12,
+                        children: [
+                          Text(
+                            _submitLabel,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.surface,
+                            ),
+                          ),
+                          const Icon(
+                            LucideIcons.arrowRight,
+                            size: AppIconSizes.defaultSize,
+                            color: AppColors.surface,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 110),
+                  curve: Curves.easeOut,
+                  left: knobLeft,
+                  top: 6,
+                  child: Container(
+                    width: knobSize,
+                    height: knobSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.18),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      LucideIcons.arrowRight,
+                      size: AppIconSizes.defaultSize,
+                      color:
+                          (_canDragLaunch
+                                  ? AppColors.surface
+                                  : AppColors.mutedForeground)
+                              .withValues(alpha: 1 - _launchDragProgress),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeroPreview() {
+    return GestureDetector(
+      key: const ValueKey('create_event_hero_preview'),
+      onTap: _handleMediaSelection,
+      child: Container(
+        width: double.infinity,
+        height: 150,
+        decoration: BoxDecoration(
+          color: AppColors.muted,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: AppColors.border, width: 2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: _handleMediaSelection,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      LucideIcons.uploadCloud,
+                      size: AppIconSizes.l,
+                      color: AppColors.surface,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Upload Event Media',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'ADD PHOTOS OR VIDEO FOR THE EVENT',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
 
-class _DotPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.2)
-      ..style = PaintingStyle.fill;
-
-    const spacing = 20.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1, paint);
-      }
-    }
+  Widget _buildAttachmentPills() {
+    return SingleChildScrollView(
+      key: const ValueKey('create_event_attachment_list'),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _attachments.asMap().entries.map((entry) {
+          return Padding(
+            padding: EdgeInsets.only(
+              right: entry.key == _attachments.length - 1 ? 0 : 8,
+            ),
+            child: _buildAttachmentChip(entry.key, entry.value),
+          );
+        }).toList(),
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget _buildLocationCard() {
+    final location = _selectedLocation;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _sectionLabel('Location')),
+            GestureDetector(
+              key: const ValueKey('create_event_current_location_action'),
+              onTap: _useCurrentLocation,
+              child: const Row(
+                children: [
+                  Icon(
+                    LucideIcons.locateFixed,
+                    size: AppIconSizes.s,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Use Current',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_locationError != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              _locationError!,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+        Container(
+          height: 160,
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(child: _buildMiniMapPreview(location)),
+              IgnorePointer(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.mapPin,
+                          size: AppIconSizes.defaultSize,
+                          color: AppColors.surface,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(50),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          location?.label.isNotEmpty == true
+                              ? location!.label.toUpperCase()
+                              : 'TAP TO PINPOINT',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: GestureDetector(
+                  key: const ValueKey('create_event_location_card'),
+                  onTap: _openLocationPicker,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: const Icon(
+                      LucideIcons.expand,
+                      size: AppIconSizes.defaultSize,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection(List<Tag> categories) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('Event Details'),
+        const SizedBox(height: 8),
+        AppInput(
+          placeholder: 'Event Title (e.g. Midnight Pizza)',
+          controller: _titleController,
+          error: _titleError,
+          onChanged: _handleTitleChanged,
+        ),
+        const SizedBox(height: 16),
+        _sectionLabel('About Event'),
+        const SizedBox(height: 8),
+        AppTextArea(
+          placeholder:
+              'What is happening, who is it for, and what should people know?',
+          controller: _descriptionController,
+          minLines: 5,
+          maxLines: 5,
+          error: _descriptionError,
+          onChanged: _handleDescriptionChanged,
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          key: const ValueKey('create_event_category_field'),
+          onTap: categories.isEmpty
+              ? null
+              : () => _openCategoryPicker(categories),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _categoryError != null
+                    ? AppColors.error
+                    : AppColors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _selectedCategory?.name ??
+                        (categories.isEmpty
+                            ? 'Loading categories...'
+                            : 'Select Category'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _selectedCategory != null
+                          ? AppColors.primary
+                          : AppColors.mutedForeground,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  LucideIcons.chevronDown,
+                  size: AppIconSizes.defaultSize,
+                  color: AppColors.mutedForeground,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_categoryError != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              _categoryError!,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDateTimeField(
+                key: const ValueKey('create_event_start_field'),
+                label: 'Starts',
+                value: _startAt,
+                onTap: () => _pickDateTime(isStart: true),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDateTimeField(
+                key: const ValueKey('create_event_end_field'),
+                label: 'Ends',
+                value: _endAt,
+                onTap: () => _pickDateTime(isStart: false),
+              ),
+            ),
+          ],
+        ),
+        if (_timingError != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              _timingError!,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDateTimeField({
+    required Key key,
+    required String label,
+    required DateTime value,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel(label),
+        const SizedBox(height: 8),
+        GestureDetector(
+          key: key,
+          onTap: onTap,
+          child: Container(
+            height: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.calendarClock, size: AppIconSizes.m),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _dateFormat.format(value),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _timeFormat.format(value),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMiniMapPreview(UserAddress? location) {
+    final target =
+        _locationPreviewTarget ??
+        LatLng(location?.latitude ?? 21.1702, location?.longitude ?? 79.6527);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AppMapView(
+          manager: _mapManager,
+          initialCameraPosition: CameraPosition(
+            target: target,
+            zoom: _locationPreviewZoom,
+          ),
+          markers: const <Marker>{},
+          gestureRecognizers: _mapGestureRecognizers,
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.surface.withValues(alpha: 0.06),
+                AppColors.primary.withValues(alpha: 0.12),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttachmentChip(int index, ChatAttachment file) {
+    return AttachmentPill(
+      key: ValueKey('create_event_attachment_$index'),
+      file: file,
+      onTap: () => _openMediaPreview(index),
+      onRetry: () => _retryAttachment(file),
+      onRemove: () => _removeAttachment(file),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 2,
+        color: AppColors.mutedForeground,
+      ),
+    );
+  }
+
+  void _hydrateInitialEvent() {
+    final initialEvent = widget.initialEvent;
+    if (_didHydrateInitialEvent || initialEvent == null) return;
+
+    _titleController.text = initialEvent.name;
+    _descriptionController.text = initialEvent.description ?? '';
+    _startAt = initialEvent.startTime;
+    _endAt = initialEvent.endTime;
+    _selectedLocation = UserAddress(
+      label: initialEvent.location.address,
+      latitude: initialEvent.location.latitude,
+      longitude: initialEvent.location.longitude,
+    );
+    if (initialEvent.location.latitude != null &&
+        initialEvent.location.longitude != null) {
+      _locationPreviewTarget = LatLng(
+        initialEvent.location.latitude!,
+        initialEvent.location.longitude!,
+      );
+    }
+    if (initialEvent.tags?.isNotEmpty == true) {
+      _selectedCategory = initialEvent.tags!.first;
+    }
+    _didHydrateLocation = true;
+    _didHydrateInitialEvent = true;
+  }
+
+  List<ChatAttachment> _seedAttachmentsFromEvent(Event? event) {
+    final media = event?.media ?? const <Media>[];
+    return media
+        .map(
+          (item) => ChatAttachment(
+            id: item.id,
+            mediaId: item.id,
+            name: item.url.split('/').last,
+            url: item.url,
+            localPath: item.url,
+            sizeBytes: 0,
+            isVideo: item.type.toLowerCase().contains('video'),
+          ),
+        )
+        .toList();
+  }
 }

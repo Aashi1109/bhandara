@@ -8,6 +8,7 @@ import '../constants/socket_events.dart';
 import '../models/chat.dart';
 import '../services/socket.dart';
 import '../theme/theme.dart';
+import '../utils/file_size.dart';
 
 class MediaItem {
   MediaItem({
@@ -16,6 +17,7 @@ class MediaItem {
     required this.thumbnail,
     required this.type,
     required this.name,
+    this.sizeBytes,
   });
 
   final String id;
@@ -23,6 +25,7 @@ class MediaItem {
   final String thumbnail;
   final String type; // 'image' or 'video'
   final String name;
+  final int? sizeBytes;
 }
 
 class AppMediaPreview extends StatefulWidget {
@@ -477,7 +480,10 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
                 child: Column(
+                  spacing: 12,
                   children: [
+                    _mediaDetails(),
+                    if (_showReactionRow) const SizedBox(height: 16),
                     // Reactions
                     if (_showReactionRow) ...[
                       Container(
@@ -610,6 +616,44 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
           color: AppColors.primary,
         ),
       ),
+    );
+  }
+
+  Widget _mediaDetails() {
+    final item = widget.items[_currentIndex];
+    final subtitle = item.sizeBytes == null
+        ? item.type.toUpperCase()
+        : '${formatFileSize(item.sizeBytes!)} • ${item.type.toUpperCase()}';
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

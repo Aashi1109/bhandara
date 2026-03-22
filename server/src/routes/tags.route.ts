@@ -22,6 +22,13 @@ router.use([sessionParser, userParser]);
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Tag'
+ *     responses:
+ *       200:
+ *         description: Tag list or created tag
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/', asyncHandler(getTags));
 router.post('/', validateRequest('TAG_CREATE', tagSchema), asyncHandler(createTag));
@@ -39,12 +46,51 @@ router
    *         required: true
    *         schema:
    *           type: string
+   *     responses:
+   *       200:
+   *         description: Tag detail
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiEnvelope'
    *   put:
    *     tags: [Tags]
    *     summary: Update tag
+   *     parameters:
+   *       - in: path
+   *         name: tagId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/Tag'
+   *     responses:
+   *       200:
+   *         description: Updated tag
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiEnvelope'
    *   delete:
    *     tags: [Tags]
    *     summary: Delete tag
+   *     parameters:
+   *       - in: path
+   *         name: tagId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Deleted tag
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ApiEnvelope'
    */
   .get(asyncHandler(getTagById))
   .put(validateRequest('TAG_UPDATE', tagUpdateSchema), asyncHandler(updateTag))
@@ -62,6 +108,13 @@ router
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Child tags
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/:tagId/sub-tags', asyncHandler(getSubTags));
 

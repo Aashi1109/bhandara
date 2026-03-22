@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -8,6 +7,8 @@ import '../providers/user.dart';
 import '../services/engagement.dart';
 import '../theme/theme.dart';
 import '../utils/error.dart';
+import '../widgets/app_pull_to_refresh.dart';
+import '../widgets/avatar.dart';
 import '../widgets/header.dart';
 import '../widgets/review_editor_sheet.dart';
 import '../widgets/snackbar.dart';
@@ -17,12 +18,14 @@ class EventRatingsScreen extends ConsumerStatefulWidget {
     super.key,
     required this.eventId,
     required this.eventName,
+    this.isOwner = false,
   });
 
   static const String routePath = '/event/:id/ratings';
 
   final String eventId;
   final String eventName;
+  final bool isOwner;
 
   @override
   ConsumerState<EventRatingsScreen> createState() => _EventRatingsScreenState();
@@ -73,7 +76,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
 
   Future<void> _openEditor() async {
     final summary = _summary;
-    if (summary == null || _isSubmitting) return;
+    if (summary == null || _isSubmitting || widget.isOwner) return;
 
     final result = await showReviewEditorSheet(
       context,
@@ -157,11 +160,11 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   )
-                : RefreshIndicator(
-                    color: AppColors.primary,
+                : AppPullToRefresh(
                     onRefresh: _loadData,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _summaryCard(summary),
                         if (currentUserReview != null) ...[
@@ -215,7 +218,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: currentUserReview == null
+      floatingActionButton: !widget.isOwner && currentUserReview == null
           ? FloatingActionButton.extended(
               onPressed: _isSubmitting ? null : _openEditor,
               backgroundColor: AppColors.primary,
@@ -376,7 +379,9 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
 
   Widget _emptyReviewsState() {
     final message = _selectedRatingFilter == null
-        ? 'No reviews yet. Be the first to add one.'
+        ? widget.isOwner
+              ? 'No reviews yet.'
+              : 'No reviews yet. Be the first to add one.'
         : 'No ${_filterLabel(_selectedRatingFilter).toLowerCase()} found yet.';
 
     return Container(
@@ -409,29 +414,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
         children: [
           Row(
             children: [
-              ClipOval(
-                child: SizedBox(
-                  width: 52,
-                  height: 52,
-                  child: CachedNetworkImage(
-                    imageUrl: avatarUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(color: AppColors.muted),
-                    errorWidget: (_, _, _) => Container(
-                      color: AppColors.muted,
-                      alignment: Alignment.center,
-                      child: Text(
-                        (name.isNotEmpty ? name[0] : 'U').toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              Avatar(name: name, imageUrl: avatarUrl, size: 52, textSize: 18),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -474,7 +457,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                       color: AppColors.primary,
                     ),
                   ),
-                  if (isCurrentUser) ...[
+                  if (isCurrentUser && !widget.isOwner) ...[
                     const SizedBox(width: 10),
                     GestureDetector(
                       onTap: _isSubmitting ? null : _openEditor,

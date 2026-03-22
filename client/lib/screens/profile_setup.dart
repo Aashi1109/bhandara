@@ -218,7 +218,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                           AppInput(
                             controller: _nameController,
                             placeholder: 'John Doe',
-                            height: 64,
                             borderRadius: 20,
                             backgroundColor: AppColors.surface,
                             hasBorder: true,

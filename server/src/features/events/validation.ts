@@ -1,7 +1,7 @@
 import { validateSchema } from '@/helpers';
 import { EVENT_TABLE_NAME } from './constants';
 import { EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
-import { BadRequestError } from '@/exceptions';
+import { validateEventTimings } from './status';
 
 const locationSchema = {
   type: 'object',
@@ -141,7 +141,7 @@ const eventSchema = {
       uniqueItems: true,
     },
   },
-  required: ['name', 'description', 'location', 'timings', 'type', 'createdBy', 'status', 'tags'],
+  required: ['name', 'description', 'location', 'timings', 'type', 'createdBy', 'tags'],
 
   additionalProperties: false,
   errorMessage: {
@@ -152,7 +152,6 @@ const eventSchema = {
       location: 'Location is required',
       type: 'Type is required',
       createdBy: 'createdBy is required',
-      status: 'Status is required',
       capacity: 'Capacity is required',
     },
   },
@@ -191,46 +190,41 @@ const eventUpdateSchema = {
     },
     status: {
       type: 'string',
-      enum: Object.values(EEventStatus),
-      errorMessage: `Status must be one of ${Object.values(EEventStatus).join(', ')}`,
+      enum: [EEventStatus.Cancelled],
+      errorMessage: `Status must be ${EEventStatus.Cancelled}`,
     },
     capacity: {
       type: 'integer',
       minimum: 0,
       errorMessage: 'Capacity must be a non-negative integer',
     },
+    timings: {
+      type: 'object',
+      properties: {
+        start: {
+          type: 'string',
+          format: 'date-time',
+          errorMessage: 'Start time must be a valid date-time',
+        },
+        end: {
+          type: 'string',
+          format: 'date-time',
+          errorMessage: 'End time must be a valid date-time',
+        },
+      },
+      required: ['start', 'end'],
+      errorMessage: {
+        type: 'Timings must be an object',
+        required: {
+          start: 'Start time is required',
+          end: 'End time is required',
+        },
+      },
+    },
   },
 };
 
 const validateEventCreate = validateSchema(`${EVENT_TABLE_NAME}_CREATE`, eventSchema);
-
-// Custom timing validation function
-const validateTimings = (timings: { start: string | Date; end: string | Date }) => {
-  if (!timings || !timings.start || !timings.end) {
-    throw new BadRequestError('Start time and end time are required');
-  }
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const startTime = new Date(timings.start);
-  const endTime = new Date(timings.end);
-
-  // Check if start time is in the future
-  if (startTime <= now) {
-    throw new BadRequestError('Start time must be in the future');
-  }
-
-  // Check if end time is in the future
-  if (endTime <= now) {
-    throw new BadRequestError('End time must be in the future');
-  }
-
-  // Check if end time is after start time
-  if (endTime <= startTime) {
-    throw new BadRequestError('End time must be after start time');
-  }
-};
 
 // Enhanced validation function that includes timing validation
 const validateEventCreateWithTiming = <T extends { timings?: { start: string | Date; end: string | Date } }, R>(
@@ -241,7 +235,7 @@ const validateEventCreateWithTiming = <T extends { timings?: { start: string | D
   const result = validateEventCreate(data, (validData) => {
     // Add custom timing validation
     if (validData.timings) {
-      validateTimings(validData.timings);
+      validateEventTimings(validData.timings);
     }
     return callback(validData);
   });
@@ -249,6 +243,23 @@ const validateEventCreateWithTiming = <T extends { timings?: { start: string | D
   return result;
 };
 
-const validateEventUpdate = validateSchema(`${EVENT_TABLE_NAME}_UPDATE`, eventUpdateSchema);
+const validateEventUpdateBase = validateSchema(`${EVENT_TABLE_NAME}_UPDATE`, eventUpdateSchema);
+
+const validateEventUpdate = <
+  T extends {
+    timings?: { start: string | Date; end: string | Date };
+    status?: string;
+  },
+  R,
+>(
+  data: T,
+  callback: (validData: T) => R,
+): R =>
+  validateEventUpdateBase(data, (validData) => {
+    if (validData.timings && validData.status !== EEventStatus.Cancelled) {
+      validateEventTimings(validData.timings);
+    }
+    return callback(validData);
+  });
 
 export { validateEventCreateWithTiming as validateEventCreate, validateEventUpdate, eventSchema, eventUpdateSchema };

@@ -1,13 +1,13 @@
-import { Router } from "express";
+import { Router } from 'express';
 
-import { asyncHandler, sessionParser, userParser } from "@/middlewares";
+import { asyncHandler, sessionParser, userParser } from '@/middlewares';
 import {
   deleteEntityRating,
   getEntityEngagement,
   getEntityRatings,
   rateEntity,
   trackEntityView,
-} from "@/features/engagement/controller";
+} from '@/features/engagement/controller';
 
 const router = Router();
 
@@ -35,8 +35,25 @@ router.use([sessionParser, userParser]);
  *                 error:
  *                   nullable: true
  */
-router.get("/:entityType/:entityId", asyncHandler(getEntityEngagement));
-router.get("/:entityType/:entityId/ratings", asyncHandler(getEntityRatings));
+router.get('/:entityType/:entityId', asyncHandler(getEntityEngagement));
+/**
+ * @openapi
+ * /engagement/{entityType}/{entityId}/ratings:
+ *   get:
+ *     tags: [Engagement]
+ *     summary: List ratings for an entity
+ *     parameters:
+ *       - $ref: '#/components/parameters/EntityTypeParam'
+ *       - $ref: '#/components/parameters/EntityIdParam'
+ *     responses:
+ *       200:
+ *         description: Ratings for the entity
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
+ */
+router.get('/:entityType/:entityId/ratings', asyncHandler(getEntityRatings));
 
 /**
  * @openapi
@@ -60,7 +77,7 @@ router.get("/:entityType/:entityId/ratings", asyncHandler(getEntityRatings));
  *                 error:
  *                   nullable: true
  */
-router.post("/:entityType/:entityId/view", asyncHandler(trackEntityView));
+router.post('/:entityType/:entityId/view', asyncHandler(trackEntityView));
 
 /**
  * @openapi
@@ -108,7 +125,7 @@ router.post("/:entityType/:entityId/view", asyncHandler(trackEntityView));
  *                 error:
  *                   nullable: true
  */
-router.put("/:entityType/:entityId/rating", asyncHandler(rateEntity));
-router.delete("/:entityType/:entityId/rating", asyncHandler(deleteEntityRating));
+router.put('/:entityType/:entityId/rating', asyncHandler(rateEntity));
+router.delete('/:entityType/:entityId/rating', asyncHandler(deleteEntityRating));
 
 export default router;

@@ -9,9 +9,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
-import '../widgets/input.dart';
 import '../widgets/card.dart';
 import '../widgets/header.dart';
+import '../widgets/input.dart';
 import '../widgets/snackbar.dart';
 import '../utils/error.dart';
 
@@ -109,19 +109,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       child: Column(
                         children: [
                           AppInput(
+                            type: AppInputType.email,
                             label: 'Email',
                             placeholder: 'chef@foodie.com',
-                            keyboardType: TextInputType.emailAddress,
                             controller: _emailController,
-                            validations: InputValidations(
-                              required: 'Email is required',
-                              pattern: ValidationRule(
-                                value: RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                ),
-                                message: 'Invalid email address',
-                              ),
-                            ),
                             onValidationError: (error) {
                               setState(() {
                                 _isEmailValid =

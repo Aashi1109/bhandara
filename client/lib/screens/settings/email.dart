@@ -90,9 +90,9 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
                     ),
                     const SizedBox(height: 48),
                     AppInput(
+                      type: AppInputType.email,
+                      label: null,
                       placeholder: 'Enter new email address',
-                      keyboardType: TextInputType.emailAddress,
-                      height: 64,
                       borderRadius: 16,
                       controller: _emailController,
                       onChanged: (_) => setState(() {}),

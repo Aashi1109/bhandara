@@ -1,17 +1,7 @@
 import { Router } from 'express';
 
-import {
-  asyncHandler,
-  paginationParser,
-  sessionParser,
-  userParser,
-} from '@/middlewares';
-import {
-  getSavedEntityState,
-  listSavedEntities,
-  saveEntity,
-  unsaveEntity,
-} from '@/features/saves/controller';
+import { asyncHandler, paginationParser, sessionParser, userParser } from '@/middlewares';
+import { getSavedEntityState, listSavedEntities, saveEntity, unsaveEntity } from '@/features/saves/controller';
 
 const router = Router();
 
@@ -33,6 +23,15 @@ router.use([sessionParser, userParser]);
  *     responses:
  *       200:
  *         description: Paginated saved entities
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedSavedEntities'
+ *                 error:
+ *                   nullable: true
  */
 router.get('/', [paginationParser], asyncHandler(listSavedEntities));
 
@@ -57,6 +56,15 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *     responses:
  *       200:
  *         description: Save state for the entity
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/SavedEntitySummary'
+ *                 error:
+ *                   nullable: true
  *   put:
  *     tags: [Saves]
  *     summary: Save an entity for the current user
@@ -75,6 +83,15 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *     responses:
  *       200:
  *         description: Saved entity state
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/SavedEntitySummary'
+ *                 error:
+ *                   nullable: true
  *   delete:
  *     tags: [Saves]
  *     summary: Remove an entity from the current user's saves
@@ -93,6 +110,15 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *     responses:
  *       200:
  *         description: Unsaved entity state
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/SavedEntitySummary'
+ *                 error:
+ *                   nullable: true
  */
 router
   .route('/:entityType/:entityId')

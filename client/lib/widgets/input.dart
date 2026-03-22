@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/theme.dart';
 
+enum AppInputType { text, email }
+
 class ValidationRule<T> {
   const ValidationRule({required this.value, required this.message});
 
@@ -36,6 +38,7 @@ class InputValidations {
 class AppInput extends StatefulWidget {
   const AppInput({
     super.key,
+    this.type = AppInputType.text,
     this.label,
     this.placeholder,
     this.error,
@@ -55,6 +58,7 @@ class AppInput extends StatefulWidget {
     this.minLines,
   });
 
+  final AppInputType type;
   final String? label;
   final String? placeholder;
   final String? error;
@@ -78,6 +82,10 @@ class AppInput extends StatefulWidget {
 }
 
 class _AppInputState extends State<AppInput> {
+  static final RegExp _emailPattern = RegExp(
+    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+  );
+
   String? _internalError;
 
   T? _extractRuleValue<T>(dynamic rule) {
@@ -92,8 +100,28 @@ class _AppInputState extends State<AppInput> {
     return defaultMessage;
   }
 
-  void _validate(String value) {
+  InputValidations? _effectiveValidations() {
     final rules = widget.validations;
+    if (widget.type != AppInputType.email) {
+      return rules;
+    }
+
+    return InputValidations(
+      required: rules?.required ?? 'Email is required',
+      minLength: rules?.minLength,
+      maxLength: rules?.maxLength,
+      pattern:
+          rules?.pattern ??
+          ValidationRule(
+            value: _emailPattern,
+            message: 'Invalid email address',
+          ),
+      validate: rules?.validate,
+    );
+  }
+
+  void _validate(String value) {
+    final rules = _effectiveValidations();
     if (rules == null) {
       return;
     }
@@ -217,7 +245,11 @@ class _AppInputState extends State<AppInput> {
                     }
                   },
                   obscureText: widget.obscureText,
-                  keyboardType: widget.keyboardType,
+                  keyboardType:
+                      widget.keyboardType ??
+                      (widget.type == AppInputType.email
+                          ? TextInputType.emailAddress
+                          : null),
                   maxLines: widget.maxLines,
                   minLines: widget.minLines,
                   style: typography.bodyMD.copyWith(

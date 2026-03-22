@@ -35,7 +35,7 @@ class ExploreEventMap extends StatefulWidget {
 
 class _ExploreEventMapState extends State<ExploreEventMap>
     with SingleTickerProviderStateMixin {
-  static const double _initialZoom = 13;
+  static const double _initialZoom = 11;
   static const double _userPulseMinRadius = 30;
   static const double _userPulseMaxRadius = 120;
 
@@ -73,8 +73,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     super.didUpdateWidget(oldWidget);
 
     final eventsChanged = oldWidget.events != widget.events;
-    final selectedChanged = oldWidget.selectedEvent?.id !=
-        widget.selectedEvent?.id;
+    final selectedChanged =
+        oldWidget.selectedEvent?.id != widget.selectedEvent?.id;
     final locationChanged = oldWidget.userLocation != widget.userLocation;
 
     if (eventsChanged || selectedChanged || locationChanged) {
@@ -82,6 +82,13 @@ class _ExploreEventMapState extends State<ExploreEventMap>
       if (locationChanged) {
         _rebuildUserLocationPulse();
       }
+    }
+
+    if (eventsChanged || locationChanged) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _fitCameraToVisibleContent();
+      });
     }
   }
 
@@ -128,7 +135,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     }
 
     final progress = _pulseController.value;
-    final radius = _userPulseMinRadius +
+    final radius =
+        _userPulseMinRadius +
         ((_userPulseMaxRadius - _userPulseMinRadius) * progress);
     final opacity = (1 - progress).clamp(0.0, 1.0);
 
@@ -167,8 +175,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         markers.add(
           Marker(
             markerId: MarkerId(
-              'cluster_${cluster.center.latitude}_${cluster.center
-                  .longitude}_${cluster.count}',
+              'cluster_${cluster.center.latitude}_${cluster.center.longitude}_${cluster.count}',
             ),
             position: cluster.center,
             anchor: const Offset(0.5, 0.5),
@@ -231,6 +238,73 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     return null;
   }
 
+  List<LatLng> _contentPoints() {
+    final points = <LatLng>[];
+    if (widget.userLocation != null) {
+      points.add(widget.userLocation!);
+    }
+
+    for (final event in widget.events) {
+      final lat = event.location.latitude;
+      final lng = event.location.longitude;
+      if (lat != null && lng != null) {
+        points.add(LatLng(lat, lng));
+      }
+    }
+    return points;
+  }
+
+  Future<void> _fitCameraToVisibleContent() async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    final points = _contentPoints();
+    if (points.isEmpty) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(_getInitialMapCenter(), _initialZoom),
+      );
+      return;
+    }
+
+    if (points.length == 1) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(points.first, 12.5),
+      );
+      return;
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points.skip(1)) {
+      minLat = point.latitude < minLat ? point.latitude : minLat;
+      maxLat = point.latitude > maxLat ? point.latitude : maxLat;
+      minLng = point.longitude < minLng ? point.longitude : minLng;
+      maxLng = point.longitude > maxLng ? point.longitude : maxLng;
+    }
+
+    if (minLat == maxLat) {
+      minLat -= 0.01;
+      maxLat += 0.01;
+    }
+    if (minLng == maxLng) {
+      minLng -= 0.01;
+      maxLng += 0.01;
+    }
+
+    await controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        72,
+      ),
+    );
+  }
+
   Future<void> _zoomIn() async {
     final controller = _mapController;
     if (controller == null) return;
@@ -249,19 +323,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     );
   }
 
-  Future<void> _focusOnSelectedEvent() async {
-    final controller = _mapController;
-    if (controller == null) return;
-    final userLocation = widget.userLocation;
-    final event = widget.selectedEvent;
-    final lat = event?.location.latitude;
-    final lng = event?.location.longitude;
-    final target =
-        userLocation ??
-            (lat != null && lng != null
-                ? LatLng(lat, lng)
-                : _getInitialMapCenter());
-    await controller.animateCamera(CameraUpdate.newLatLngZoom(target, 15));
+  Future<void> _focusOnVisibleContent() async {
+    await _fitCameraToVisibleContent();
   }
 
   Future<void> _focusOnCluster(EventMapCluster cluster) async {
@@ -333,7 +396,10 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                     zoomControlsEnabled: false,
                     myLocationButtonEnabled: false,
                     myLocationEnabled: false,
-                    onMapReady: (controller) => _mapController = controller,
+                    onMapReady: (controller) {
+                      _mapController = controller;
+                      unawaited(_fitCameraToVisibleContent());
+                    },
                     onCameraMove: (position) => _pendingZoom = position.zoom,
                     onCameraIdle: _handleCameraIdle,
                   );
@@ -344,10 +410,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         ),
         Positioned(
           right: 20,
-          top: MediaQuery
-              .of(context)
-              .size
-              .height * 0.5 - 60,
+          top: MediaQuery.of(context).size.height * 0.5 - 60,
           child: Column(
             children: [
               _mapControl(LucideIcons.plus, false, onTap: _zoomIn),
@@ -357,7 +420,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
               _mapControl(
                 LucideIcons.locateFixed,
                 true,
-                onTap: _focusOnSelectedEvent,
+                onTap: _focusOnVisibleContent,
               ),
             ],
           ),

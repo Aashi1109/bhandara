@@ -28,6 +28,25 @@
  *           oneOf:
  *             - $ref: '#/components/schemas/ApiError'
  *             - nullable: true
+ *     PaginationMeta:
+ *       type: object
+ *       properties:
+ *         limit:
+ *           type: integer
+ *         next:
+ *           type: string
+ *           nullable: true
+ *         hasNext:
+ *           type: boolean
+ *         total:
+ *           type: integer
+ *           nullable: true
+ *         sortBy:
+ *           type: string
+ *           enum: [createdAt, updatedAt]
+ *         sortOrder:
+ *           type: string
+ *           enum: [asc, desc]
  *     PublicUser:
  *       type: object
  *       properties:
@@ -324,6 +343,93 @@
  *           type: array
  *           items:
  *             type: object
+ *     SavedEntitySummary:
+ *       type: object
+ *       properties:
+ *         entityType:
+ *           type: string
+ *           enum: [event, thread, message]
+ *         entityId:
+ *           type: string
+ *         saved:
+ *           type: boolean
+ *         saveCount:
+ *           type: integer
+ *         savedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *       required: [entityType, entityId, saved, saveCount, savedAt]
+ *     SavedEntityListItem:
+ *       allOf:
+ *         - $ref: '#/components/schemas/SavedEntitySummary'
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *             userId:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *             deletedAt:
+ *               type: string
+ *               format: date-time
+ *               nullable: true
+ *             entity:
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/Event'
+ *                 - $ref: '#/components/schemas/Thread'
+ *                 - $ref: '#/components/schemas/Message'
+ *                 - type: 'null'
+ *     PaginatedSavedEntities:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SavedEntityListItem'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     PaginatedUsers:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/PublicUser'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     PaginatedThreads:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Thread'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     PaginatedMessages:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Message'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     PaginatedEvents:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Event'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
  *     EntityEngagement:
  *       type: object
  *       properties:

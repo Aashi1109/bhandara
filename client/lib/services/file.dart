@@ -169,16 +169,27 @@ class FileService {
     }
   }
 
-  Future<String?> getPublicUrl(String mediaId) async {
+  Future<Map<String, dynamic>?> getMediaById(String mediaId) async {
     try {
-      final response = await _dio.post(
-        Api.mediaPublicUrl,
-        data: {'mediaId': mediaId},
-      );
-      return response.data['data']['url'] as String?;
+      final response = await _dio.get(Api.media(mediaId));
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final payload = data['data'];
+        if (payload is Map<String, dynamic>) {
+          return payload;
+        }
+        return data;
+      }
+      return null;
     } catch (e) {
       return null;
     }
+  }
+
+  Future<String?> getPublicUrl(String mediaId) async {
+    final media = await getMediaById(mediaId);
+    if (media == null) return null;
+    return (media['publicUrl'] ?? media['url']) as String?;
   }
 }
 

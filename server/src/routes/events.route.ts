@@ -51,13 +51,16 @@ router.use([sessionParser, userParser]);
  *     summary: List events
  *     responses:
  *       200:
- *         description: List of events
+ *         description: Paginated events
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Event'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedEvents'
+ *                 error:
+ *                   nullable: true
  *   post:
  *     tags: [Events]
  *     summary: Create event
@@ -73,7 +76,12 @@ router.use([sessionParser, userParser]);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Event'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *                 error:
+ *                   nullable: true
  */
 router
   .route('/')
@@ -100,7 +108,12 @@ router
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Event'
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/Event'
+   *                 error:
+   *                   nullable: true
    *   put:
    *     tags: [Events]
    *     summary: Update event
@@ -116,7 +129,12 @@ router
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Event'
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/Event'
+   *                 error:
+   *                   nullable: true
    *   delete:
    *     tags: [Events]
    *     summary: Delete event
@@ -126,7 +144,12 @@ router
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Event'
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   $ref: '#/components/schemas/Event'
+   *                 error:
+   *                   nullable: true
    */
   .get([validateParams(['eventId'])], asyncHandler(getEventById))
   .put([validateParams(['eventId']), validateRequest('EVENT_UPDATE', eventUpdateSchema)], asyncHandler(updateEvent))
@@ -152,6 +175,10 @@ router
  *     responses:
  *       200:
  *         description: Tag removed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.delete('/:eventId/tags/:tagId', [validateParams(['eventId', 'tagId'])], asyncHandler(deleteEventTag));
 
@@ -170,6 +197,15 @@ router.delete('/:eventId/tags/:tagId', [validateParams(['eventId', 'tagId'])], a
  *     responses:
  *       200:
  *         description: List of threads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedThreads'
+ *                 error:
+ *                   nullable: true
  */
 router.get('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(getEventThreads));
 
@@ -194,6 +230,15 @@ router.get('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(getE
  *     responses:
  *       201:
  *         description: Created thread
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Thread'
+ *                 error:
+ *                   nullable: true
  */
 router.post('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(createThread));
 
@@ -203,9 +248,61 @@ router.post('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(cre
  *   get:
  *     tags: [Events]
  *     summary: Get thread in event
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: threadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Thread detail
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Thread'
+ *                 error:
+ *                   nullable: true
  *   put:
  *     tags: [Events]
  *     summary: Update thread in event
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: threadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Thread'
+ *     responses:
+ *       200:
+ *         description: Updated thread
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Thread'
+ *                 error:
+ *                   nullable: true
  *   delete:
  *     tags: [Events]
  *     summary: Delete thread in event
@@ -220,6 +317,18 @@ router.post('/:eventId/threads', [validateParams(['eventId'])], asyncHandler(cre
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted thread
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Thread'
+ *                 error:
+ *                   nullable: true
  */
 router
   .route('/:eventId/threads/:threadId')
@@ -253,6 +362,15 @@ router
  *     responses:
  *       200:
  *         description: Thread lock/unlock result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Thread'
+ *                 error:
+ *                   nullable: true
  */
 router.post(
   '/:eventId/threads/:threadId/:action',
@@ -271,6 +389,29 @@ router.post(
  *   get:
  *     tags: [Events]
  *     summary: List messages in thread
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: threadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Paginated messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedMessages'
+ *                 error:
+ *                   nullable: true
  *   post:
  *     tags: [Events]
  *     summary: Create message in thread
@@ -291,6 +432,18 @@ router.post(
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Message'
+ *     responses:
+ *       201:
+ *         description: Created message
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *                 error:
+ *                   nullable: true
  */
 router.get(
   '/:eventId/threads/:threadId/messages',
@@ -309,9 +462,71 @@ router.post(
  *   get:
  *     tags: [Events]
  *     summary: Get message in thread
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: threadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Message detail
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *                 error:
+ *                   nullable: true
  *   put:
  *     tags: [Events]
  *     summary: Update message in thread
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: threadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Message'
+ *     responses:
+ *       200:
+ *         description: Updated message
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *                 error:
+ *                   nullable: true
  *   delete:
  *     tags: [Events]
  *     summary: Delete message in thread
@@ -331,6 +546,18 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted message
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *                 error:
+ *                   nullable: true
  */
 router
   .route('/:eventId/threads/:threadId/messages/:messageId')
@@ -360,6 +587,18 @@ router
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Paginated child messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/PaginatedMessages'
+ *                 error:
+ *                   nullable: true
  */
 router.get(
   '/:eventId/threads/:threadId/child-messages/:parentId',
@@ -391,6 +630,15 @@ router.get(
  *     responses:
  *       200:
  *         description: Verification result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *                 error:
+ *                   nullable: true
  */
 router.post('/:eventId/verify', asyncHandler(verifyEvent));
 
@@ -415,6 +663,15 @@ router.post('/:eventId/verify', asyncHandler(verifyEvent));
  *     responses:
  *       200:
  *         description: Join/leave status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *                 error:
+ *                   nullable: true
  */
 router.get('/:eventId/:action', [validateParams(['eventId', 'action'])], asyncHandler(eventJoinLeaveHandler));
 
@@ -438,6 +695,15 @@ router.get('/:eventId/:action', [validateParams(['eventId', 'action'])], asyncHa
  *     responses:
  *       200:
  *         description: Media deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *                 error:
+ *                   nullable: true
  */
 router.delete('/:eventId/media/:mediaId', [validateParams(['eventId', 'mediaId'])], asyncHandler(deleteEventMedia));
 

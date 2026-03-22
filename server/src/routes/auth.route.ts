@@ -53,6 +53,10 @@ router.post('/login', validateRequest('AUTH_LOGIN', schemas.login), asyncHandler
  *     responses:
  *       200:
  *         description: OAuth success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/google/callback', asyncHandler(googleCallback));
 /**
@@ -65,6 +69,10 @@ router.get('/google/callback', asyncHandler(googleCallback));
  *     responses:
  *       200:
  *         description: OAuth URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/google', asyncHandler(googleAuth));
 /**
@@ -88,6 +96,10 @@ router.get('/google', asyncHandler(googleAuth));
  *     responses:
  *       200:
  *         description: Signup success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
  */
 router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHandler(signUp));
 /**
@@ -96,10 +108,25 @@ router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHand
  *   post:
  *     tags: [Auth]
  *     summary: Signin with OAuth id token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               provider:
+ *                 type: string
+ *               idToken:
+ *                 type: string
  *     security: []
  *     responses:
  *       200:
  *         description: Signin success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
  */
 router.post('/oauth/signin-with-id-token', asyncHandler(signInWithIdToken));
 
@@ -113,6 +140,10 @@ router.use([sessionParser, userParser]);
  *     responses:
  *       200:
  *         description: Logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/logout', asyncHandler(logOut));
 /**
@@ -121,6 +152,13 @@ router.get('/logout', asyncHandler(logOut));
  *   get:
  *     tags: [Auth]
  *     summary: Get current session
+ *     responses:
+ *       200:
+ *         description: Current session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/session', asyncHandler(session));
 /**
@@ -135,6 +173,13 @@ router.get('/session', asyncHandler(session));
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Session deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.delete('/session/:sessionId', asyncHandler(deleteSession));
 /**
@@ -143,6 +188,13 @@ router.delete('/session/:sessionId', asyncHandler(deleteSession));
  *   get:
  *     tags: [Auth]
  *     summary: List sessions
+ *     responses:
+ *       200:
+ *         description: Active sessions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/sessions', asyncHandler(sessionsList));
 

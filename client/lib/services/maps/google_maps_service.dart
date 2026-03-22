@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:dio/dio.dart';
 import 'map_models.dart';
 import 'map_provider_service.dart';
@@ -15,7 +17,7 @@ class GoogleMapsService implements MapProviderService {
   {
     "featureType": "administrative",
     "elementType": "all",
-    "stylers": [{"saturation": "-100"}]
+    "stylers": [{"saturation": -100}, {"lightness": 6}]
   },
   {
     "featureType": "administrative.province",
@@ -25,54 +27,78 @@ class GoogleMapsService implements MapProviderService {
   {
     "featureType": "landscape",
     "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": 65}, {"visibility": "on"}]
+    "stylers": [{"saturation": -100}, {"lightness": 42}, {"visibility": "on"}]
   },
   {
     "featureType": "poi",
     "elementType": "all",
     "stylers": [
       {"saturation": -100},
-      {"lightness": "50"},
+      {"lightness": 28},
       {"visibility": "simplified"}
     ]
   },
   {
     "featureType": "road",
     "elementType": "all",
-    "stylers": [{"saturation": "-100"}]
+    "stylers": [{"saturation": -100}, {"lightness": 8}]
   },
   {
     "featureType": "road.highway",
     "elementType": "all",
-    "stylers": [{"visibility": "simplified"}]
+    "stylers": [
+      {"saturation": -100},
+      {"lightness": -10},
+      {"visibility": "simplified"}
+    ]
   },
   {
     "featureType": "road.arterial",
     "elementType": "all",
-    "stylers": [{"lightness": "30"}]
+    "stylers": [{"saturation": -100}, {"lightness": -2}]
   },
   {
     "featureType": "road.local",
     "elementType": "all",
-    "stylers": [{"lightness": "40"}]
+    "stylers": [{"saturation": -100}, {"lightness": 14}]
   },
   {
     "featureType": "transit",
     "elementType": "all",
-    "stylers": [{"saturation": -100}, {"visibility": "simplified"}]
+    "stylers": [
+      {"saturation": -100},
+      {"lightness": 18},
+      {"visibility": "simplified"}
+    ]
   },
   {
     "featureType": "water",
     "elementType": "geometry",
-    "stylers": [{"hue": "#ffff00"}, {"lightness": -25}, {"saturation": -97}]
+    "stylers": [{"saturation": -100}, {"lightness": 16}]
   },
   {
     "featureType": "water",
     "elementType": "labels",
-    "stylers": [{"lightness": -25}, {"saturation": -100}]
+    "stylers": [{"saturation": -100}, {"lightness": 4}]
   }
 ]
 ''';
+
+  static const List<String> _staticMapStyles = [
+    'feature:all|element:labels.icon|visibility:off',
+    'feature:administrative|saturation:-100|lightness:6',
+    'feature:administrative.province|visibility:off',
+    'feature:landscape|saturation:-100|lightness:42',
+    'feature:poi|saturation:-100|lightness:28|visibility:simplified',
+    'feature:poi.park|saturation:-100|lightness:34',
+    'feature:road|saturation:-100|lightness:8',
+    'feature:road.highway|saturation:-100|lightness:-10|visibility:simplified',
+    'feature:road.arterial|saturation:-100|lightness:-2',
+    'feature:road.local|saturation:-100|lightness:14',
+    'feature:transit|saturation:-100|lightness:18|visibility:simplified',
+    'feature:water|saturation:-100|lightness:16',
+    'feature:water|element:labels|saturation:-100|lightness:4',
+  ];
 
   @override
   MapProviderType get type => MapProviderType.google;
@@ -197,18 +223,50 @@ class GoogleMapsService implements MapProviderService {
     int width = 1000,
     int height = 1000,
     double zoom = 14,
+    bool showMarker = true,
+    String? customMarkerUrl = defaultStaticMapMarkerUrl,
     String fallbackUrl = 'https://picsum.photos/seed/nyc-map/1000/1000',
   }) {
     if (_apiKey.isEmpty) return fallbackUrl;
+    final zoomValue = zoom == zoom.roundToDouble()
+        ? zoom.round().toString()
+        : zoom.toString();
+    const maxDimension = 640;
+    final resizeFactor = math.max(
+      math.max(width / maxDimension, height / maxDimension),
+      1,
+    );
+    final requestWidth = (width / resizeFactor).round();
+    final requestHeight = (height / resizeFactor).round();
 
-    final uri = Uri.https('maps.googleapis.com', '/maps/api/staticmap', {
-      'size': '${width}x$height',
-      'center': '$latitude,$longitude',
-      'zoom': '$zoom',
-      'markers': '$latitude,$longitude',
-      'key': _apiKey,
-    });
-    return uri.toString();
+    final params = <String, List<String>>{
+      'size': ['${requestWidth}x$requestHeight'],
+      'center': ['$latitude,$longitude'],
+      'zoom': [zoomValue],
+      'scale': ['2'],
+      'format': ['png'],
+      'maptype': ['roadmap'],
+      'key': [_apiKey],
+      'style': _staticMapStyles,
+    };
+    if (showMarker) {
+      final markerValue =
+          customMarkerUrl == null || customMarkerUrl.isEmpty
+          ? '$latitude,$longitude'
+          : 'anchor:bottom|icon:$customMarkerUrl|$latitude,$longitude';
+      params['markers'] = [markerValue];
+    }
+
+    final query = params.entries
+        .expand(
+          (entry) => entry.value.map(
+            (value) =>
+                '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(value)}',
+          ),
+        )
+        .join('&');
+
+    return 'https://maps.googleapis.com/maps/api/staticmap?$query';
   }
 
   MapAddress _mapAddressFromGeocode(Map<String, dynamic> json) {

@@ -1,25 +1,19 @@
-import type { IEvent, IMedia } from "@/definitions/types";
-import { EMediaProvider } from "@/definitions/enums";
-import { findAllWithPagination } from "@/utils/dbUtils";
-import SupabaseService from "@/supabase";
-import CloudinaryService from "@/ccloudinary";
-import { validateMediaCreate, validateMediaUpdate } from "./validation";
-import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from "./constants";
-import { Media } from "./model";
-import { Event } from "../events/model";
-import { isEmpty, omit } from "@/utils";
-import {
-  deleteMediaCache,
-  getEventMediaCache,
-  setEventMediaCache,
-  setMediaCache,
-  getMediaCache,
-} from "./helpers";
-import logger from "@/logger";
-import { getUniqueFilename as getUniqueFilename } from "./utils";
-import { BadRequestError } from "@/exceptions";
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
-import EntityStatsService from "@/features/stats/service";
+import type { IEvent, IMedia } from '@/definitions/types';
+import { EMediaProvider } from '@/definitions/enums';
+import { findAllWithPagination } from '@/utils/dbUtils';
+import SupabaseService from '@/supabase';
+import CloudinaryService from '@/ccloudinary';
+import { validateMediaCreate, validateMediaUpdate } from './validation';
+import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from './constants';
+import { Media } from './model';
+import { Event } from '../events/model';
+import { isEmpty, omit } from '@/utils';
+import { deleteMediaCache, getEventMediaCache, setEventMediaCache, setMediaCache, getMediaCache } from './helpers';
+import logger from '@/logger';
+import { getUniqueFilename as getUniqueFilename } from './utils';
+import { BadRequestError } from '@/exceptions';
+import { CACHE_NAMESPACE_CONFIG } from '@/constants';
+import EntityStatsService from '@/features/stats/service';
 
 class MediaService {
   private readonly getCache = getMediaCache;
@@ -35,16 +29,14 @@ class MediaService {
   }
 
   async getEventMedia(event: IEvent, limit: number | null = null) {
-    const key = event.id + (limit ? `:${limit}` : "");
+    const key = event.id + (limit ? `:${limit}` : '');
     const cached = await getEventMediaCache(key);
     if (cached) return cached;
 
     const mediaIds = event?.media || [];
     if (!mediaIds.length) return [];
 
-    const data = await this.getMediaByIds(
-      mediaIds.slice(0, limit || mediaIds.length) as unknown as string[]
-    );
+    const data = await this.getMediaByIds(mediaIds.slice(0, limit || mediaIds.length) as unknown as string[]);
 
     const values = Object.values(data);
     if (values.length > 0) await setEventMediaCache(key, values as IMedia[]);
@@ -90,11 +82,7 @@ class MediaService {
     return data;
   }
 
-  async deleteFile(
-    bucket: string,
-    path: string,
-    provider: EMediaProvider = EMediaProvider.Supabase
-  ) {
+  async deleteFile(bucket: string, path: string, provider: EMediaProvider = EMediaProvider.Supabase) {
     if (provider === EMediaProvider.Cloudinary) {
       const { error } = await this._cloudinaryService.deleteFile(path);
       if (error) throw error;
@@ -112,7 +100,7 @@ class MediaService {
   async update<U extends Partial<IMedia>>(id: string, data: U) {
     const res = await validateMediaUpdate(data, async (validatedData) => {
       const row = await Media.findByPk(id);
-      if (!row) throw new Error("Media not found");
+      if (!row) throw new Error('Media not found');
       await row.update(validatedData as any);
       return row.toJSON() as any;
     });
@@ -133,25 +121,19 @@ class MediaService {
     };
     return validateMediaCreate(dataWithProvider, (validatedData) =>
       Media.sequelize!.transaction(async (tx) => {
-        const {
-          name: fileName,
-          format,
-          metadata,
-          ...initialRestOptions
-        } = validatedData.options || {};
+        const { name: fileName, format, metadata, ...initialRestOptions } = validatedData.options || {};
         let restOptions = initialRestOptions;
 
-        const {bucket} = validatedData;
+        const { bucket } = validatedData;
 
         const bucketConfig = MEDIA_BUCKET_CONFIG[validatedData.bucket];
-        if (!bucketConfig) throw new Error("Bucket not found");
-        if (validatedData.options.size > bucketConfig.maxSize)
-          throw new BadRequestError("File size too large");
+        if (!bucketConfig) throw new Error('Bucket not found');
+        if (validatedData.options.size > bucketConfig.maxSize) throw new BadRequestError('File size too large');
 
         const path = getUniqueFilename(validatedData.path);
 
-        validatedData = omit(validatedData, ["path", "bucket", "options"]);
-        restOptions = omit(restOptions, ["path"]);
+        validatedData = omit(validatedData, ['path', 'bucket', 'options']);
+        restOptions = omit(restOptions, ['path']);
 
         // create media record
         const createData = {
@@ -165,7 +147,7 @@ class MediaService {
           mimeType: insertData.mimeType,
           name: fileName,
           ...restOptions,
-          access: "public",
+          access: 'public',
         };
 
         const creationData = await Media.create(createData as any, {
@@ -194,7 +176,7 @@ class MediaService {
           row: creationData as IMedia,
           ...signedUrl,
         };
-      })
+      }),
     );
   }
 
@@ -208,13 +190,7 @@ class MediaService {
     return { path: uniquePath, ...signedUrl.data };
   }
 
-  async uploadFileToSignedUrl({
-    bucket,
-    path,
-    base64FileData,
-    mimeType,
-    token,
-  }) {
+  async uploadFileToSignedUrl({ bucket, path, base64FileData, mimeType, token }) {
     return this._supabaseService.uploadFileToSignedUrl({
       bucket,
       path,
@@ -224,7 +200,7 @@ class MediaService {
     });
   }
 
-  async create<U extends Partial<Omit<IMedia, "id" | "updatedAt">>>(data: U) {
+  async create<U extends Partial<Omit<IMedia, 'id' | 'updatedAt'>>>(data: U) {
     const res = await validateMediaCreate(data, (validatedData) => {
       const { path, ...rest } = validatedData;
       return Media.create({
@@ -246,14 +222,10 @@ class MediaService {
 
     const res = (await Media.findByPk(id, { raw: true })) as IMedia | null;
     if (res) {
-      const publicUrl = await this.getPublicUrl(
-        res.url,
-        res.storage.bucket,
-        res.storage.provider
-      );
+      const publicUrl = await this.getPublicUrl(res.url, res.storage.bucket, res.storage.provider);
       (res as any).publicUrl = publicUrl.signedUrl;
       (res as any).publicUrlExpiresAt = publicUrl.expiresAt;
-      await this.setCache(id, res as any);
+      await this.setCache(id, res);
     }
     return res;
   }
@@ -262,7 +234,7 @@ class MediaService {
     path: string,
     bucket: string,
     provider: EMediaProvider = EMediaProvider.Supabase,
-    options?: Record<string, any>
+    options?: Record<string, any>,
   ) {
     if (provider === EMediaProvider.Cloudinary) {
       const signedUrl = this._cloudinaryService.getPublicUrl(path);
@@ -289,7 +261,7 @@ class MediaService {
     paths: string[],
     bucket: string,
     expiresIn: number = CACHE_NAMESPACE_CONFIG.Media.ttl,
-    provider: EMediaProvider = EMediaProvider.Supabase
+    provider: EMediaProvider = EMediaProvider.Supabase,
   ) {
     if (provider === EMediaProvider.Cloudinary) {
       const urls = paths.map((p) => {
@@ -297,18 +269,20 @@ class MediaService {
         return { path: p, signedUrl, expiresAt: -1 };
       });
 
-      return urls.reduce((acc, url) => {
-        acc[url.path] = url;
-        return acc;
-      }, {} as Record<string, { signedUrl: string; expiresAt: Date | number }>);
+      return urls.reduce(
+        (acc, url) => {
+          acc[url.path] = url;
+          return acc;
+        },
+        {} as Record<string, { signedUrl: string; expiresAt: Date | number }>,
+      );
     }
 
-    const { data: publicUrls, error } =
-      await this._supabaseService.getBulkPublicUrls({
-        bucket,
-        paths,
-        expiresIn,
-      });
+    const { data: publicUrls, error } = await this._supabaseService.getBulkPublicUrls({
+      bucket,
+      paths,
+      expiresIn,
+    });
 
     if (error) throw error;
 
@@ -319,10 +293,13 @@ class MediaService {
       };
     });
 
-    const mediaWithPublicUrls = publicUrlsWithExpiresAt.reduce((acc, url) => {
-      acc[url.path] = url;
-      return acc;
-    }, {} as Record<string, { signedUrl: string; expiresAt: Date }>);
+    const mediaWithPublicUrls = publicUrlsWithExpiresAt.reduce(
+      (acc, url) => {
+        acc[url.path] = url;
+        return acc;
+      },
+      {} as Record<string, { signedUrl: string; expiresAt: Date }>,
+    );
 
     return mediaWithPublicUrls;
   }
@@ -332,11 +309,7 @@ class MediaService {
       const media = await Media.findByPk(id, { transaction: tx });
       if (!media) return null;
       await media.destroy({ transaction: tx });
-      const deletionResult = await this.deleteFile(
-        media.storage.bucket,
-        media.url,
-        media.storage.provider
-      );
+      const deletionResult = await this.deleteFile(media.storage.bucket, media.url, media.storage.provider);
       await this.deleteCache(id);
       logger.debug(`Deleted media ${id}`, { deletionResult });
       return media;
@@ -351,7 +324,7 @@ class MediaService {
     const res = await findAllWithPagination(
       Media,
       { where: { id: Array.from(filteredIds) } },
-      { limit: filteredIds.size }
+      { limit: filteredIds.size },
     );
     const mediaData = { data: res.items } as { data: IMedia[] };
     if (!isEmpty(mediaData.data)) {
@@ -365,19 +338,14 @@ class MediaService {
           acc[key].push(media.url);
           return acc;
         },
-        {} as Record<string, string[]>
+        {} as Record<string, string[]>,
       );
 
       const bucketGroupedPublicUrls = await Promise.all(
         Object.entries(bucketPathsMapping).map(([key, paths]) => {
-          const [provider, bucket] = key.split(":");
-          return this.getBulkPublicUrls(
-            paths,
-            bucket,
-            CACHE_NAMESPACE_CONFIG.Media.ttl,
-            provider as EMediaProvider
-          );
-        })
+          const [provider, bucket] = key.split(':');
+          return this.getBulkPublicUrls(paths, bucket, CACHE_NAMESPACE_CONFIG.Media.ttl, provider as EMediaProvider);
+        }),
       );
 
       const publicUrls = bucketGroupedPublicUrls.reduce(
@@ -387,39 +355,33 @@ class MediaService {
             ...bucketPublicUrls,
           };
         },
-        {} as Record<
-          string,
-          { signedUrl: string; expiresAt: Date; error?: any }
-        >
+        {} as Record<string, { signedUrl: string; expiresAt: Date; error?: any }>,
       );
 
       // Create a map of media data with their public URLs
-      const mediaWithUrls = (mediaData.data as IMedia[]).reduce(
-        (acc, media) => {
-          const publicUrl = publicUrls[media.url];
+      const mediaWithUrls = (mediaData.data as IMedia[]).reduce((acc, media) => {
+        const publicUrl = publicUrls[media.url];
 
-          if (!publicUrl) {
-            logger.error(`Public url not found for media ${media.id}`);
-            return acc;
-          }
-
-          if ("error" in publicUrl && publicUrl.error) {
-            logger.error("Error getting public url for media", {
-              mediaId: media.id,
-              error: publicUrl.error,
-            });
-            return acc;
-          }
-
-          acc[media.id] = {
-            ...media,
-            publicUrl: publicUrl?.signedUrl,
-            publicUrlExpiresAt: publicUrl?.expiresAt,
-          };
+        if (!publicUrl) {
+          logger.error(`Public url not found for media ${media.id}`);
           return acc;
-        },
-        {}
-      );
+        }
+
+        if ('error' in publicUrl && publicUrl.error) {
+          logger.error('Error getting public url for media', {
+            mediaId: media.id,
+            error: publicUrl.error,
+          });
+          return acc;
+        }
+
+        acc[media.id] = {
+          ...media,
+          publicUrl: publicUrl?.signedUrl,
+          publicUrlExpiresAt: publicUrl?.expiresAt,
+        };
+        return acc;
+      }, {});
 
       // TODO: Need to be validated if this is required
       // await setMediaBulkCache(Object.values(mediaWithUrls));
@@ -440,10 +402,10 @@ class MediaService {
     const mediaSet = new Set((event?.media || []) as string[]);
     const alreadyPresent = mediaSet.has(mediaId);
     mediaSet.add(mediaId);
-    const [, rows] = await Event.update(
-      { media: Array.from(mediaSet) as any } as any,
-      { where: { id: eventId }, returning: true }
-    );
+    const [, rows] = await Event.update({ media: Array.from(mediaSet) as any } as any, {
+      where: { id: eventId },
+      returning: true,
+    });
     if (!alreadyPresent && rows[0]) {
       await this.entityStatsService.syncEventRowStats(rows[0].toJSON() as IEvent);
     }

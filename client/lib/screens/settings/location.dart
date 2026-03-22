@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,6 +9,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../../models/location_picker.dart';
+import '../../models/user.dart';
 import '../../providers/user.dart';
 import '../../services/location_permission.dart';
 import '../../services/maps/map_manager.dart';
@@ -15,15 +19,32 @@ import '../../services/maps/map_provider_type.dart';
 import '../../theme/theme.dart';
 import '../../widgets/button.dart';
 import '../../widgets/header.dart';
-import '../../widgets/input.dart';
 import '../../widgets/map_view.dart';
 import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
 class LocationSettingsScreen extends ConsumerStatefulWidget {
-  const LocationSettingsScreen({super.key});
+  const LocationSettingsScreen({
+    super.key,
+    this.mode = LocationSelectionMode.settings,
+    this.initialLocation,
+    this.initialCameraLatitude,
+    this.initialCameraLongitude,
+    this.initialZoom,
+    this.mapManager,
+    this.currentLocationResolver,
+    this.useStaticMapPlaceholder = false,
+  });
 
   static const String routePath = '/settings/location';
+  final LocationSelectionMode mode;
+  final UserAddress? initialLocation;
+  final double? initialCameraLatitude;
+  final double? initialCameraLongitude;
+  final double? initialZoom;
+  final MapManager? mapManager;
+  final Future<UserAddress?> Function()? currentLocationResolver;
+  final bool useStaticMapPlaceholder;
 
   @override
   ConsumerState<LocationSettingsScreen> createState() =>
@@ -32,18 +53,20 @@ class LocationSettingsScreen extends ConsumerStatefulWidget {
 
 class _LocationSettingsScreenState
     extends ConsumerState<LocationSettingsScreen> {
-  late final MapManager _mapManager = MapManager(type: MapProviderType.google);
-
   static const LatLng _defaultLocation = LatLng(21.1702, 79.6527);
   static const double _minZoom = 4;
   static const double _maxZoom = 20;
   static const double _zoomStep = 1;
   static const double _initialZoom = 14;
 
+  late final MapManager _mapManager =
+      widget.mapManager ?? MapManager(type: MapProviderType.google);
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   GoogleMapController? _mapController;
   double _currentZoom = _initialZoom;
   LatLng _selectedLocation = _defaultLocation;
+  LatLng _cameraTarget = _defaultLocation;
   LatLng _initialLocation = _defaultLocation;
   String _selectedLabel = 'Not set';
   String _initialLabel = 'Not set';
@@ -51,24 +74,42 @@ class _LocationSettingsScreenState
   Timer? _debounce;
   bool _isSearching = false;
   bool _didHydrate = false;
+  bool _isResolvingDraggedLocation = false;
+  bool _isSearchOpen = false;
+
+  Set<Factory<OneSequenceGestureRecognizer>> get _mapGestureRecognizers => {
+    Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
+    Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+  };
+
+  bool get _isPickerMode => widget.mode == LocationSelectionMode.picker;
 
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _mapController?.dispose();
     super.dispose();
   }
 
   void _hydrateFromUser() {
-    final user = ref.read(userProfileProvider).value;
-    if (_didHydrate || user?.address == null) return;
+    if (_didHydrate) return;
 
-    _selectedLabel = user!.address!.label;
+    final seedLocation =
+        widget.initialLocation ?? ref.read(userProfileProvider).value?.address;
+    if (seedLocation == null) return;
+
+    _selectedLabel = seedLocation.label;
     _selectedLocation = LatLng(
-      user.address!.latitude ?? _defaultLocation.latitude,
-      user.address!.longitude ?? _defaultLocation.longitude,
+      seedLocation.latitude ?? _defaultLocation.latitude,
+      seedLocation.longitude ?? _defaultLocation.longitude,
     );
+    _cameraTarget = LatLng(
+      widget.initialCameraLatitude ?? _selectedLocation.latitude,
+      widget.initialCameraLongitude ?? _selectedLocation.longitude,
+    );
+    _currentZoom = widget.initialZoom ?? _initialZoom;
     _initialLocation = _selectedLocation;
     _initialLabel = _selectedLabel;
     _searchController.text = _selectedLabel;
@@ -112,20 +153,45 @@ class _LocationSettingsScreenState
     if (mounted) {
       setState(() {
         _selectedLocation = target;
+        _cameraTarget = target;
       });
     }
   }
 
-  Future<void> _centerMap() async {
-    await _moveToLocation(_selectedLocation, zoom: _initialZoom);
+  Future<void> _useCurrentLocation() async {
+    try {
+      final resolved = widget.currentLocationResolver != null
+          ? await widget.currentLocationResolver!()
+          : await _resolveCurrentLocation();
+      if (resolved == null || !mounted) return;
+
+      setState(() {
+        _selectedLocation = LatLng(
+          resolved.latitude ?? _defaultLocation.latitude,
+          resolved.longitude ?? _defaultLocation.longitude,
+        );
+        _cameraTarget = _selectedLocation;
+        _selectedLabel = resolved.label;
+        _searchController.text = _selectedLabel;
+        _suggestions = const [];
+      });
+      await _moveToLocation(_selectedLocation);
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        message: 'Unable to get current location.',
+        type: SnackBarType.error,
+      );
+    }
   }
 
-  Future<void> _useCurrentLocation() async {
+  Future<UserAddress?> _resolveCurrentLocation() async {
     var status = await LocationPermissionService.currentStatus();
     if (!LocationPermissionService.hasAccess(status)) {
       status = await LocationPermissionService.requestOnStartup();
     }
-    if (!LocationPermissionService.hasAccess(status)) return;
+    if (!LocationPermissionService.hasAccess(status)) return null;
 
     final position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
@@ -135,16 +201,13 @@ class _LocationSettingsScreenState
       longitude: position.longitude,
     );
 
-    if (!mounted) return;
-    setState(() {
-      _selectedLocation = LatLng(position.latitude, position.longitude);
-      _selectedLabel =
+    return UserAddress(
+      label:
           address?.formattedAddress ??
-          '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
-      _searchController.text = _selectedLabel;
-      _suggestions = const [];
-    });
-    await _moveToLocation(_selectedLocation);
+          '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
   }
 
   Future<void> _searchAddress(String query) async {
@@ -171,34 +234,151 @@ class _LocationSettingsScreenState
   }
 
   Future<void> _selectSuggestion(MapSearchSuggestion suggestion) async {
-    if (suggestion.latitude == null || suggestion.longitude == null) return;
-    final target = LatLng(suggestion.latitude!, suggestion.longitude!);
+    final label = suggestion.subtitle?.isNotEmpty == true
+        ? '${suggestion.title}, ${suggestion.subtitle}'
+        : suggestion.title;
+    double? latitude = suggestion.latitude;
+    double? longitude = suggestion.longitude;
+
+    if (latitude == null || longitude == null) {
+      final matches = await _mapManager.getCoordinatesFromAddress(
+        address: label,
+        limit: 1,
+      );
+      if (matches.isEmpty) {
+        if (!mounted) return;
+        AppSnackBar.show(
+          context,
+          message: 'Unable to move to that location.',
+          type: SnackBarType.error,
+        );
+        return;
+      }
+      latitude = matches.first.latitude;
+      longitude = matches.first.longitude;
+    }
+
+    if (!mounted) return;
+    final target = LatLng(latitude, longitude);
+    FocusScope.of(context).unfocus();
     setState(() {
-      _selectedLabel = suggestion.subtitle?.isNotEmpty == true
-          ? '${suggestion.title}, ${suggestion.subtitle}'
-          : suggestion.title;
+      _selectedLocation = target;
+      _cameraTarget = target;
+      _selectedLabel = label;
       _searchController.text = _selectedLabel;
       _suggestions = const [];
     });
     await _moveToLocation(target);
   }
 
+  Future<void> _handleMapIdle() async {
+    if (_isResolvingDraggedLocation || widget.useStaticMapPlaceholder) return;
+
+    _isResolvingDraggedLocation = true;
+    try {
+      final target = _cameraTarget;
+      final address = await _mapManager.getAddressFromCoordinates(
+        latitude: target.latitude,
+        longitude: target.longitude,
+      );
+      if (!mounted) return;
+      setState(() {
+        _selectedLocation = target;
+        _selectedLabel =
+            address?.formattedAddress ??
+            '${target.latitude.toStringAsFixed(4)}, ${target.longitude.toStringAsFixed(4)}';
+        _searchController.text = _selectedLabel;
+      });
+    } finally {
+      _isResolvingDraggedLocation = false;
+    }
+  }
+
   Future<void> _saveLocation() async {
+    final selected = UserAddress(
+      label: _selectedLabel,
+      latitude: _selectedLocation.latitude,
+      longitude: _selectedLocation.longitude,
+    );
+
+    if (_isPickerMode) {
+      if (!mounted) return;
+      Navigator.of(context).pop(
+        LocationPickerResult(
+          location: selected,
+          cameraLatitude: _cameraTarget.latitude,
+          cameraLongitude: _cameraTarget.longitude,
+          zoom: _currentZoom,
+        ),
+      );
+      return;
+    }
+
     final user = ref.read(userProfileProvider).value;
     if (user == null || !_isDirty) return;
 
     await ref.read(userProfileProvider.notifier).updateUserData({
-      'address': {
-        'address': _selectedLabel,
-        'coordinates': {
-          'latitude': _selectedLocation.latitude,
-          'longitude': _selectedLocation.longitude,
-        },
-      },
+      'address': selected.toJson(),
     });
     if (!mounted) return;
     AppSnackBar.success(context, 'Location saved.');
     context.go(SettingsScreen.routePath);
+  }
+
+  String? _distanceLabel(MapSearchSuggestion suggestion) {
+    final latitude = suggestion.latitude;
+    final longitude = suggestion.longitude;
+    if (latitude == null || longitude == null) {
+      return null;
+    }
+
+    final origin =
+        widget.initialLocation ?? ref.read(userProfileProvider).value?.address;
+    final originLatitude = origin?.latitude;
+    final originLongitude = origin?.longitude;
+    if (originLatitude == null || originLongitude == null) {
+      return null;
+    }
+
+    final distanceInMeters = Geolocator.distanceBetween(
+      originLatitude,
+      originLongitude,
+      latitude,
+      longitude,
+    );
+
+    if (distanceInMeters >= 1000) {
+      return '${(distanceInMeters / 1000).toStringAsFixed(1)} km';
+    }
+
+    return '${distanceInMeters.round()} m';
+  }
+
+  void _openSearchOverlay() {
+    setState(() {
+      _isSearchOpen = true;
+      _searchController.text = _selectedLabel;
+      _searchController.selection = TextSelection(
+        baseOffset: _searchController.text.length,
+        extentOffset: _searchController.text.length,
+      );
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _closeSearchOverlay() {
+    _debounce?.cancel();
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSearchOpen = false;
+      _isSearching = false;
+      _suggestions = const [];
+      _searchController.text = _selectedLabel;
+    });
   }
 
   @override
@@ -210,91 +390,56 @@ class _LocationSettingsScreenState
       body: Column(
         children: [
           AppHeader(
-            title: 'Default Location',
-            onBack: () => context.go(SettingsScreen.routePath),
+            title: _isPickerMode ? 'Select Location' : 'Default Location',
+            onBack: () => _isPickerMode
+                ? context.pop()
+                : context.go(SettingsScreen.routePath),
           ),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              child: Column(
-                children: [
-                  AppInput(
-                    placeholder: 'Search address or area',
-                    icon: const Icon(LucideIcons.search),
-                    height: 56,
-                    borderRadius: 16,
-                    controller: _searchController,
-                    onChanged: (value) {
-                      _debounce?.cancel();
-                      _debounce = Timer(
-                        const Duration(milliseconds: 350),
-                        () => _searchAddress(value),
-                      );
-                    },
-                  ),
-                  if (_suggestions.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 180),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: _suggestions.length,
-                        separatorBuilder: (_, _) =>
-                            const Divider(height: 1, color: AppColors.border),
-                        itemBuilder: (context, index) {
-                          final suggestion = _suggestions[index];
-                          return ListTile(
-                            title: Text(suggestion.title),
-                            subtitle: suggestion.subtitle != null
-                                ? Text(suggestion.subtitle!)
-                                : null,
-                            onTap: () => _selectSuggestion(suggestion),
-                          );
-                        },
-                      ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      border: Border.all(color: AppColors.border),
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  AppButton(
-                    variant: AppButtonVariant.outline,
-                    size: AppButtonSize.lg,
-                    fullWidth: true,
-                    icon: const Icon(
-                      LucideIcons.locateFixed,
-                      size: AppIconSizes.defaultSize,
-                    ),
-                    label: 'Use Current Location',
-                    onPressed: _useCurrentLocation,
-                  ),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: AppColors.muted,
-                        borderRadius: BorderRadius.circular(40),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        children: [
-                          AppMapView(
-                            manager: _mapManager,
-                            initialCameraPosition: CameraPosition(
-                              target: _selectedLocation,
-                              zoom: _initialZoom,
-                            ),
-                            markers: const <Marker>{},
-                            onMapReady: (controller) {
-                              _mapController = controller;
-                            },
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: AbsorbPointer(
+                            absorbing: _suggestions.isNotEmpty,
+                            child: widget.useStaticMapPlaceholder
+                                ? Container(color: AppColors.muted)
+                                : AppMapView(
+                                    manager: _mapManager,
+                                    initialCameraPosition: CameraPosition(
+                                      target: _cameraTarget,
+                                      zoom: _currentZoom,
+                                    ),
+                                    markers: const <Marker>{},
+                                    gestureRecognizers: _suggestions.isEmpty
+                                        ? _mapGestureRecognizers
+                                        : const <
+                                            Factory<
+                                              OneSequenceGestureRecognizer
+                                            >
+                                          >{},
+                                    onMapReady: (controller) {
+                                      _mapController = controller;
+                                    },
+                                    onCameraMove: (position) {
+                                      _currentZoom = position.zoom;
+                                      _cameraTarget = position.target;
+                                    },
+                                    onCameraIdle: _handleMapIdle,
+                                  ),
                           ),
-                          Center(
+                        ),
+                        IgnorePointer(
+                          child: Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -351,63 +496,242 @@ class _LocationSettingsScreenState
                               ],
                             ),
                           ),
-                          Positioned(
-                            top: 24,
-                            left: 24,
-                            right: 24,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface.withValues(alpha: 0.9),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Text(
-                                _isSearching ? 'Searching...' : _selectedLabel,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
+                        ),
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOutCubic,
+                          top: 24,
+                          left: 24,
+                          right: _isSearchOpen ? 24 : 88,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SizeTransition(
+                                  sizeFactor: animation,
+                                  axisAlignment: -1,
+                                  child: child,
                                 ),
-                              ),
-                            ),
+                              );
+                            },
+                            child: _isSearchOpen
+                                ? Material(
+                                    key: const ValueKey('location-search-open'),
+                                    color: AppColors.transparent,
+                                    child: _buildSearchBar(),
+                                  )
+                                : GestureDetector(
+                                    key: const ValueKey(
+                                      'location-search-closed',
+                                    ),
+                                    onTap: _openSearchOverlay,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface.withValues(
+                                          alpha: 0.9,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: AppColors.border,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            LucideIcons.search,
+                                            size: AppIconSizes.s,
+                                            color: AppColors.mutedForeground,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              _isSearching
+                                                  ? 'Searching...'
+                                                  : _selectedLabel,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                           ),
-                          Positioned(
-                            bottom: 24,
-                            right: 24,
-                            child: Column(
-                              children: [
-                                _mapControl(
-                                  LucideIcons.plus,
-                                  onTap: () => _changeZoom(_zoomStep),
-                                ),
-                                const SizedBox(height: 12),
-                                _mapControl(
-                                  LucideIcons.minus,
-                                  onTap: () => _changeZoom(-_zoomStep),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 24,
-                            left: 24,
-                            child: _mapControl(
-                              LucideIcons.locateFixed,
-                              onTap: _centerMap,
+                        ),
+                        if (_isSearchOpen) ...[
+                          Positioned.fill(
+                            top: 84,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _closeSearchOverlay,
+                              child: const SizedBox.expand(),
                             ),
                           ),
                         ],
-                      ),
+                        if (_suggestions.isNotEmpty) ...[
+                          Positioned(
+                            top: 84,
+                            left: 24,
+                            right: 24,
+                            child: AnimatedSlide(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              offset: Offset.zero,
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 180),
+                                opacity: 1,
+                                child: Material(
+                                  color: AppColors.transparent,
+                                  elevation: 24,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {},
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 180,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: AppColors.border,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ListView.separated(
+                                        padding: EdgeInsets.zero,
+                                        shrinkWrap: true,
+                                        itemCount: _suggestions.length,
+                                        separatorBuilder: (_, _) =>
+                                            const Divider(
+                                              height: 1,
+                                              color: AppColors.border,
+                                            ),
+                                        itemBuilder: (context, index) {
+                                          final suggestion =
+                                              _suggestions[index];
+                                          final distanceLabel =
+                                              _distanceLabel(suggestion);
+                                          final details = <String>[];
+                                          final subtitle =
+                                              suggestion.subtitle?.trim();
+                                          if (subtitle != null &&
+                                              subtitle.isNotEmpty) {
+                                            details.add(subtitle);
+                                          }
+                                          if (distanceLabel != null) {
+                                            details.add(distanceLabel);
+                                          }
+                                          return Material(
+                                            color: AppColors.transparent,
+                                            child: InkWell(
+                                              onTap: () async {
+                                                await _selectSuggestion(
+                                                  suggestion,
+                                                );
+                                                if (!mounted) return;
+                                                _closeSearchOverlay();
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 12,
+                                                    ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      suggestion.title,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ),
+                                                    ),
+                                                    if ((suggestion.subtitle !=
+                                                                null &&
+                                                            suggestion
+                                                                .subtitle!
+                                                                .isNotEmpty) ||
+                                                        distanceLabel !=
+                                                            null) ...[
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        details.join(' • '),
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color: AppColors
+                                                              .mutedForeground,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Positioned(
+                          bottom: 24,
+                          right: 24,
+                          child: Column(
+                            children: [
+                              _mapControl(
+                                LucideIcons.plus,
+                                onTap: () => _changeZoom(_zoomStep),
+                              ),
+                              const SizedBox(height: 12),
+                              _mapControl(
+                                LucideIcons.minus,
+                                onTap: () => _changeZoom(-_zoomStep),
+                              ),
+                              const SizedBox(height: 12),
+                              _mapControl(
+                                LucideIcons.locateFixed,
+                                onTap: _useCurrentLocation,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -415,9 +739,9 @@ class _LocationSettingsScreenState
             child: AppButton(
               size: AppButtonSize.xl,
               fullWidth: true,
-              label: 'Confirm Location',
+              label: _isPickerMode ? 'Use This Location' : 'Confirm Location',
               loadable: true,
-              onPressed: _isDirty ? _saveLocation : null,
+              onPressed: _isPickerMode || _isDirty ? _saveLocation : null,
             ),
           ),
         ],
@@ -451,6 +775,70 @@ class _LocationSettingsScreenState
             size: AppIconSizes.defaultSize,
             color: AppColors.primary,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: AppColors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              LucideIcons.search,
+              size: AppIconSizes.defaultSize,
+              color: AppColors.mutedForeground,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                onChanged: (value) {
+                  _debounce?.cancel();
+                  _debounce = Timer(
+                    const Duration(milliseconds: 350),
+                    () => _searchAddress(value),
+                  );
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search address or area',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.mutedForeground.withValues(alpha: 0.5),
+                  ),
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                ),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

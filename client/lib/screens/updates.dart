@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../models/update.dart';
 import '../services/activity.dart';
 import '../theme/theme.dart';
+import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/header.dart';
 import '../widgets/bottom_nav.dart';
 import 'event_detail.dart';
@@ -220,7 +221,8 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                           color: AppColors.primary,
                         ),
                       )
-                    : SingleChildScrollView(
+                    : AppPullToRefresh(
+                        onRefresh: _loadUpdates,
                         padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

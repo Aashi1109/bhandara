@@ -7,6 +7,7 @@ import '../models/event.dart';
 import '../services/event.dart';
 import '../services/user.dart';
 import '../theme/theme.dart';
+import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/button.dart';
 import '../widgets/header.dart';
 import 'create_event.dart';
@@ -62,6 +63,71 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
   }
 
+  Widget _buildEventCard(Event event) {
+    return GestureDetector(
+      onTap: () => context.go(
+        EventDetailScreen.routePath.replaceAll(':id', event.id),
+        extra: event,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              event.name,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DateFormat('EEE, d MMM • h:mm a').format(event.startTime),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              event.location.address,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _engagementMeta(
+                  LucideIcons.eye,
+                  '${event.stats?.viewCount ?? 0} views',
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _engagementMeta(
+                    LucideIcons.star,
+                    event.stats != null && event.stats!.ratingCount > 0
+                        ? '${event.stats!.ratingAverage.toStringAsFixed(1)} (${event.stats!.ratingCount})'
+                        : 'No ratings',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,112 +140,46 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   )
-                : _events.isEmpty
-                ? Padding(
+                : AppPullToRefresh(
+                    onRefresh: _loadEvents,
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          LucideIcons.calendarDays,
-                          size: AppIconSizes.hero,
-                          color: AppColors.mutedForeground,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'You have not created any events yet.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        AppButton(
-                          label: 'Create Event',
-                          size: AppButtonSize.lg,
-                          onPressed: () =>
-                              context.go(CreateEventScreen.routePath),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                    itemBuilder: (context, index) {
-                      final event = _events[index];
-                      return GestureDetector(
-                        onTap: () => context.go(
-                          EventDetailScreen.routePath.replaceAll(
-                            ':id',
-                            event.id,
-                          ),
-                          extra: event,
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    child: _events.isEmpty
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                event.name,
-                                style: const TextStyle(
+                              const Icon(
+                                LucideIcons.calendarDays,
+                                size: AppIconSizes.hero,
+                                color: AppColors.mutedForeground,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'You have not created any events yet.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: AppColors.primary,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                DateFormat(
-                                  'EEE, d MMM • h:mm a',
-                                ).format(event.startTime),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.mutedForeground,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                event.location.address,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.mutedForeground,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  _engagementMeta(
-                                    LucideIcons.eye,
-                                    '${event.stats?.viewCount ?? 0} views',
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _engagementMeta(
-                                      LucideIcons.star,
-                                      event.stats != null &&
-                                              event.stats!.ratingCount > 0
-                                          ? '${event.stats!.ratingAverage.toStringAsFixed(1)} (${event.stats!.ratingCount})'
-                                          : 'No ratings',
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(height: 20),
+                              AppButton(
+                                label: 'Create Event',
+                                size: AppButtonSize.lg,
+                                onPressed: () =>
+                                    context.go(CreateEventScreen.routePath),
                               ),
                             ],
+                          )
+                        : Column(
+                            children: [
+                              for (var i = 0; i < _events.length; i++) ...[
+                                _buildEventCard(_events[i]),
+                                if (i != _events.length - 1)
+                                  const SizedBox(height: 12),
+                              ],
+                            ],
                           ),
-                        ),
-                      );
-                    },
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemCount: _events.length,
                   ),
           ),
         ],

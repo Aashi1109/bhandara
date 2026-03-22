@@ -12,7 +12,9 @@ const toCursorDateValue = (value: string) => new Date(value);
 
 export function encodePaginationCursor(sortValue: Date | string): string {
   const normalizedSortValue = sortValue instanceof Date ? sortValue.toISOString() : String(sortValue);
-  return Buffer.from(JSON.stringify({ sortValue: normalizedSortValue } satisfies PaginationCursorPayload)).toString('base64url');
+  return Buffer.from(JSON.stringify({ sortValue: normalizedSortValue } satisfies PaginationCursorPayload)).toString(
+    'base64url',
+  );
 }
 
 export function decodePaginationCursor(cursor: string | null | undefined): PaginationCursorPayload | null {
@@ -42,7 +44,8 @@ export function buildCursorPaginationWhere(
   }
 
   const operator = sortOrder === 'asc' ? Op.gt : Op.lt;
-  const sortValue = sortBy === 'createdAt' || sortBy === 'updatedAt' ? toCursorDateValue(cursor.sortValue) : cursor.sortValue;
+  const sortValue =
+    sortBy === 'createdAt' || sortBy === 'updatedAt' ? toCursorDateValue(cursor.sortValue) : cursor.sortValue;
 
   const cursorWhere: WhereOptions = {
     [sortBy]: { [operator]: sortValue },
@@ -79,7 +82,10 @@ export async function findAllWithPagination<T extends Model>(
   const options: FindOptions = {
     raw: true,
     ...findOptions,
-    order: findOptions.order || [[_pagination.sortBy, upperSortOrder], ['id', upperSortOrder]],
+    order: findOptions.order || [
+      [_pagination.sortBy, upperSortOrder],
+      ['id', upperSortOrder],
+    ],
     limit: _pagination.limit + 1,
   };
 
@@ -107,9 +113,7 @@ export async function findAllWithPagination<T extends Model>(
     hasNext,
     next:
       hasNext && normalizedRows.length
-        ? encodePaginationCursor(
-            normalizedRows[normalizedRows.length - 1][_pagination.sortBy] as Date | string,
-          )
+        ? encodePaginationCursor(normalizedRows[normalizedRows.length - 1][_pagination.sortBy] as Date | string)
         : null,
     sortBy: _pagination.sortBy,
     sortOrder: _pagination.sortOrder,

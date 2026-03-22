@@ -157,12 +157,19 @@ class MapboxMapsService implements MapProviderService {
     int width = 1000,
     int height = 1000,
     double zoom = 14,
+    bool showMarker = true,
+    String? customMarkerUrl = defaultStaticMapMarkerUrl,
     String fallbackUrl = 'https://picsum.photos/seed/nyc-map/1000/1000',
   }) {
     if (_accessToken.isEmpty) return fallbackUrl;
 
+    final overlay = showMarker
+        ? customMarkerUrl == null || customMarkerUrl.isEmpty
+              ? 'pin-s+000($longitude,$latitude)/'
+              : 'url-${Uri.encodeComponent(customMarkerUrl)}($longitude,$latitude)/'
+        : '';
     final path =
-        '/styles/v1/$_styleId/static/pin-s+000($longitude,$latitude)/$longitude,$latitude,$zoom/{$width}x{$height}';
+        '/styles/v1/$_styleId/static/${overlay}$longitude,$latitude,$zoom/{$width}x{$height}';
     final resolvedPath = path
         .replaceAll('{$width}', '$width')
         .replaceAll('{$height}', '$height');

@@ -1,32 +1,24 @@
-import cors from "cors";
-import express from "express";
-import cookieparser from "cookie-parser";
-import swaggerUI from "swagger-ui-express";
+import cors from 'cors';
+import express from 'express';
+import cookieparser from 'cookie-parser';
+import swaggerUI from 'swagger-ui-express';
 
-import helmet from "helmet";
-import config from "@/config";
-import {
-  errorHandler,
-  morganLogger,
-  requestContextMiddleware,
-} from "@/middlewares";
-import appRoutes from "@/routes";
-import { NotFoundError } from "@/exceptions";
-import { swaggerSpec } from "@/docs/swagger";
-import {
-  httpRequestCounter,
-  register,
-  responseTimeHistogram,
-} from "@/config/prometheus.config";
+import helmet from 'helmet';
+import config from '@/config';
+import { errorHandler, morganLogger, requestContextMiddleware } from '@/middlewares';
+import appRoutes from '@/routes';
+import { NotFoundError } from '@/exceptions';
+import { swaggerSpec } from '@/docs/swagger';
+import { httpRequestCounter, register, responseTimeHistogram } from '@/config/prometheus.config';
 
-import * as Sentry from "@sentry/node";
+import * as Sentry from '@sentry/node';
 
 const createServer = () => {
   const app = express();
 
   app.use((req, res, next) => {
     const end = responseTimeHistogram.startTimer();
-    res.on("finish", () => {
+    res.on('finish', () => {
       // Record metrics
       httpRequestCounter.inc({
         method: req.method,
@@ -53,7 +45,7 @@ const createServer = () => {
     express.urlencoded({
       extended: true,
       limit: config.express.fileSizeLimit,
-    })
+    }),
   );
 
   app.use(morganLogger);
@@ -62,24 +54,33 @@ const createServer = () => {
   // routes setup
 
   // swagger docs
-  app.use("/docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
+  app.use(
+    '/docs',
+    swaggerUI.serve,
+    swaggerUI.setup(swaggerSpec, {
+      swaggerOptions: {
+        withCredentials: true,
+        persistAuthorization: true,
+      },
+    }),
+  );
 
-  app.get("/", (req, res) => {
+  app.get('/', (req, res) => {
     res.send({
-      name: "Bhandara API",
-      description: "Bhandara backend service",
-      version: "1.0.0",
+      name: 'Bhandara API',
+      description: 'Bhandara backend service',
+      version: '1.0.0',
     });
   });
 
-  app.get("/metrics", async (_, res) => {
-    res.setHeader("Content-Type", register.contentType);
+  app.get('/metrics', async (_, res) => {
+    res.setHeader('Content-Type', register.contentType);
     res.send(await register.metrics());
   });
 
   app.use(requestContextMiddleware);
 
-  app.use("/api", appRoutes);
+  app.use('/api', appRoutes);
 
   Sentry.setupExpressErrorHandler(app);
 

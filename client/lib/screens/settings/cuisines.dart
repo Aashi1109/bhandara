@@ -117,7 +117,6 @@ class _CuisineInterestsScreenState
                   AppInput(
                     placeholder: 'Search cuisines...',
                     icon: const Icon(LucideIcons.search),
-                    height: 56,
                     borderRadius: 16,
                     controller: _searchController,
                     onChanged: (_) => setState(() {}),

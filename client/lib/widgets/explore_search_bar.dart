@@ -4,9 +4,18 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 
 class ExploreSearchBar extends StatelessWidget {
-  const ExploreSearchBar({super.key, required this.onOpenFilters});
+  const ExploreSearchBar({
+    super.key,
+    this.onOpenFilters,
+    this.controller,
+    this.placeholder = 'Find food events...',
+    this.onChanged,
+  });
 
-  final VoidCallback onOpenFilters;
+  final VoidCallback? onOpenFilters;
+  final TextEditingController? controller;
+  final String placeholder;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +54,10 @@ class ExploreSearchBar extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
+                      controller: controller,
+                      onChanged: onChanged,
                       decoration: InputDecoration(
-                        hintText: 'Find food events...',
+                        hintText: placeholder,
                         hintStyle: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -68,22 +79,23 @@ class ExploreSearchBar extends StatelessWidget {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: onOpenFilters,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                LucideIcons.slidersHorizontal,
-                size: AppIconSizes.defaultSize,
-                color: AppColors.surface,
+          if (onOpenFilters != null)
+            GestureDetector(
+              onTap: onOpenFilters,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  LucideIcons.slidersHorizontal,
+                  size: AppIconSizes.defaultSize,
+                  color: AppColors.surface,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

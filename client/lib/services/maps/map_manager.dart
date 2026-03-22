@@ -79,6 +79,8 @@ class MapManager {
     int width = 1000,
     int height = 1000,
     double zoom = 14,
+    bool showMarker = true,
+    String? customMarkerUrl = defaultStaticMapMarkerUrl,
     String fallbackUrl = 'https://picsum.photos/seed/nyc-map/1000/1000',
   }) {
     return _service.getStaticMapImageUrl(
@@ -87,6 +89,8 @@ class MapManager {
       width: width,
       height: height,
       zoom: zoom,
+      showMarker: showMarker,
+      customMarkerUrl: customMarkerUrl,
       fallbackUrl: fallbackUrl,
     );
   }

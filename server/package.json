@@ -26,6 +26,9 @@
     "video-worker": "tsx -r tsconfig-paths/register src/workers/video-processor",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\""
   },
@@ -87,16 +90,19 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24",
+    "@types/supertest": "^7.2.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.3.0",
     "nodemon": "^3.1.11",
     "prettier": "^3.8.1",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
     "tscpaths": "^0.0.9",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.0"
+    "typescript-eslint": "^8.56.0",
+    "vitest": "^4.1.0"
   }
 }

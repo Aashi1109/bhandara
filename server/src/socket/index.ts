@@ -1,12 +1,12 @@
-import { type Namespace, type Socket, Server } from "socket.io";
-import config from "@/config";
-import logger from "@/logger";
-import { requestContextMiddleware, socketUserParser } from "@/middlewares";
-import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import type { IncomingMessage } from "http";
-import type { IBaseUser } from "@/definitions/types";
-import { PLATFORM_SOCKET_EVENTS } from "@/constants";
-import type http from "http";
+import { type Namespace, type Socket, Server } from 'socket.io';
+import config from '@/config';
+import logger from '@/logger';
+import { requestContextMiddleware, socketUserParser } from '@/middlewares';
+import type { DefaultEventsMap } from 'socket.io/dist/typed-events';
+import type { IncomingMessage } from 'http';
+import type { IBaseUser } from '@/definitions/types';
+import { PLATFORM_SOCKET_EVENTS } from '@/constants';
+import type http from 'http';
 import {
   EventService,
   getSafeUser,
@@ -18,28 +18,18 @@ import {
   setExploreCursor,
   deleteExploreCursor,
   buildExploreSections,
-} from "@/features";
-import { BadRequestError, NotFoundError, ForbiddenError } from "@/exceptions";
-import { isEmpty } from "@/utils";
-import { getDistanceInMeters } from "@/helpers";
-import { setPlatformNamespace, emitSocketEvent } from "./emitter";
-import { EAllowedReactionTables } from "@/features/reactions/constants";
-import { EAccessLevel, EEventStatus } from "@/definitions/enums";
-import ActivityService from "@/features/activity/service";
-import {
-  EActivityEntityType,
-  EActivityType,
-  EActivityVisibility,
-} from "@/features/activity/constants";
-import AchievementService from "@/features/achievements/service";
+} from '@/features';
+import { BadRequestError, NotFoundError, ForbiddenError } from '@/exceptions';
+import { isEmpty } from '@/utils';
+import { getDistanceInMeters } from '@/helpers';
+import { setPlatformNamespace, emitSocketEvent } from './emitter';
+import { EAllowedReactionTables } from '@/features/reactions/constants';
+import { EAccessLevel, EEventStatus } from '@/definitions/enums';
+import ActivityService from '@/features/activity/service';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import AchievementService from '@/features/achievements/service';
 
-interface CustomSocket
-  extends Socket<
-    DefaultEventsMap,
-    DefaultEventsMap,
-    DefaultEventsMap,
-    IBaseUser
-  > {
+interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, IBaseUser> {
   request: IncomingMessage & {
     user: IBaseUser;
   };
@@ -69,502 +59,420 @@ const removeRoom = (room: string) => {
 export function initializeSocket(server: http.Server) {
   const io = new Server(server, { cors: { ...config.corsOptions } });
 
-  platformNamespace = io.of("/platform");
+  platformNamespace = io.of('/platform');
   setPlatformNamespace(platformNamespace);
-  platformNamespace.use((socket, next) =>
-    requestContextMiddleware(socket.request as any, null, next as any)
-  );
+  platformNamespace.use((socket, next) => requestContextMiddleware(socket.request as any, null, next as any));
   platformNamespace.use(socketUserParser);
 
-  platformNamespace.on(
-    PLATFORM_SOCKET_EVENTS.CONNECT,
-    async (socket: CustomSocket) => {
-      logger.info(`Connected ${socket.id}`);
-      const socketUserId = socket.request.user.id;
+  platformNamespace.on(PLATFORM_SOCKET_EVENTS.CONNECT, async (socket: CustomSocket) => {
+    logger.info(`Connected ${socket.id}`);
+    const socketUserId = socket.request.user.id;
 
-      socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, cb) => {
-        try {
-          const messageData = request || {};
-          const threadResponse = await threadService.getById(
-            messageData.threadId
-          );
-          if (isEmpty(threadResponse.data))
-            throw new NotFoundError("Thread not found");
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, cb) => {
+      try {
+        const messageData = request || {};
+        const threadResponse = await threadService.getById(messageData.threadId);
+        if (isEmpty(threadResponse.data)) throw new NotFoundError('Thread not found');
 
-          const message = await messageService.create(messageData);
-          const media = (message.content?.media || []) as string[];
+        const message = await messageService.create(messageData);
+        const media = (message.content?.media || []) as string[];
 
-          if (!isEmpty(media)) {
-            const mediaData = await mediaService.getMediaByIds(media);
-            const populatedMedia = media.map((i) => mediaData.data[i]);
-            message.content.media = populatedMedia;
-          }
-
-          if (message) {
-            (message as any).thread = threadResponse;
-            (message as any).user = socket.request.user;
-          }
-          await Promise.all([
-            activityService.create({
-              actorId: socketUserId,
-              type: EActivityType.MessageCreated,
-              entityType: EActivityEntityType.Message,
-              entityId: message.id,
-              payload: {
-                messageId: message.id,
-                threadId: message.threadId,
-              },
-              visibility: EActivityVisibility.Public,
-            }),
-            achievementService.trackActivity(
-              socketUserId,
-              EActivityType.MessageCreated
-            ),
-          ]);
-          emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
-            data: message,
-          });
-          cb({ data: true });
-        } catch (error) {
-          logger.error(`Error sending new message`, error);
-          cb?.({
-            error: error?.message || "Something went wrong",
-            stack: error,
-          });
+        if (!isEmpty(media)) {
+          const mediaData = await mediaService.getMediaByIds(media);
+          const populatedMedia = media.map((i) => mediaData.data[i]);
+          message.content.media = populatedMedia;
         }
-      });
 
-      socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, async (request, cb) => {
-        try {
-          // TODO: implement message update handling
-        } catch (error) {
-          logger.error(`Error updating message`, error);
-          cb?.({ error: error?.message || "Something went wrong" });
+        if (message) {
+          (message as any).thread = threadResponse;
+          (message as any).user = socket.request.user;
         }
-      });
+        await Promise.all([
+          activityService.create({
+            actorId: socketUserId,
+            type: EActivityType.MessageCreated,
+            entityType: EActivityEntityType.Message,
+            entityId: message.id,
+            payload: {
+              messageId: message.id,
+              threadId: message.threadId,
+            },
+            visibility: EActivityVisibility.Public,
+          }),
+          achievementService.trackActivity(socketUserId, EActivityType.MessageCreated),
+        ]);
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
+          data: message,
+        });
+        cb({ data: true });
+      } catch (error) {
+        logger.error(`Error sending new message`, error);
+        cb?.({
+          error: error?.message || 'Something went wrong',
+          stack: error,
+        });
+      }
+    });
 
-      socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, async (request, cb) => {
-        logger.debug(`User ${socketUserId} chat window opened`);
-        const { conversation: conversationId } = request || {};
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, async (request, cb) => {
+      try {
+        // TODO: implement message update handling
+      } catch (error) {
+        logger.error(`Error updating message`, error);
+        cb?.({ error: error?.message || 'Something went wrong' });
+      }
+    });
 
-        if (!conversationId)
-          return cb?.({ error: "Conversation id is required" });
-      });
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, async (request, cb) => {
+      logger.debug(`User ${socketUserId} chat window opened`);
+      const { conversation: conversationId } = request || {};
 
-      socket.on(
-        PLATFORM_SOCKET_EVENTS.REACTION_CREATED,
-        async (request, cb) => {
-          try {
-            const { contentId, contentPath, reaction, parentId } = request;
+      if (!conversationId) return cb?.({ error: 'Conversation id is required' });
+    });
 
-            if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
-              throw new BadRequestError(
-                `Invalid content path provided. Provided:${contentPath}`
-              );
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, async (request, cb) => {
+      try {
+        const { contentId, contentPath, reaction, parentId } = request;
+
+        if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
+          throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
+        }
+
+        const serviceMap = {
+          [EAllowedReactionTables.Message]: messageService,
+          [EAllowedReactionTables.Event]: eventService,
+          [EAllowedReactionTables.Thread]: threadService,
+        };
+
+        const reactionContentId = `${contentPath}/${contentId}`;
+
+        // delete previous reaction from current user on that content
+        const responses = await Promise.all([
+          serviceMap[contentPath].getById(contentId),
+          reactionService.deleteByQuery({
+            contentId: reactionContentId,
+            userId: socketUserId,
+          }),
+        ]);
+
+        if (isEmpty(responses[0])) throw new NotFoundError(`Reaction or Thread not found`);
+
+        // Check if the content is in a locked thread
+        if (contentPath === EAllowedReactionTables.Message) {
+          const message = responses[0];
+          if (message && message.threadId) {
+            const lockStatus = await threadService.isThreadChainLocked(message.threadId);
+            if (lockStatus.isLocked) {
+              throw new ForbiddenError('Cannot add reactions to messages in a locked thread');
             }
+          }
+        } else if (contentPath === EAllowedReactionTables.Thread) {
+          const lockStatus = await threadService.isThreadChainLocked(contentId);
+          if (lockStatus.isLocked) {
+            throw new ForbiddenError('Cannot add reactions to a locked thread');
+          }
+        }
 
-            const serviceMap = {
-              [EAllowedReactionTables.Message]: messageService,
-              [EAllowedReactionTables.Event]: eventService,
-              [EAllowedReactionTables.Thread]: threadService,
-            };
+        const creationData = {
+          contentId: reactionContentId,
+          emoji: reaction,
+          userId: socketUserId,
+        };
 
-            const reactionContentId = `${contentPath}/${contentId}`;
+        const newReaction = await reactionService.create(creationData);
 
-            // delete previous reaction from current user on that content
-            const responses = await Promise.all([
-              serviceMap[contentPath].getById(contentId),
-              reactionService.deleteByQuery({
-                contentId: reactionContentId,
-                userId: socketUserId,
-              }),
-            ]);
+        newReaction.user = getSafeUser(socket.request.user);
 
-            if (isEmpty(responses[0]))
-              throw new NotFoundError(`Reaction or Thread not found`);
+        const entityTypeMap = {
+          [EAllowedReactionTables.Event]: EActivityEntityType.Event,
+          [EAllowedReactionTables.Message]: EActivityEntityType.Message,
+          [EAllowedReactionTables.Thread]: EActivityEntityType.Thread,
+        };
 
-            // Check if the content is in a locked thread
-            if (contentPath === EAllowedReactionTables.Message) {
-              const message = responses[0];
-              if (message && message.threadId) {
-                const lockStatus = await threadService.isThreadChainLocked(
-                  message.threadId
-                );
-                if (lockStatus.isLocked) {
-                  throw new ForbiddenError(
-                    "Cannot add reactions to messages in a locked thread"
-                  );
-                }
-              }
-            } else if (contentPath === EAllowedReactionTables.Thread) {
-              const lockStatus = await threadService.isThreadChainLocked(
-                contentId
-              );
-              if (lockStatus.isLocked) {
-                throw new ForbiddenError(
-                  "Cannot add reactions to a locked thread"
-                );
-              }
-            }
-
-            const creationData = {
-              contentId: reactionContentId,
+        await Promise.all([
+          activityService.create({
+            actorId: socketUserId,
+            type: EActivityType.ReactionCreated,
+            entityType: entityTypeMap[contentPath] || EActivityEntityType.Reaction,
+            entityId: String(contentId),
+            payload: {
+              reactionId: newReaction.id,
               emoji: reaction,
-              userId: socketUserId,
-            };
+              contentPath,
+              contentId,
+            },
+            visibility: EActivityVisibility.Public,
+          }),
+          achievementService.trackActivity(socketUserId, EActivityType.ReactionCreated),
+        ]);
 
-            const newReaction = await reactionService.create(creationData);
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, {
+          data: {
+            id: contentId,
+            contentPath,
+            reaction: newReaction,
+            parentId,
+          },
+        });
 
-            newReaction.user = getSafeUser(socket.request.user);
+        cb?.({ data: true });
+      } catch (error) {
+        logger.error(`Error sending new message`, error);
+        cb?.({
+          error: error?.message || 'Something went wrong',
+          stack: error,
+        });
+      }
+    });
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_UPDATED, async (request, cb) => {
+      try {
+        const { contentId, contentPath, reaction, parentId } = request;
 
-            const entityTypeMap = {
-              [EAllowedReactionTables.Event]: EActivityEntityType.Event,
-              [EAllowedReactionTables.Message]: EActivityEntityType.Message,
-              [EAllowedReactionTables.Thread]: EActivityEntityType.Thread,
-            };
+        if (typeof reaction !== 'string') throw new BadRequestError(`Reaction should be string`);
 
-            await Promise.all([
-              activityService.create({
-                actorId: socketUserId,
-                type: EActivityType.ReactionCreated,
-                entityType: entityTypeMap[contentPath] || EActivityEntityType.Reaction,
-                entityId: String(contentId),
-                payload: {
-                  reactionId: newReaction.id,
-                  emoji: reaction,
-                  contentPath,
-                  contentId,
-                },
-                visibility: EActivityVisibility.Public,
-              }),
-              achievementService.trackActivity(
-                socketUserId,
-                EActivityType.ReactionCreated
-              ),
-            ]);
-
-            emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, {
-              data: {
-                id: contentId,
-                contentPath,
-                reaction: newReaction,
-                parentId,
-              },
-            });
-
-            cb?.({ data: true });
-          } catch (error) {
-            logger.error(`Error sending new message`, error);
-            cb?.({
-              error: error?.message || "Something went wrong",
-              stack: error,
-            });
-          }
-        }
-      );
-      socket.on(
-        PLATFORM_SOCKET_EVENTS.REACTION_UPDATED,
-        async (request, cb) => {
-          try {
-            const { contentId, contentPath, reaction, parentId } = request;
-
-            if (typeof reaction !== "string")
-              throw new BadRequestError(`Reaction should be string`);
-
-            if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
-              throw new BadRequestError(
-                `Invalid content path provided. Provided:${contentPath}`
-              );
-            }
-
-            const serviceMap = {
-              [EAllowedReactionTables.Message]: messageService,
-              [EAllowedReactionTables.Event]: eventService,
-              [EAllowedReactionTables.Thread]: threadService,
-            };
-
-            const reactionContentId = `${contentPath}/${contentId}`;
-
-            // delete previous reaction from current user on that content
-            const responses = await Promise.all([
-              serviceMap[contentPath].getById(contentId),
-              reactionService.getReactions(reactionContentId),
-            ]);
-
-            const content = responses[0];
-
-            if (!content)
-              throw new NotFoundError(
-                `Content not found with provided id:${contentId}`
-              );
-
-            // Check if the content is in a locked thread
-            if (contentPath === EAllowedReactionTables.Message) {
-              if (content && content.threadId) {
-                const lockStatus = await threadService.isThreadChainLocked(
-                  content.threadId
-                );
-                if (lockStatus.isLocked) {
-                  throw new ForbiddenError(
-                    "Cannot update reactions on messages in a locked thread"
-                  );
-                }
-              }
-            } else if (contentPath === EAllowedReactionTables.Thread) {
-              const lockStatus = await threadService.isThreadChainLocked(
-                contentId
-              );
-              if (lockStatus.isLocked) {
-                throw new ForbiddenError(
-                  "Cannot update reactions on a locked thread"
-                );
-              }
-            }
-
-            const previousReaction = responses[1]?.[0];
-
-            if (!previousReaction)
-              throw new NotFoundError(
-                `Reaction not found ${reaction} for user`
-              );
-
-            const updatedReaction = await reactionService.update(
-              previousReaction.id,
-              {
-                emoji: reaction,
-              }
-            );
-
-            updatedReaction.user = getSafeUser(socket.request.user);
-
-            emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_UPDATED, {
-              data: {
-                id: contentId,
-                contentPath,
-                reaction: updatedReaction,
-                parentId,
-              },
-            });
-
-            cb?.({ data: true });
-          } catch (error) {
-            logger.error(`Error sending new message`, error);
-            cb?.({
-              error: error?.message || "Something went wrong",
-              stack: error,
-            });
-          }
-        }
-      );
-      socket.on(
-        PLATFORM_SOCKET_EVENTS.REACTION_DELETED,
-        async (request, cb) => {
-          try {
-            const { contentId, contentPath, id, reaction, parentId } = request;
-
-            if (typeof reaction !== "string")
-              throw new BadRequestError(`Reaction should be string`);
-
-            if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
-              throw new BadRequestError(
-                `Invalid content path provided. Provided:${contentPath}`
-              );
-            }
-
-            const serviceMap = {
-              [EAllowedReactionTables.Message]: messageService,
-              [EAllowedReactionTables.Event]: eventService,
-              [EAllowedReactionTables.Thread]: threadService,
-            };
-
-            const reactionContentId = `${contentPath}/${contentId}`;
-
-            // delete previous reaction from current user on that content
-            const responses = await Promise.all([
-              serviceMap[contentPath].getById(contentId),
-              reactionService.getReactions(reactionContentId),
-            ]);
-
-            const content = responses[0];
-
-            if (!content)
-              throw new NotFoundError(
-                `Content not found with provided id:${contentId}`
-              );
-
-            // Check if the content is in a locked thread
-            if (contentPath === EAllowedReactionTables.Message) {
-              if (content && content.threadId) {
-                const lockStatus = await threadService.isThreadChainLocked(
-                  content.threadId
-                );
-                if (lockStatus.isLocked) {
-                  throw new ForbiddenError(
-                    "Cannot delete reactions on messages in a locked thread"
-                  );
-                }
-              }
-            } else if (contentPath === EAllowedReactionTables.Thread) {
-              const lockStatus = await threadService.isThreadChainLocked(
-                contentId
-              );
-              if (lockStatus.isLocked) {
-                throw new ForbiddenError(
-                  "Cannot delete reactions on a locked thread"
-                );
-              }
-            }
-
-            const previousReaction = responses[1]?.[0];
-
-            if (!previousReaction)
-              throw new NotFoundError(
-                `Reaction not found ${reaction} for user`
-              );
-
-            const deletedReaction = await reactionService.delete(previousReaction.id);
-
-            emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, {
-              data: {
-                id: contentId,
-                contentPath,
-                reaction: previousReaction,
-                parentId,
-              },
-            });
-
-            cb?.({ data: true });
-          } catch (error) {
-            logger.error(`Error sending new message`, error);
-            cb?.({
-              error: error?.message || "Something went wrong",
-              stack: error,
-            });
-          }
-        }
-      );
-
-      socket.on(PLATFORM_SOCKET_EVENTS.EXPLORE, async (request, cb) => {
-        const { filter: { location } = {} } = request || {};
-        const { latitude, longitude } = location || {};
-        if (typeof latitude !== "number" || typeof longitude !== "number") {
-          return cb?.({ error: "Invalid location" });
+        if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
+          throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
         }
 
-        const abortController = new AbortController();
-        (socket as any).exploreAbort = abortController;
+        const serviceMap = {
+          [EAllowedReactionTables.Message]: messageService,
+          [EAllowedReactionTables.Event]: eventService,
+          [EAllowedReactionTables.Thread]: threadService,
+        };
 
-        try {
-          let nextCursor = (await getExploreCursor(socketUserId)) || null;
+        const reactionContentId = `${contentPath}/${contentId}`;
 
-          while (!abortController.signal.aborted) {
-            const { items, pagination } = await eventService.getAll(
-              { status: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
-              { limit: 10, next: nextCursor }
-            );
+        // delete previous reaction from current user on that content
+        const responses = await Promise.all([
+          serviceMap[contentPath].getById(contentId),
+          reactionService.getReactions(reactionContentId),
+        ]);
 
-            let radius = 100;
-            let nearby = items;
+        const content = responses[0];
 
-            while (
-              nearby.length === 0 &&
-              radius <= 1000 &&
-              !abortController.signal.aborted
-            ) {
-              nearby = items.filter((ev) => {
-                const { latitude: elat, longitude: elon } = ev.location || {};
-                if (typeof elat !== "number" || typeof elon !== "number")
-                  return false;
-                return (
-                  getDistanceInMeters(latitude, longitude, elat, elon) <= radius
-                );
-              });
-              if (nearby.length === 0) radius += 100;
+        if (!content) throw new NotFoundError(`Content not found with provided id:${contentId}`);
+
+        // Check if the content is in a locked thread
+        if (contentPath === EAllowedReactionTables.Message) {
+          if (content && content.threadId) {
+            const lockStatus = await threadService.isThreadChainLocked(content.threadId);
+            if (lockStatus.isLocked) {
+              throw new ForbiddenError('Cannot update reactions on messages in a locked thread');
             }
-
-            if (nearby.length === 0) break;
-
-            const sections = buildExploreSections(nearby);
-
-            for (const section of sections) {
-              if (abortController.signal.aborted) break;
-              emitSocketEvent(PLATFORM_SOCKET_EVENTS.EXPLORE, {
-                data: section,
-                });
-            }
-
-            await setExploreCursor(socketUserId, pagination.next ?? null);
-            nextCursor = pagination.next ?? null;
-
-            if (!pagination.hasNext) break;
           }
-          cb?.({ data: true });
-        } catch (err) {
-          logger.error("Explore event failed", err);
-          cb?.({ error: err?.message || "Something went wrong" });
+        } else if (contentPath === EAllowedReactionTables.Thread) {
+          const lockStatus = await threadService.isThreadChainLocked(contentId);
+          if (lockStatus.isLocked) {
+            throw new ForbiddenError('Cannot update reactions on a locked thread');
+          }
         }
-      });
 
-      socket.on(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, async (request, cb) => {
-        try {
-          const { eventId, ...messageData } = request || {};
+        const previousReaction = responses[1]?.[0];
 
-          if (!eventId)
-            throw new BadRequestError(`EventId is required for new thread`);
+        if (!previousReaction) throw new NotFoundError(`Reaction not found ${reaction} for user`);
 
-          const eventResponse = await eventService.getById(eventId);
+        const updatedReaction = await reactionService.update(previousReaction.id, {
+          emoji: reaction,
+        });
 
-          if (isEmpty(eventResponse))
-            throw new NotFoundError("Event not found");
+        updatedReaction.user = getSafeUser(socket.request.user);
 
-          const newThread = await threadService.create({
-            eventId,
-            createdBy: socketUserId,
-            visibility: EAccessLevel.Public,
-          });
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_UPDATED, {
+          data: {
+            id: contentId,
+            contentPath,
+            reaction: updatedReaction,
+            parentId,
+          },
+        });
 
-          if (isEmpty(newThread))
-            throw new Error("Unable able to create thread");
+        cb?.({ data: true });
+      } catch (error) {
+        logger.error(`Error sending new message`, error);
+        cb?.({
+          error: error?.message || 'Something went wrong',
+          stack: error,
+        });
+      }
+    });
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, async (request, cb) => {
+      try {
+        const { contentId, contentPath, id, reaction, parentId } = request;
 
-          messageData.threadId = newThread.id;
+        if (typeof reaction !== 'string') throw new BadRequestError(`Reaction should be string`);
 
-          const message = await messageService.create(messageData);
-          const media = (message.content?.media || []) as string[];
+        if (!Object.values(EAllowedReactionTables).includes(contentPath)) {
+          throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
+        }
 
-          if (!isEmpty(media)) {
-            const mediaData = await mediaService.getMediaByIds(media);
-            const populatedMedia = media.map((i) => mediaData.data[i]);
-            message.content.media = populatedMedia;
+        const serviceMap = {
+          [EAllowedReactionTables.Message]: messageService,
+          [EAllowedReactionTables.Event]: eventService,
+          [EAllowedReactionTables.Thread]: threadService,
+        };
+
+        const reactionContentId = `${contentPath}/${contentId}`;
+
+        // delete previous reaction from current user on that content
+        const responses = await Promise.all([
+          serviceMap[contentPath].getById(contentId),
+          reactionService.getReactions(reactionContentId),
+        ]);
+
+        const content = responses[0];
+
+        if (!content) throw new NotFoundError(`Content not found with provided id:${contentId}`);
+
+        // Check if the content is in a locked thread
+        if (contentPath === EAllowedReactionTables.Message) {
+          if (content && content.threadId) {
+            const lockStatus = await threadService.isThreadChainLocked(content.threadId);
+            if (lockStatus.isLocked) {
+              throw new ForbiddenError('Cannot delete reactions on messages in a locked thread');
+            }
           }
-
-          if (message) {
-            (message as any).thread = eventResponse;
-            (message as any).user = socket.request.user;
+        } else if (contentPath === EAllowedReactionTables.Thread) {
+          const lockStatus = await threadService.isThreadChainLocked(contentId);
+          if (lockStatus.isLocked) {
+            throw new ForbiddenError('Cannot delete reactions on a locked thread');
           }
+        }
 
-          newThread.messages = [message];
-          newThread.creator = socket.request.user;
+        const previousReaction = responses[1]?.[0];
 
-          emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, {
-            data: { ...newThread, event: eventResponse },
+        if (!previousReaction) throw new NotFoundError(`Reaction not found ${reaction} for user`);
+
+        const deletedReaction = await reactionService.delete(previousReaction.id);
+
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, {
+          data: {
+            id: contentId,
+            contentPath,
+            reaction: previousReaction,
+            parentId,
+          },
+        });
+
+        cb?.({ data: true });
+      } catch (error) {
+        logger.error(`Error sending new message`, error);
+        cb?.({
+          error: error?.message || 'Something went wrong',
+          stack: error,
+        });
+      }
+    });
+
+    socket.on(PLATFORM_SOCKET_EVENTS.EXPLORE, async (request, cb) => {
+      const { filter: { location } = {} } = request || {};
+      const { latitude, longitude } = location || {};
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return cb?.({ error: 'Invalid location' });
+      }
+
+      const abortController = new AbortController();
+      (socket as any).exploreAbort = abortController;
+
+      try {
+        let nextCursor = (await getExploreCursor(socketUserId)) || null;
+
+        while (!abortController.signal.aborted) {
+          const { items, pagination } = await eventService.getAll(
+            { status: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
+            { limit: 10, next: nextCursor },
+          );
+
+          let radius = 100;
+          let nearby = items;
+
+          while (nearby.length === 0 && radius <= 1000 && !abortController.signal.aborted) {
+            nearby = items.filter((ev) => {
+              const { latitude: elat, longitude: elon } = ev.location || {};
+              if (typeof elat !== 'number' || typeof elon !== 'number') return false;
+              return getDistanceInMeters(latitude, longitude, elat, elon) <= radius;
             });
-          cb({ data: true });
-        } catch (error) {
-          logger.error(`Error sending new message`, error);
-          cb?.({
-            error: error?.message || "Something went wrong",
-            stack: error,
-          });
-        }
-      });
+            if (nearby.length === 0) radius += 100;
+          }
 
-      socket.on(PLATFORM_SOCKET_EVENTS.DISCONNECT, async () => {
-        const ctrl = (socket as any).exploreAbort;
-        if (ctrl) ctrl.abort();
-        await deleteExploreCursor(socketUserId);
-      });
-    }
-  );
+          if (nearby.length === 0) break;
+
+          const sections = buildExploreSections(nearby);
+
+          for (const section of sections) {
+            if (abortController.signal.aborted) break;
+            emitSocketEvent(PLATFORM_SOCKET_EVENTS.EXPLORE, {
+              data: section,
+            });
+          }
+
+          await setExploreCursor(socketUserId, pagination.next ?? null);
+          nextCursor = pagination.next ?? null;
+
+          if (!pagination.hasNext) break;
+        }
+        cb?.({ data: true });
+      } catch (err) {
+        logger.error('Explore event failed', err);
+        cb?.({ error: err?.message || 'Something went wrong' });
+      }
+    });
+
+    socket.on(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, async (request, cb) => {
+      try {
+        const { eventId, ...messageData } = request || {};
+
+        if (!eventId) throw new BadRequestError(`EventId is required for new thread`);
+
+        const eventResponse = await eventService.getById(eventId);
+
+        if (isEmpty(eventResponse)) throw new NotFoundError('Event not found');
+
+        const newThread = await threadService.create({
+          eventId,
+          createdBy: socketUserId,
+          visibility: EAccessLevel.Public,
+        });
+
+        if (isEmpty(newThread)) throw new Error('Unable able to create thread');
+
+        messageData.threadId = newThread.id;
+
+        const message = await messageService.create(messageData);
+        const media = (message.content?.media || []) as string[];
+
+        if (!isEmpty(media)) {
+          const mediaData = await mediaService.getMediaByIds(media);
+          const populatedMedia = media.map((i) => mediaData.data[i]);
+          message.content.media = populatedMedia;
+        }
+
+        if (message) {
+          (message as any).thread = eventResponse;
+          (message as any).user = socket.request.user;
+        }
+
+        newThread.messages = [message];
+        newThread.creator = socket.request.user;
+
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, {
+          data: { ...newThread, event: eventResponse },
+        });
+        cb({ data: true });
+      } catch (error) {
+        logger.error(`Error sending new message`, error);
+        cb?.({
+          error: error?.message || 'Something went wrong',
+          stack: error,
+        });
+      }
+    });
+
+    socket.on(PLATFORM_SOCKET_EVENTS.DISCONNECT, async () => {
+      const ctrl = (socket as any).exploreAbort;
+      if (ctrl) ctrl.abort();
+      await deleteExploreCursor(socketUserId);
+    });
+  });
 
   return io;
 }

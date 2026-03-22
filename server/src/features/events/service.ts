@@ -15,6 +15,7 @@ import { getDistanceInMeters } from '@/helpers';
 import { Event } from './model';
 import MessageService from '@/features/messages/service';
 import EntityStatsService from '@/features/stats/service';
+import { deriveEventStatus, resolveEventStatus } from './status';
 
 class EventService {
   private readonly threadService: ThreadsService;
@@ -40,15 +41,27 @@ class EventService {
 
   private readonly populateFields = ['threads', 'tags', 'media', 'creator', 'participants', 'verifiers', 'reactions'];
 
-  private toEventSummary(event: IEvent) {
+  private withResolvedStatus<T extends IEvent | null>(event: T): T {
+    if (!event || event.status === EEventStatus.Cancelled) {
+      return event;
+    }
+
     return {
-      id: event.id,
-      name: event.name,
-      status: event.status,
-      type: event.type,
-      createdBy: event.createdBy,
-      location: event.location,
-      timings: event.timings,
+      ...event,
+      status: deriveEventStatus(event.timings),
+    } as T;
+  }
+
+  private toEventSummary(event: IEvent) {
+    const resolved = this.withResolvedStatus(event) as IEvent;
+    return {
+      id: resolved.id,
+      name: resolved.name,
+      status: resolved.status,
+      type: resolved.type,
+      createdBy: resolved.createdBy,
+      location: resolved.location,
+      timings: resolved.timings,
     };
   }
 
@@ -104,18 +117,18 @@ class EventService {
     if (fields.includes('verifiers')) event.verifiers = resolved.verifiers || [];
     if (fields.includes('reactions')) event.reactions = resolved.reactions || [];
 
-    return event;
+    return this.withResolvedStatus(event) as IEvent;
   }
 
   async getById(id: string) {
     const cached = await getEventCache(id);
-    if (cached) return cached;
+    if (cached) return this.withResolvedStatus(cached as IEvent);
 
     const data = await Event.findByPk(id, { raw: true });
     if (!data) return null;
 
     await setEventCache(id, data as IEvent);
-    return data as IEvent;
+    return this.withResolvedStatus(data as IEvent);
   }
 
   async getEventData(id: string) {
@@ -136,16 +149,20 @@ class EventService {
     const preview = await this.populateEvent(event, ['media', 'tags']);
     await this.entityStatsService.hydrateEvent(preview);
 
-    return preview;
+    return this.withResolvedStatus(preview);
   }
 
   async createEvent(body: Partial<IEvent>) {
-    if (!body.status) body.status = EEventStatus.Draft;
+    if (!body.timings) {
+      throw new BadRequestError('Event timings are required');
+    }
+
+    body.status = resolveEventStatus(body.timings);
     const result = await validateEventCreate(body, async (data) => {
       const row = await Event.create(data as Partial<IEvent>);
       return row.toJSON() as IEvent;
     });
-    const eventData = result as IEvent;
+    const eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     if (eventData) {
       await setEventCache(eventData.id, eventData);
       await this.entityStatsService.hydrateEvent(eventData);
@@ -165,14 +182,23 @@ class EventService {
     if (existing && existing.status === EEventStatus.Cancelled) {
       throw new BadRequestError('Cannot update a cancelled event');
     }
+    const nextTimings = data.timings ?? existing.timings;
+    const nextStatus =
+      data.status === EEventStatus.Cancelled
+        ? EEventStatus.Cancelled
+        : resolveEventStatus(nextTimings);
+
     const result = await validateEventUpdate(data, async (d) => {
       const row = await Event.findByPk(existing.id);
       if (!row) throw new NotFoundError('Event not found');
-      await row.update(d as Partial<IEvent>);
+      await row.update({
+        ...(d as Partial<IEvent>),
+        status: nextStatus,
+      } as Partial<IEvent>);
       return row.toJSON() as IEvent;
     });
     await this.deleteCache(existing.id);
-    let eventData = result as IEvent;
+    let eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     const shouldSyncDerivedStats =
       !!eventData &&
       ('participants' in data ||
@@ -288,8 +314,12 @@ class EventService {
     const eventData = event;
     const userData = user;
 
-    if (eventData.status !== EEventStatus.Ongoing) {
-      throw new BadRequestError(`Event is ${eventData.status}`);
+    const resolvedEventStatus =
+      eventData.status === EEventStatus.Cancelled
+        ? EEventStatus.Cancelled
+        : deriveEventStatus(eventData.timings);
+    if (resolvedEventStatus !== EEventStatus.Ongoing) {
+      throw new BadRequestError(`Event is ${resolvedEventStatus}`);
     }
 
     const updateData = {

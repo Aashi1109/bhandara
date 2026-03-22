@@ -1,11 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/event.dart';
-import 'profile.dart';
 import '../theme/theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/header.dart';
+import 'profile.dart';
 
 class EventAttendeesScreen extends StatelessWidget {
   const EventAttendeesScreen({
@@ -59,32 +59,11 @@ class EventAttendeesScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Row(
                             children: [
-                              ClipOval(
-                                child: SizedBox(
-                                  width: 48,
-                                  height: 48,
-                                  child: CachedNetworkImage(
-                                    imageUrl: attendee.avatarUrl ?? '',
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, _) =>
-                                        Container(color: AppColors.muted),
-                                    errorWidget: (_, _, _) => Container(
-                                      color: AppColors.muted,
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        ((attendee.name ?? 'U').isNotEmpty
-                                                ? attendee.name!
-                                                : 'U')[0]
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              Avatar(
+                                name: attendee.name,
+                                imageUrl: attendee.avatarUrl,
+                                size: 48,
+                                textSize: 16,
                               ),
                               const SizedBox(width: 16),
                               Expanded(

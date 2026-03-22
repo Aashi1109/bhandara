@@ -1,22 +1,22 @@
-import { Event } from "@/features/events/model";
-import EventService from "@/features/events/service";
-import { Op } from "sequelize";
-import { emitSocketEvent } from "@/socket/emitter";
-import { PLATFORM_SOCKET_EVENTS } from "@/constants";
-import logger from "@/logger";
-import { supabase } from "@/connections";
-import { MEDIA_TABLE_NAME } from "@/features/media/constants";
-import type { IMedia } from "@/definitions/types";
+import { Event } from '@/features/events/model';
+import EventService from '@/features/events/service';
+import { Op } from 'sequelize';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS } from '@/constants';
+import logger from '@/logger';
+import { supabase } from '@/connections';
+import { MEDIA_TABLE_NAME } from '@/features/media/constants';
+import type { IMedia } from '@/definitions/types';
 
 const eventService = new EventService();
 export function initializeMediaRealtime() {
   const channel = supabase
-    .channel("table-db-changes")
+    .channel('table-db-changes')
     .on(
-      "postgres_changes",
+      'postgres_changes',
       {
-        event: "UPDATE",
-        schema: "public",
+        event: 'UPDATE',
+        schema: 'public',
         table: MEDIA_TABLE_NAME,
       } as any,
       async (payload: { new: IMedia; [key: string]: any }) => {
@@ -32,9 +32,9 @@ export function initializeMediaRealtime() {
             emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: ev });
           }
         } catch (err) {
-          logger.error("Realtime handler error", err);
+          logger.error('Realtime handler error', err);
         }
-      }
+      },
     )
     .subscribe();
   return channel;

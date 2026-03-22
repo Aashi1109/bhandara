@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
+import '../../widgets/textarea.dart';
 import '../../providers/user.dart';
 import '../../widgets/snackbar.dart';
 import '../settings.dart';
@@ -199,50 +200,15 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       label: 'Display Name',
                       placeholder: 'Enter your full name',
                       controller: _nameController,
-                      height: 56,
                       borderRadius: 16,
                     ),
                     const SizedBox(height: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(left: 4),
-                          child: Text(
-                            'BIO',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 2,
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 132,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: TextField(
-                            controller: _bioController,
-                            maxLines: null,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primary,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: 'Tell us a bit about yourself...',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
-                      ],
+                    AppTextArea(
+                      label: 'Bio',
+                      placeholder: 'Tell us a bit about yourself...',
+                      controller: _bioController,
+                      height: 132,
+                      minLines: 5,
                     ),
                   ],
                 ),

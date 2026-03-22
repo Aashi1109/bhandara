@@ -11,22 +11,49 @@ import '../constants/socket_events.dart';
 import '../models/chat.dart';
 import '../models/engagement.dart';
 import '../models/event.dart';
+import '../models/save.dart';
 import '../providers/user.dart';
 import '../services/chat.dart';
 import '../services/engagement.dart';
 import '../services/event.dart';
 import '../services/maps/map_manager.dart';
 import '../services/maps/map_provider_type.dart';
+import '../services/save.dart';
 import '../services/socket.dart';
 import '../theme/theme.dart';
+import '../utils/event_status.dart';
 import '../utils/error.dart';
+import '../widgets/avatar.dart';
 import '../widgets/button.dart';
 import '../widgets/review_editor_sheet.dart';
 import '../widgets/snackbar.dart';
 import 'chat.dart';
+import 'create_event.dart';
 import 'event_attendees.dart';
 import 'event_ratings.dart';
 import 'explore.dart';
+
+enum _EventDetailActionKey { share, save, edit }
+
+class _EventDetailAction {
+  const _EventDetailAction({
+    required this.key,
+    required this.label,
+    required this.icon,
+    this.onTap,
+    this.enabled = true,
+    this.loading = false,
+    this.tooltip,
+  });
+
+  final _EventDetailActionKey key;
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool enabled;
+  final bool loading;
+  final String? tooltip;
+}
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.id, this.initialEvent});
@@ -52,10 +79,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   bool _isJoining = false;
   bool _isOpeningChat = false;
   bool _isSubmittingReview = false;
+  bool _isLoadingSaveState = false;
+  bool _isTogglingSave = false;
   bool _hasJoined = false;
   bool _isHeroExpanded = true;
   int _heroMediaIndex = 0;
   final MapManager _mapManager = MapManager(type: MapProviderType.google);
+  SavedEntitySummary? _saveSummary;
 
   @override
   void initState() {
@@ -68,7 +98,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _loadEvent(showBlockingLoader: false);
-        _loadEngagement(silent: false);
       });
       _checkIfJoined();
       _listenToSocketMessages();
@@ -99,6 +128,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       });
 
       _checkIfJoined();
+      unawaited(_loadSaveState());
       await _loadEngagement(silent: !showBlockingLoader);
 
       if (showBlockingLoader) {
@@ -111,6 +141,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         _isHydratingFullEvent = false;
       });
     }
+  }
+
+  bool get _isOwner {
+    final currentUser = ref.read(userProfileProvider).value;
+    return currentUser != null && currentUser.id == _event?.createdBy;
+  }
+
+  bool get _isExpired {
+    final event = _event;
+    if (event == null) return false;
+    final status = resolveEventStatus(event);
+    return status == EventStatusValue.completed ||
+        status == EventStatusValue.cancelled;
   }
 
   Future<void> _loadEngagement({bool silent = true}) async {
@@ -126,6 +169,32 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoadingEngagement = false);
+    }
+  }
+
+  Future<void> _loadSaveState() async {
+    final currentUser = ref.read(userProfileProvider).value;
+    if (currentUser == null || _event == null || _isOwner) {
+      if (mounted) {
+        setState(() {
+          _saveSummary = null;
+          _isLoadingSaveState = false;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isLoadingSaveState = true);
+    try {
+      final summary = await saveService.getSaveState('event', widget.id);
+      if (!mounted) return;
+      setState(() {
+        _saveSummary = summary;
+        _isLoadingSaveState = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingSaveState = false);
     }
   }
 
@@ -164,6 +233,29 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         type: SnackBarType.error,
       );
       setState(() => _isJoining = false);
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    if (_isOwner || _isTogglingSave) return;
+    setState(() => _isTogglingSave = true);
+    try {
+      final summary = _saveSummary?.saved == true
+          ? await saveService.unsaveEntity('event', widget.id)
+          : await saveService.saveEntity('event', widget.id);
+      if (!mounted) return;
+      setState(() {
+        _saveSummary = summary;
+        _isTogglingSave = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isTogglingSave = false);
+      AppSnackBar.show(
+        context,
+        message: extractExceptionMessage(e),
+        type: SnackBarType.error,
+      );
     }
   }
 
@@ -226,6 +318,24 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         setState(() => _isOpeningChat = false);
       }
     }
+  }
+
+  Future<void> _openEditEvent() async {
+    if (!_isOwner || _event == null || _isExpired) return;
+    final updatedEvent = await context.push<Event>(
+      CreateEventScreen.routePath,
+      extra: _event,
+    );
+    if (!mounted || updatedEvent == null) return;
+    setState(() {
+      _event = _event?.merge(updatedEvent) ?? updatedEvent;
+      _heroMediaIndex = _clampMediaIndexFor(_event);
+    });
+    await _loadEvent(showBlockingLoader: false);
+  }
+
+  void _shareEvent() {
+    AppSnackBar.info(context, 'Share is not available yet.');
   }
 
   void _applyEngagementSummary(EngagementSummary summary) {
@@ -302,31 +412,43 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   IconData _statusIconForEvent() {
-    switch (_event?.status.toLowerCase()) {
-      case 'ongoing':
+    final event = _event;
+    if (event == null) {
+      return Icons.schedule_rounded;
+    }
+
+    switch (resolveEventStatus(event)) {
+      case EventStatusValue.ongoing:
         return Icons.play_circle_fill_rounded;
-      case 'expired':
+      case EventStatusValue.completed:
+      case EventStatusValue.cancelled:
         return Icons.check_circle_rounded;
-      case 'upcoming':
+      case EventStatusValue.upcoming:
       default:
         return Icons.schedule_rounded;
     }
   }
 
   IconData _minimizedStatusIconForEvent() {
-    switch (_event?.status.toLowerCase()) {
-      case 'ongoing':
+    final event = _event;
+    if (event == null) {
+      return Icons.event_available_rounded;
+    }
+
+    switch (resolveEventStatus(event)) {
+      case EventStatusValue.ongoing:
         return Icons.play_circle_filled_rounded;
-      case 'expired':
+      case EventStatusValue.completed:
+      case EventStatusValue.cancelled:
         return Icons.task_alt_rounded;
-      case 'upcoming':
+      case EventStatusValue.upcoming:
       default:
         return Icons.event_available_rounded;
     }
   }
 
   Future<void> _openReviewComposer() async {
-    if (_isSubmittingReview) return;
+    if (_isSubmittingReview || _isOwner) return;
 
     final result = await showReviewEditorSheet(
       context,
@@ -367,7 +489,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   Future<void> _openRatingsPage() async {
     await context.push(
       EventRatingsScreen.routePath.replaceAll(':id', widget.id),
-      extra: {'eventName': _event?.name ?? 'Event'},
+      extra: {'eventName': _event?.name ?? 'Event', 'isOwner': _isOwner},
     );
     if (!mounted) return;
     await _loadEngagement(silent: true);
@@ -380,24 +502,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       return 'https://picsum.photos/seed/event-location/1200/600';
     }
 
-    final providerUrl = _mapManager.getStaticMapImageUrl(
+    return _mapManager.getStaticMapImageUrl(
       latitude: lat,
       longitude: lng,
       width: 1200,
-      height: 600,
-      zoom: 15,
+      height: 800,
+      zoom: 14,
+      showMarker: true,
       fallbackUrl: 'https://picsum.photos/seed/event-location/1200/600',
     );
-    if (!providerUrl.contains('picsum.photos')) {
-      return providerUrl;
-    }
-
-    return Uri.https('staticmap.openstreetmap.de', '/staticmap.php', {
-      'center': '$lat,$lng',
-      'zoom': '15',
-      'size': '1200x600',
-      'markers': '$lat,$lng,red-pushpin',
-    }).toString();
   }
 
   void _openAttendees() {
@@ -414,8 +527,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   List<EventUser> get _participantUsers =>
       (_event?.participants ?? const []).whereType<EventUser>().toList();
-
-  List<EventVerifier> get _verifiers => _event?.verifiers ?? const [];
 
   int get _participantCount => _event?.participants?.length ?? 0;
 
@@ -438,8 +549,63 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return '${_eventStats.ratingAverage.toStringAsFixed(1)} (${_eventStats.ratingCount})';
   }
 
+  List<_EventDetailAction> get _topActions {
+    final currentUser = ref.read(userProfileProvider).value;
+    final actions = <_EventDetailAction>[
+      _EventDetailAction(
+        key: _EventDetailActionKey.share,
+        label: 'Share',
+        icon: LucideIcons.share2,
+        onTap: _shareEvent,
+      ),
+    ];
+
+    if (_isOwner) {
+      actions.insert(
+        0,
+        _EventDetailAction(
+          key: _EventDetailActionKey.edit,
+          label: 'Edit Event',
+          icon: LucideIcons.pencil,
+          onTap: _isExpired ? null : _openEditEvent,
+          enabled: !_isExpired,
+          tooltip: _isExpired
+              ? "Can't edit this event because it has expired."
+              : null,
+        ),
+      );
+    } else if (currentUser != null) {
+      actions.insert(
+        0,
+        _EventDetailAction(
+          key: _EventDetailActionKey.save,
+          label: _saveSummary?.saved == true ? 'Unsave Event' : 'Save Event',
+          icon: _saveSummary?.saved == true
+              ? Icons.bookmark_rounded
+              : Icons.bookmark_border_rounded,
+          onTap: _toggleSave,
+          loading: _isLoadingSaveState || _isTogglingSave,
+        ),
+      );
+    }
+
+    return actions;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(userProfileProvider).value;
+    if (currentUser != null &&
+        !_isOwner &&
+        _saveSummary == null &&
+        !_isLoadingSaveState) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _saveSummary == null && !_isLoadingSaveState) {
+          _loadSaveState();
+        }
+      });
+    }
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(
@@ -510,15 +676,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             children: [
                               _circleButton(
                                 LucideIcons.arrowLeft,
-                                () => context.go(ExploreScreen.routePath),
+                                () => context.canPop()
+                                    ? context.pop()
+                                    : context.go(ExploreScreen.routePath),
                               ),
-                              Row(
-                                children: [
-                                  _circleButton(LucideIcons.heart, () {}),
-                                  const SizedBox(width: 12),
-                                  _circleButton(LucideIcons.share2, () {}),
-                                ],
-                              ),
+                              _buildTopActions(),
                             ],
                           ),
                         ),
@@ -581,37 +743,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            ClipOval(
-                              child: SizedBox(
-                                width: 48,
-                                height: 48,
-                                child: ColorFiltered(
-                                  colorFilter: const ColorFilter.mode(
-                                    AppColors.mutedForeground,
-                                    BlendMode.saturation,
-                                  ),
-                                  child: CachedNetworkImage(
-                                    imageUrl: _event?.creator?.avatarUrl ?? '',
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, _, _) => Container(
-                                      color: AppColors.muted,
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        ((_event?.creator?.name ?? 'H')
-                                                    .isNotEmpty
-                                                ? (_event?.creator?.name ??
-                                                      'H')[0]
-                                                : 'H')
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                            Avatar(
+                              name: _event?.creator?.name ?? 'H',
+                              imageUrl: _event?.creator?.avatarUrl,
+                              size: 48,
+                              textSize: 16,
+                              imageBuilder: (context, child) => ColorFiltered(
+                                colorFilter: const ColorFilter.mode(
+                                  AppColors.mutedForeground,
+                                  BlendMode.saturation,
                                 ),
+                                child: child,
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -658,20 +800,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 40),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          alignment: WrapAlignment.spaceBetween,
+                        Row(
                           children: [
-                            const Text(
-                              'About the Event',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                            const Expanded(
+                              child: Text(
+                                'About the Event',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 12),
                             GestureDetector(
                               onTap: _openChat,
                               child: Container(
@@ -761,31 +902,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   ),
                                 ),
                                 Align(
-                                  alignment: const Alignment(0, -0.18),
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.18,
-                                          ),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      LucideIcons.mapPin,
-                                      size: AppIconSizes.m,
-                                      color: AppColors.surface,
-                                    ),
-                                  ),
-                                ),
-                                Align(
                                   alignment: Alignment.bottomCenter,
                                   child: Container(
                                     margin: const EdgeInsets.only(bottom: 12),
@@ -818,20 +934,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 40),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          alignment: WrapAlignment.spaceBetween,
+                        Row(
                           children: [
-                            const Text(
-                              "Who's Going",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                            const Expanded(
+                              child: Text(
+                                "Who's Going",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 12),
                             GestureDetector(
                               onTap: _participantUsers.isEmpty
                                   ? null
@@ -840,6 +955,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 _isHydratingFullEvent && !_event!.hasFullDetail
                                     ? 'Loading attendees...'
                                     : '$_participantCount Attending',
+                                textAlign: TextAlign.right,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -870,29 +986,45 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               ),
                             ),
                           )
+                        else if (_participantUsers.isEmpty)
+                          const SizedBox(
+                            height: 40,
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                'No attendees yet',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.mutedForeground,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
                         else
                           SizedBox(
-                            height: 40,
+                            height: 52,
                             child: Stack(
                               children: [
                                 ...List.generate(
                                   _participantUsers.take(4).length,
                                   (i) => Positioned(
-                                    left: i * 28.0,
+                                    left: i * 34.0,
                                     child: _avatarBubble(
                                       user: _participantUsers[i],
-                                      size: 40,
-                                      textSize: 10,
+                                      size: 52,
+                                      textSize: 13,
                                       borderColor: AppColors.surface,
                                     ),
                                   ),
                                 ),
                                 if (_participantCount > 4)
                                   Positioned(
-                                    left: 4 * 28.0,
+                                    left: 4 * 34.0,
                                     child: Container(
-                                      width: 40,
-                                      height: 40,
+                                      width: 52,
+                                      height: 52,
                                       decoration: BoxDecoration(
                                         color: AppColors.muted,
                                         shape: BoxShape.circle,
@@ -905,7 +1037,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         child: Text(
                                           '+${_participantCount - 4}',
                                           style: const TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.mutedForeground,
                                           ),
@@ -984,33 +1116,39 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.spaceBetween,
+        Row(
           children: [
-            Text(
-              hasRatings ? 'Ratings & Reviews' : 'No review yet',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
+            Expanded(
+              child: Text(
+                hasRatings ? 'Ratings & Reviews' : 'No review yet',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
               ),
             ),
+            const SizedBox(width: 12),
             GestureDetector(
-              onTap: _isSubmittingReview ? null : _openReviewComposer,
+              onTap: hasRatings || _isOwner
+                  ? _openRatingsPage
+                  : (_isSubmittingReview ? null : _openReviewComposer),
               child: Text(
                 hasRatings
                     ? '${_eventStats.ratingCount} ratings'
+                    : _isOwner
+                    ? 'No reviews yet'
                     : 'Be the first to review',
+                textAlign: TextAlign.right,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: _isSubmittingReview
+                  color: _isSubmittingReview && !hasRatings
                       ? AppColors.mutedForeground
                       : AppColors.primary,
-                  decoration: TextDecoration.underline,
+                  decoration: hasRatings || !_isOwner
+                      ? TextDecoration.underline
+                      : TextDecoration.none,
                 ),
               ),
             ),
@@ -1050,16 +1188,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    GestureDetector(
-                      onTap: _isSubmittingReview ? null : _openReviewComposer,
-                      child: Icon(
-                        LucideIcons.pencil,
-                        color: _isSubmittingReview
-                            ? AppColors.mutedForeground
-                            : AppColors.primary,
-                        size: AppIconSizes.defaultSize,
+                    if (!_isOwner)
+                      GestureDetector(
+                        onTap: _isSubmittingReview ? null : _openReviewComposer,
+                        child: Icon(
+                          LucideIcons.pencil,
+                          color: _isSubmittingReview
+                              ? AppColors.mutedForeground
+                              : AppColors.primary,
+                          size: AppIconSizes.defaultSize,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 if ((_engagementSummary?.currentUserReview ?? '')
@@ -1108,6 +1247,133 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           color: AppColors.primary,
         ),
       ),
+    );
+  }
+
+  Widget _buildTopActions() {
+    final actions = _topActions;
+    if (actions.length <= 2) {
+      return Row(
+        children: [
+          for (var index = 0; index < actions.length; index++) ...[
+            _buildTopActionButton(actions[index]),
+            if (index != actions.length - 1) const SizedBox(width: 12),
+          ],
+        ],
+      );
+    }
+
+    return PopupMenuButton<_EventDetailActionKey>(
+      onSelected: (value) {
+        final action = actions.firstWhere((item) => item.key == value);
+        action.onTap?.call();
+      },
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      itemBuilder: (context) => actions
+          .map(
+            (action) => PopupMenuItem<_EventDetailActionKey>(
+              value: action.key,
+              enabled: action.enabled && !action.loading,
+              child: Row(
+                children: [
+                  Icon(
+                    action.icon,
+                    size: AppIconSizes.defaultSize,
+                    color: action.enabled
+                        ? AppColors.primary
+                        : AppColors.mutedForeground,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      action.tooltip ?? action.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: action.enabled
+                            ? AppColors.primary
+                            : AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+      child: _circleButtonShell(
+        const Icon(
+          LucideIcons.moreVertical,
+          size: AppIconSizes.defaultSize,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopActionButton(_EventDetailAction action) {
+    final button = GestureDetector(
+      onTap: action.enabled && !action.loading ? action.onTap : null,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: action.loading
+            ? const Center(
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              )
+            : Icon(
+                action.icon,
+                size: AppIconSizes.defaultSize,
+                color: action.enabled
+                    ? AppColors.primary
+                    : AppColors.mutedForeground,
+              ),
+      ),
+    );
+
+    if (action.tooltip != null) {
+      return Tooltip(message: action.tooltip, child: button);
+    }
+    return button;
+  }
+
+  Widget _circleButtonShell(Widget child) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(child: child),
     );
   }
 
@@ -1306,53 +1572,61 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             children: [
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: Wrap(
-                                  alignment: WrapAlignment.start,
-                                  spacing: 18,
-                                  runSpacing: 8,
-                                  children: [
-                                    _engagementMeta(
-                                      LucideIcons.eye,
-                                      '${_eventStats.viewCount} views',
-                                    ),
-                                    GestureDetector(
-                                      onTap: _openRatingsPage,
-                                      child: _engagementMeta(
-                                        LucideIcons.star,
-                                        _ratingMetaText,
-                                        isInteractive: true,
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Wrap(
+                                    alignment: WrapAlignment.start,
+                                    spacing: 18,
+                                    runSpacing: 8,
+                                    children: [
+                                      _engagementMeta(
+                                        LucideIcons.eye,
+                                        '${_eventStats.viewCount} views',
                                       ),
-                                    ),
-                                    if (_isHydratingFullEvent ||
-                                        _isLoadingEngagement)
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: AppColors.surface,
+                                      GestureDetector(
+                                        onTap: _openRatingsPage,
+                                        child: _engagementMeta(
+                                          LucideIcons.star,
+                                          _ratingMetaText,
+                                          isInteractive: true,
                                         ),
                                       ),
-                                  ],
+                                      if (_isLoadingEngagement)
+                                        const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.surface,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 14),
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: Wrap(
-                                  alignment: WrapAlignment.start,
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _infoPill(LucideIcons.timer, 'Active'),
-                                    _infoPill(
-                                      LucideIcons.utensils,
-                                      _event!.tags?.isNotEmpty == true
-                                          ? _event!.tags!.first.name
-                                          : 'Food',
-                                    ),
-                                    _infoPill(LucideIcons.navigation, 'Nearby'),
-                                  ],
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Wrap(
+                                    alignment: WrapAlignment.start,
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _infoPill(LucideIcons.timer, 'Active'),
+                                      _infoPill(
+                                        LucideIcons.utensils,
+                                        _event!.tags?.isNotEmpty == true
+                                            ? _event!.tags!.first.name
+                                            : 'Food',
+                                      ),
+                                      _infoPill(
+                                        LucideIcons.navigation,
+                                        'Nearby',
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -1398,10 +1672,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   Widget _verifiedHostChip() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showAvatars =
-            _verifiers.isNotEmpty && constraints.maxWidth >= 172;
-        final showLabel = constraints.maxWidth >= 118;
-
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
           decoration: BoxDecoration(
@@ -1409,48 +1679,28 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: AppColors.border),
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
+            spacing: 6,
             children: [
-              const Icon(
+              Icon(
                 LucideIcons.badgeCheck,
                 size: AppIconSizes.s,
                 color: AppColors.primary,
               ),
-              if (showLabel) ...[
-                const SizedBox(width: 6),
-                const Text(
+              Flexible(
+                child: Text(
                   'Verified Host',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: AppColors.primary,
                   ),
                 ),
-              ],
-              if (showAvatars) ...[
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: (_verifiers.take(3).length * 20) + 14,
-                  height: 28,
-                  child: Stack(
-                    children: [
-                      ...List.generate(
-                        _verifiers.take(3).length,
-                        (index) => Positioned(
-                          left: index * 20,
-                          child: _avatarBubble(
-                            user: _verifiers[index].user,
-                            size: 28,
-                            textSize: 10,
-                            borderColor: AppColors.muted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+              // Verifier avatar listing intentionally hidden for now.
             ],
           ),
         );
@@ -1464,33 +1714,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     required double textSize,
     required Color borderColor,
   }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor, width: 2),
-      ),
-      child: ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: user.avatarUrl ?? '',
-          fit: BoxFit.cover,
-          placeholder: (_, _) => Container(color: AppColors.muted),
-          errorWidget: (_, _, _) => Container(
-            color: AppColors.muted,
-            alignment: Alignment.center,
-            child: Text(
-              ((user.name ?? 'U').isNotEmpty ? user.name! : 'U')[0]
-                  .toUpperCase(),
-              style: TextStyle(
-                fontSize: textSize,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-        ),
-      ),
+    return Avatar(
+      name: user.name,
+      imageUrl: user.avatarUrl,
+      size: size,
+      textSize: textSize,
+      borderColor: borderColor,
+      borderWidth: 2,
     );
   }
 

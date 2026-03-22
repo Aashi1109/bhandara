@@ -93,4 +93,10 @@ class Api {
 
   static String engagementRatings(String entityType, String entityId) =>
       '/engagement/$entityType/$entityId/ratings';
+
+  // Save endpoints
+  static const String saves = '/saves';
+
+  static String saveEntity(String entityType, String entityId) =>
+      '/saves/$entityType/$entityId';
 }
