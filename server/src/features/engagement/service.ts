@@ -1,5 +1,5 @@
 import { getRedisConnection } from "@/connections/redis";
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from "@/constants";
 import type {
   IEntityEngagement,
   IEntityEngagementSummary,
@@ -42,7 +42,7 @@ type ViewerContext = {
 };
 
 class EntityEngagementService {
-  private readonly redis = getRedisConnection();
+  private readonly redis = getRedisConnection(REDIS_CONNECTION_NAMES.Analytics);
   private readonly namespace = CACHE_NAMESPACE_CONFIG.Engagement.namespace;
 
   private getAggregateKey(entityType: string, entityId: string) {
@@ -143,9 +143,9 @@ class EntityEngagementService {
   }
 
   private async getCachedStats(entityType: string, entityId: string) {
-    const raw = await this.redis.hgetall<Record<string, unknown>>(
+    const raw = (await this.redis.hgetall(
       this.getAggregateKey(entityType, entityId),
-    );
+    )) as Record<string, unknown>;
 
     if (!raw || Object.keys(raw).length === 0) {
       return null;
@@ -335,10 +335,7 @@ class EntityEngagementService {
       ),
     );
 
-    const result = await this.redis.set(dedupeKey, "1", {
-      nx: true,
-      ex: secondsUntilDayEnd,
-    });
+    const result = await this.redis.set(dedupeKey, "1", "EX", secondsUntilDayEnd, "NX");
 
     if (!result) {
       return stats;

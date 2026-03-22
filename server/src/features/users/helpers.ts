@@ -1,7 +1,7 @@
 import type { ITag, IUserSession, IBaseUser } from '@/definitions/types';
 import { RedisCache } from '@/features/cache';
 import { jnparse, jnstringify } from '@/utils';
-import { CACHE_NAMESPACE_CONFIG } from '@/constants';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
 import logger from '@/logger';
 
 const userCacheNamespace = CACHE_NAMESPACE_CONFIG.Users.namespace;
@@ -9,10 +9,12 @@ const userCacheTTL = CACHE_NAMESPACE_CONFIG.Users.ttl;
 const sessionCacheNamespace = CACHE_NAMESPACE_CONFIG.Sessions.namespace;
 
 const userCache = new RedisCache({
+  connectionName: REDIS_CONNECTION_NAMES.Cache,
   namespace: userCacheNamespace,
   defaultTTLSeconds: userCacheTTL,
 });
 const sessionCache = new RedisCache({
+  connectionName: REDIS_CONNECTION_NAMES.Sessions,
   namespace: sessionCacheNamespace,
   defaultTTLSeconds: CACHE_NAMESPACE_CONFIG.Sessions.ttl,
 });
@@ -187,16 +189,10 @@ export const deleteUserInterestsCache = (userId: string) => {
 export const bulkSetUserCache = async (users: IBaseUser[]): Promise<'OK'> => {
   const pipeline = userCache.getPipeline();
   users.forEach((user) => {
-    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), {
-      ex: userCacheTTL,
-    });
-    pipeline.set(`${userCacheNamespace}:${user.email}`, user.id, {
-      ex: userCacheTTL,
-    });
+    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), 'EX', userCacheTTL);
+    pipeline.set(`${userCacheNamespace}:${user.email}`, user.id, 'EX', userCacheTTL);
     if (user.username)
-      pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, {
-        ex: userCacheTTL,
-      });
+      pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, 'EX', userCacheTTL);
   });
   await pipeline.exec();
   return 'OK';
@@ -207,10 +203,10 @@ export const bulkGetUserCache = async (ids: string[]): Promise<IBaseUser[]> => {
   ids.forEach((id) => {
     pipeline.get(`${userCacheNamespace}:${id}`);
   });
-  const results = (await pipeline.exec()) as (IBaseUser | null)[];
+  const results = await pipeline.exec();
 
-  const users = results.reduce((acc, result) => {
-    const user = typeof result === 'string' ? (jnparse(result) as IBaseUser) : (result as IBaseUser | null);
+  const users = (results || []).reduce((acc, [, result]) => {
+    const user = typeof result === 'string' ? (jnparse(result) as IBaseUser) : null;
     if (!user) return acc;
     acc.push(user);
     return acc;

@@ -1,4 +1,4 @@
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from "@/constants";
 import type {
   IBaseThread,
   IEvent,
@@ -46,6 +46,7 @@ const DEFAULT_MESSAGE_STATS: IMessageStats = {
 
 class EntityStatsService {
   private readonly cache = new RedisCache({
+    connectionName: REDIS_CONNECTION_NAMES.Analytics,
     namespace: CACHE_NAMESPACE_CONFIG.EntityStats.namespace,
     defaultTTLSeconds: CACHE_NAMESPACE_CONFIG.EntityStats.ttl,
   });

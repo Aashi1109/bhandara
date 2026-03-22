@@ -5,6 +5,11 @@ process.env.NODE_ENV = "test";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_ANON_KEY = "test-key";
 process.env.JWT_SECRET = "test-secret";
+process.env.REDIS_HOST = "127.0.0.1";
+process.env.REDIS_PORT = "6379";
+process.env.REDIS_PASSWORD = "";
+process.env.REDIS_DB = "0";
+process.env.REDIS_TLS = "false";
 
 vi.mock("@sentry/node", () => ({
   captureException: vi.fn(),

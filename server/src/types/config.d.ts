@@ -17,6 +17,14 @@ export interface InfrastructureConfig {
   serviceName: string;
 }
 
+export interface RedisConnectionConfig {
+  host: string;
+  port: number;
+  password?: string;
+  db?: number;
+  tls?: Record<string, never>;
+}
+
 export interface AppConfig {
   baseUrl: string;
   port: string | number;
@@ -51,10 +59,7 @@ export interface AppConfig {
     key: string;
   };
   redis: {
-    [key: string]: {
-      url: string;
-      token: string;
-    };
+    [key: string]: RedisConnectionConfig;
   };
   sessionCookie: {
     keyName: string;

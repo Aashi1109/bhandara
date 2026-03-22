@@ -1,9 +1,11 @@
-import type { Redis } from '@upstash/redis'; // TODO: Uncomment on prod
+import type IORedis from 'ioredis';
 import { jnstringify, safeJsonParse } from '@/utils';
 import { getRedisConnection } from '@/connections';
+import { REDIS_CONNECTION_NAMES } from '@/constants';
 
 interface RedisCacheConfig {
-  redisClient?: Redis;
+  redisClient?: IORedis;
+  connectionName?: REDIS_CONNECTION_NAMES;
   namespace: string;
   defaultTTLSeconds?: number;
 }
@@ -16,12 +18,12 @@ interface MethodCacheOptions {
 }
 
 class RedisCache {
-  private readonly redisClient: Redis;
+  private readonly redisClient: IORedis;
   private readonly cacheNamespace: string;
   private readonly defaultTTLSeconds: number;
 
   constructor(config: RedisCacheConfig) {
-    this.redisClient = getRedisConnection();
+    this.redisClient = config.redisClient || getRedisConnection(config.connectionName || REDIS_CONNECTION_NAMES.Cache);
     this.cacheNamespace = config.namespace;
     this.defaultTTLSeconds = config.defaultTTLSeconds || 3600;
   }
@@ -78,7 +80,7 @@ class RedisCache {
 
           // Cache the result if successful
           if (!methodOptions.skipCacheSet && databaseResult && !databaseResult.error)
-            await redisClient.setex(cacheKey, _options.timeToLiveSeconds!, JSON.stringify(databaseResult));
+            await redisClient.set(cacheKey, JSON.stringify(databaseResult), 'EX', _options.timeToLiveSeconds!);
 
           return databaseResult;
         } catch (error) {
@@ -105,12 +107,7 @@ class RedisCache {
 
   setItem(key: string, value: any, ttl?: number) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
-    // return this.redisClient.set(namespacedKey, jnstringify(value), {
-    //   ex: ttl || this.defaultTTLSeconds,
-    // }); // TODO: Uncomment on prod
-    return this.redisClient.set(namespacedKey, jnstringify(value), {
-      ex: ttl || this.defaultTTLSeconds,
-    });
+    return this.redisClient.set(namespacedKey, jnstringify(value), 'EX', ttl || this.defaultTTLSeconds);
   }
 
   async getItem<T>(key: string): Promise<T | null> {
@@ -224,9 +221,7 @@ class RedisCache {
 
   updateValue(key: string, newValue: any) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
-    return this.redisClient.set(namespacedKey, jnstringify(newValue), {
-      keepTtl: true,
-    });
+    return this.redisClient.set(namespacedKey, jnstringify(newValue), 'KEEPTTL');
   }
 
   getTTL(key: string) {

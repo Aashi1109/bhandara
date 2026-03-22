@@ -1,15 +1,18 @@
 import type { NextFunction, Request, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRedis } from "../mocks/external";
+import { REDIS_CONNECTION_NAMES } from "@/constants";
 
 describe("rateLimit middleware", () => {
   beforeEach(() => {
+    vi.resetModules();
     mockRedis.incr.mockResolvedValue(1);
     mockRedis.expire.mockResolvedValue(1);
   });
 
   it("sets rate-limit headers on the first hit", async () => {
     const { default: rateLimit } = await import("@/middlewares/rateLimit");
+    const { getRedisConnection } = await import("@/connections/redis");
     const middleware = rateLimit({
       keyPrefix: "public-user-query",
       limit: 10,
@@ -31,6 +34,7 @@ describe("rateLimit middleware", () => {
 
     expect(mockRedis.incr).toHaveBeenCalled();
     expect(mockRedis.expire).toHaveBeenCalled();
+    expect(getRedisConnection).toHaveBeenCalledWith(REDIS_CONNECTION_NAMES.RateLimit);
     expect((res.setHeader as any).mock.calls).toEqual([
       ["X-RateLimit-Limit", "10"],
       ["X-RateLimit-Remaining", "9"],

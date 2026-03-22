@@ -47,7 +47,6 @@
     "@sentry/node": "^10.39.0",
     "@supabase/postgrest-js": "^1.19.4",
     "@supabase/supabase-js": "^2.97.0",
-    "@upstash/redis": "^1.36.2",
     "ajv": "^8.18.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^3.0.1",

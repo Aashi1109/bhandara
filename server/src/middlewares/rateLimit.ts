@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { getRedisConnection } from "@/connections/redis";
+import { REDIS_CONNECTION_NAMES } from "@/constants";
 
 type RateLimitOptions = {
   keyPrefix: string;
@@ -18,7 +19,7 @@ const getClientIp = (req: Request) => {
 };
 
 export default function rateLimit(options: RateLimitOptions) {
-  const redis = getRedisConnection();
+  const redis = getRedisConnection(REDIS_CONNECTION_NAMES.RateLimit);
 
   return async function rateLimitMiddleware(
     req: Request,

@@ -1,8 +1,33 @@
 import * as dotenv from 'dotenv';
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from '@/constants';
-import type { AppConfig } from '@/types/config';
+import type { AppConfig, RedisConnectionConfig } from '@/types/config';
 
 dotenv.config({});
+
+const getRedisBaseConnectionConfig = (): RedisConnectionConfig => {
+  return {
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: +(process.env.REDIS_PORT || 6379),
+    password: process.env.REDIS_PASSWORD || undefined,
+    tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+  };
+};
+
+const withRedisDb = (baseConfig: RedisConnectionConfig, db: number): RedisConnectionConfig => ({
+  ...baseConfig,
+  db,
+});
+
+const redisBaseConnection = getRedisBaseConnectionConfig();
+const redisConnections = {
+  [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),
+  [REDIS_CONNECTION_NAMES.Cache]: withRedisDb(redisBaseConnection, 5),
+  [REDIS_CONNECTION_NAMES.Sessions]: withRedisDb(redisBaseConnection, 1),
+  [REDIS_CONNECTION_NAMES.Bull]: withRedisDb(redisBaseConnection, 2),
+  [REDIS_CONNECTION_NAMES.Analytics]: withRedisDb(redisBaseConnection, 3),
+  [REDIS_CONNECTION_NAMES.RateLimit]: withRedisDb(redisBaseConnection, 4),
+  [REDIS_CONNECTION_NAMES.Activity]: withRedisDb(redisBaseConnection, 6),
+} satisfies Record<REDIS_CONNECTION_NAMES, RedisConnectionConfig>;
 
 const config: AppConfig = {
   baseUrl: process.env.CLOUD_RUN_SERVICE_URL || `http://localhost:${process.env.PORT || 3001}`,
@@ -42,10 +67,7 @@ const config: AppConfig = {
     key: process.env.SUPABASE_ANON_KEY || '',
   },
   redis: {
-    [REDIS_CONNECTION_NAMES.Default]: {
-      url: process.env.UPSTASH_REDIS_REST_URL || '',
-      token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-    },
+    ...redisConnections,
   },
   sessionCookie: {
     keyName: 'bh_session',
@@ -95,19 +117,13 @@ const config: AppConfig = {
   },
 };
 
-const getRedisHost = (url: string) => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return 'localhost';
-  }
-};
-
 export const WORKER_CONNECTION_CONFIG = {
-  host: getRedisHost(config.redis.default.url),
-  password: config.redis.default.token,
-  tls: config.redis.default.url.startsWith('https') ? {} : undefined,
-  port: +(process.env.REDIS_TCP_PORT || 6379),
+  host: redisConnections[REDIS_CONNECTION_NAMES.Bull].host,
+  port: redisConnections[REDIS_CONNECTION_NAMES.Bull].port,
+  password: redisConnections[REDIS_CONNECTION_NAMES.Bull].password,
+  db: redisConnections[REDIS_CONNECTION_NAMES.Bull].db,
+  tls: redisConnections[REDIS_CONNECTION_NAMES.Bull].tls,
+  maxRetriesPerRequest: null,
 };
 
 export default config;
