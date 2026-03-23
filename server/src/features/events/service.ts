@@ -184,9 +184,7 @@ class EventService {
     }
     const nextTimings = data.timings ?? existing.timings;
     const nextStatus =
-      data.status === EEventStatus.Cancelled
-        ? EEventStatus.Cancelled
-        : resolveEventStatus(nextTimings);
+      data.status === EEventStatus.Cancelled ? EEventStatus.Cancelled : resolveEventStatus(nextTimings);
 
     const result = await validateEventUpdate(data, async (d) => {
       const row = await Event.findByPk(existing.id);
@@ -200,11 +198,7 @@ class EventService {
     await this.deleteCache(existing.id);
     let eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     const shouldSyncDerivedStats =
-      !!eventData &&
-      ('participants' in data ||
-        'verifiers' in data ||
-        'media' in data ||
-        'tags' in data);
+      !!eventData && ('participants' in data || 'verifiers' in data || 'media' in data || 'tags' in data);
 
     if (shouldSyncDerivedStats) {
       await this.entityStatsService.syncEventRowStats(eventData);
@@ -315,9 +309,7 @@ class EventService {
     const userData = user;
 
     const resolvedEventStatus =
-      eventData.status === EEventStatus.Cancelled
-        ? EEventStatus.Cancelled
-        : deriveEventStatus(eventData.timings);
+      eventData.status === EEventStatus.Cancelled ? EEventStatus.Cancelled : deriveEventStatus(eventData.timings);
     if (resolvedEventStatus !== EEventStatus.Ongoing) {
       throw new BadRequestError(`Event is ${resolvedEventStatus}`);
     }

@@ -32,11 +32,13 @@ Activity.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     recipientId: {
       type: DataTypes.UUID,
       allowNull: true,
       references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     type: {
       type: DataTypes.TEXT,

@@ -52,18 +52,18 @@ CREATE TABLE "Users" (
 );
 
 -- Add foreign key constraints for User and Media after both tables are created
-ALTER TABLE "Media" ADD CONSTRAINT "Media_uploader_fkey" FOREIGN KEY ("uploader") REFERENCES "Users"("id");
-ALTER TABLE "Users" ADD CONSTRAINT "Users_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "Media"("id");
+ALTER TABLE "Media" ADD CONSTRAINT "Media_uploader_fkey" FOREIGN KEY ("uploader") REFERENCES "Users"("id") ON DELETE CASCADE;
+ALTER TABLE "Users" ADD CONSTRAINT "Users_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "Media"("id") ON DELETE SET NULL;
 
 -- Thread Table
 CREATE TABLE "Threads" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
     "visibility" "AccessLevel" NOT NULL,
-    "parentId" UUID NULL REFERENCES "Threads"("id"),
+    "parentId" UUID NULL REFERENCES "Threads"("id") ON DELETE CASCADE,
     "eventId" UUID, -- Foreign key will be added later
     "lockHistory" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
-    "createdBy" UUID NULL REFERENCES "Users"("id"),
+    "createdBy" UUID NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -83,7 +83,7 @@ CREATE TABLE "Events" (
     "participants" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "verifiers" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "type" "EventType" NOT NULL,
-    "createdBy" UUID NOT NULL REFERENCES "Users"("id"),
+    "createdBy" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "status" "EventStatus" NOT NULL,
     "capacity" INTEGER NULL,
     "tags" JSONB NOT NULL DEFAULT '[]'::JSONB,
@@ -112,17 +112,17 @@ COMMENT ON COLUMN "Events"."participants" IS '{
 }[]';
 
 -- Add foreign key constraint for Thread after both tables are created
-ALTER TABLE "Threads" ADD CONSTRAINT "Threads_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Events"("id");
+ALTER TABLE "Threads" ADD CONSTRAINT "Threads_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Events"("id") ON DELETE CASCADE;
 
 -- Message Table
 CREATE TABLE "Messages" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
-    "userId" UUID NOT NULL REFERENCES "Users"("id"),
-    "parentId" UUID NULL REFERENCES "Messages"("id"),
+    "userId" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
+    "parentId" UUID NULL REFERENCES "Messages"("id") ON DELETE CASCADE,
     "content" JSONB NOT NULL, -- Unified field for text or richObject
     "isEdited" BOOLEAN NOT NULL DEFAULT FALSE,
     "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
-    "threadId" UUID NOT NULL REFERENCES "Threads"("id"),
+    "threadId" UUID NOT NULL REFERENCES "Threads"("id") ON DELETE CASCADE,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -145,8 +145,8 @@ CREATE TABLE "Tags" (
     "description" TEXT NULL,
     "icon" TEXT NULL,
     "color" TEXT NULL,
-    "parentId" UUID NULL REFERENCES "Tags"("id"),
-    "createdBy" UUID NULL REFERENCES "Users"("id"),
+    "parentId" UUID NULL REFERENCES "Tags"("id") ON DELETE CASCADE,
+    "createdBy" UUID NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -155,8 +155,8 @@ CREATE TABLE "Tags" (
 -- Activity Table
 CREATE TABLE "Activities" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
-    "actorId" UUID NOT NULL REFERENCES "Users"("id"),
-    "recipientId" UUID NULL REFERENCES "Users"("id"),
+    "actorId" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
+    "recipientId" UUID NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "type" TEXT NOT NULL,
     "entityType" "ActivityEntityType" NOT NULL,
     "entityId" TEXT NOT NULL,
@@ -179,7 +179,7 @@ CREATE INDEX "activities_updatedAt_idx" ON "Activities"("updatedAt");
 -- User achievements and progress
 CREATE TABLE "UserAchievements" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
-    "userId" UUID NOT NULL REFERENCES "Users"("id"),
+    "userId" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "key" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -196,7 +196,7 @@ CREATE INDEX "user_achievements_userId_unlockedAt_idx" ON "UserAchievements"("us
 
 CREATE TABLE "AchievementProgress" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
-    "userId" UUID NOT NULL UNIQUE REFERENCES "Users"("id"),
+    "userId" UUID NOT NULL UNIQUE REFERENCES "Users"("id") ON DELETE CASCADE,
     "metrics" JSONB NOT NULL DEFAULT '{}'::JSONB,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
@@ -208,7 +208,7 @@ CREATE TABLE "Reactions" (
     "id" UUID PRIMARY KEY DEFAULT uuidv7(),
     "contentId" TEXT NOT NULL,
     "emoji" TEXT NOT NULL,
-    "userId" UUID NOT NULL REFERENCES "Users"("id"),
+    "userId" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL

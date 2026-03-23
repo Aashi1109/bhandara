@@ -37,10 +37,12 @@ Thread.init(
     parentId: {
       type: DataTypes.UUID,
       references: { model: 'Threads', key: 'id' },
+      onDelete: 'CASCADE',
     },
     eventId: {
       type: DataTypes.UUID,
       references: { model: 'Events', key: 'id' },
+      onDelete: 'CASCADE',
     },
     lockHistory: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
     stats: {
@@ -51,6 +53,7 @@ Thread.init(
     createdBy: {
       type: DataTypes.UUID,
       references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {

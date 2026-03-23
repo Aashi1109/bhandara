@@ -31,10 +31,12 @@ Message.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     parentId: {
       type: DataTypes.UUID,
       references: { model: 'Messages', key: 'id' },
+      onDelete: 'CASCADE',
     },
     content: { type: DataTypes.JSONB, allowNull: false },
     isEdited: {
@@ -51,6 +53,7 @@ Message.init(
       type: DataTypes.UUID,
       allowNull: false,
       references: { model: 'Threads', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {

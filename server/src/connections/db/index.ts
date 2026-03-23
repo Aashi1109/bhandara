@@ -7,6 +7,11 @@ const postgresConnection: Partial<Record<DB_CONNECTION_NAMES, Sequelize>> = {};
 export const getConnections = () => postgresConnection;
 
 const connect = (name: DB_CONNECTION_NAMES) => {
+  const poolMax = Number(process.env.DB_POOL_MAX || 5);
+  const poolMin = Number(process.env.DB_POOL_MIN || 1);
+  const poolAcquire = Number(process.env.DB_POOL_ACQUIRE_MS || 60000);
+  const poolIdle = Number(process.env.DB_POOL_IDLE_MS || 10000);
+
   const sequelize = new Sequelize(config.db[name], {
     logging: (msg, duration) =>
       logger.debug({
@@ -28,10 +33,10 @@ const connect = (name: DB_CONNECTION_NAMES) => {
       ],
     },
     pool: {
-      max: 20,
-      min: 0,
-      acquire: 60000,
-      idle: 10000,
+      max: Number.isFinite(poolMax) ? poolMax : 5,
+      min: Number.isFinite(poolMin) ? poolMin : 1,
+      acquire: Number.isFinite(poolAcquire) ? poolAcquire : 60000,
+      idle: Number.isFinite(poolIdle) ? poolIdle : 10000,
     },
     dialectOptions: {
       application_name: config.infrastructure.appName || 'Local',

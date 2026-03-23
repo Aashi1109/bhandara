@@ -87,6 +87,7 @@ Event.init(
         model: 'Users',
         key: 'id',
       },
+      onDelete: 'CASCADE',
     },
     status: {
       type: DataTypes.ENUM(...Object.values(EEventStatus)),

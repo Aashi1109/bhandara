@@ -35,10 +35,12 @@ Tag.init(
     parentId: {
       type: DataTypes.UUID,
       references: { model: 'Tags', key: 'id' },
+      onDelete: 'CASCADE',
     },
     createdBy: {
       type: DataTypes.UUID,
       references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {

@@ -53,6 +53,8 @@ Media.init(
     uploader: {
       type: DataTypes.UUID,
       allowNull: false,
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     storage: { type: DataTypes.JSONB, allowNull: false },
     access: {

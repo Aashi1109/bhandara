@@ -1,6 +1,7 @@
 import { QueryTypes } from 'sequelize';
 import { Activity } from '@/features/activity/model';
 import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
+import { EntityEngagement, EntityRating } from '@/features/engagement/model';
 import { Event } from '@/features/events/model';
 import { Media } from '@/features/media/model';
 import { MEDIA_TABLE_NAME } from '@/features/media/constants';
@@ -22,6 +23,8 @@ const REGISTERED_MODELS = [
   Thread,
   Message,
   Reaction,
+  EntityEngagement,
+  EntityRating,
   SavedEntity,
   Activity,
   UserAchievement,
@@ -58,13 +61,13 @@ async function ensureCircularForeignKeys() {
 
   if (!(await hasConstraint('Media_uploader_fkey'))) {
     await sequelize.query(
-      `ALTER TABLE "${MEDIA_TABLE_NAME}" ADD CONSTRAINT "Media_uploader_fkey" FOREIGN KEY ("uploader") REFERENCES "${USER_TABLE_NAME}"("id")`,
+      `ALTER TABLE "${MEDIA_TABLE_NAME}" ADD CONSTRAINT "Media_uploader_fkey" FOREIGN KEY ("uploader") REFERENCES "${USER_TABLE_NAME}"("id") ON DELETE CASCADE`,
     );
   }
 
   if (!(await hasConstraint('Users_mediaId_fkey'))) {
     await sequelize.query(
-      `ALTER TABLE "${USER_TABLE_NAME}" ADD CONSTRAINT "Users_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "${MEDIA_TABLE_NAME}"("id")`,
+      `ALTER TABLE "${USER_TABLE_NAME}" ADD CONSTRAINT "Users_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES "${MEDIA_TABLE_NAME}"("id") ON DELETE SET NULL`,
     );
   }
 }
