@@ -12,15 +12,16 @@ import 'package:intl/intl.dart';
 import 'settings.dart';
 import 'media_preview_screen.dart';
 import '../models/achievement.dart';
-import '../models/api_response.dart';
-import '../models/event.dart';
-import '../models/profile_overview.dart';
 import '../models/update.dart';
 import '../models/user.dart';
+import '../models/save.dart';
+import '../providers/profile_overview.dart';
 import '../providers/user.dart';
-import '../services/activity.dart';
-import '../services/event.dart';
+import '../services/save.dart';
 import '../services/user.dart';
+import '../utils/error.dart';
+import '../widgets/app_pull_to_refresh.dart';
+import '../widgets/snackbar.dart';
 import 'profile_badges.dart';
 import 'my_events.dart';
 import 'updates.dart';
@@ -36,55 +37,155 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  Future<ProfileOverview>? _overviewFuture;
-  String? _overviewUserId;
   Future<User?>? _viewedUserFuture;
+  SavedEntitySummary? _saveSummary;
+  String? _saveStateUserId;
+  bool _isLoadingSaveState = false;
+  bool _isTogglingSave = false;
 
   bool get _isViewingOwnProfile => widget.userId == null;
-
-  Future<ProfileOverview> _loadOverview(String userId) async {
-    final results = await Future.wait([
-      eventService.getEvents(createdBy: userId, limit: 50),
-      userService.getUserAchievements(userId),
-      activityService.getUserActivity(
-        userId,
-        includePrivate: _isViewingOwnProfile,
-        limit: 3,
-      ),
-    ]);
-
-    final allEvents = results[0] as PaginatedResponse<Event>;
-    final achievements = results[1] as List<Achievement>;
-    final activity = results[2] as PaginatedResponse<AppUpdate>;
-
-    final myEvents =
-        await Future.wait(
-            allEvents.items.map((event) async {
-              try {
-                return await eventService.getEventPreview(event.id);
-              } catch (_) {
-                return event;
-              }
-            }),
-          )
-          ..sort((a, b) => b.startTime.compareTo(a.startTime));
-
-    return ProfileOverview(
-      myEvents: myEvents,
-      achievements: achievements,
-      recentActivity: activity.items,
-    );
-  }
-
-  void _ensureOverview(String userId) {
-    if (_overviewUserId == userId && _overviewFuture != null) return;
-    _overviewUserId = userId;
-    _overviewFuture = _loadOverview(userId);
-  }
 
   void _ensureViewedUser() {
     if (_isViewingOwnProfile || _viewedUserFuture != null) return;
     _viewedUserFuture = userService.getUserById(widget.userId!);
+  }
+
+  Future<void> _refreshOverview(String userId) async {
+    ref.invalidate(profileOverviewProvider(userId));
+    await ref.read(profileOverviewProvider(userId).future);
+  }
+
+  void _ensureSaveState(User viewedUser) {
+    final currentUser = ref.read(userProfileProvider).value;
+    final shouldShowSave =
+        !_isViewingOwnProfile &&
+        currentUser != null &&
+        currentUser.id != viewedUser.id;
+
+    if (!shouldShowSave || _isLoadingSaveState) {
+      return;
+    }
+
+    if (_saveStateUserId == viewedUser.id && _saveSummary != null) {
+      return;
+    }
+
+    _saveStateUserId = viewedUser.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadSaveState(viewedUser.id, currentUser.id);
+    });
+  }
+
+  Future<void> _loadSaveState(String viewedUserId, String currentUserId) async {
+    if (viewedUserId == currentUserId) {
+      if (!mounted) return;
+      setState(() {
+        _saveSummary = null;
+        _isLoadingSaveState = false;
+      });
+      return;
+    }
+
+    setState(() => _isLoadingSaveState = true);
+    try {
+      final summary = await saveService.getSaveState('user', viewedUserId);
+      if (!mounted || _saveStateUserId != viewedUserId) return;
+      setState(() {
+        _saveSummary = summary;
+        _isLoadingSaveState = false;
+      });
+    } catch (_) {
+      if (!mounted || _saveStateUserId != viewedUserId) return;
+      setState(() => _isLoadingSaveState = false);
+    }
+  }
+
+  Future<void> _toggleSaveProfile(User viewedUser) async {
+    if (_isTogglingSave) return;
+    final currentUser = ref.read(userProfileProvider).value;
+    if (currentUser == null || currentUser.id == viewedUser.id) {
+      return;
+    }
+
+    setState(() => _isTogglingSave = true);
+    try {
+      final summary = _saveSummary?.saved == true
+          ? await saveService.unsaveEntity('user', viewedUser.id)
+          : await saveService.saveEntity('user', viewedUser.id);
+      if (!mounted) return;
+      setState(() {
+        _saveSummary = summary;
+        _isTogglingSave = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isTogglingSave = false);
+      AppSnackBar.show(
+        context,
+        message: extractExceptionMessage(e),
+        type: SnackBarType.error,
+      );
+    }
+  }
+
+  Widget _profileHeaderAction(User viewedUser, {required bool showSelfActions}) {
+    if (showSelfActions) {
+      return GestureDetector(
+        onTap: () => context.go(SettingsScreen.routePath),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Icon(
+            LucideIcons.settings,
+            size: AppIconSizes.defaultSize,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    final currentUser = ref.watch(userProfileProvider).value;
+    final canSave = currentUser != null && currentUser.id != viewedUser.id;
+    if (!canSave) {
+      return const SizedBox(width: 40);
+    }
+
+    _ensureSaveState(viewedUser);
+    return GestureDetector(
+      onTap: _isLoadingSaveState || _isTogglingSave
+          ? null
+          : () => _toggleSaveProfile(viewedUser),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: _isLoadingSaveState || _isTogglingSave
+            ? const Padding(
+                padding: EdgeInsets.all(10),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              )
+            : Icon(
+                _saveSummary?.saved == true
+                    ? LucideIcons.heartOff
+                    : LucideIcons.heart,
+                size: AppIconSizes.defaultSize,
+                color: AppColors.primary,
+              ),
+      ),
+    );
   }
 
   Future<void> _viewPhoto() async {
@@ -293,7 +394,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (currentUser == null) {
                       return const Center(child: Text('User not found'));
                     }
-                    _ensureOverview(currentUser.id);
                     return _buildProfileScaffold(
                       context,
                       currentUser,
@@ -317,8 +417,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       if (user == null) {
                         return const Center(child: Text('User not found'));
                       }
-
-                      _ensureOverview(user.id);
                       return _buildProfileScaffold(
                         context,
                         user,
@@ -339,40 +437,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     User user, {
     required bool showSelfActions,
   }) {
-    return FutureBuilder<ProfileOverview>(
-      future: _overviewFuture,
-      builder: (context, overviewSnapshot) {
-        final overview = overviewSnapshot.data;
+    final overviewAsync = ref.watch(profileOverviewProvider(user.id));
+    final overview = overviewAsync.value;
 
-        return Column(
-          children: [
-            AppHeader(
-              title: 'Profile',
-              showBack: !showSelfActions,
-              rightElement: showSelfActions
-                  ? GestureDetector(
-                      onTap: () => context.go(SettingsScreen.routePath),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: const Icon(
-                          LucideIcons.settings,
-                          size: AppIconSizes.defaultSize,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
-                child: Column(
+    return Column(
+      children: [
+        AppHeader(
+          title: 'Profile',
+          showBack: !showSelfActions,
+          rightElement: _profileHeaderAction(
+            user,
+            showSelfActions: showSelfActions,
+          ),
+        ),
+        Expanded(
+          child: AppPullToRefresh(
+            onRefresh: () => _refreshOverview(user.id),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+            child: Column(
                   children: [
                     // Avatar
                     GestureDetector(
@@ -495,6 +577,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                       ),
                     ),
+                    if (overviewAsync.isLoading && overview == null) ...[
+                      const SizedBox(height: 12),
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 32),
 
                     // Badges
@@ -537,7 +630,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         variant: AppButtonVariant.outline,
                         size: AppButtonSize.lg,
                         fullWidth: true,
-                        onPressed: () => context.go(MyEventsScreen.routePath),
+                        onPressed: () => context.push(MyEventsScreen.routePath),
                         icon: const Icon(
                           LucideIcons.calendar,
                           color: AppColors.primary,
@@ -650,10 +743,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
-        );
-      },
+        ),
+      ],
     );
   }
 

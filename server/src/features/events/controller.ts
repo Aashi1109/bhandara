@@ -6,7 +6,7 @@ import { isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
-import { EEventStatus } from '@/definitions/enums';
+import { EEventStatus, EEventType } from '@/definitions/enums';
 import ActivityService from '@/features/activity/service';
 import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
 import AchievementService from '@/features/achievements/service';
@@ -28,16 +28,90 @@ const getViewerIp = (req: ICustomRequest) => {
 };
 
 export const getEvents = async (req: ICustomRequest & IRequestPagination, res: Response) => {
-  const { createdBy, status } = req.query;
-  const where: Record<string, any> = {};
-  if (createdBy) where.createdBy = createdBy;
-  if (status) {
-    const statuses = (status as string)
-      .split(',')
-      .filter((s) => Object.values(EEventStatus).includes(s as EEventStatus));
-    if (statuses.length) where.status = statuses;
+  const { createdBy, status, type, latitude, longitude, radiusKm, tagIds, datePreset } = req.query;
+
+  let statuses: EEventStatus[] | undefined;
+  if (typeof status === 'string' && status.length > 0) {
+    statuses = status.split(',').map((item) => item.trim() as EEventStatus);
+    if (statuses.some((item) => !Object.values(EEventStatus).includes(item))) {
+      throw new BadRequestError('Invalid event status filter');
+    }
   }
-  const events = await eventService.getAll(where, req.pagination);
+
+  let types: EEventType[] | undefined;
+  if (typeof type === 'string' && type.length > 0) {
+    types = type.split(',').map((item) => item.trim() as EEventType);
+    if (types.some((item) => !Object.values(EEventType).includes(item))) {
+      throw new BadRequestError('Invalid event type filter');
+    }
+  }
+
+  const parsedLatitude =
+    typeof latitude === 'string' && latitude.length > 0 ? Number(latitude) : undefined;
+  const parsedLongitude =
+    typeof longitude === 'string' && longitude.length > 0 ? Number(longitude) : undefined;
+  const parsedRadiusKm =
+    typeof radiusKm === 'string' && radiusKm.length > 0 ? Number(radiusKm) : undefined;
+
+  if (
+    (latitude != null && !Number.isFinite(parsedLatitude)) ||
+    (longitude != null && !Number.isFinite(parsedLongitude)) ||
+    (radiusKm != null && (!Number.isFinite(parsedRadiusKm) || (parsedRadiusKm ?? 0) <= 0))
+  ) {
+    throw new BadRequestError('Invalid location filter');
+  }
+
+  let startDate: Date | undefined;
+  let endDate: Date | undefined;
+  const normalizedDatePreset = typeof datePreset === 'string' ? datePreset.trim().toLowerCase() : null;
+  if (normalizedDatePreset && normalizedDatePreset !== 'anytime') {
+    const now = new Date();
+    if (normalizedDatePreset === 'today') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, -1);
+    } else if (normalizedDatePreset === 'this_week') {
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() + 6) % 7);
+      startDate = startOfWeek;
+      endDate = new Date(startOfWeek);
+      endDate.setDate(endDate.getDate() + 7);
+      endDate.setMilliseconds(endDate.getMilliseconds() - 1);
+    } else if (normalizedDatePreset === 'this_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, -1);
+    } else {
+      throw new BadRequestError('Invalid date preset filter');
+    }
+  }
+
+  const events = await eventService.getAll(
+    {
+      createdBy: typeof createdBy === 'string' && createdBy.length > 0 ? createdBy : undefined,
+      statuses,
+      types,
+      latitude:
+        Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
+          ? parsedLatitude
+          : undefined,
+      longitude:
+        Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
+          ? parsedLongitude
+          : undefined,
+      radiusKm:
+        Number.isFinite(parsedLatitude) &&
+        Number.isFinite(parsedLongitude) &&
+        Number.isFinite(parsedRadiusKm)
+          ? parsedRadiusKm
+          : undefined,
+      tagIds:
+        typeof tagIds === 'string' && tagIds.length > 0
+          ? tagIds.split(',').map((item) => item.trim()).filter(Boolean)
+          : undefined,
+      startDate,
+      endDate,
+    },
+    req.pagination,
+  );
   return res.status(200).json({ data: events });
 };
 

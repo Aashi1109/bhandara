@@ -22,28 +22,81 @@ class UpdatesScreen extends StatefulWidget {
 }
 
 class _UpdatesScreenState extends State<UpdatesScreen> {
+  static const int _pageSize = 20;
+
+  final ScrollController _scrollController = ScrollController();
+
   bool _isLoading = true;
+  bool _isFetchingMore = false;
   bool _isMarkingAll = false;
+  bool _hasNext = true;
+  String? _nextCursor;
   List<AppUpdate> _updates = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadUpdates();
+    _scrollController.addListener(_onScroll);
+    _loadUpdates(refresh: true);
   }
 
-  Future<void> _loadUpdates() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await activityService.getMyUpdates(limit: 50);
-      if (!mounted) return;
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoading || _isFetchingMore || !_hasNext) {
+      return;
+    }
+    if (_scrollController.position.extentAfter < 320) {
+      _loadUpdates();
+    }
+  }
+
+  Future<void> _loadUpdates({bool refresh = false}) async {
+    if ((_isLoading && !refresh) || _isFetchingMore) return;
+
+    if (refresh) {
       setState(() {
-        _updates = response.items;
+        _isLoading = true;
+        _isFetchingMore = false;
+        _nextCursor = null;
+        _hasNext = true;
+      });
+    } else {
+      if (!_hasNext) return;
+      setState(() => _isFetchingMore = true);
+    }
+
+    try {
+      final response = await activityService.getMyUpdates(
+        limit: _pageSize,
+        next: refresh ? null : _nextCursor,
+      );
+      if (!mounted) return;
+
+      final merged = <String, AppUpdate>{
+        for (final update in refresh ? <AppUpdate>[] : _updates) update.id: update,
+        for (final update in response.items) update.id: update,
+      }.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      setState(() {
+        _updates = merged;
+        _nextCursor = response.pagination.next;
+        _hasNext = response.pagination.hasNext;
         _isLoading = false;
+        _isFetchingMore = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isFetchingMore = false;
+      });
     }
   }
 
@@ -112,7 +165,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
 
     if (update.entityType == 'achievement') {
       context.go(ProfileBadgesScreen.routePath);
-      return;
     }
   }
 
@@ -173,114 +225,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final unreadCount = _updates.where((update) => update.isUnread).length;
-    final now = DateTime.now();
-    final today = _updates.where((update) {
-      return update.createdAt.year == now.year &&
-          update.createdAt.month == now.month &&
-          update.createdAt.day == now.day;
-    }).toList();
-    final earlier = _updates
-        .where((update) => !today.contains(update))
-        .toList();
-
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              AppHeader(
-                title: 'Updates',
-                showBack: false,
-                rightElement: GestureDetector(
-                  onTap: _updates.isEmpty || _isMarkingAll
-                      ? null
-                      : _markAllRead,
-                  child: Text(
-                    _isMarkingAll ? 'Marking...' : 'Mark all as read',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _updates.isEmpty || _isMarkingAll
-                          ? AppColors.mutedForeground
-                          : AppColors.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
-                    : AppPullToRefresh(
-                        onRefresh: _loadUpdates,
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              child: Text(
-                                '$unreadCount UNREAD',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2,
-                                  color: AppColors.surface,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            if (today.isNotEmpty) ...[
-                              _sectionLabel('TODAY'),
-                              const SizedBox(height: 12),
-                              ...today.map(_notif),
-                              const SizedBox(height: 32),
-                            ],
-                            if (earlier.isNotEmpty) ...[
-                              _sectionLabel('EARLIER'),
-                              const SizedBox(height: 12),
-                              ...earlier.map(_notif),
-                            ],
-                            if (_updates.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 32),
-                                child: Center(
-                                  child: Text(
-                                    'No updates yet.',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-              ),
-            ],
-          ),
-          const AppBottomNav(),
-        ],
-      ),
-    );
   }
 
   Widget _sectionLabel(String text) {
@@ -386,6 +330,147 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildUpdatesList() {
+    final unreadCount = _updates.where((update) => update.isUnread).length;
+    final now = DateTime.now();
+    final today = _updates.where((update) {
+      return update.createdAt.year == now.year &&
+          update.createdAt.month == now.month &&
+          update.createdAt.day == now.day;
+    }).toList();
+    final earlier = _updates.where((update) => !today.contains(update)).toList();
+
+    return ListView(
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+      children: [
+        if (_updates.isNotEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: unreadCount > 0 ? AppColors.primary : AppColors.muted,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Text(
+                unreadCount > 0 ? '$unreadCount UNREAD' : 'You are all caught up.',
+                style: TextStyle(
+                  fontSize: unreadCount > 0 ? 10 : 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: unreadCount > 0 ? 2 : 0,
+                  color: unreadCount > 0
+                      ? AppColors.surface
+                      : AppColors.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+        if (_updates.isNotEmpty) const SizedBox(height: 24),
+        if (today.isNotEmpty) ...[
+          _sectionLabel('TODAY'),
+          const SizedBox(height: 12),
+          ...today.map(_notif),
+          const SizedBox(height: 20),
+        ],
+        if (earlier.isNotEmpty) ...[
+          _sectionLabel('EARLIER'),
+          const SizedBox(height: 12),
+          ...earlier.map(_notif),
+        ],
+        if (_updates.isEmpty)
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.55,
+            child: const Center(
+              child: Text(
+                'No updates yet.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+        if (_isFetchingMore)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        if (_updates.isNotEmpty && !_hasNext)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Center(
+              child: Text(
+                'You are all caught up.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              AppHeader(
+                title: 'Updates',
+                showBack: false,
+                rightElement: GestureDetector(
+                  onTap: _updates.isEmpty || _isMarkingAll ? null : _markAllRead,
+                  child: Text(
+                    _isMarkingAll ? 'Marking...' : 'Mark all as read',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _updates.isEmpty || _isMarkingAll
+                          ? AppColors.mutedForeground
+                          : AppColors.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : AppPullToRefresh(
+                        onRefresh: () => _loadUpdates(refresh: true),
+                        wrapInScrollView: false,
+                        child: _buildUpdatesList(),
+                      ),
+              ),
+            ],
+          ),
+          const AppBottomNav(),
+        ],
       ),
     );
   }

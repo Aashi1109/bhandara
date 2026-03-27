@@ -67,13 +67,14 @@ export const listSavedEntities = async (
   res: Response,
 ) => {
   const entityTypeQuery = asString(req.query.entityType as string | undefined);
+  const query = asString(req.query.query as string | undefined)?.trim();
   const entityType = entityTypeQuery
     ? savedEntityService.validateEntityType(entityTypeQuery)
     : undefined;
 
   const data = await savedEntityService.listSavedEntities(
     req.user.id,
-    { entityType },
+    { entityType, query: query ? query : undefined },
     {
       ...req.pagination,
       sortBy: 'updatedAt',

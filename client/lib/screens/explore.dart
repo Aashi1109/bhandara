@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -37,17 +38,36 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen>
     with WidgetsBindingObserver {
-  static const List<double> _radiusPresets = <double>[5, 10, 25, 50, 100];
+  static const int _eventPageSize = 100;
+  static const List<double> _radiusPresets = <double>[5, 10, 25, 50, 100, 250, 500];
+  static const List<_ExploreEventTypeOption> _eventTypeOptions =
+      <_ExploreEventTypeOption>[
+        _ExploreEventTypeOption(null, 'Any Type'),
+        _ExploreEventTypeOption(ExploreEventTypeValues.organized, 'Organized'),
+        _ExploreEventTypeOption(ExploreEventTypeValues.custom, 'Custom'),
+      ];
+  static const List<_ExploreDatePresetOption> _datePresetOptions =
+      <_ExploreDatePresetOption>[
+        _ExploreDatePresetOption(ExploreDatePresetValues.anytime, 'Anytime'),
+        _ExploreDatePresetOption(ExploreDatePresetValues.today, 'Today'),
+        _ExploreDatePresetOption(ExploreDatePresetValues.thisWeek, 'This Week'),
+        _ExploreDatePresetOption(ExploreDatePresetValues.thisMonth, 'This Month'),
+      ];
 
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   final MapManager _mapManager = MapManager(type: MapProviderType.google);
+  final Map<String, _ExploreEventCacheEntry> _eventCacheByFilter =
+      <String, _ExploreEventCacheEntry>{};
 
   bool _showDetails = false;
   bool _isFilterOpen = false;
   bool _isLoading = true;
   bool _isSelectedEventLoading = false;
+  bool _isFetchingMoreEvents = false;
   bool _isLocationEnabled = true;
+  bool _hasNextEvents = true;
   int _selectedEventRequestVersion = 0;
+  String? _nextEventsCursor;
 
   List<Event> _events = <Event>[];
   List<Tag> _rootTags = <Tag>[];
@@ -68,6 +88,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _draftFilters = _appliedFilters;
+    _listenToSocketMessages();
     _initializeExplore();
   }
 
@@ -80,14 +101,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   LatLng? get _effectiveLocation => _userLocation ?? _profileLocation;
 
-  List<Event> get _preRadiusEvents =>
-      filterExploreEventsWithoutRadius(_events, filters: _appliedFilters);
-
-  List<Event> get _visibleEvents => filterExploreEvents(
-    _events,
-    filters: _appliedFilters,
-    effectiveLocation: _effectiveLocation,
-  );
+  List<Event> get _visibleEvents => _events;
 
   Event? get _selectedVisibleEvent {
     final selected = _selectedEvent;
@@ -107,8 +121,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool get _shouldShowRadiusExpansionBanner =>
       !_isLoading &&
       _effectiveLocation != null &&
-      _preRadiusEvents.isNotEmpty &&
-      _visibleEvents.isEmpty;
+      _visibleEvents.isEmpty &&
+      _appliedFilters.radiusKm < 500;
 
   Future<void> _refreshLocationPermission() async {
     final status = await LocationPermissionService.currentStatus();
@@ -123,6 +137,9 @@ class _ExploreScreenState extends State<ExploreScreen>
         _userLocation = null;
       }
     });
+    if (!hasAccess) {
+      unawaited(_refreshEventsForCurrentFilters());
+    }
   }
 
   Future<void> _loadCurrentLocation() async {
@@ -137,11 +154,13 @@ class _ExploreScreenState extends State<ExploreScreen>
       setState(() {
         _userLocation = LatLng(position.latitude, position.longitude);
       });
+      unawaited(_refreshEventsForCurrentFilters());
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _userLocation = null;
       });
+      unawaited(_refreshEventsForCurrentFilters());
     }
   }
 
@@ -155,6 +174,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       setState(() {
         _profileLocation = LatLng(address!.latitude!, address.longitude!);
       });
+      unawaited(_refreshEventsForCurrentFilters());
     } catch (_) {
       // Ignore profile location failures on explore.
     }
@@ -172,19 +192,148 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  Future<void> _loadEvents() async {
-    setState(() => _isLoading = true);
+  List<Event> _mergeEvents(List<Event> existing, List<Event> incoming) {
+    final merged = <String, Event>{
+      for (final event in existing) event.id: event,
+      for (final event in incoming) event.id: event,
+    };
+    return merged.values.toList();
+  }
+
+  String _buildFilterCacheKey(ExploreFilterState filters, LatLng? location) {
+    final sortedTags = filters.tagIds.toList()..sort();
+    final locationKey = location == null
+        ? 'no-location'
+        : '${location.latitude.toStringAsFixed(3)},${location.longitude.toStringAsFixed(3)}';
+    return [
+      filters.quickStatus,
+      filters.radiusKm.round().toString(),
+      filters.eventType ?? 'any-type',
+      filters.datePreset,
+      sortedTags.join(','),
+      locationKey,
+    ].join('|');
+  }
+
+  String? _statusQueryForFilters(ExploreFilterState filters) {
+    return switch (filters.quickStatus) {
+      EventStatusValue.ongoing => EventStatusValue.ongoing,
+      EventStatusValue.upcoming => EventStatusValue.upcoming,
+      _ => null,
+    };
+  }
+
+  bool _eventMatchesActiveFilters(Event event) {
+    return matchesExploreFilters(
+      event,
+      filters: _appliedFilters,
+      effectiveLocation: _effectiveLocation,
+    );
+  }
+
+  void _applyCachedEntry(String cacheKey, _ExploreEventCacheEntry cached) {
+    final previousSelectedId = _selectedEvent?.id;
+    final nextSelected = previousSelectedId == null
+        ? (cached.events.isNotEmpty ? cached.events.first : null)
+        : cached.events.where((event) => event.id == previousSelectedId).firstOrNull ??
+            (cached.events.isNotEmpty ? cached.events.first : null);
+
+    setState(() {
+      _events = cached.events;
+      _selectedEvent = nextSelected;
+      _showDetails = nextSelected != null && _showDetails;
+      _nextEventsCursor = cached.nextCursor;
+      _hasNextEvents = cached.hasNext;
+      _isLoading = false;
+      _isFetchingMoreEvents = false;
+    });
+
+    if (_selectedEvent != null) {
+      unawaited(
+        _hydrateSelectedEvent(_selectedEvent!, _selectedEventRequestVersion),
+      );
+    }
+  }
+
+  Future<void> _refreshEventsForCurrentFilters({bool force = false}) async {
+    final location = _effectiveLocation;
+    final cacheKey = _buildFilterCacheKey(_appliedFilters, location);
+    if (!force) {
+      final cached = _eventCacheByFilter[cacheKey];
+      if (cached != null) {
+        _applyCachedEntry(cacheKey, cached);
+        return;
+      }
+    }
+    await _loadEvents(
+      refresh: true,
+      filters: _appliedFilters,
+      effectiveLocation: location,
+      cacheKey: cacheKey,
+    );
+  }
+
+  Future<void> _loadEvents({
+    bool refresh = false,
+    ExploreFilterState? filters,
+    LatLng? effectiveLocation,
+    String? cacheKey,
+  }) async {
+    if (_isFetchingMoreEvents || (!refresh && !_hasNextEvents)) {
+      return;
+    }
+
+    final resolvedFilters = filters ?? _appliedFilters;
+    final resolvedLocation = effectiveLocation ?? _effectiveLocation;
+    final resolvedCacheKey =
+        cacheKey ?? _buildFilterCacheKey(resolvedFilters, resolvedLocation);
+
+    if (refresh) {
+      setState(() {
+        _isLoading = true;
+        _nextEventsCursor = null;
+        _hasNextEvents = true;
+      });
+    } else {
+      setState(() => _isFetchingMoreEvents = true);
+    }
+
     try {
-      final result = await eventService.getEvents(limit: 50);
+      final result = await eventService.getEvents(
+        status: _statusQueryForFilters(resolvedFilters),
+        type: resolvedFilters.eventType,
+        datePreset: resolvedFilters.datePreset,
+        latitude: resolvedLocation?.latitude,
+        longitude: resolvedLocation?.longitude,
+        radiusKm: resolvedLocation == null ? null : resolvedFilters.radiusKm,
+        tagIds: resolvedFilters.tagIds,
+        limit: _eventPageSize,
+        next: refresh ? null : _nextEventsCursor,
+      );
       if (!mounted) return;
 
-      final events = result.items;
+      final previousSelectedId = _selectedEvent?.id;
+      final events = _mergeEvents(refresh ? const <Event>[] : _events, result.items);
+      final nextSelected = previousSelectedId == null
+          ? (events.isNotEmpty ? events.first : null)
+          : events.where((event) => event.id == previousSelectedId).firstOrNull ??
+              (events.isNotEmpty ? events.first : null);
+
       setState(() {
         _events = events;
-        _selectedEvent = events.isNotEmpty ? events.first : null;
-        _showDetails = events.isNotEmpty;
+        _selectedEvent = nextSelected;
+        _showDetails = nextSelected != null && (_showDetails || refresh);
+        _nextEventsCursor = result.pagination.next;
+        _hasNextEvents = result.pagination.hasNext;
         _isLoading = false;
+        _isFetchingMoreEvents = false;
       });
+
+      _eventCacheByFilter[resolvedCacheKey] = _ExploreEventCacheEntry(
+        events: List<Event>.from(events),
+        nextCursor: result.pagination.next,
+        hasNext: result.pagination.hasNext,
+      );
 
       if (_selectedEvent != null) {
         unawaited(
@@ -193,17 +342,19 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isFetchingMoreEvents = false;
+        });
       }
     }
-    _listenToSocketMessages();
   }
 
   Future<void> _initializeExplore() async {
     unawaited(_refreshLocationPermission());
     unawaited(_loadProfileLocation());
     unawaited(_loadRootTags());
-    await _loadEvents();
+    await _refreshEventsForCurrentFilters(force: true);
   }
 
   Future<void> _hydrateSelectedEvent(Event event, int requestVersion) async {
@@ -246,23 +397,34 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       final eventName = event['event'];
       final eventData = event['data'];
+      final activeCacheKey = _buildFilterCacheKey(_appliedFilters, _effectiveLocation);
 
       setState(() {
         if (eventName == SocketEvents.eventCreated) {
           final newEvent = Event.fromJson(eventData);
-          if (!_events.any((e) => e.id == newEvent.id)) {
+          if (_eventMatchesActiveFilters(newEvent) &&
+              !_events.any((e) => e.id == newEvent.id)) {
             _events = [..._events, newEvent];
           }
         } else if (eventName == SocketEvents.eventUpdated) {
           final updatedEvent = Event.fromJson(eventData);
           final index = _events.indexWhere((e) => e.id == updatedEvent.id);
-          if (index != -1) {
+          final matches = _eventMatchesActiveFilters(updatedEvent);
+          if (index != -1 && matches) {
             final nextEvents = [..._events];
             nextEvents[index] = nextEvents[index].merge(updatedEvent);
             _events = nextEvents;
             if (_selectedEvent?.id == updatedEvent.id) {
               _selectedEvent = _selectedEvent!.merge(updatedEvent);
             }
+          } else if (index != -1 && !matches) {
+            _events = _events.where((e) => e.id != updatedEvent.id).toList();
+            if (_selectedEvent?.id == updatedEvent.id) {
+              _selectedEvent = null;
+              _showDetails = false;
+            }
+          } else if (matches) {
+            _events = [..._events, updatedEvent];
           }
         } else if (eventName == SocketEvents.eventDeleted) {
           final eventId = eventData['id'];
@@ -272,6 +434,12 @@ class _ExploreScreenState extends State<ExploreScreen>
             _showDetails = false;
           }
         }
+
+        _eventCacheByFilter[activeCacheKey] = _ExploreEventCacheEntry(
+          events: List<Event>.from(_events),
+          nextCursor: _nextEventsCursor,
+          hasNext: _hasNextEvents,
+        );
       });
     });
   }
@@ -289,6 +457,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() {
       _appliedFilters = _appliedFilters.copyWith(quickStatus: quickStatus);
     });
+    unawaited(_refreshEventsForCurrentFilters());
   }
 
   void _toggleDraftTag(String tagId) {
@@ -311,6 +480,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       );
       _isFilterOpen = false;
     });
+    unawaited(_refreshEventsForCurrentFilters());
   }
 
   void _resetDrawerFilters() {
@@ -333,6 +503,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _appliedFilters = _appliedFilters.copyWith(radiusKm: nextRadius);
       _draftFilters = _draftFilters.copyWith(radiusKm: nextRadius);
     });
+    unawaited(_refreshEventsForCurrentFilters());
   }
 
   Future<void> _requestCurrentLocationFromNudge() async {
@@ -440,6 +611,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                             'Location is disabled. Nearby results may be incomplete.',
                         ctaLabel: 'Enable location',
                         onTap: _requestCurrentLocationFromNudge,
+                      ),
+                    ],
+                    if (_isFetchingMoreEvents) ...[
+                      const SizedBox(height: 10),
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 8),
@@ -713,32 +895,28 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                    height: 1.35,
-                  ),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                  height: 1.35,
                 ),
-                if (hasAction) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    ctaLabel,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                      decoration: TextDecoration.underline,
+                children: [
+                  TextSpan(text: message),
+                  if (hasAction) const TextSpan(text: ' '),
+                  if (hasAction)
+                    TextSpan(
+                      text: ctaLabel,
+                      recognizer: TapGestureRecognizer()..onTap = onTap,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
         ],
@@ -920,9 +1098,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                           ),
                         ),
                         Slider(
-                          value: _draftFilters.radiusKm.clamp(1, 100),
+                          value: _draftFilters.radiusKm.clamp(1, 500),
                           min: 1,
-                          max: 100,
+                          max: 500,
                           activeColor: AppColors.primary,
                           inactiveColor: AppColors.muted,
                           onChanged: (value) {
@@ -932,6 +1110,55 @@ class _ExploreScreenState extends State<ExploreScreen>
                               );
                             });
                           },
+                        ),
+                        const SizedBox(height: 24),
+                        _sectionLabel('EVENT TYPE'),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _eventTypeOptions.map((option) {
+                            final selected = _draftFilters.eventType == option.value ||
+                                (_draftFilters.eventType == null &&
+                                    option.value == null);
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _draftFilters = _draftFilters.copyWith(
+                                    eventType: option.value,
+                                  );
+                                });
+                              },
+                              child: _chipButton(
+                                option.label,
+                                selected: selected,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 24),
+                        _sectionLabel('TIME'),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _datePresetOptions.map((option) {
+                            final selected =
+                                _draftFilters.datePreset == option.value;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _draftFilters = _draftFilters.copyWith(
+                                    datePreset: option.value,
+                                  );
+                                });
+                              },
+                              child: _chipButton(
+                                option.label,
+                                selected: selected,
+                              ),
+                            );
+                          }).toList(),
                         ),
                         const SizedBox(height: 24),
                         _sectionLabel('CATEGORIES'),
@@ -1059,4 +1286,30 @@ class _QuickFilter {
   final String id;
   final String name;
   final IconData icon;
+}
+
+class _ExploreEventTypeOption {
+  const _ExploreEventTypeOption(this.value, this.label);
+
+  final String? value;
+  final String label;
+}
+
+class _ExploreDatePresetOption {
+  const _ExploreDatePresetOption(this.value, this.label);
+
+  final String value;
+  final String label;
+}
+
+class _ExploreEventCacheEntry {
+  const _ExploreEventCacheEntry({
+    required this.events,
+    required this.nextCursor,
+    required this.hasNext,
+  });
+
+  final List<Event> events;
+  final String? nextCursor;
+  final bool hasNext;
 }

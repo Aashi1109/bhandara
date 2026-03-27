@@ -16,13 +16,14 @@ class SuccessScreen extends StatelessWidget {
 
   final Event? event;
 
-  String get _imageUrl =>
-      event?.media?.isNotEmpty == true
-          ? event!.media!.first.url
-          : 'https://picsum.photos/seed/burrito/200/200';
+  String get _imageUrl => event?.media?.isNotEmpty == true
+      ? event!.media!.first.url
+      : 'https://picsum.photos/seed/burrito/200/200';
 
   String get _categoryLabel {
-    final tag = event?.tags?.isNotEmpty == true ? event!.tags!.first.name : null;
+    final tag = event?.tags?.isNotEmpty == true
+        ? event!.tags!.first.name
+        : null;
     if (tag != null && tag.isNotEmpty) return tag.toUpperCase();
     return 'EVENT';
   }
@@ -47,7 +48,9 @@ class SuccessScreen extends StatelessWidget {
     final currentEvent = event;
     if (currentEvent == null) return '0';
     final count =
-        currentEvent.stats?.participantCount ?? currentEvent.participants?.length ?? 0;
+        currentEvent.stats?.participantCount ??
+        currentEvent.participants?.length ??
+        0;
     return '$count';
   }
 
@@ -149,7 +152,7 @@ class SuccessScreen extends StatelessWidget {
                                           ),
                                           child: Text(
                                             _categoryLabel,
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w900,
                                               letterSpacing: 2,
@@ -171,7 +174,7 @@ class SuccessScreen extends StatelessWidget {
                                     const SizedBox(height: 4),
                                     Text(
                                       _title,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w700,
                                         height: 1.2,
@@ -251,7 +254,7 @@ class SuccessScreen extends StatelessWidget {
                                       child: Center(
                                         child: Text(
                                           _participantLabel,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 8,
                                             fontWeight: FontWeight.w900,
                                             color: AppColors.mutedForeground,

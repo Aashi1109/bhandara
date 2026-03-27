@@ -14,6 +14,7 @@ import '../services/socket.dart';
 import '../services/chat.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/media_preview.dart';
+import '../widgets/message_reactions.dart';
 import '../models/chat.dart';
 import 'package:intl/intl.dart';
 import '../services/user.dart';
@@ -627,34 +628,71 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final reaction = MessageReaction.fromJson(rawReaction);
-    final reactions = List<MessageReaction>.from(
-      _messages[messageIndex].reactions,
+    final reactions = MessageReactionUtils.applySocketEvent(
+      reactions: _messages[messageIndex].reactions,
+      eventName: eventName,
+      reaction: reaction,
     );
-
-    switch (eventName) {
-      case SocketEvents.reactionCreated:
-      case SocketEvents.reactionUpdated:
-        final sameIdIndex = reactions.indexWhere(
-          (item) => item.id == reaction.id,
-        );
-        final sameUserIndex = reactions.indexWhere(
-          (item) => item.userId == reaction.userId,
-        );
-        if (sameIdIndex != -1) {
-          reactions[sameIdIndex] = reaction;
-        } else if (sameUserIndex != -1) {
-          reactions[sameUserIndex] = reaction;
-        } else {
-          reactions.add(reaction);
-        }
-        break;
-      case SocketEvents.reactionDeleted:
-        reactions.removeWhere((item) => item.id == reaction.id);
-        break;
-    }
 
     _messages[messageIndex] = _messages[messageIndex].copyWith(
       reactions: reactions,
+    );
+  }
+
+  Future<void> _toggleMessageReaction(Message message, String emoji) async {
+    if (!socketService.isConnected) {
+      return;
+    }
+
+    final mutation = MessageReactionUtils.createMutation(
+      reactions: message.reactions,
+      emoji: emoji,
+      contentId: message.id,
+      contentPath: 'messages',
+      currentUserId: _currentUser?.id,
+    );
+
+    final index = _messages.indexWhere((item) => item.id == message.id);
+    if (index == -1) {
+      return;
+    }
+
+    setState(() {
+      _messages[index] = _messages[index].copyWith(reactions: mutation.optimistic);
+    });
+
+    try {
+      await MessageReactionUtils.emitReaction(
+        eventName: mutation.eventName,
+        contentId: message.id,
+        contentPath: 'messages',
+        emoji: emoji,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _messages[index] = _messages[index].copyWith(
+          reactions: mutation.previous,
+        );
+      });
+    }
+  }
+
+  Future<void> _showMessageReactionBar(
+    BuildContext targetContext,
+    Message message,
+  ) {
+    return showMessageReactionOverlay(
+      context: context,
+      targetContext: targetContext,
+      currentUserReactionEmoji: MessageReactionUtils.currentUserReactionEmoji(
+        message.reactions,
+        _currentUser?.id,
+      ),
+      dismissOnScrollControllers: [_scrollController],
+      onSelected: (emoji) => _toggleMessageReaction(message, emoji),
     );
   }
 
@@ -717,6 +755,8 @@ class _ChatScreenState extends State<ChatScreen> {
     List<MessageMedia> media = const [],
     int attachmentCount = 0,
   }) {
+    final bubbleKey = GlobalKey();
+    final imageKey = GlobalKey();
     final isPending = status == MessageDeliveryStatus.pending;
     final isFailed = status == MessageDeliveryStatus.failed;
     final imageMedia =
@@ -795,6 +835,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               if (imageMedia != null)
                 GestureDetector(
+                  key: imageKey,
                   onTap: () => _openMediaPreview(
                     media,
                     reactionContentId: threadMessage?.id,
@@ -809,6 +850,14 @@ class _ChatScreenState extends State<ChatScreen> {
                             return message.reactions;
                           },
                   ),
+                  onLongPress: threadMessage == null
+                      ? null
+                      : () {
+                          final targetContext = imageKey.currentContext;
+                          if (targetContext != null) {
+                            _showMessageReactionBar(targetContext, threadMessage);
+                          }
+                        },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.network(
@@ -821,28 +870,45 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               if (text.isNotEmpty || attachmentCount == 0)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.muted,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
+                GestureDetector(
+                  key: bubbleKey,
+                  onLongPress: threadMessage == null
+                      ? null
+                      : () {
+                          final targetContext = bubbleKey.currentContext;
+                          if (targetContext != null) {
+                            _showMessageReactionBar(targetContext, threadMessage);
+                          }
+                        },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    text.isEmpty && attachmentCount > 0
-                        ? 'Media attachment'
-                        : text,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 1.5,
-                      color: AppColors.primary,
+                    child: Text(
+                      text.isEmpty && attachmentCount > 0
+                          ? 'Media attachment'
+                          : text,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.5,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
+                ),
+              if (threadMessage != null && threadMessage.reactions.isNotEmpty)
+                MessageReactionSummaryRow(
+                  reactions: threadMessage.reactions,
+                  currentUserId: _currentUser?.id,
+                  onTap: (emoji) => _toggleMessageReaction(threadMessage, emoji),
                 ),
               if (attachmentCount > 0) ...[
                 Text(

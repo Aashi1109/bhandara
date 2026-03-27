@@ -1,8 +1,10 @@
-import * as dotenv from 'dotenv';
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from '@/constants';
 import type { AppConfig, RedisConnectionConfig } from '@/types/config';
+import dotenv from 'dotenv';
 
-dotenv.config({});
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({});
+}
 
 const getRedisBaseConnectionConfig = (): RedisConnectionConfig => {
   return {

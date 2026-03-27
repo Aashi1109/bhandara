@@ -11,6 +11,12 @@ class EventService extends BaseService {
   Future<PaginatedResponse<Event>> getEvents({
     String? status,
     String? createdBy,
+    String? type,
+    String? datePreset,
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+    Set<String>? tagIds,
     int? limit,
     String? next,
   }) async {
@@ -20,6 +26,12 @@ class EventService extends BaseService {
         queryParameters: {
           'status': status,
           'createdBy': createdBy,
+          'type': type,
+          'datePreset': datePreset,
+          'latitude': latitude,
+          'longitude': longitude,
+          'radiusKm': radiusKm,
+          'tagIds': tagIds?.isEmpty == true ? null : tagIds?.join(','),
           'limit': limit,
           'next': next,
         },

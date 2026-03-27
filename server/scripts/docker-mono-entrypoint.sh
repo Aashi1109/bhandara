@@ -87,16 +87,70 @@ build_redis_commander_config_json "${REDIS_HOST}" "${REDIS_PORT}" "${REDIS_PASSW
   > "${REDIS_COMMANDER_CONFIG_DIR}/local-production.json"
 
 declare -a PIDS=()
+declare -A PID_NAMES=()
 shutting_down=0
+
+probe_api_server() {
+  local attempts=24
+  local delay=5
+
+  for ((i=1; i<=attempts; i++)); do
+    if [[ "${shutting_down}" -eq 1 ]]; then
+      return
+    fi
+
+    local response
+    response="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:${APP_PORT}/" 2>/dev/null || true)"
+
+    if [[ -n "${response}" && "${response}" != "000" ]]; then
+      echo "[probe] api-server reachable on 127.0.0.1:${APP_PORT} with status ${response}"
+      return
+    fi
+
+    echo "[probe] api-server not reachable on 127.0.0.1:${APP_PORT} yet (attempt ${i}/${attempts})"
+    sleep "${delay}"
+  done
+
+  echo "[probe] api-server never became reachable on 127.0.0.1:${APP_PORT}"
+}
+
+log_database_target() {
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "[config] DATABASE_URL is not set"
+    return
+  fi
+
+  node -e '
+    try {
+      const parsed = new URL(process.env.DATABASE_URL);
+      const summary = {
+        protocol: parsed.protocol.replace(/:$/, ""),
+        host: parsed.hostname,
+        port: parsed.port || "(default)",
+        database: parsed.pathname.replace(/^\//, "") || "(none)",
+        username: parsed.username || "(none)",
+        password: parsed.password ? "***" : "(none)",
+      };
+      console.log(`[config] DATABASE_URL target ${JSON.stringify(summary)}`);
+    } catch {
+      console.log("[config] DATABASE_URL is present but could not be parsed");
+    }
+  '
+}
 
 start_process() {
   local name="$1"
   shift
 
   echo "Starting ${name}..."
-  "$@" &
+  (
+    exec > >(sed "s/^/[${name}] /")
+    exec 2> >(sed "s/^/[${name}] /" >&2)
+    "$@"
+  ) &
   local pid=$!
   PIDS+=("${pid}")
+  PID_NAMES["${pid}"]="${name}"
   echo "${name} started with pid ${pid}"
 }
 
@@ -118,6 +172,8 @@ cleanup() {
 }
 
 trap cleanup SIGINT SIGTERM EXIT
+
+log_database_target
 
 start_process \
   "redis" \
@@ -148,14 +204,31 @@ start_process \
   --no-open
 
 start_process "api-server" node index.js
+probe_api_server &
 start_process "worker" node workers/index.js
 start_process "nginx" nginx -g "daemon off;"
 
-set +e
-wait -n
-exit_code=$?
-set -e
+monitor_processes() {
+  local -A reported=()
 
-echo "A child process exited. Shutting down the remaining processes..."
-cleanup
-exit "${exit_code}"
+  while [[ "${shutting_down}" -eq 0 ]]; do
+    for pid in "${PIDS[@]:-}"; do
+      if [[ -n "${reported[${pid}]:-}" ]]; then
+        continue
+      fi
+
+      if ! kill -0 "${pid}" 2>/dev/null; then
+        wait "${pid}"
+        local exit_code=$?
+        local name="${PID_NAMES[${pid}]:-unknown}"
+        echo "Process ${name} (pid ${pid}) exited with code ${exit_code}."
+        reported["${pid}"]=1
+      fi
+    done
+
+    sleep 1
+  done
+}
+
+monitor_processes &
+wait

@@ -11,6 +11,7 @@ class AppPullToRefresh extends StatelessWidget {
     this.edgeOffset = 0,
     this.displacement = 40,
     this.color = AppColors.primary,
+    this.wrapInScrollView = true,
   });
 
   final Future<void> Function() onRefresh;
@@ -19,9 +20,20 @@ class AppPullToRefresh extends StatelessWidget {
   final double edgeOffset;
   final double displacement;
   final Color color;
+  final bool wrapInScrollView;
 
   @override
   Widget build(BuildContext context) {
+    if (!wrapInScrollView) {
+      return RefreshIndicator(
+        color: color,
+        edgeOffset: edgeOffset,
+        displacement: displacement,
+        onRefresh: onRefresh,
+        child: child,
+      );
+    }
+
     return RefreshIndicator(
       color: color,
       edgeOffset: edgeOffset,

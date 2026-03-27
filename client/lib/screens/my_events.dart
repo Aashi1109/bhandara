@@ -23,43 +23,113 @@ class MyEventsScreen extends StatefulWidget {
 }
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
+  static const int _pageSize = 20;
+
+  final ScrollController _scrollController = ScrollController();
+
   bool _isLoading = true;
+  bool _isFetchingMore = false;
+  bool _hasNext = true;
+  String? _nextCursor;
+  String? _currentUserId;
   List<Event> _events = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _scrollController.addListener(_onScroll);
+    _loadEvents(refresh: true);
   }
 
-  Future<void> _loadEvents() async {
-    setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoading || _isFetchingMore || !_hasNext) {
+      return;
+    }
+    if (_scrollController.position.extentAfter < 320) {
+      _loadEvents();
+    }
+  }
+
+  Future<List<Event>> _hydrateEvents(List<Event> events) async {
+    final hydrated = await Future.wait(
+      events.map((event) async {
+        try {
+          return await eventService.getEventPreview(event.id);
+        } catch (_) {
+          return event;
+        }
+      }),
+    );
+
+    hydrated.sort((a, b) => b.startTime.compareTo(a.startTime));
+    return hydrated;
+  }
+
+  Future<void> _loadEvents({bool refresh = false}) async {
+    if ((_isLoading && !refresh) || _isFetchingMore) return;
+
+    if (refresh) {
+      setState(() {
+        _isLoading = true;
+        _isFetchingMore = false;
+        _nextCursor = null;
+        _hasNext = true;
+      });
+    } else {
+      if (!_hasNext) return;
+      setState(() => _isFetchingMore = true);
+    }
+
     try {
-      final user = await userService.getCurrentUser();
+      final userId =
+          _currentUserId ?? (await userService.getCurrentUser())?.id;
+      if (userId == null) {
+        if (!mounted) return;
+        setState(() {
+          _events = const [];
+          _isLoading = false;
+          _isFetchingMore = false;
+          _hasNext = false;
+        });
+        return;
+      }
+      _currentUserId = userId;
+
       final response = await eventService.getEvents(
-        createdBy: user?.id,
-        limit: 50,
+        createdBy: userId,
+        limit: _pageSize,
+        next: refresh ? null : _nextCursor,
       );
-      final myEvents =
-          await Future.wait(
-              response.items.map((event) async {
-                try {
-                  return await eventService.getEventPreview(event.id);
-                } catch (_) {
-                  return event;
-                }
-              }),
-            )
-            ..sort((a, b) => b.startTime.compareTo(a.startTime));
+      final pageEvents = await _hydrateEvents(response.items);
 
       if (!mounted) return;
+
+      final merged = <String, Event>{
+        for (final event in refresh ? <Event>[] : _events) event.id: event,
+        for (final event in pageEvents) event.id: event,
+      }.values.toList()
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+
       setState(() {
-        _events = myEvents;
+        _events = merged;
+        _nextCursor = response.pagination.next;
+        _hasNext = response.pagination.hasNext;
         _isLoading = false;
+        _isFetchingMore = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isFetchingMore = false;
+      });
     }
   }
 
@@ -128,6 +198,71 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(
+          LucideIcons.calendarDays,
+          size: AppIconSizes.hero,
+          color: AppColors.mutedForeground,
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'You have not created any events yet.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        AppButton(
+          label: 'Create Event',
+          size: AppButtonSize.lg,
+          onPressed: () => context.go(CreateEventScreen.routePath),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    if (_isFetchingMore) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 4, bottom: 12),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_events.isNotEmpty && !_hasNext) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 4, bottom: 12),
+        child: Center(
+          child: Text(
+            'You are all caught up.',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,45 +276,33 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                     child: CircularProgressIndicator(color: AppColors.primary),
                   )
                 : AppPullToRefresh(
-                    onRefresh: _loadEvents,
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                    child: _events.isEmpty
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                LucideIcons.calendarDays,
-                                size: AppIconSizes.hero,
-                                color: AppColors.mutedForeground,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'You have not created any events yet.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              AppButton(
-                                label: 'Create Event',
-                                size: AppButtonSize.lg,
-                                onPressed: () =>
-                                    context.go(CreateEventScreen.routePath),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              for (var i = 0; i < _events.length; i++) ...[
-                                _buildEventCard(_events[i]),
-                                if (i != _events.length - 1)
-                                  const SizedBox(height: 12),
-                              ],
-                            ],
+                    onRefresh: () => _loadEvents(refresh: true),
+                    wrapInScrollView: false,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                      itemCount: _events.isEmpty ? 1 : _events.length + 1,
+                      itemBuilder: (context, index) {
+                        if (_events.isEmpty) {
+                          return SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.55,
+                            child: _buildEmptyState(),
+                          );
+                        }
+
+                        if (index == _events.length) {
+                          return _buildFooter();
+                        }
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: index == _events.length - 1 ? 0 : 12,
                           ),
+                          child: _buildEventCard(_events[index]),
+                        );
+                      },
+                    ),
                   ),
           ),
         ],

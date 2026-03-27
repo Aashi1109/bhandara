@@ -37,7 +37,7 @@ SavedEntity.init(
       onDelete: 'CASCADE',
     },
     entityType: {
-      type: DataTypes.ENUM('event', 'thread', 'message'),
+      type: DataTypes.ENUM('event', 'thread', 'message', 'user'),
       allowNull: false,
     },
     entityId: {

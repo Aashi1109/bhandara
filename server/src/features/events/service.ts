@@ -1,8 +1,8 @@
 import type { IBaseThread, IBaseUser, IEvent, IPaginationParams } from '@/definitions/types';
 import ThreadsService from '../threads/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
-import { Op } from 'sequelize';
-import { EEventParticipantStatus, EEventStatus } from '@/definitions/enums';
+import { Op, Sequelize, type WhereOptions } from 'sequelize';
+import { EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
 import UserService from '../users/service';
@@ -16,6 +16,18 @@ import { Event } from './model';
 import MessageService from '@/features/messages/service';
 import EntityStatsService from '@/features/stats/service';
 import { deriveEventStatus, resolveEventStatus } from './status';
+
+export interface IEventListFilters {
+  createdBy?: string;
+  statuses?: EEventStatus[];
+  tagIds?: string[];
+  types?: EEventType[];
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
+  startDate?: Date;
+  endDate?: Date;
+}
 
 class EventService {
   private readonly threadService: ThreadsService;
@@ -63,6 +75,93 @@ class EventService {
       location: resolved.location,
       timings: resolved.timings,
     };
+  }
+
+  private jsonTimestampExpression(field: 'start' | 'end') {
+    return `CAST("timings"->>'${field}' AS TIMESTAMPTZ)`;
+  }
+
+  private buildDerivedStatusClause(status: EEventStatus) {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const now = escape(new Date().toISOString());
+    const startExpr = this.jsonTimestampExpression('start');
+    const endExpr = this.jsonTimestampExpression('end');
+    const activeStatuses = `COALESCE("status", '') NOT IN (${escape(EEventStatus.Cancelled)}, ${escape(EEventStatus.Draft)})`;
+
+    switch (status) {
+      case EEventStatus.Draft:
+      case EEventStatus.Cancelled:
+        return { status };
+      case EEventStatus.Upcoming:
+        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} > ${now})`);
+      case EEventStatus.Ongoing:
+        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} <= ${now} AND ${endExpr} > ${now})`);
+      case EEventStatus.Completed:
+        return Sequelize.literal(`(${activeStatuses} AND ${endExpr} <= ${now})`);
+      default:
+        return null;
+    }
+  }
+
+  private buildWhere(filters: IEventListFilters = {}): WhereOptions {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const clauses: any[] = [];
+
+    if (filters.createdBy) {
+      clauses.push({ createdBy: filters.createdBy });
+    }
+
+    if (filters.types?.length) {
+      clauses.push({ type: { [Op.in]: filters.types } });
+    }
+
+    if (filters.statuses?.length) {
+      const statusClauses = filters.statuses
+        .map((status) => this.buildDerivedStatusClause(status))
+        .filter(Boolean);
+      if (statusClauses.length) {
+        clauses.push({ [Op.or]: statusClauses });
+      }
+    }
+
+    if (filters.tagIds?.length) {
+      const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
+      clauses.push(
+        Sequelize.literal(
+          `(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`,
+        ),
+      );
+    }
+
+    if (filters.startDate && filters.endDate) {
+      clauses.push(
+        Sequelize.literal(
+          `(${this.jsonTimestampExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.jsonTimestampExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+        ),
+      );
+    }
+
+    if (
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0
+    ) {
+      const latitude = escape(filters.latitude);
+      const longitude = escape(filters.longitude);
+      const radiusMeters = escape((filters.radiusKm ?? 0) * 1000);
+      clauses.push(
+        Sequelize.literal(
+          `(("location"->>'latitude') IS NOT NULL AND ("location"->>'longitude') IS NOT NULL AND ST_DWithin(ST_SetSRID(ST_MakePoint(CAST("location"->>'longitude' AS DOUBLE PRECISION), CAST("location"->>'latitude' AS DOUBLE PRECISION)), 4326)::geography, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography, ${radiusMeters}))`,
+        ),
+      );
+    }
+
+    if (!clauses.length) {
+      return {};
+    }
+
+    return { [Op.and]: clauses };
   }
 
   private async populateEvent(event: IEvent, populate?: boolean | string[]): Promise<IEvent> {
@@ -213,11 +312,8 @@ class EventService {
     return eventData;
   }
 
-  async getAll(where: Record<string, any> = {}, pagination?: Partial<IPaginationParams>) {
-    if (Array.isArray(where.status)) {
-      where.status = { [Op.in]: where.status };
-    }
-
+  async getAll(filters: IEventListFilters = {}, pagination?: Partial<IPaginationParams>) {
+    const where = this.buildWhere(filters);
     const data = await findAllWithPagination(
       Event,
       { where },

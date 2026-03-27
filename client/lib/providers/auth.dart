@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/user.dart';
 import '../services/auth.dart';
@@ -19,7 +21,7 @@ class Auth extends _$Auth {
     try {
       final user = await authService.login(email, password);
       ref.read(userProfileProvider.notifier).setUser(user);
-      await socketService.startAuthenticatedSession();
+      unawaited(socketService.startAuthenticatedSession());
       state = const AsyncData(true);
       return user;
     } catch (e, st) {
@@ -33,7 +35,7 @@ class Auth extends _$Auth {
     try {
       final user = await authService.signup(data);
       ref.read(userProfileProvider.notifier).setUser(user);
-      await socketService.startAuthenticatedSession();
+      unawaited(socketService.startAuthenticatedSession());
       state = const AsyncData(true);
       return user;
     } catch (e, st) {
@@ -47,7 +49,7 @@ class Auth extends _$Auth {
     try {
       final user = await authService.signInWithGoogle();
       ref.read(userProfileProvider.notifier).setUser(user);
-      await socketService.startAuthenticatedSession();
+      unawaited(socketService.startAuthenticatedSession());
       state = const AsyncData(true);
       return user;
     } catch (e, st) {

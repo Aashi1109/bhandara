@@ -82,10 +82,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 4,
             children: [
-              Text(
-                title,
-                style: typography.titleMD,
-              ),
+              Text(title, style: typography.titleMD),
               if (_hasSubtitle)
                 Text(
                   _subtitleText,

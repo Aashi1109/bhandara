@@ -36,27 +36,27 @@ export const CACHE_NAMESPACE_CONFIG = {
     ttl: 3600 * 24,
   },
   Explore: {
-    namespace: "explore-pages",
+    namespace: "ex",
     ttl: 3600,
   },
   Activity: {
-    namespace: "activity",
+    namespace: "ac",
     ttl: 900,
   },
   Achievements: {
-    namespace: "achievements",
+    namespace: "ah",
     ttl: 900,
   },
   Engagement: {
-    namespace: "engagement",
+    namespace: "eg",
     ttl: 3600 * 24 * 30,
   },
   RateLimit: {
-    namespace: "rate-limit",
+    namespace: "rl",
     ttl: 3600,
   },
   EntityStats: {
-    namespace: "entity-stats",
+    namespace: "st",
     ttl: 3600 * 24 * 30,
   },
 };

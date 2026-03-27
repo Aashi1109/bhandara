@@ -19,7 +19,12 @@ router.use([sessionParser, userParser]);
  *         required: false
  *         schema:
  *           type: string
- *           enum: [event, thread, message]
+ *           enum: [event, thread, message, user]
+ *       - in: query
+ *         name: query
+ *         required: false
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Paginated saved entities
@@ -47,7 +52,7 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *         required: true
  *         schema:
  *           type: string
- *           enum: [event, thread, message]
+ *           enum: [event, thread, message, user]
  *       - in: path
  *         name: entityId
  *         required: true
@@ -74,7 +79,7 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *         required: true
  *         schema:
  *           type: string
- *           enum: [event, thread, message]
+ *           enum: [event, thread, message, user]
  *       - in: path
  *         name: entityId
  *         required: true
@@ -101,7 +106,7 @@ router.get('/', [paginationParser], asyncHandler(listSavedEntities));
  *         required: true
  *         schema:
  *           type: string
- *           enum: [event, thread, message]
+ *           enum: [event, thread, message, user]
  *       - in: path
  *         name: entityId
  *         required: true

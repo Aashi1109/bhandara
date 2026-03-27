@@ -1,4 +1,5 @@
 import type {
+  IBaseUser,
   IBaseThread,
   IEntitySaveSummary,
   IEvent,
@@ -12,7 +13,13 @@ import { BadRequestError, NotFoundError } from '@/exceptions';
 import EventService from '@/features/events/service';
 import MessageService from '@/features/messages/service';
 import ThreadService from '@/features/threads/service';
-import { findAllWithPagination } from '@/utils/dbUtils';
+import UserService from '@/features/users/service';
+import { getSafeUser } from '@/features/users/helpers';
+import {
+  decodePaginationCursor,
+  encodePaginationCursor,
+  findAllWithPagination,
+} from '@/utils/dbUtils';
 
 import {
   SUPPORTED_SAVED_ENTITY_TYPES,
@@ -24,17 +31,19 @@ type SavedEntityRecord = ISavedEntity & {
   deletedAt?: Date | null;
 };
 
-type SavedEntityPayload = IEvent | IBaseThread | IMessage | null;
+type SavedEntityPayload = IEvent | IBaseThread | IMessage | IBaseUser | null;
 
 class SavedEntityService {
   private readonly eventService: EventService;
   private readonly threadService: ThreadService;
   private readonly messageService: MessageService;
+  private readonly userService: UserService;
 
   constructor() {
     this.eventService = new EventService();
     this.threadService = new ThreadService();
     this.messageService = new MessageService();
+    this.userService = new UserService();
   }
 
   isSupportedEntityType(
@@ -56,9 +65,155 @@ class SavedEntityService {
         return this.threadService.getById(entityId);
       case 'message':
         return this.messageService.getById(entityId);
+      case 'user':
+        return this.userService.getById(entityId).then((user) =>
+          user ? getSafeUser(user) : null,
+        );
       default:
         return null;
     }
+  }
+
+  private getSearchText(
+    item: ISavedEntityListItem,
+    entityType: SupportedSavedEntityType,
+  ): string {
+    const entity = item.entity as unknown as Record<string, unknown> | null;
+    if (!entity) {
+      return '';
+    }
+
+    switch (entityType) {
+      case 'event': {
+        const location =
+          entity.location && typeof entity.location === 'object'
+            ? (entity.location as Record<string, unknown>)
+            : null;
+        return [
+          entity.name,
+          entity.description,
+          location?.address,
+        ]
+          .filter((value): value is string => typeof value === 'string')
+          .join(' ');
+      }
+      case 'thread':
+        return [entity.title, entity.type]
+          .filter((value): value is string => typeof value === 'string')
+          .join(' ');
+      case 'message': {
+        const content =
+          entity.content && typeof entity.content === 'object'
+            ? (entity.content as Record<string, unknown>)
+            : null;
+        const user =
+          entity.user && typeof entity.user === 'object'
+            ? (entity.user as Record<string, unknown>)
+            : null;
+        return [content?.text, user?.name]
+          .filter((value): value is string => typeof value === 'string')
+          .join(' ');
+      }
+      case 'user':
+        return [entity.name, entity.username, entity.bio]
+          .filter((value): value is string => typeof value === 'string')
+          .join(' ');
+      default:
+        return '';
+    }
+  }
+
+  private async hydrateSavedItems(
+    items: SavedEntityRecord[],
+  ): Promise<ISavedEntityListItem[]> {
+    return Promise.all(
+      items.map(async (item) => ({
+        ...(item as unknown as ISavedEntity),
+        entity: await this.findEntity(
+          item.entityType as SupportedSavedEntityType,
+          item.entityId,
+        ),
+      })),
+    );
+  }
+
+  private async listSavedEntitiesByQuery(
+    userId: string,
+    filters: {
+      entityType?: SupportedSavedEntityType;
+      query: string;
+    },
+    pagination: Partial<IPaginationParams> = {},
+  ): Promise<PaginatedResult<ISavedEntityListItem>> {
+    const {
+      limit = 10,
+      next = null,
+      sortBy = 'updatedAt',
+      sortOrder = 'desc',
+    } = pagination;
+    const where: Record<string, unknown> = { userId };
+    if (filters.entityType) {
+      where.entityType = filters.entityType;
+    }
+
+    const rows = (await SavedEntity.findAll({
+      where,
+      raw: true,
+      order: [
+        [sortBy, sortOrder.toUpperCase()],
+        ['id', sortOrder.toUpperCase()],
+      ],
+    })) as SavedEntityRecord[];
+
+    const hydrated = await this.hydrateSavedItems(rows);
+    const normalizedQuery = filters.query.trim().toLowerCase();
+    const matched = hydrated.filter((item) => {
+      if (!item.entity) {
+        return false;
+      }
+      const searchText = this.getSearchText(
+        item,
+        item.entityType as SupportedSavedEntityType,
+      ).toLowerCase();
+      return searchText.includes(normalizedQuery);
+    });
+
+    const cursor = decodePaginationCursor(next);
+    const afterCursor = !cursor
+      ? matched
+      : matched.filter((item) => {
+          const rawSortValue = item[sortBy as keyof ISavedEntityListItem];
+          if (!(rawSortValue instanceof Date) && typeof rawSortValue !== 'string') {
+            return true;
+          }
+          const itemSortValue = rawSortValue instanceof Date
+            ? rawSortValue
+            : new Date(rawSortValue);
+          const cursorDate = new Date(cursor.sortValue);
+          return sortOrder === 'asc'
+            ? itemSortValue > cursorDate
+            : itemSortValue < cursorDate;
+        });
+
+    const pagedWindow = afterCursor.slice(0, limit + 1);
+    const hasNext = pagedWindow.length > limit;
+    const items = pagedWindow.slice(0, limit);
+    const nextSortValue = hasNext && items.length
+      ? (items[items.length - 1][sortBy as keyof ISavedEntityListItem] as
+          Date | string)
+      : null;
+
+    return {
+      items,
+      pagination: {
+        limit,
+        total: matched.length,
+        hasNext,
+        next: nextSortValue ? encodePaginationCursor(nextSortValue) : null,
+        sortBy,
+        sortOrder,
+      },
+    };
   }
 
   private async assertEntityExists(
@@ -126,6 +281,10 @@ class SavedEntityService {
     entityType: SupportedSavedEntityType,
     entityId: string,
   ): Promise<IEntitySaveSummary> {
+    if (entityType === 'user' && entityId === userId) {
+      throw new BadRequestError('You cannot save your own profile');
+    }
+
     await this.assertEntityExists(entityType, entityId);
 
     const existing = await SavedEntity.findOne({
@@ -170,9 +329,20 @@ class SavedEntityService {
 
   async listSavedEntities(
     userId: string,
-    filters: { entityType?: SupportedSavedEntityType },
+    filters: { entityType?: SupportedSavedEntityType; query?: string },
     pagination: Partial<IPaginationParams> = {},
   ): Promise<PaginatedResult<ISavedEntityListItem>> {
+    if (filters.query?.trim()) {
+      return this.listSavedEntitiesByQuery(
+        userId,
+        {
+          entityType: filters.entityType,
+          query: filters.query,
+        },
+        pagination,
+      );
+    }
+
     const where: Record<string, unknown> = { userId };
     if (filters.entityType) {
       where.entityType = filters.entityType;
@@ -188,15 +358,7 @@ class SavedEntityService {
       },
     );
 
-    const items = await Promise.all(
-      data.items.map(async (item) => ({
-        ...(item as unknown as ISavedEntity),
-        entity: await this.findEntity(
-          item.entityType as SupportedSavedEntityType,
-          item.entityId,
-        ),
-      })),
-    );
+    const items = await this.hydrateSavedItems(data.items as SavedEntityRecord[]);
 
     return {
       items,

@@ -169,7 +169,7 @@ class MapboxMapsService implements MapProviderService {
               : 'url-${Uri.encodeComponent(customMarkerUrl)}($longitude,$latitude)/'
         : '';
     final path =
-        '/styles/v1/$_styleId/static/${overlay}$longitude,$latitude,$zoom/{$width}x{$height}';
+        '/styles/v1/$_styleId/static/$overlay$longitude,$latitude,$zoom/{$width}x{$height}';
     final resolvedPath = path
         .replaceAll('{$width}', '$width')
         .replaceAll('{$height}', '$height');

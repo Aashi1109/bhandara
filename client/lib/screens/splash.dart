@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foody_mobile/screens/preferences.dart';
@@ -73,7 +75,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
         if (user != null) {
           ref.read(userProfileProvider.notifier).setUser(user);
-          await socketService.startAuthenticatedSession();
+          unawaited(socketService.startAuthenticatedSession());
           if (!mounted) return;
 
           if (user.meta?.hasOnboarded ?? false) {

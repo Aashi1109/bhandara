@@ -57,12 +57,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) {
         if (isUserExists) {
           if (!isSocialLogin) {
-            await context.push(LoginScreen.routePath);
+            context.push(LoginScreen.routePath);
           } else {
             AppSnackBar.warning(context, 'Please login using social login');
           }
         } else {
-          await context.push(LoginScreen.routePath);
+          context.push(LoginScreen.routePath);
         }
       }
     } catch (e) {

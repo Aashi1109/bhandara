@@ -111,22 +111,17 @@ class ApiService {
     final response = error.response;
     final statusCode = response?.statusCode;
     final path = error.requestOptions.path;
-    final token = await _storage.read(_tokenKey);
-
-    if (token == null || token.isEmpty) {
-      return false;
-    }
 
     if (_isHandlingUnauthorized) {
       return false;
     }
 
-    if (_isAuthEndpoint(path)) {
-      return false;
+    if (statusCode == 401) {
+      return true;
     }
 
-    if (statusCode == 401 || statusCode == 403) {
-      return true;
+    if (_isAuthEndpoint(path)) {
+      return false;
     }
 
     final errorMessage = _extractErrorMessage(response?.data);

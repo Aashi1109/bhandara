@@ -56,7 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ref.read(loginFlowProvider.notifier).update({
             'password': _passwordController.text,
           });
-          await context.push(ProfileSetupScreen.routePath);
+          context.push(ProfileSetupScreen.routePath);
           return;
         } else {
           // Strictly using login as requested, even for new users
@@ -65,8 +65,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               .login(email, _passwordController.text);
 
           if (!mounted) return;
-          await context.push(ExploreScreen.routePath);
           ref.invalidate(loginFlowProvider);
+          context.go(ExploreScreen.routePath);
         }
       } catch (e) {
         if (!mounted) return;

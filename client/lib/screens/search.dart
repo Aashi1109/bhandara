@@ -1,8 +1,10 @@
 import 'dart:async';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+
 import '../models/chat.dart';
 import '../theme/theme.dart';
 import '../widgets/app_pull_to_refresh.dart';
@@ -12,10 +14,9 @@ import '../widgets/explore_search_bar.dart';
 import '../services/save.dart';
 import '../services/search.dart';
 import '../utils/event_status.dart';
-
-import 'explore.dart';
 import 'chat.dart';
 import 'event_detail.dart';
+import 'profile.dart';
 import 'thread.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -28,332 +29,210 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final _controller = TextEditingController();
-  List<SearchResult> _results = [];
-  List<SearchResult> _savedResults = [];
-  List<String> _suggestions = [];
-  bool _isLoading = true;
-  bool _hasSearched = false;
-  int _totalResults = 0;
-  String _activeFilter = 'All Results';
-  String? _errorMessage;
-  Timer? _debounce;
+  static const int _pageSize = 20;
+  static const _filters = ['All', 'Events', 'Threads', 'Messages', 'Profiles'];
 
-  static const _filters = ['All Results', 'Events', 'Users', 'Tags'];
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  List<SearchResult> _results = const [];
+  bool _isLoading = true;
+  bool _isFetchingMore = false;
+  bool _hasNext = true;
+  bool _hasSearched = false;
+  String _activeFilter = 'All';
+  String? _errorMessage;
+  String? _nextCursor;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
-    _loadSavedResults();
+    _scrollController.addListener(_onScroll);
+    _loadSavedResults(refresh: true);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _controller.removeListener(_onQueryChanged);
+    _scrollController.removeListener(_onScroll);
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoading || _isFetchingMore || !_hasNext) {
+      return;
+    }
+    if (_scrollController.position.extentAfter < 320) {
+      _loadSavedResults();
+    }
   }
 
   void _onQueryChanged() {
     _debounce?.cancel();
     final query = _controller.text.trim();
-    final filtered = _applyFilters(query);
-    if (query.isEmpty) {
-      setState(() {
-        _results = filtered;
-        _suggestions = _buildSuggestionsList(query);
-        _hasSearched = false;
-        _totalResults = filtered.length;
-      });
-      return;
-    }
-    if (query.length >= 2) {
-      _debounce = Timer(const Duration(milliseconds: 400), () {
-        if (!mounted) return;
-        setState(() {
-          _results = filtered;
-          _suggestions = _buildSuggestionsList(query);
-          _hasSearched = true;
-          _totalResults = filtered.length;
-        });
-      });
+    if (query.isEmpty || query.length >= 2) {
+      _debounce = Timer(
+        query.isEmpty ? Duration.zero : const Duration(milliseconds: 300),
+        () {
+          if (!mounted) return;
+          _loadSavedResults(refresh: true);
+        },
+      );
     }
   }
 
-  Future<void> _loadSavedResults() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final results = await saveService.getSavedResults();
-      if (!mounted) return;
+  String? _activeEntityType() {
+    switch (_activeFilter) {
+      case 'Events':
+        return 'event';
+      case 'Threads':
+        return 'thread';
+      case 'Messages':
+        return 'message';
+      case 'Profiles':
+        return 'user';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _loadSavedResults({bool refresh = false}) async {
+    if ((_isLoading && !refresh) || _isFetchingMore) return;
+    final trimmedQuery = _controller.text.trim();
+    final effectiveQuery = trimmedQuery.length >= 2 ? trimmedQuery : null;
+
+    if (refresh) {
       setState(() {
-        _savedResults = results;
-        _results = _applyFilters(_controller.text.trim());
-        _suggestions = _buildSuggestionsList(_controller.text.trim());
-        _totalResults = _results.length;
+        _isLoading = true;
+        _isFetchingMore = false;
+        _errorMessage = null;
+        _nextCursor = null;
+        _hasNext = true;
+      });
+    } else {
+      if (!_hasNext) return;
+      setState(() => _isFetchingMore = true);
+    }
+
+    try {
+      final response = await saveService.getSavedResults(
+        limit: _pageSize,
+        next: refresh ? null : _nextCursor,
+        query: effectiveQuery,
+        entityType: _activeEntityType(),
+      );
+      if (!mounted) return;
+
+      final merged = <String, SearchResult>{
+        for (final result in refresh ? <SearchResult>[] : _results)
+          '${result.type}:${result.id}': result,
+        for (final result in response.items) '${result.type}:${result.id}': result,
+      }.values.toList();
+
+      setState(() {
+        _results = merged;
+        _nextCursor = response.pagination.next;
+        _hasNext = response.pagination.hasNext;
+        _errorMessage = null;
         _isLoading = false;
+        _isFetchingMore = false;
+        _hasSearched = effectiveQuery != null;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+        _isFetchingMore = false;
         _errorMessage = 'Unable to load saved items right now.';
+        _hasSearched = effectiveQuery != null;
       });
     }
-  }
-
-  List<SearchResult> _applyFilters(String query) {
-    final normalizedQuery = query.trim().toLowerCase();
-    return _savedResults.where((result) {
-      final matchesFilter =
-          _activeFilter == 'All Results' ||
-          (_activeFilter == 'Events' && result.type == 'event') ||
-          (_activeFilter == 'Users' && result.type == 'message') ||
-          (_activeFilter == 'Tags' && result.type == 'thread');
-      if (!matchesFilter) {
-        return false;
-      }
-
-      if (normalizedQuery.isEmpty) {
-        return true;
-      }
-
-      final metadata = result.metadata ?? const <String, dynamic>{};
-      final haystack = [
-        result.title,
-        result.description,
-        metadata['address'],
-        metadata['threadType'],
-        metadata['description'],
-      ].whereType<String>().join(' ').toLowerCase();
-      return haystack.contains(normalizedQuery);
-    }).toList();
-  }
-
-  List<String> _buildSuggestionsList(String query) {
-    if (query.trim().length < 2) {
-      return const [];
-    }
-
-    return _savedResults
-        .map((result) => result.title.trim())
-        .where((title) => title.isNotEmpty)
-        .where(
-          (title) => title.toLowerCase().contains(query.trim().toLowerCase()),
-        )
-        .toSet()
-        .take(5)
-        .toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Header
-              Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 16,
-                  right: 16,
-                  bottom: 0,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface.withValues(alpha: 0.9),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.go(ExploreScreen.routePath),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.border),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.04,
-                                  ),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              LucideIcons.arrowLeft,
-                              size: AppIconSizes.defaultSize,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ExploreSearchBar(
-                            controller: _controller,
-                            placeholder: 'Search events, people, tags...',
-                            onChanged: (_) {},
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Filter chips
-                    SizedBox(
-                      height: 36,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _filters.map((f) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _activeFilter = f;
-                                  _results = _applyFilters(
-                                    _controller.text.trim(),
-                                  );
-                                  _totalResults = _results.length;
-                                  _suggestions = _buildSuggestionsList(
-                                    _controller.text.trim(),
-                                  );
-                                  _hasSearched =
-                                      _controller.text.trim().length >= 2;
-                                });
-                              },
-                              child: _chipBtn(f, _activeFilter == f),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Content
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
-                    : _errorMessage != null
-                    ? _buildErrorState()
-                    : _suggestions.isNotEmpty && !_hasSearched
-                    ? _buildSuggestions()
-                    : _hasSearched || _results.isNotEmpty
-                    ? _buildResults()
-                    : _buildEmptyState(),
-              ),
-            ],
-          ),
-          const AppBottomNav(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestions() {
-    return AppPullToRefresh(
-      onRefresh: _loadSavedResults,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-      child: Column(
-        children: [
-          for (final suggestion in _suggestions)
-            ListTile(
-              leading: const Icon(
-                LucideIcons.search,
-                color: AppColors.mutedForeground,
-              ),
-              title: Text(
-                suggestion,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
-                ),
-              ),
-              onTap: () {
-                _controller.text = suggestion;
-                _controller.selection = TextSelection.fromPosition(
-                  TextPosition(offset: suggestion.length),
-                );
-                _onQueryChanged();
-              },
-            ),
-        ],
-      ),
-    );
   }
 
   Widget _buildResults() {
     if (_results.isEmpty) {
       return AppPullToRefresh(
-        onRefresh: _loadSavedResults,
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                LucideIcons.searchX,
-                size: AppIconSizes.hero,
-                color: AppColors.mutedForeground,
-              ),
-              SizedBox(height: 16),
-              Text(
-                'No results found',
+        onRefresh: () => _loadSavedResults(refresh: true),
+        wrapInScrollView: false,
+        child: ListView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+          children: const [
+            SizedBox(height: 120),
+            Icon(
+              LucideIcons.searchX,
+              size: AppIconSizes.hero,
+              color: AppColors.mutedForeground,
+            ),
+            SizedBox(height: 16),
+            Center(
+              child: Text(
+                'No saved items found',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                'Try a different search term',
+            ),
+            SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Try a different search or filter',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.mutedForeground,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     return AppPullToRefresh(
-      onRefresh: _loadSavedResults,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-      child: Column(
-        children: [
-          ..._results.map((result) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: GestureDetector(
-                onTap: () {
-                  _openSavedItem(result);
-                },
-                child: _buildResultCard(result),
-              ),
-            );
-          }),
-        ],
+      onRefresh: () => _loadSavedResults(refresh: true),
+      wrapInScrollView: false,
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        itemCount: _results.length + 1,
+        itemBuilder: (context, index) {
+          if (index == _results.length) {
+            if (_isFetchingMore) {
+              return const Padding(
+                padding: EdgeInsets.only(top: 8, bottom: 8),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox(height: 12);
+          }
+
+          final result = _results[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: GestureDetector(
+              onTap: () => _openSavedItem(result),
+              child: _buildResultCard(result),
+            ),
+          );
+        },
       ),
     );
   }
@@ -364,8 +243,12 @@ class _SearchScreenState extends State<SearchScreen> {
     final rawStart = metadata['start'] as String?;
     final rawEnd = metadata['end'] as String?;
     final rawStatus = metadata['status'] as String?;
+    final createdAt = metadata['createdAt'] as String?;
+    final username = metadata['username'] as String?;
+    final bio = metadata['bio'] as String?;
     final startTime = rawStart != null ? DateTime.tryParse(rawStart) : null;
     final endTime = rawEnd != null ? DateTime.tryParse(rawEnd) : null;
+    final createdAtTime = createdAt != null ? DateTime.tryParse(createdAt) : null;
     final resolvedStatus =
         result.type == 'event' && startTime != null && endTime != null
         ? deriveEventStatus(
@@ -374,8 +257,11 @@ class _SearchScreenState extends State<SearchScreen> {
             currentStatus: rawStatus,
           )
         : null;
+    final isMessage = result.type == 'message';
     final secondaryText = startTime != null
         ? '${_formatTime(startTime)}${address != null && address.isNotEmpty ? ' • $address' : ''}'
+        : result.type == 'user'
+        ? (username != null && username.isNotEmpty ? '@$username' : bio)
         : result.description;
 
     return AppCard(
@@ -407,15 +293,13 @@ class _SearchScreenState extends State<SearchScreen> {
                     runSpacing: 6,
                     children: [
                       _buildBadge(
-                        label: result.type.toUpperCase(),
+                        label: result.type == 'user' ? 'PROFILE' : result.type.toUpperCase(),
                         background: AppColors.primary.withValues(alpha: 0.1),
                         foreground: AppColors.primary,
                       ),
                       if (resolvedStatus != null)
                         _buildBadge(
-                          label: formatEventStatusLabel(
-                            resolvedStatus,
-                          ).toUpperCase(),
+                          label: formatEventStatusLabel(resolvedStatus).toUpperCase(),
                           background: _statusBackground(resolvedStatus),
                           foreground: _statusForeground(resolvedStatus),
                         ),
@@ -423,22 +307,35 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    result.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
+                    isMessage ? (result.description ?? 'Open message') : result.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: isMessage ? 15 : 16,
+                      fontWeight: isMessage ? FontWeight.w500 : FontWeight.w700,
+                      height: 1.25,
                       color: AppColors.primary,
                     ),
                   ),
-                  if (result.description != null) ...[
+                  if (!isMessage && secondaryText != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      secondaryText ?? result.description!,
+                      secondaryText,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
+                  if (isMessage && createdAtTime != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatRelative(createdAtTime),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -511,6 +408,8 @@ class _SearchScreenState extends State<SearchScreen> {
             ? LucideIcons.calendar
             : result.type == 'message'
             ? LucideIcons.messageCircle
+            : result.type == 'user'
+            ? LucideIcons.user
             : LucideIcons.messagesSquare,
         size: AppIconSizes.xl,
         color: AppColors.mutedForeground,
@@ -520,79 +419,85 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildErrorState() {
     return AppPullToRefresh(
-      onRefresh: _loadSavedResults,
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              LucideIcons.cloudOff,
-              size: AppIconSizes.hero,
-              color: AppColors.mutedForeground,
+      onRefresh: () => _loadSavedResults(refresh: true),
+      wrapInScrollView: false,
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+        children: [
+          const SizedBox(height: 120),
+          const Icon(
+            LucideIcons.cloudOff,
+            size: AppIconSizes.hero,
+            color: AppColors.mutedForeground,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage ?? 'Unable to load saved items right now.',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primary,
             ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage ?? 'Unable to load saved items right now.',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _loadSavedResults,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => _loadSavedResults(refresh: true),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmptyState() {
     return AppPullToRefresh(
-      onRefresh: _loadSavedResults,
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.search,
-              size: AppIconSizes.hero,
-              color: AppColors.mutedForeground,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Search your saved items',
+      onRefresh: () => _loadSavedResults(refresh: true),
+      wrapInScrollView: false,
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+        children: const [
+          SizedBox(height: 120),
+          Icon(
+            LucideIcons.search,
+            size: AppIconSizes.hero,
+            color: AppColors.mutedForeground,
+          ),
+          SizedBox(height: 16),
+          Center(
+            child: Text(
+              'No saved items yet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Type at least 2 characters to search',
+          ),
+          SizedBox(height: 8),
+          Center(
+            child: Text(
+              'Save events, threads, messages, and profiles to find them here',
               style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   void _openSavedItem(SearchResult result) {
     if (result.type == 'event') {
-      context.go(EventDetailScreen.routePath.replaceAll(':id', result.id));
+      context.push(EventDetailScreen.routePath.replaceAll(':id', result.id));
       return;
     }
 
     if (result.type == 'thread') {
-      context.go(
+      context.push(
         ChatScreen.routePath.replaceAll(':id', result.id),
         extra: {'eventId': result.metadata?['eventId'] as String?},
       );
@@ -602,7 +507,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (result.type == 'message') {
       final rawMessage = result.metadata?['message'];
       final threadId = result.metadata?['threadId'] as String?;
-      context.go(
+      context.push(
         ThreadScreen.routePath.replaceAll(':id', result.id),
         extra: {
           'threadId': threadId,
@@ -610,6 +515,14 @@ class _SearchScreenState extends State<SearchScreen> {
               ? Message.fromJson(rawMessage)
               : null,
         },
+      );
+      return;
+    }
+
+    if (result.type == 'user') {
+      context.push(
+        ProfileScreen.routePath,
+        extra: {'userId': result.id},
       );
     }
   }
@@ -619,6 +532,14 @@ class _SearchScreenState extends State<SearchScreen> {
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';
+  }
+
+  String _formatRelative(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   Widget _chipBtn(String text, bool selected) {
@@ -647,6 +568,87 @@ class _SearchScreenState extends State<SearchScreen> {
               ? AppColors.surface
               : AppColors.primary.withValues(alpha: 0.6),
         ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  left: 16,
+                  right: 16,
+                  bottom: 0,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface.withValues(alpha: 0.9),
+                ),
+                child: Column(
+                  children: [
+                    const Center(
+                      child: Text(
+                        'Saved',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ExploreSearchBar(
+                      controller: _controller,
+                      placeholder: 'Search saved items...',
+                      onChanged: (_) {},
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: _filters.map((filter) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _activeFilter = filter;
+                                });
+                                _loadSavedResults(refresh: true);
+                              },
+                              child: _chipBtn(filter, _activeFilter == filter),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : _errorMessage != null
+                    ? _buildErrorState()
+                    : _hasSearched || _results.isNotEmpty
+                    ? _buildResults()
+                    : _buildEmptyState(),
+              ),
+            ],
+          ),
+          const AppBottomNav(),
+        ],
       ),
     );
   }

@@ -1,5 +1,6 @@
 import { RedisCache } from "@/features/cache";
 import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { cacheKeys } from "@/features/cache/keys";
 
 const exploreCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Explore.namespace,
@@ -7,13 +8,13 @@ const exploreCache = new RedisCache({
 });
 
 export const getExploreCursor = (userId: string) =>
-  exploreCache.getItem<string | null>(userId);
+  exploreCache.getItem<string | null>(cacheKeys.exploreCursor(userId));
 
 export const setExploreCursor = (userId: string, next: string | null) =>
-  exploreCache.setItem(userId, next);
+  exploreCache.setItem(cacheKeys.exploreCursor(userId), next);
 
 export const deleteExploreCursor = (userId: string) =>
-  exploreCache.deleteItem(userId);
+  exploreCache.deleteItem(cacheKeys.exploreCursor(userId));
 
 export enum EExploreComponents {
   TasteCalendar = "taste-calendar",

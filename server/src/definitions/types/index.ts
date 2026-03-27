@@ -179,7 +179,7 @@ export interface IEntityRating extends ITimeStamp {
 export interface ISavedEntity extends ITimeStamp {
   id: string;
   userId: string;
-  entityType: 'event' | 'thread' | 'message';
+  entityType: 'event' | 'thread' | 'message' | 'user';
   entityId: string;
 }
 
@@ -192,7 +192,7 @@ export interface IEntitySaveSummary {
 }
 
 export interface ISavedEntityListItem extends ISavedEntity {
-  entity: IEvent | IBaseThread | IMessage | null;
+  entity: IEvent | IBaseThread | IMessage | IBaseUser | null;
 }
 
 export interface IVerifier {

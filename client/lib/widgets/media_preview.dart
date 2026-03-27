@@ -4,11 +4,11 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../constants/socket_events.dart';
 import '../models/chat.dart';
 import '../services/socket.dart';
 import '../theme/theme.dart';
 import '../utils/file_size.dart';
+import 'message_reactions.dart';
 
 class MediaItem {
   MediaItem({
@@ -55,8 +55,6 @@ class AppMediaPreview extends StatefulWidget {
 }
 
 class _AppMediaPreviewState extends State<AppMediaPreview> {
-  static const List<String> _starterEmojis = ['👍', '❤️', '😊'];
-
   late PageController _pageController;
   late int _currentIndex;
   late List<MessageReaction> _reactions;
@@ -71,43 +69,6 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
       (widget.reactionContentId?.isNotEmpty ?? false) &&
       (widget.reactionContentPath?.isNotEmpty ?? false);
   bool get _showReactionRow => _hasReactionContext;
-  String? get _currentUserReactionEmoji {
-    final userId = widget.currentUserId;
-    if (userId == null || userId.isEmpty) {
-      return null;
-    }
-
-    for (final reaction in _reactions) {
-      if (reaction.userId == userId) {
-        return reaction.emoji;
-      }
-    }
-
-    return null;
-  }
-
-  List<_ReactionSummary> get _reactionSummaries {
-    final grouped = <String, int>{};
-    for (final reaction in _reactions) {
-      if (reaction.emoji.isEmpty) continue;
-      grouped.update(reaction.emoji, (value) => value + 1, ifAbsent: () => 1);
-    }
-
-    final orderedEmojis = <String>[
-      ..._starterEmojis,
-      ...grouped.keys.where((emoji) => !_starterEmojis.contains(emoji)),
-    ];
-
-    if (orderedEmojis.isEmpty) {
-      return const [];
-    }
-
-    return orderedEmojis
-        .map(
-          (emoji) => _ReactionSummary(emoji: emoji, count: grouped[emoji] ?? 0),
-        )
-        .toList();
-  }
 
   @override
   void initState() {
@@ -156,37 +117,13 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
       final reaction = MessageReaction.fromJson(rawReaction);
 
       setState(() {
-        switch (eventName) {
-          case SocketEvents.reactionCreated:
-            _upsertReaction(reaction);
-            break;
-          case SocketEvents.reactionUpdated:
-            _upsertReaction(reaction);
-            break;
-          case SocketEvents.reactionDeleted:
-            _reactions.removeWhere((item) => item.id == reaction.id);
-            break;
-        }
+        _reactions = MessageReactionUtils.applySocketEvent(
+          reactions: _reactions,
+          eventName: eventName ?? '',
+          reaction: reaction,
+        );
       });
     });
-  }
-
-  void _upsertReaction(MessageReaction reaction) {
-    final index = _reactions.indexWhere((item) => item.id == reaction.id);
-    if (index != -1) {
-      _reactions[index] = reaction;
-      return;
-    }
-
-    final sameUserIndex = _reactions.indexWhere(
-      (item) => item.userId == reaction.userId,
-    );
-    if (sameUserIndex != -1) {
-      _reactions[sameUserIndex] = reaction;
-      return;
-    }
-
-    _reactions.add(reaction);
   }
 
   Future<void> _refreshReactions() async {
@@ -278,60 +215,31 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
 
     final contentId = widget.reactionContentId!;
     final contentPath = widget.reactionContentPath!;
-    final userId = widget.currentUserId;
-    MessageReaction? existing;
-    if (userId != null) {
-      for (final reaction in _reactions) {
-        if (reaction.userId == userId) {
-          existing = reaction;
-          break;
-        }
-      }
-    }
-    final isRemoving = existing != null && existing.emoji == emoji;
-    final existingUserId = existing?.userId;
-    final previous = List<MessageReaction>.from(_reactions);
-
-    final optimisticReaction = MessageReaction(
-      id: existing?.id ?? 'local_${DateTime.now().microsecondsSinceEpoch}',
-      contentId: '$contentPath/$contentId',
+    final mutation = MessageReactionUtils.createMutation(
+      reactions: _reactions,
       emoji: emoji,
-      userId: userId ?? '',
-      user: existing?.user,
+      contentId: contentId,
+      contentPath: contentPath,
+      currentUserId: widget.currentUserId,
     );
 
     setState(() {
       _isSubmittingReaction = true;
-      if (isRemoving) {
-        _reactions.removeWhere((item) => item.userId == existingUserId);
-      } else if (existingUserId != null) {
-        _reactions = _reactions
-            .map(
-              (item) =>
-                  item.userId == existingUserId ? optimisticReaction : item,
-            )
-            .toList();
-      } else {
-        _reactions = [..._reactions, optimisticReaction];
-      }
+      _reactions = mutation.optimistic;
     });
 
     try {
-      final eventName = isRemoving
-          ? SocketEvents.reactionDeleted
-          : existing != null
-          ? SocketEvents.reactionUpdated
-          : SocketEvents.reactionCreated;
-      await socketService.emit(eventName, {
-        'contentId': contentId,
-        'contentPath': contentPath,
-        'reaction': emoji,
-      });
+      await MessageReactionUtils.emitReaction(
+        eventName: mutation.eventName,
+        contentId: contentId,
+        contentPath: contentPath,
+        emoji: emoji,
+      );
       unawaited(_refreshReactions());
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _reactions = previous;
+        _reactions = mutation.previous;
       });
     } finally {
       if (mounted) {
@@ -502,11 +410,13 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                               Flexible(
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: _reactionSummaries
-                                        .map(_reactionChip)
-                                        .toList(),
+                                  child: MessageReactionSummaryRow(
+                                    reactions: _reactions,
+                                    currentUserId: widget.currentUserId,
+                                    isEnabled:
+                                        !_isSubmittingReaction &&
+                                        _isSocketReady,
+                                    onTap: _handleReactionTap,
                                   ),
                                 ),
                               ),
@@ -656,40 +566,4 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
       ],
     );
   }
-
-  Widget _reactionChip(_ReactionSummary summary) {
-    final isSelected = summary.emoji == _currentUserReactionEmoji;
-    return GestureDetector(
-      onTap: _isSubmittingReaction || !_isSocketReady
-          ? null
-          : () => _handleReactionTap(summary.emoji),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          spacing: 4,
-          children: [
-            Text(summary.emoji, style: const TextStyle(fontSize: 16)),
-            if (summary.count > 0)
-              Text(
-                '${summary.count}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.mutedForeground,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReactionSummary {
-  const _ReactionSummary({required this.emoji, required this.count});
-
-  final String emoji;
-  final int count;
 }

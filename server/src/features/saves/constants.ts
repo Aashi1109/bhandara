@@ -4,6 +4,7 @@ export const SUPPORTED_SAVED_ENTITY_TYPES = [
   'event',
   'thread',
   'message',
+  'user',
 ] as const;
 
 export type SupportedSavedEntityType =

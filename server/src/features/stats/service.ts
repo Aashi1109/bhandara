@@ -14,6 +14,7 @@ import { Thread } from "@/features/threads/model";
 import { Message } from "@/features/messages/model";
 import { Reaction } from "@/features/reactions/model";
 import EntityEngagementService from "@/features/engagement/service";
+import { cacheKeys } from "@/features/cache/keys";
 
 type EntityType = "events" | "threads" | "messages";
 
@@ -53,7 +54,7 @@ class EntityStatsService {
   private readonly entityEngagementService = new EntityEngagementService();
 
   private getKey(entityType: EntityType, id: string) {
-    return `${entityType}:${id}:stats`;
+    return cacheKeys.stats(entityType, id);
   }
 
   private getDefaults<T extends EntityType>(entityType: T): StatsByEntity[T] {

@@ -111,13 +111,13 @@ final router = GoRouter(
     GoRoute(
       path: CreateEventScreen.routePath,
       builder: (context, state) => CreateEventScreen(
-        initialEvent: state.extra is Event ? state.extra as Event : null,
+        initialEvent: state.extra is Event ? state.extra! as Event : null,
       ),
     ),
     GoRoute(
       path: SuccessScreen.routePath,
       builder: (context, state) => SuccessScreen(
-        event: state.extra is Event ? state.extra as Event : null,
+        event: state.extra is Event ? state.extra! as Event : null,
       ),
     ),
     GoRoute(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -11,10 +13,13 @@ import '../widgets/floating_message_bar.dart';
 import '../widgets/header.dart';
 import '../widgets/snackbar.dart';
 import '../services/chat.dart';
+import '../services/socket.dart';
 import '../services/user.dart';
+import '../constants/socket_events.dart';
 import '../models/user.dart';
 import 'chat.dart';
 import '../widgets/media_preview.dart';
+import '../widgets/message_reactions.dart';
 
 class ThreadScreen extends StatefulWidget {
   const ThreadScreen({
@@ -40,6 +45,7 @@ class ThreadScreen extends StatefulWidget {
 
 class _ThreadScreenState extends State<ThreadScreen> {
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   bool _isInputVisible = true;
   bool _isLoading = true;
   bool _isSending = false;
@@ -102,6 +108,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     _scrollController.addListener(_scrollListener);
     _loadCurrentUser();
     _loadReplies();
+    _listenToSocketMessages();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -204,6 +211,31 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
+  bool _sameMediaIds(List<String> a, List<String> b) {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _isOptimisticMatch(Message local, Message server) {
+    if (local.deliveryStatus == MessageDeliveryStatus.sent) {
+      return false;
+    }
+    return local.threadId == server.threadId &&
+        local.parentId == server.parentId &&
+        local.senderId.isNotEmpty &&
+        local.senderId == server.senderId &&
+        local.content == server.content &&
+        _sameMediaIds(local.retryMediaIds, server.retryMediaIds) &&
+        local.createdAt.difference(server.createdAt).inSeconds.abs() <= 30;
+  }
+
   Future<void> _sendOptimisticReply(Message optimistic) async {
     try {
       final reply = await chatService.sendMessage(
@@ -275,8 +307,192 @@ class _ThreadScreenState extends State<ThreadScreen> {
     }
   }
 
+  Future<void> _listenToSocketMessages() async {
+    await _socketSubscription?.cancel();
+    _socketSubscription = socketService.messages.listen((event) {
+      if (!mounted) {
+        return;
+      }
+
+      final eventName = event['event'] as String?;
+      final eventData = event['data'];
+      if (eventName == null || eventData is! Map<String, dynamic>) {
+        return;
+      }
+
+      if (eventName == SocketEvents.messageCreated) {
+        final message = Message.fromJson(eventData);
+        final optimisticIndex = _replies.indexWhere(
+          (item) => item.parentId == _parentMessageId && _isOptimisticMatch(item, message),
+        );
+        if (optimisticIndex != -1) {
+          setState(() {
+            _replies[optimisticIndex] = message;
+          });
+        } else if (message.parentId == _parentMessageId &&
+            !_replies.any((item) => item.id == message.id)) {
+          setState(() {
+            _replies.add(message);
+          });
+        }
+        return;
+      }
+
+      if (eventName == SocketEvents.messageUpdated) {
+        final message = Message.fromJson(eventData);
+        if (message.id == _originalMessage?.id) {
+          setState(() {
+            _originalMessage = message;
+          });
+          return;
+        }
+        final index = _replies.indexWhere((item) => item.id == message.id);
+        if (index != -1) {
+          setState(() {
+            _replies[index] = message;
+          });
+        }
+        return;
+      }
+
+      if (eventName == SocketEvents.messageDeleted) {
+        final messageId = eventData['id'] as String?;
+        if (messageId == null) {
+          return;
+        }
+        setState(() {
+          if (_originalMessage?.id == messageId) {
+            _originalMessage = null;
+          }
+          _replies.removeWhere((item) => item.id == messageId);
+        });
+        return;
+      }
+
+      if (eventName == SocketEvents.reactionCreated ||
+          eventName == SocketEvents.reactionUpdated ||
+          eventName == SocketEvents.reactionDeleted) {
+        _applyReactionEvent(eventName, eventData);
+      }
+    });
+  }
+
+  void _applyReactionEvent(String eventName, Map<String, dynamic> eventData) {
+    if (eventData['contentPath'] != 'messages') {
+      return;
+    }
+
+    final messageId = eventData['id'] as String?;
+    final rawReaction = eventData['reaction'];
+    if (messageId == null || rawReaction is! Map<String, dynamic>) {
+      return;
+    }
+
+    final reaction = MessageReaction.fromJson(rawReaction);
+    setState(() {
+      if (_originalMessage?.id == messageId) {
+        _originalMessage = _originalMessage?.copyWith(
+          reactions: MessageReactionUtils.applySocketEvent(
+            reactions: _originalMessage?.reactions ?? const [],
+            eventName: eventName,
+            reaction: reaction,
+          ),
+        );
+        return;
+      }
+
+      final replyIndex = _replies.indexWhere((item) => item.id == messageId);
+      if (replyIndex == -1) {
+        return;
+      }
+
+      _replies[replyIndex] = _replies[replyIndex].copyWith(
+        reactions: MessageReactionUtils.applySocketEvent(
+          reactions: _replies[replyIndex].reactions,
+          eventName: eventName,
+          reaction: reaction,
+        ),
+      );
+    });
+  }
+
+  Future<void> _toggleMessageReaction(Message message, String emoji) async {
+    if (!socketService.isConnected) {
+      return;
+    }
+
+    final mutation = MessageReactionUtils.createMutation(
+      reactions: message.reactions,
+      emoji: emoji,
+      contentId: message.id,
+      contentPath: 'messages',
+      currentUserId: _currentUser?.id,
+    );
+
+    setState(() {
+      if (_originalMessage?.id == message.id) {
+        _originalMessage = _originalMessage?.copyWith(
+          reactions: mutation.optimistic,
+        );
+        return;
+      }
+
+      final index = _replies.indexWhere((item) => item.id == message.id);
+      if (index != -1) {
+        _replies[index] = _replies[index].copyWith(
+          reactions: mutation.optimistic,
+        );
+      }
+    });
+
+    try {
+      await MessageReactionUtils.emitReaction(
+        eventName: mutation.eventName,
+        contentId: message.id,
+        contentPath: 'messages',
+        emoji: emoji,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (_originalMessage?.id == message.id) {
+          _originalMessage = _originalMessage?.copyWith(
+            reactions: mutation.previous,
+          );
+          return;
+        }
+
+        final index = _replies.indexWhere((item) => item.id == message.id);
+        if (index != -1) {
+          _replies[index] = _replies[index].copyWith(
+            reactions: mutation.previous,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _showMessageReactionBar(
+    BuildContext targetContext,
+    Message message,
+  ) {
+    return showMessageReactionOverlay(
+      context: context,
+      targetContext: targetContext,
+      currentUserReactionEmoji: MessageReactionUtils.currentUserReactionEmoji(
+        message.reactions,
+        _currentUser?.id,
+      ),
+      dismissOnScrollControllers: [_scrollController],
+      onSelected: (emoji) => _toggleMessageReaction(message, emoji),
+    );
+  }
+
   @override
   void dispose() {
+    _socketSubscription?.cancel();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
@@ -320,74 +536,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColors.muted,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          borderRadius: BorderRadius.circular(
-                                            50,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'ORIGINAL',
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 2,
-                                            color: AppColors.surface,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _originalMessage?.senderName ??
-                                            'Unknown',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _originalMessage?.content ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _originalMessage != null
-                                        ? DateFormat(
-                                            'hh:mm a',
-                                          ).format(_originalMessage!.createdAt)
-                                        : '',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            _OriginalMessageCard(
+                              message: _originalMessage,
+                              currentUserId: _currentUser?.id,
+                              onReactionTap: _toggleMessageReaction,
+                              onLongPress: (targetContext, message) =>
+                                  _showMessageReactionBar(targetContext, message),
                             ),
                             const SizedBox(height: 16),
                             Padding(
@@ -455,6 +609,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   Widget _reply(Message reply) {
+    final bubbleKey = GlobalKey();
+    final imageKey = GlobalKey();
     final attachmentCount = reply.media.isNotEmpty
         ? reply.media.length
         : reply.retryMediaIds.length;
@@ -526,6 +682,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
               ),
               if (imageMedia != null)
                 GestureDetector(
+                  key: imageKey,
                   onTap: () => _openMediaPreviewWithContext(
                     reply.media,
                     reactionContentId: reply.id,
@@ -537,6 +694,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       );
                       return message.reactions;
                     },
+                  ),
+                  onLongPress: () => _showMessageReactionBar(
+                    imageKey.currentContext ?? context,
+                    reply,
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
@@ -550,27 +711,40 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   ),
                 ),
               if (reply.content.isNotEmpty || attachmentCount == 0)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.muted,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                      bottomRight: Radius.circular(20),
-                    ),
-                    border: Border.all(color: AppColors.border),
+                GestureDetector(
+                  key: bubbleKey,
+                  onLongPress: () => _showMessageReactionBar(
+                    bubbleKey.currentContext ?? context,
+                    reply,
                   ),
-                  child: Text(
-                    reply.content.isEmpty && attachmentCount > 0
-                        ? 'Media attachment'
-                        : reply.content,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 1.5,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      reply.content.isEmpty && attachmentCount > 0
+                          ? 'Media attachment'
+                          : reply.content,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.5,
+                      ),
                     ),
                   ),
+                ),
+              if (reply.reactions.isNotEmpty)
+                MessageReactionSummaryRow(
+                  reactions: reply.reactions,
+                  currentUserId: _currentUser?.id,
+                  onTap: (emoji) => _toggleMessageReaction(reply, emoji),
                 ),
               if (attachmentCount > 0) ...[
                 Text(
@@ -655,6 +829,139 @@ class _ThreadScreenState extends State<ThreadScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OriginalMessageCard extends StatelessWidget {
+  const _OriginalMessageCard({
+    required this.message,
+    required this.currentUserId,
+    required this.onReactionTap,
+    required this.onLongPress,
+  });
+
+  final Message? message;
+  final String? currentUserId;
+  final Future<void> Function(Message message, String emoji) onReactionTap;
+  final Future<void> Function(BuildContext targetContext, Message message)
+      onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final contentKey = GlobalKey();
+    final isCurrentUser =
+        message != null &&
+        currentUserId != null &&
+        message!.senderId == currentUserId;
+    final bubbleAlignment =
+        isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
+    final columnAlignment =
+        isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Align(
+      alignment: bubbleAlignment,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.82,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: columnAlignment,
+            children: [
+              Align(
+                alignment: bubbleAlignment,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: const Text(
+                        'ORIGINAL',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                          color: AppColors.surface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        message?.senderName ?? 'Unknown',
+                        textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                key: contentKey,
+                onLongPress:
+                    message == null
+                        ? null
+                        : () => onLongPress(
+                          contentKey.currentContext ?? context,
+                          message!,
+                        ),
+                child: Text(
+                  message?.content ?? '',
+                  textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              if (message != null && message!.reactions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: bubbleAlignment,
+                  child: MessageReactionSummaryRow(
+                    reactions: message!.reactions,
+                    currentUserId: currentUserId,
+                    onTap: (emoji) => onReactionTap(message!, emoji),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Align(
+                alignment: bubbleAlignment,
+                child: Text(
+                  message != null
+                      ? DateFormat('hh:mm a').format(message!.createdAt)
+                      : '',
+                  textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

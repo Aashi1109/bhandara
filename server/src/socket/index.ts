@@ -378,7 +378,7 @@ export function initializeSocket(server: http.Server) {
 
         while (!abortController.signal.aborted) {
           const { items, pagination } = await eventService.getAll(
-            { status: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
+            { statuses: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
             { limit: 10, next: nextCursor },
           );
 

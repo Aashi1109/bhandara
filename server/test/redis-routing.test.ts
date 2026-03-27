@@ -85,29 +85,41 @@ describe("redis connection routing", () => {
 
     expect(cacheConfigs).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ connectionName: REDIS_CONNECTION_NAMES.Activity }),
-        expect.objectContaining({ connectionName: REDIS_CONNECTION_NAMES.Activity }),
+        expect.objectContaining({
+          connectionName: REDIS_CONNECTION_NAMES.Activity,
+          namespace: "ac",
+        }),
+        expect.objectContaining({
+          connectionName: REDIS_CONNECTION_NAMES.Activity,
+          namespace: "ah",
+        }),
       ]),
     );
   });
 
-  it("routes bull queue connection to DB 2", async () => {
-    const queueSpy = vi.fn();
+  it("uses compact explore cache namespace", async () => {
+    const cacheConfigs: Array<Record<string, unknown>> = [];
 
-    vi.doMock("bullmq", () => ({
-      Queue: class MockQueue {
-        constructor(_name: string, options: Record<string, unknown>) {
-          queueSpy(options);
+    vi.doMock("@/features/cache", () => ({
+      RedisCache: class MockRedisCache {
+        constructor(config: Record<string, unknown>) {
+          cacheConfigs.push(config);
         }
       },
     }));
 
-    await import("@/queues/video");
+    await import("@/features/explore/helpers");
 
-    expect(queueSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        connection: expect.objectContaining({ db: 2 }),
-      }),
+    expect(cacheConfigs).toEqual(
+      expect.arrayContaining([expect.objectContaining({ namespace: "ex" })]),
+    );
+  });
+
+  it("routes bull queue connection to DB 2", async () => {
+    const { WORKER_CONNECTION_CONFIG } = await import("@/config");
+
+    expect(WORKER_CONNECTION_CONFIG).toEqual(
+      expect.objectContaining({ db: 2 }),
     );
   });
 });

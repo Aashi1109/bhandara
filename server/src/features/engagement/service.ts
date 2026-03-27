@@ -18,6 +18,7 @@ import {
   type SupportedEngagementEntityType,
 } from "./constants";
 import { EntityEngagement, EntityRating } from "./model";
+import { cacheKeys } from "@/features/cache/keys";
 
 const DEFAULT_HISTOGRAM: IEntityRatingHistogram = {
   "1": 0,
@@ -43,10 +44,12 @@ type ViewerContext = {
 
 class EntityEngagementService {
   private readonly redis = getRedisConnection(REDIS_CONNECTION_NAMES.Analytics);
-  private readonly namespace = CACHE_NAMESPACE_CONFIG.Engagement.namespace;
 
   private getAggregateKey(entityType: string, entityId: string) {
-    return `${this.namespace}:${entityType}:${entityId}:stats`;
+    return cacheKeys.engagementAggregate(
+      entityType as SupportedEngagementEntityType,
+      entityId,
+    );
   }
 
   private getViewDedupeKey(
@@ -55,7 +58,12 @@ class EntityEngagementService {
     dayKey: string,
     viewerKey: string,
   ) {
-    return `${this.namespace}:${entityType}:${entityId}:views:${dayKey}:${viewerKey}`;
+    return cacheKeys.engagementViewDedupe(
+      entityType as SupportedEngagementEntityType,
+      entityId,
+      dayKey,
+      viewerKey,
+    );
   }
 
   private getHistogramField(value: number) {

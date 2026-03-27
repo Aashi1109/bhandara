@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../constants/api.dart';
+import '../models/api_response.dart';
 import '../models/save.dart';
 import 'search.dart';
 import 'api.dart';
@@ -54,17 +55,34 @@ class SaveService extends BaseService {
     }
   }
 
-  Future<List<SearchResult>> getSavedResults() async {
+  Future<PaginatedResponse<SearchResult>> getSavedResults({
+    int? limit,
+    String? next,
+    String? query,
+    String? entityType,
+  }) async {
     try {
-      final response = await _dio.get(Api.saves);
+      final response = await _dio.get(
+        Api.saves,
+        queryParameters: {
+          'limit': limit,
+          'next': next,
+          'query': query,
+          'entityType': entityType,
+        },
+      );
       final data = response.data['data'] as Map<String, dynamic>? ?? const {};
       final items = data['items'] as List<dynamic>? ?? const [];
+      final pagination = data['pagination'] as Map<String, dynamic>? ?? const {};
 
-      return items
-          .whereType<Map<String, dynamic>>()
-          .map(_mapSavedItemToResult)
-          .whereType<SearchResult>()
-          .toList();
+      return PaginatedResponse<SearchResult>(
+        items: items
+            .whereType<Map<String, dynamic>>()
+            .map(_mapSavedItemToResult)
+            .whereType<SearchResult>()
+            .toList(),
+        pagination: Pagination.fromJson(pagination),
+      );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch saved items');
     } catch (e) {
@@ -86,6 +104,8 @@ class SaveService extends BaseService {
         return _mapSavedThread(entity);
       case 'message':
         return _mapSavedMessage(entity);
+      case 'user':
+        return _mapSavedUser(entity);
       default:
         return null;
     }
@@ -152,6 +172,31 @@ class SaveService extends BaseService {
         'threadId': entity['threadId'],
         'message': entity,
         'createdAt': entity['createdAt'],
+      },
+    );
+  }
+
+  SearchResult _mapSavedUser(Map<String, dynamic> entity) {
+    final profilePic = entity['profilePic'] as Map<String, dynamic>?;
+    final media = entity['media'] as Map<String, dynamic>?;
+    final avatarUrl =
+        entity['avatarUrl'] as String? ??
+        media?['publicUrl'] as String? ??
+        media?['url'] as String? ??
+        profilePic?['url'] as String?;
+
+    final username = entity['username'] as String?;
+    final bio = entity['bio'] as String?;
+
+    return SearchResult(
+      id: entity['id'] as String? ?? '',
+      type: 'user',
+      title: entity['name'] as String? ?? 'Profile',
+      description: bio ?? (username != null && username.isNotEmpty ? '@$username' : null),
+      imageUrl: avatarUrl,
+      metadata: {
+        'username': username,
+        'bio': bio,
       },
     );
   }
