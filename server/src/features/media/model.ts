@@ -5,10 +5,7 @@ import { MEDIA_TABLE_NAME } from './constants';
 import { EMediaType, EAccessLevel } from '@/definitions/enums';
 import type { IMedia } from '@/definitions/types';
 
-type MediaAttributes = Omit<
-  IMedia,
-  'createdAt' | 'updatedAt' | 'deletedAt' | 'path' | 'publicUrl' | 'publicUrlExpiresAt'
->;
+type MediaAttributes = Omit<IMedia, 'createdAt' | 'updatedAt' | 'path' | 'publicUrl' | 'publicUrlExpiresAt'>;
 
 export class Media extends Model<MediaAttributes, MediaAttributes> {
   declare id: string;
@@ -29,7 +26,6 @@ export class Media extends Model<MediaAttributes, MediaAttributes> {
   declare path?: string;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 Media.init(
@@ -66,9 +62,8 @@ Media.init(
   {
     modelName: 'Media',
     tableName: MEDIA_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
     indexes: [
       {
         name: 'idx_media_url',

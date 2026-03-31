@@ -151,6 +151,7 @@ class SupabaseService {
       // Rollback transaction on error
       const res = await this.supabaseClient.rpc('rollback');
       throwSupabaseError(error);
+      return { data: null, error: error as any };
     }
   }
 

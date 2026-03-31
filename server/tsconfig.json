@@ -11,7 +11,8 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "skipLibCheck": true
   },
   "include": ["types.d.ts", "src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

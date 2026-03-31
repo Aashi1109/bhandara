@@ -220,6 +220,7 @@ CREATE INDEX "threads_updatedAt_idx" ON "Threads"("updatedAt");
 CREATE INDEX "events_updatedAt_idx" ON "Events"("updatedAt");
 CREATE INDEX "messages_updatedAt_idx" ON "Messages"("updatedAt");
 CREATE INDEX "tags_updatedAt_idx" ON "Tags"("updatedAt");
+CREATE INDEX "tags_parentId_idx" ON "Tags"("parentId");
 
 -- Search results
 CREATE TYPE "enum_SearchResults_type" AS ENUM ('event', 'user', 'tag');

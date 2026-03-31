@@ -45,7 +45,7 @@ class RedisCache {
    * }
    *
    */
-  withCache(methodOptions: MethodCacheOptions = {}): (...args: unknown[]) => unknown {
+  withCache(methodOptions: MethodCacheOptions = {}): any {
     // Capture redis instance variables in closure
     const { redisClient } = this;
     const { cacheNamespace } = this;

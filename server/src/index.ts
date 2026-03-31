@@ -33,8 +33,8 @@ async function startServer() {
 
     const [db, redis] = await Promise.all([getDBConnection(), getRedisConnection()]);
 
-    await Promise.all([await redis.ping(), await db.ping()]);
-    await ensureDatabaseSchema(db);
+    await Promise.all([await redis.ping(), await db!.ping()]);
+    await ensureDatabaseSchema(db!);
 
     const app = createServer();
 

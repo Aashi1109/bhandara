@@ -5,7 +5,7 @@ import { THREAD_TABLE_NAME } from './constants';
 import { EAccessLevel } from '@/definitions/enums';
 import type { IBaseThread, ILockHistory, IThreadStats } from '@/definitions/types';
 
-type ThreadAttributes = Omit<IBaseThread, 'createdAt' | 'updatedAt' | 'deletedAt' | 'messages' | 'creator'>;
+type ThreadAttributes = Omit<IBaseThread, 'createdAt' | 'updatedAt' | 'messages' | 'creator'>;
 
 export class Thread extends Model<ThreadAttributes, ThreadAttributes> {
   declare id: string;
@@ -16,7 +16,6 @@ export class Thread extends Model<ThreadAttributes, ThreadAttributes> {
   declare stats: IThreadStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare createdBy: IBaseThread['createdBy'];
 
   declare messages?: any[];
@@ -59,11 +58,8 @@ Thread.init(
   {
     modelName: 'Thread',
     tableName: THREAD_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-    indexes: [
-      { name: 'threads_updatedAt_idx', fields: ['updatedAt'] },
-    ],
+    indexes: [{ name: 'threads_updatedAt_idx', fields: ['updatedAt'] }],
   },
 );

@@ -71,7 +71,7 @@ export const processor = async (job: Job) => {
         }
       } catch (err) {
         console.error('WebP conversion failed', { suffix, err });
-        delete sizes[suffix];
+        delete (sizes as Record<string, number>)[suffix];
       }
     }
 

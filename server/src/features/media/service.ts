@@ -11,7 +11,7 @@ import { isEmpty, omit } from '@/utils';
 import { deleteMediaCache, getEventMediaCache, setEventMediaCache, setMediaCache, getMediaCache } from './helpers';
 import logger from '@/logger';
 import { getUniqueFilename as getUniqueFilename } from './utils';
-import { BadRequestError } from '@/exceptions';
+import { BadRequestError, NotFoundError } from '@/exceptions';
 import { CACHE_NAMESPACE_CONFIG } from '@/constants';
 import EntityStatsService from '@/features/stats/service';
 
@@ -100,7 +100,7 @@ class MediaService {
   async update<U extends Partial<IMedia>>(id: string, data: U) {
     const res = await validateMediaUpdate(data, async (validatedData) => {
       const row = await Media.findByPk(id);
-      if (!row) throw new Error('Media not found');
+      if (!row) throw new NotFoundError('Media not found');
       await row.update(validatedData as any);
       return row.toJSON() as any;
     });
@@ -126,8 +126,10 @@ class MediaService {
 
         const { bucket } = validatedData;
 
-        const bucketConfig = MEDIA_BUCKET_CONFIG[validatedData.bucket];
-        if (!bucketConfig) throw new Error('Bucket not found');
+        const bucketConfig = (MEDIA_BUCKET_CONFIG as Record<string, { accept: string[]; maxSize: number }>)[
+          validatedData.bucket
+        ];
+        if (!bucketConfig) throw new NotFoundError('Bucket not found');
         if (validatedData.options.size > bucketConfig.maxSize) throw new BadRequestError('File size too large');
 
         const path = getUniqueFilename(validatedData.path);
@@ -171,7 +173,7 @@ class MediaService {
           signedUrl = res.data;
         }
 
-        delete signedUrl.token;
+        if (signedUrl) delete (signedUrl as any).token;
         return {
           row: creationData as IMedia,
           ...signedUrl,
@@ -186,11 +188,23 @@ class MediaService {
       bucket: MEDIA_PUBLIC_BUCKET_NAME,
       path: uniquePath,
     });
-    delete signedUrl.data.token;
+    if (signedUrl.data) delete (signedUrl.data as any).token;
     return { path: uniquePath, ...signedUrl.data };
   }
 
-  async uploadFileToSignedUrl({ bucket, path, base64FileData, mimeType, token }) {
+  async uploadFileToSignedUrl({
+    bucket,
+    path,
+    base64FileData,
+    mimeType,
+    token,
+  }: {
+    bucket: string;
+    path: string;
+    base64FileData: string;
+    mimeType: string;
+    token: string;
+  }) {
     return this._supabaseService.uploadFileToSignedUrl({
       bucket,
       path,
@@ -205,7 +219,7 @@ class MediaService {
       const { path, ...rest } = validatedData;
       return Media.create({
         ...rest,
-        path: getUniqueFilename(path),
+        path: getUniqueFilename(path!),
       } as any);
     });
     const created = res as any;
@@ -252,7 +266,7 @@ class MediaService {
     });
 
     return {
-      signedUrl: publicUrl.data.signedUrl,
+      signedUrl: publicUrl.data!.signedUrl,
       expiresAt: new Date(Date.now() + 3600 * 24 * 1000),
     };
   }
@@ -295,7 +309,7 @@ class MediaService {
 
     const mediaWithPublicUrls = publicUrlsWithExpiresAt.reduce(
       (acc, url) => {
-        acc[url.path] = url;
+        if (url.path) acc[url.path] = url;
         return acc;
       },
       {} as Record<string, { signedUrl: string; expiresAt: Date }>,
@@ -359,29 +373,32 @@ class MediaService {
       );
 
       // Create a map of media data with their public URLs
-      const mediaWithUrls = (mediaData.data as IMedia[]).reduce((acc, media) => {
-        const publicUrl = publicUrls[media.url];
+      const mediaWithUrls = (mediaData.data as IMedia[]).reduce(
+        (acc, media) => {
+          const publicUrl = publicUrls[media.url];
 
-        if (!publicUrl) {
-          logger.error(`Public url not found for media ${media.id}`);
+          if (!publicUrl) {
+            logger.error(`Public url not found for media ${media.id}`);
+            return acc;
+          }
+
+          if ('error' in publicUrl && publicUrl.error) {
+            logger.error('Error getting public url for media', {
+              mediaId: media.id,
+              error: publicUrl.error,
+            });
+            return acc;
+          }
+
+          acc[media.id] = {
+            ...media,
+            publicUrl: publicUrl?.signedUrl,
+            publicUrlExpiresAt: publicUrl?.expiresAt,
+          };
           return acc;
-        }
-
-        if ('error' in publicUrl && publicUrl.error) {
-          logger.error('Error getting public url for media', {
-            mediaId: media.id,
-            error: publicUrl.error,
-          });
-          return acc;
-        }
-
-        acc[media.id] = {
-          ...media,
-          publicUrl: publicUrl?.signedUrl,
-          publicUrlExpiresAt: publicUrl?.expiresAt,
-        };
-        return acc;
-      }, {});
+        },
+        {} as Record<string, any>,
+      );
 
       // TODO: Need to be validated if this is required
       // await setMediaBulkCache(Object.values(mediaWithUrls));

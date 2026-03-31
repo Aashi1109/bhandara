@@ -12,7 +12,7 @@ const connect = (name: DB_CONNECTION_NAMES) => {
   const poolAcquire = Number(process.env.DB_POOL_ACQUIRE_MS || 60000);
   const poolIdle = Number(process.env.DB_POOL_IDLE_MS || 10000);
 
-  const sequelize = new Sequelize(config.db[name], {
+  const sequelize = new Sequelize(config.db[name] as string, {
     logging: (msg, duration) =>
       logger.debug({
         message: msg,

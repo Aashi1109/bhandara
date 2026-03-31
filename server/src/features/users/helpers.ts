@@ -87,10 +87,10 @@ export const getUserSessionCacheList = async (userId: string) => {
 
   const results = await pipeline.exec();
 
-  const sessions = [];
-  const staleSessionIds = [];
+  const sessions: any[] = [];
+  const staleSessionIds: string[] = [];
 
-  results.forEach(([, rawResult]: [Error | null, unknown], index: number) => {
+  results!.forEach(([, rawResult]: [Error | null, unknown], index: number) => {
     const result = jnparse(rawResult);
     if (!result) {
       // Mark for lazy cleanup
@@ -149,13 +149,13 @@ export const deleteUserSessionCache = async (userId: string, sessionId: string) 
   return Promise.all([sessionCache.deleteItem(sessionId), userCache.deleteHKey(`${userId}:sessions`, sessionId)]);
 };
 
-export const getSafeUser = (user: IBaseUser) => {
-  const _user = { ...user };
+export const getSafeUser = (user: IBaseUser): IBaseUser & { isSocialLogin: boolean } => {
+  const _user = { ...user } as Record<string, any>;
   const provider = _user.meta?.auth?.provider;
   delete _user.password;
   delete _user.meta?.auth?.accessToken;
   delete _user.meta?.auth?.refreshToken;
-  return { ..._user, isSocialLogin: provider !== 'email' };
+  return { ..._user, isSocialLogin: provider !== 'email' } as IBaseUser & { isSocialLogin: boolean };
 };
 
 export const getPublicUser = (user: IBaseUser) => {
@@ -170,8 +170,8 @@ export const getPublicUser = (user: IBaseUser) => {
 
 export const getLeanUser = (user: IBaseUser) => {
   const safe = getSafeUser(user);
-  const { id, name, createdAt, deletedAt, username, email } = safe;
-  return { id, name, createdAt, deletedAt, username, email } as IBaseUser;
+  const { id, name, createdAt, username, email } = safe;
+  return { id, name, createdAt, username, email } as IBaseUser;
 };
 
 export const getUserInterestsCache = (userId: string) => {
@@ -191,8 +191,7 @@ export const bulkSetUserCache = async (users: IBaseUser[]): Promise<'OK'> => {
   users.forEach((user) => {
     pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), 'EX', userCacheTTL);
     pipeline.set(`${userCacheNamespace}:${user.email}`, user.id, 'EX', userCacheTTL);
-    if (user.username)
-      pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, 'EX', userCacheTTL);
+    if (user.username) pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, 'EX', userCacheTTL);
   });
   await pipeline.exec();
   return 'OK';

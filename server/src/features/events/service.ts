@@ -2,7 +2,7 @@ import type { IBaseThread, IBaseUser, IEvent, IPaginationParams } from '@/defini
 import ThreadsService from '../threads/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { Op, Sequelize, type WhereOptions } from 'sequelize';
-import { EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { EEventParticipantStatus, EEventStatus, type EEventType } from '@/definitions/enums';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
 import UserService from '../users/service';
@@ -16,6 +16,7 @@ import { Event } from './model';
 import MessageService from '@/features/messages/service';
 import EntityStatsService from '@/features/stats/service';
 import { deriveEventStatus, resolveEventStatus } from './status';
+import ngeohash from 'ngeohash';
 
 export interface IEventListFilters {
   createdBy?: string;
@@ -74,6 +75,9 @@ class EventService {
       createdBy: resolved.createdBy,
       location: resolved.location,
       timings: resolved.timings,
+      createdAt: resolved.createdAt,
+      updatedAt: resolved.updatedAt,
+      media: resolved.media,
     };
   }
 
@@ -116,9 +120,7 @@ class EventService {
     }
 
     if (filters.statuses?.length) {
-      const statusClauses = filters.statuses
-        .map((status) => this.buildDerivedStatusClause(status))
-        .filter(Boolean);
+      const statusClauses = filters.statuses.map((status) => this.buildDerivedStatusClause(status)).filter(Boolean);
       if (statusClauses.length) {
         clauses.push({ [Op.or]: statusClauses });
       }
@@ -126,11 +128,7 @@ class EventService {
 
     if (filters.tagIds?.length) {
       const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
-      clauses.push(
-        Sequelize.literal(
-          `(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`,
-        ),
-      );
+      clauses.push(Sequelize.literal(`(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`));
     }
 
     if (filters.startDate && filters.endDate) {
@@ -147,8 +145,8 @@ class EventService {
       Number.isFinite(filters.radiusKm) &&
       (filters.radiusKm ?? 0) > 0
     ) {
-      const latitude = escape(filters.latitude);
-      const longitude = escape(filters.longitude);
+      const latitude = escape(filters.latitude!);
+      const longitude = escape(filters.longitude!);
       const radiusMeters = escape((filters.radiusKm ?? 0) * 1000);
       clauses.push(
         Sequelize.literal(
@@ -232,6 +230,7 @@ class EventService {
 
   async getEventData(id: string) {
     const event = await this.getById(id);
+    if (!event) return null;
     const populatedEvent = await this.populateEvent(event, true);
     return populatedEvent ? this.entityStatsService.hydrateEvent(populatedEvent) : populatedEvent;
   }
@@ -258,7 +257,7 @@ class EventService {
 
     body.status = resolveEventStatus(body.timings);
     const result = await validateEventCreate(body, async (data) => {
-      const row = await Event.create(data as Partial<IEvent>);
+      const row = await Event.create(data as any);
       return row.toJSON() as IEvent;
     });
     const eventData = this.withResolvedStatus(result as IEvent) as IEvent;
@@ -312,13 +311,133 @@ class EventService {
     return eventData;
   }
 
+  private static readonly CLUSTER_ZOOM_THRESHOLD = 12;
+  private static readonly MARKERS_PER_TILE_LIMIT = 500;
+  private static readonly MAX_CLUSTERS = 200;
+
+  // Shared SQL expressions for location JSONB extraction — matches the GIST index path.
+  private static readonly LAT_EXPR = `CAST("location"->>'latitude' AS DOUBLE PRECISION)`;
+  private static readonly LNG_EXPR = `CAST("location"->>'longitude' AS DOUBLE PRECISION)`;
+  private static readonly POINT_EXPR = `ST_MakePoint(${EventService.LNG_EXPR}, ${EventService.LAT_EXPR})`;
+
+  private static gridSizeFromZoom(zoom: number): number {
+    if (zoom <= 4) return 5.0;
+    if (zoom <= 6) return 2.0;
+    if (zoom <= 8) return 0.5;
+    if (zoom <= 10) return 0.1;
+    return 0.05;
+  }
+
+  async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[] } = {}) {
+    const { zoom = 0, tiles } = options;
+    const isClusterMode = zoom < EventService.CLUSTER_ZOOM_THRESHOLD;
+
+    if (isClusterMode) {
+      return this.getClusterMarkers(filters, zoom);
+    }
+
+    return this.getTileMarkers(filters, tiles);
+  }
+
+  private async getClusterMarkers(filters: IEventListFilters, zoom: number) {
+    const where = this.buildWhere(filters);
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const gridSize = escape(EventService.gridSizeFromZoom(zoom));
+
+    const whereClause = (where as any)[Op.and] ? where : {};
+
+    const results = await Event.findAll({
+      where: whereClause,
+      attributes: [
+        [Sequelize.fn('AVG', Sequelize.literal(EventService.LAT_EXPR)), 'latitude'],
+        [Sequelize.fn('AVG', Sequelize.literal(EventService.LNG_EXPR)), 'longitude'],
+        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count'],
+      ],
+      group: [
+        Sequelize.fn('ST_SnapToGrid', Sequelize.literal(EventService.POINT_EXPR), Sequelize.literal(String(gridSize))),
+      ],
+      order: [[Sequelize.literal('count'), 'DESC']],
+      limit: EventService.MAX_CLUSTERS,
+      raw: true,
+      subQuery: false,
+    });
+
+    return {
+      mode: 'clusters' as const,
+      items: results.map((row: any) => ({
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
+        count: Number(row.count),
+      })),
+    };
+  }
+
+  private async getTileMarkers(filters: IEventListFilters, tiles?: string[]) {
+    if (!tiles?.length) {
+      return { mode: 'tiles' as const, items: {} };
+    }
+
+    const baseWhere = this.buildWhere(filters);
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+
+    // Single query for all tiles — OR their bounding boxes together.
+    const tileConditions = tiles.map((tile) => {
+      const [minLat, minLng, maxLat, maxLng] = ngeohash.decode_bbox(tile);
+      return `(${EventService.LAT_EXPR} >= ${escape(minLat)} AND ${EventService.LAT_EXPR} <= ${escape(maxLat)} AND ${EventService.LNG_EXPR} >= ${escape(minLng)} AND ${EventService.LNG_EXPR} <= ${escape(maxLng)})`;
+    });
+
+    const baseClauses = (baseWhere as any)[Op.and] ? ((baseWhere as any)[Op.and] as any[]) : [];
+    const batchWhere = {
+      [Op.and]: [...baseClauses, Sequelize.literal(`(${tileConditions.join(' OR ')})`)],
+    };
+
+    const rows = await Event.findAll({
+      where: batchWhere,
+      attributes: ['id', 'name', 'location'],
+      raw: true,
+      limit: EventService.MARKERS_PER_TILE_LIMIT * tiles.length,
+    });
+
+    // Distribute rows into tile buckets
+    const tileBboxes = tiles.map((tile) => {
+      const [minLat, minLng, maxLat, maxLng] = ngeohash.decode_bbox(tile);
+      return { tile, minLat, minLng, maxLat, maxLng };
+    });
+
+    const tileResults: Record<string, { id: string; name: string; latitude: number; longitude: number }[]> = {};
+    for (const tile of tiles) {
+      tileResults[tile] = [];
+    }
+
+    for (const row of rows as any[]) {
+      const lat = Number(row.location?.latitude ?? row.location?.coordinates?.latitude);
+      const lng = Number(row.location?.longitude ?? row.location?.coordinates?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const marker = { id: row.id, name: row.name, latitude: lat, longitude: lng };
+      for (const { tile, minLat, minLng, maxLat, maxLng } of tileBboxes) {
+        if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
+          if (tileResults[tile].length < EventService.MARKERS_PER_TILE_LIMIT) {
+            tileResults[tile].push(marker);
+          }
+          break;
+        }
+      }
+    }
+
+    return {
+      mode: 'tiles' as const,
+      items: tileResults,
+    };
+  }
+
   async getAll(filters: IEventListFilters = {}, pagination?: Partial<IPaginationParams>) {
     const where = this.buildWhere(filters);
     const data = await findAllWithPagination(
       Event,
       { where },
       pagination,
-      'id,name,status,type,createdBy,location,timings',
+      'id,name,status,type,createdBy,location,timings,createdAt,updatedAt,media',
     );
     if (data.items) {
       data.items = data.items.map((event) => this.toEventSummary(event as IEvent)) as typeof data.items;
@@ -372,9 +491,10 @@ class EventService {
     },
   ) {
     const data = await this.getById(eventId);
+    if (!data) throw new NotFoundError('Event not found');
     const { latitude, longitude } = currentCoordinates;
     const { latitude: eventLatitude, longitude: eventLongitude } = data.location;
-    const distance = getDistanceInMeters(latitude, longitude, eventLatitude, eventLongitude);
+    const distance = getDistanceInMeters(latitude, longitude, eventLatitude!, eventLongitude!);
     if (distance > 50) {
       throw new BadRequestError(`You are too far from the event. Current distance ${distance.toFixed(2)} meters`);
     }

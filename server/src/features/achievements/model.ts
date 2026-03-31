@@ -4,9 +4,9 @@ import { getUUIDv7 } from '@/helpers';
 import type { IAchievementProgress, IUserAchievement } from '@/definitions/types';
 import { ACHIEVEMENT_PROGRESS_TABLE_NAME, USER_ACHIEVEMENT_TABLE_NAME } from './constants';
 
-type UserAchievementAttributes = Omit<IUserAchievement, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+type UserAchievementAttributes = Omit<IUserAchievement, 'createdAt' | 'updatedAt'>;
 
-type AchievementProgressAttributes = Omit<IAchievementProgress, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+type AchievementProgressAttributes = Omit<IAchievementProgress, 'createdAt' | 'updatedAt'>;
 
 export class UserAchievement extends Model<UserAchievementAttributes, UserAchievementAttributes> {
   declare id: string;
@@ -19,7 +19,6 @@ export class UserAchievement extends Model<UserAchievementAttributes, UserAchiev
   declare unlockedAt: Date;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 export class AchievementProgress extends Model<AchievementProgressAttributes, AchievementProgressAttributes> {
@@ -28,7 +27,6 @@ export class AchievementProgress extends Model<AchievementProgressAttributes, Ac
   declare metrics: Record<string, any>;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 UserAchievement.init(
@@ -74,9 +72,8 @@ UserAchievement.init(
   {
     modelName: 'UserAchievement',
     tableName: USER_ACHIEVEMENT_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
     indexes: [{ unique: true, fields: ['userId', 'key'] }, { fields: ['userId', 'unlockedAt'] }],
   },
 );
@@ -104,8 +101,7 @@ AchievementProgress.init(
   {
     modelName: 'AchievementProgress',
     tableName: ACHIEVEMENT_PROGRESS_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
   },
 );

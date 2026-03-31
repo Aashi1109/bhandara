@@ -13,10 +13,10 @@ import {
   type IReaction,
 } from '@/definitions/types';
 
-const sequelize = getDBConnection();
+const sequelize = getDBConnection()!;
 
 // Create a type that makes timestamp fields optional for model attributes
-type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt'>;
 
 /**
  * Sequelize model representing an event. Complex fields like location and
@@ -38,7 +38,6 @@ export class Event extends Model<EventAttributes, EventAttributes> {
   declare stats: IEventStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare timings: IEvent['timings'];
 
   declare creator?: IBaseUser;
@@ -123,7 +122,6 @@ Event.init(
     tableName: EVENT_TABLE_NAME,
     sequelize,
     timestamps: true,
-    paranoid: true,
     indexes: [
       {
         name: 'events_updatedAt_idx',
@@ -134,7 +132,7 @@ Event.init(
         using: 'GIST',
         fields: [
           sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("location"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("location"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`,
+            `ST_SetSRID(ST_MakePoint(CAST("location"->>'longitude' AS DOUBLE PRECISION), CAST("location"->>'latitude' AS DOUBLE PRECISION)), 4326)`,
           ),
         ],
       },

@@ -1,31 +1,29 @@
-import { getRedisConnection } from "@/connections/redis";
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from "@/constants";
+import { getRedisConnection } from '@/connections/redis';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
 import type {
   IEntityEngagement,
   IEntityEngagementSummary,
   IEntityEngagementStats,
   IEntityRating,
   IEntityRatingHistogram,
-} from "@/definitions/types";
-import { get32BitMD5Hash } from "@/helpers";
-import { Event } from "@/features/events/model";
-import { Message } from "@/features/messages/model";
-import { Thread } from "@/features/threads/model";
-import { User } from "@/features/users/model";
+} from '@/definitions/types';
+import { get32BitMD5Hash } from '@/helpers';
+import { Event } from '@/features/events/model';
+import { Message } from '@/features/messages/model';
+import { Thread } from '@/features/threads/model';
+import { User } from '@/features/users/model';
 
-import {
-  SUPPORTED_ENGAGEMENT_ENTITY_TYPES,
-  type SupportedEngagementEntityType,
-} from "./constants";
-import { EntityEngagement, EntityRating } from "./model";
-import { cacheKeys } from "@/features/cache/keys";
+import { BadRequestError, NotFoundError } from '@/exceptions';
+import { SUPPORTED_ENGAGEMENT_ENTITY_TYPES, type SupportedEngagementEntityType } from './constants';
+import { EntityEngagement, EntityRating } from './model';
+import { cacheKeys } from '@/features/cache/keys';
 
 const DEFAULT_HISTOGRAM: IEntityRatingHistogram = {
-  "1": 0,
-  "2": 0,
-  "3": 0,
-  "4": 0,
-  "5": 0,
+  '1': 0,
+  '2': 0,
+  '3': 0,
+  '4': 0,
+  '5': 0,
 };
 
 const DEFAULT_STATS: IEntityEngagementStats = {
@@ -46,24 +44,11 @@ class EntityEngagementService {
   private readonly redis = getRedisConnection(REDIS_CONNECTION_NAMES.Analytics);
 
   private getAggregateKey(entityType: string, entityId: string) {
-    return cacheKeys.engagementAggregate(
-      entityType as SupportedEngagementEntityType,
-      entityId,
-    );
+    return cacheKeys.engagementAggregate(entityType as SupportedEngagementEntityType, entityId);
   }
 
-  private getViewDedupeKey(
-    entityType: string,
-    entityId: string,
-    dayKey: string,
-    viewerKey: string,
-  ) {
-    return cacheKeys.engagementViewDedupe(
-      entityType as SupportedEngagementEntityType,
-      entityId,
-      dayKey,
-      viewerKey,
-    );
+  private getViewDedupeKey(entityType: string, entityId: string, dayKey: string, viewerKey: string) {
+    return cacheKeys.engagementViewDedupe(entityType as SupportedEngagementEntityType, entityId, dayKey, viewerKey);
   }
 
   private getHistogramField(value: number) {
@@ -75,39 +60,27 @@ class EntityEngagementService {
       return `user:${context.userId}`;
     }
 
-    const raw = [context.ip || "", context.sessionId || "", context.userAgent || ""]
-      .filter(Boolean)
-      .join("|");
-    return `anon:${get32BitMD5Hash(raw || "anonymous")}`;
+    const raw = [context.ip || '', context.sessionId || '', context.userAgent || ''].filter(Boolean).join('|');
+    return `anon:${get32BitMD5Hash(raw || 'anonymous')}`;
   }
 
   private normalizeHistogram(raw: Record<string, unknown> | null | undefined): IEntityRatingHistogram {
     return {
-      "1": Math.max(0, Number(raw?.rating_1 ?? raw?.["1"] ?? 0) || 0),
-      "2": Math.max(0, Number(raw?.rating_2 ?? raw?.["2"] ?? 0) || 0),
-      "3": Math.max(0, Number(raw?.rating_3 ?? raw?.["3"] ?? 0) || 0),
-      "4": Math.max(0, Number(raw?.rating_4 ?? raw?.["4"] ?? 0) || 0),
-      "5": Math.max(0, Number(raw?.rating_5 ?? raw?.["5"] ?? 0) || 0),
+      '1': Math.max(0, Number(raw?.rating_1 ?? raw?.['1'] ?? 0) || 0),
+      '2': Math.max(0, Number(raw?.rating_2 ?? raw?.['2'] ?? 0) || 0),
+      '3': Math.max(0, Number(raw?.rating_3 ?? raw?.['3'] ?? 0) || 0),
+      '4': Math.max(0, Number(raw?.rating_4 ?? raw?.['4'] ?? 0) || 0),
+      '5': Math.max(0, Number(raw?.rating_5 ?? raw?.['5'] ?? 0) || 0),
     };
   }
 
   private calculateAverage(histogram: IEntityRatingHistogram, ratingCount?: number) {
-    const count =
-      ratingCount ??
-      histogram["1"] +
-        histogram["2"] +
-        histogram["3"] +
-        histogram["4"] +
-        histogram["5"];
+    const count = ratingCount ?? histogram['1'] + histogram['2'] + histogram['3'] + histogram['4'] + histogram['5'];
 
     if (count === 0) return 0;
 
     const total =
-      histogram["1"] * 1 +
-      histogram["2"] * 2 +
-      histogram["3"] * 3 +
-      histogram["4"] * 4 +
-      histogram["5"] * 5;
+      histogram['1'] * 1 + histogram['2'] * 2 + histogram['3'] * 3 + histogram['4'] * 4 + histogram['5'] * 5;
 
     return Number((total / count).toFixed(2));
   }
@@ -116,14 +89,8 @@ class EntityEngagementService {
     const histogram = this.normalizeHistogram(raw);
     const ratingCount = Math.max(
       0,
-      Number(
-        raw?.ratingCount ??
-          histogram["1"] +
-            histogram["2"] +
-            histogram["3"] +
-            histogram["4"] +
-            histogram["5"],
-      ) || 0,
+      Number(raw?.ratingCount ?? histogram['1'] + histogram['2'] + histogram['3'] + histogram['4'] + histogram['5']) ||
+        0,
     );
 
     return {
@@ -138,22 +105,17 @@ class EntityEngagementService {
     await this.redis.hset(this.getAggregateKey(entityType, entityId), {
       viewCount: stats.viewCount,
       ratingCount: stats.ratingCount,
-      rating_1: stats.ratingHistogram["1"],
-      rating_2: stats.ratingHistogram["2"],
-      rating_3: stats.ratingHistogram["3"],
-      rating_4: stats.ratingHistogram["4"],
-      rating_5: stats.ratingHistogram["5"],
+      rating_1: stats.ratingHistogram['1'],
+      rating_2: stats.ratingHistogram['2'],
+      rating_3: stats.ratingHistogram['3'],
+      rating_4: stats.ratingHistogram['4'],
+      rating_5: stats.ratingHistogram['5'],
     });
-    await this.redis.expire(
-      this.getAggregateKey(entityType, entityId),
-      CACHE_NAMESPACE_CONFIG.Engagement.ttl,
-    );
+    await this.redis.expire(this.getAggregateKey(entityType, entityId), CACHE_NAMESPACE_CONFIG.Engagement.ttl);
   }
 
   private async getCachedStats(entityType: string, entityId: string) {
-    const raw = (await this.redis.hgetall(
-      this.getAggregateKey(entityType, entityId),
-    )) as Record<string, unknown>;
+    const raw = (await this.redis.hgetall(this.getAggregateKey(entityType, entityId))) as Record<string, unknown>;
 
     if (!raw || Object.keys(raw).length === 0) {
       return null;
@@ -166,8 +128,8 @@ class EntityEngagementService {
     const row = (await EntityEngagement.findOne({
       where: { entityType, entityId },
       raw: true,
-      attributes: ["stats"],
-    })) as Pick<IEntityEngagement, "stats"> | null;
+      attributes: ['stats'],
+    })) as Pick<IEntityEngagement, 'stats'> | null;
 
     if (!row?.stats) {
       return null;
@@ -183,7 +145,7 @@ class EntityEngagementService {
 
   private toSummary(
     stats: IEntityEngagementStats,
-    currentRating?: Pick<IEntityRating, "value" | "review" | "updatedAt"> | null,
+    currentRating?: Pick<IEntityRating, 'value' | 'review' | 'updatedAt'> | null,
   ): IEntityEngagementSummary {
     return {
       ...stats,
@@ -193,11 +155,7 @@ class EntityEngagementService {
     };
   }
 
-  private async getCurrentUserRating(
-    entityType: string,
-    entityId: string,
-    userId?: string | null,
-  ) {
+  private async getCurrentUserRating(entityType: string, entityId: string, userId?: string | null) {
     if (!userId) {
       return null;
     }
@@ -205,19 +163,16 @@ class EntityEngagementService {
     return (await EntityRating.findOne({
       where: { entityType, entityId, userId },
       raw: true,
-      attributes: ["value", "review", "updatedAt"],
-    })) as Pick<IEntityRating, "value" | "review" | "updatedAt"> | null;
+      attributes: ['value', 'review', 'updatedAt'],
+    })) as Pick<IEntityRating, 'value' | 'review' | 'updatedAt'> | null;
   }
 
-  private async bootstrapFromRatings(
-    entityType: string,
-    entityId: string,
-  ): Promise<IEntityEngagementStats> {
+  private async bootstrapFromRatings(entityType: string, entityId: string): Promise<IEntityEngagementStats> {
     const rows = (await EntityRating.findAll({
       where: { entityType, entityId },
       raw: true,
-      attributes: ["value"],
-    })) as Pick<IEntityRating, "value">[];
+      attributes: ['value'],
+    })) as Pick<IEntityRating, 'value'>[];
 
     const histogram = { ...DEFAULT_HISTOGRAM };
     rows.forEach((row) => {
@@ -263,7 +218,7 @@ class EntityEngagementService {
         entityType,
         entityId,
         stats,
-      } as Partial<IEntityEngagement>);
+      } as any);
       return;
     }
 
@@ -271,19 +226,19 @@ class EntityEngagementService {
   }
 
   private async assertEntityExists(entityType: SupportedEngagementEntityType, entityId: string) {
-    if (entityType === "events") {
-      return !!(await Event.findByPk(entityId, { raw: true, attributes: ["id"] }));
+    if (entityType === 'events') {
+      return !!(await Event.findByPk(entityId, { raw: true, attributes: ['id'] }));
     }
 
-    if (entityType === "threads") {
-      return !!(await Thread.findByPk(entityId, { raw: true, attributes: ["id"] }));
+    if (entityType === 'threads') {
+      return !!(await Thread.findByPk(entityId, { raw: true, attributes: ['id'] }));
     }
 
-    if (entityType === "messages") {
-      return !!(await Message.findByPk(entityId, { raw: true, attributes: ["id"] }));
+    if (entityType === 'messages') {
+      return !!(await Message.findByPk(entityId, { raw: true, attributes: ['id'] }));
     }
 
-    return !!(await User.findByPk(entityId, { raw: true, attributes: ["id"] }));
+    return !!(await User.findByPk(entityId, { raw: true, attributes: ['id'] }));
   }
 
   isSupportedEntityType(entityType: string): entityType is SupportedEngagementEntityType {
@@ -293,27 +248,18 @@ class EntityEngagementService {
   async getStats(entityType: string, entityId: string, userId?: string | null) {
     const cached = await this.getCachedStats(entityType, entityId);
     if (cached) {
-      return this.toSummary(
-        cached,
-        await this.getCurrentUserRating(entityType, entityId, userId),
-      );
+      return this.toSummary(cached, await this.getCurrentUserRating(entityType, entityId, userId));
     }
 
     const persisted = await this.readPersistedStats(entityType, entityId);
     if (persisted) {
       await this.setCachedStats(entityType, entityId, persisted);
-      return this.toSummary(
-        persisted,
-        await this.getCurrentUserRating(entityType, entityId, userId),
-      );
+      return this.toSummary(persisted, await this.getCurrentUserRating(entityType, entityId, userId));
     }
 
     const bootstrapped = await this.bootstrapFromRatings(entityType, entityId);
     await this.setCachedStats(entityType, entityId, bootstrapped);
-    return this.toSummary(
-      bootstrapped,
-      await this.getCurrentUserRating(entityType, entityId, userId),
-    );
+    return this.toSummary(bootstrapped, await this.getCurrentUserRating(entityType, entityId, userId));
   }
 
   async getStatsMap(entityType: string, entityIds: string[]) {
@@ -324,11 +270,7 @@ class EntityEngagementService {
     return Object.fromEntries(stats);
   }
 
-  async trackView(
-    entityType: SupportedEngagementEntityType,
-    entityId: string,
-    context: ViewerContext,
-  ) {
+  async trackView(entityType: SupportedEngagementEntityType, entityId: string, context: ViewerContext) {
     const stats = await this.ensureCachedStats(entityType, entityId);
     const viewerKey = this.buildViewerKey(context);
     const now = new Date();
@@ -336,24 +278,17 @@ class EntityEngagementService {
     const dedupeKey = this.getViewDedupeKey(entityType, entityId, dayKey, viewerKey);
     const secondsUntilDayEnd = Math.max(
       60,
-      Math.floor(
-        (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) -
-          now.getTime()) /
-          1000,
-      ),
+      Math.floor((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime()) / 1000),
     );
 
-    const result = await this.redis.set(dedupeKey, "1", "EX", secondsUntilDayEnd, "NX");
+    const result = await this.redis.set(dedupeKey, '1', 'EX', secondsUntilDayEnd, 'NX');
 
     if (!result) {
       return stats;
     }
 
-    await this.redis.hincrby(this.getAggregateKey(entityType, entityId), "viewCount", 1);
-    await this.redis.expire(
-      this.getAggregateKey(entityType, entityId),
-      CACHE_NAMESPACE_CONFIG.Engagement.ttl,
-    );
+    await this.redis.hincrby(this.getAggregateKey(entityType, entityId), 'viewCount', 1);
+    await this.redis.expire(this.getAggregateKey(entityType, entityId), CACHE_NAMESPACE_CONFIG.Engagement.ttl);
 
     const next = {
       ...stats,
@@ -372,12 +307,12 @@ class EntityEngagementService {
     review?: string | null,
   ) {
     if (value < 1 || value > 5) {
-      throw new Error("Rating value must be between 1 and 5");
+      throw new BadRequestError('Rating value must be between 1 and 5');
     }
 
     const exists = await this.assertEntityExists(entityType, entityId);
     if (!exists) {
-      throw new Error("Entity not found");
+      throw new NotFoundError('Entity not found');
     }
 
     const stats = await this.ensureCachedStats(entityType, entityId);
@@ -397,10 +332,7 @@ class EntityEngagementService {
     }
 
     if (existing) {
-      await EntityRating.update(
-        { value, review: normalizedReview },
-        { where: { entityType, entityId, userId } },
-      );
+      await EntityRating.update({ value, review: normalizedReview }, { where: { entityType, entityId, userId } });
     } else {
       await EntityRating.create({
         entityType,
@@ -408,7 +340,7 @@ class EntityEngagementService {
         userId,
         value,
         review: normalizedReview,
-      } as Partial<IEntityRating>);
+      } as any);
     }
 
     const histogram = { ...stats.ratingHistogram };
@@ -419,30 +351,15 @@ class EntityEngagementService {
         0,
         histogram[String(existing.value) as keyof IEntityRatingHistogram] - 1,
       );
-      await this.redis.hincrby(
-        this.getAggregateKey(entityType, entityId),
-        this.getHistogramField(existing.value),
-        -1,
-      );
+      await this.redis.hincrby(this.getAggregateKey(entityType, entityId), this.getHistogramField(existing.value), -1);
     } else {
       ratingCount += 1;
-      await this.redis.hincrby(
-        this.getAggregateKey(entityType, entityId),
-        "ratingCount",
-        1,
-      );
+      await this.redis.hincrby(this.getAggregateKey(entityType, entityId), 'ratingCount', 1);
     }
 
     histogram[String(value) as keyof IEntityRatingHistogram] += 1;
-    await this.redis.hincrby(
-      this.getAggregateKey(entityType, entityId),
-      this.getHistogramField(value),
-      1,
-    );
-    await this.redis.expire(
-      this.getAggregateKey(entityType, entityId),
-      CACHE_NAMESPACE_CONFIG.Engagement.ttl,
-    );
+    await this.redis.hincrby(this.getAggregateKey(entityType, entityId), this.getHistogramField(value), 1);
+    await this.redis.expire(this.getAggregateKey(entityType, entityId), CACHE_NAMESPACE_CONFIG.Engagement.ttl);
 
     const next = {
       viewCount: stats.viewCount,
@@ -459,11 +376,7 @@ class EntityEngagementService {
     });
   }
 
-  async deleteRating(
-    entityType: SupportedEngagementEntityType,
-    entityId: string,
-    userId: string,
-  ) {
+  async deleteRating(entityType: SupportedEngagementEntityType, entityId: string, userId: string) {
     const stats = await this.ensureCachedStats(entityType, entityId);
     const existing = (await EntityRating.findOne({
       where: { entityType, entityId, userId },
@@ -485,20 +398,9 @@ class EntityEngagementService {
     );
     const ratingCount = Math.max(0, stats.ratingCount - 1);
 
-    await this.redis.hincrby(
-      this.getAggregateKey(entityType, entityId),
-      this.getHistogramField(existing.value),
-      -1,
-    );
-    await this.redis.hincrby(
-      this.getAggregateKey(entityType, entityId),
-      "ratingCount",
-      -1,
-    );
-    await this.redis.expire(
-      this.getAggregateKey(entityType, entityId),
-      CACHE_NAMESPACE_CONFIG.Engagement.ttl,
-    );
+    await this.redis.hincrby(this.getAggregateKey(entityType, entityId), this.getHistogramField(existing.value), -1);
+    await this.redis.hincrby(this.getAggregateKey(entityType, entityId), 'ratingCount', -1);
+    await this.redis.expire(this.getAggregateKey(entityType, entityId), CACHE_NAMESPACE_CONFIG.Engagement.ttl);
 
     const next = {
       viewCount: stats.viewCount,
@@ -511,14 +413,11 @@ class EntityEngagementService {
     return this.toSummary(next, null);
   }
 
-  async getRatings(
-    entityType: SupportedEngagementEntityType,
-    entityId: string,
-  ) {
+  async getRatings(entityType: SupportedEngagementEntityType, entityId: string) {
     const rows = (await EntityRating.findAll({
       where: { entityType, entityId },
       raw: true,
-      order: [["updatedAt", "DESC"]],
+      order: [['updatedAt', 'DESC']],
     })) as IEntityRating[];
 
     if (rows.length === 0) {
@@ -529,8 +428,8 @@ class EntityEngagementService {
     const users = (await User.findAll({
       where: { id: uniqueUserIds },
       raw: true,
-      attributes: ["id", "name", "profilePic"],
-    })) as Array<Pick<typeof User.prototype, "id" | "name" | "profilePic">>;
+      attributes: ['id', 'name', 'profilePic'],
+    })) as Array<Pick<typeof User.prototype, 'id' | 'name' | 'profilePic'>>;
     const usersById = Object.fromEntries(users.map((user) => [user.id, user]));
 
     return rows.map((row) => ({

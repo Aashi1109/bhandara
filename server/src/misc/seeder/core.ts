@@ -25,7 +25,7 @@ export async function seedFreshDatabase(sequelize: Sequelize, options: SeedOptio
   );
 
   const userTransaction = await sequelize.transaction();
-  let createdUsers = [];
+  let createdUsers: any[] = [];
 
   try {
     if (missingUserCount > 0) {

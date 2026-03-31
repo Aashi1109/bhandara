@@ -119,42 +119,54 @@ const googleCallback = async (req: Request, res: Response) => {
 };
 
 export const signInWithIdToken = async (req: Request, res: Response) => {
-  const clientIds = {
-    android: config.google.androidClientId,
-    ios: config.google.iosClientId,
-    web: config.google.webClientId,
-  };
+  const { token, code, codeVerifier, redirectUri } = req.body;
 
-  const clientPlatform = req.headers['x-client-platform'] as keyof typeof clientIds;
+  let signInResponse;
 
-  const clientId = clientIds[req.headers['x-client-platform'] as keyof typeof clientIds] || config.google.webClientId;
+  if (token) {
+    // Mobile ID token flow: validate the Google ID token directly via Supabase
+    signInResponse = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token,
+    });
+  } else if (code) {
+    // Authorization code exchange flow (web/PKCE)
+    const clientIds = {
+      android: config.google.androidClientId,
+      ios: config.google.iosClientId,
+      web: config.google.webClientId,
+    };
 
-  const queryParams = new URLSearchParams();
-  queryParams.set('client_id', clientId);
-  if (clientPlatform === 'web') queryParams.set('client_secret', config.google.clientSecret);
+    const clientPlatform = req.headers['x-client-platform'] as keyof typeof clientIds;
+    const clientId = clientIds[clientPlatform] || config.google.webClientId;
 
-  queryParams.set('code', req.body.code);
-  queryParams.set('grant_type', 'authorization_code');
-  queryParams.set('code_verifier', req.body.codeVerifier);
-  queryParams.set('redirect_uri', req.body.redirectUri);
+    const queryParams = new URLSearchParams();
+    queryParams.set('client_id', clientId);
+    if (clientPlatform === 'web') queryParams.set('client_secret', config.google.clientSecret);
+    queryParams.set('code', code);
+    queryParams.set('grant_type', 'authorization_code');
+    queryParams.set('code_verifier', codeVerifier);
+    queryParams.set('redirect_uri', redirectUri);
 
-  const tokenRequest = await fetch('https://www.googleapis.com/oaut@/token', {
-    method: 'POST',
-    body: queryParams,
-  });
+    const tokenRequest = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      body: queryParams,
+    });
 
-  const tokenResponse = await tokenRequest.json();
+    const tokenResponse = await tokenRequest.json();
+    const { access_token, id_token } = tokenResponse;
 
-  const { access_token, id_token } = tokenResponse;
+    if (!access_token) {
+      throw new BadRequestError('Invalid access token');
+    }
 
-  if (!access_token) {
-    throw new BadRequestError('Invalid access token');
+    signInResponse = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: id_token,
+    });
+  } else {
+    throw new BadRequestError('Either token or code is required');
   }
-
-  const signInResponse = await supabase.auth.signInWithIdToken({
-    provider: 'google',
-    token: id_token,
-  });
 
   if (signInResponse.error) throw new Error(signInResponse.error.message);
 
@@ -207,18 +219,6 @@ export const signUp = async (req: Request, res: Response) => {
   return res.status(200).json({
     data: { session: { id: sessionId }, user },
   });
-};
-
-export const signInWithGoogleIdToken = async (req: Request, res: Response) => {
-  const { token, clientType } = req.body;
-  const { data, error } = await supabase.auth.signInWithIdToken({
-    provider: 'google',
-    token,
-  });
-
-  if (error) throw new Error(error.message);
-
-  return res.status(200).json({ data: null });
 };
 
 export { login, logOut, session, googleAuth, googleCallback };

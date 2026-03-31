@@ -3,7 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
 import { TAG_TABLE_NAME } from './constants';
 import type { ITag } from '@/definitions/types';
-type TagAttributes = Omit<ITag, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+type TagAttributes = Omit<ITag, 'createdAt' | 'updatedAt'>;
 
 export class Tag extends Model<TagAttributes, TagAttributes> {
   declare id: string;
@@ -17,7 +17,6 @@ export class Tag extends Model<TagAttributes, TagAttributes> {
   declare eventId?: string | null;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 Tag.init(
@@ -46,11 +45,8 @@ Tag.init(
   {
     modelName: 'Tag',
     tableName: TAG_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-    indexes: [
-      { name: 'tags_updatedAt_idx', fields: ['updatedAt'] },
-    ],
+    indexes: [{ name: 'tags_updatedAt_idx', fields: ['updatedAt'] }],
   },
 );

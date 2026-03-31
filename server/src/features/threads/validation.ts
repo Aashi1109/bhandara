@@ -18,6 +18,7 @@ const threadSchema = {
       type: 'string',
       enum: Object.values(EAccessLevel),
       errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
+      default: EAccessLevel.Public,
     },
     lockHistory: {
       type: 'array',

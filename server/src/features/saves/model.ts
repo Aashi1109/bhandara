@@ -5,22 +5,15 @@ import { DataTypes, Model } from 'sequelize';
 
 import { SAVED_ENTITY_TABLE_NAME } from './constants';
 
-type SavedEntityAttributes = Omit<
-  ISavedEntity,
-  'createdAt' | 'updatedAt' | 'deletedAt'
->;
+type SavedEntityAttributes = Omit<ISavedEntity, 'createdAt' | 'updatedAt'>;
 
-export class SavedEntity extends Model<
-  SavedEntityAttributes,
-  SavedEntityAttributes
-> {
+export class SavedEntity extends Model<SavedEntityAttributes, SavedEntityAttributes> {
   declare id: string;
   declare userId: string;
   declare entityType: ISavedEntity['entityType'];
   declare entityId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date | null;
 }
 
 SavedEntity.init(
@@ -48,9 +41,8 @@ SavedEntity.init(
   {
     modelName: 'SavedEntity',
     tableName: SAVED_ENTITY_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
     indexes: [
       { unique: true, fields: ['userId', 'entityType', 'entityId'] },
       { fields: ['userId', 'updatedAt'] },

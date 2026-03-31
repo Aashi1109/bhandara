@@ -1,5 +1,5 @@
-import axios from "axios";
-import TransportStream, { type TransportStreamOptions } from "winston-transport";
+import axios from 'axios';
+import TransportStream, { type TransportStreamOptions } from 'winston-transport';
 
 interface LokiTransportOptions extends TransportStreamOptions {
   lokiUrl?: string;
@@ -20,21 +20,19 @@ export class LokiTransport extends TransportStream {
   constructor(opts: LokiTransportOptions = {}) {
     super(opts);
 
-    this.lokiUrl = opts.lokiUrl;
-    this.labels = opts.labels;
-    this.flushInterval = opts.flushInterval;
-    this.maxBatchSize = opts.maxBatchSize;
+    this.lokiUrl = opts.lokiUrl ?? '';
+    this.labels = opts.labels ?? {};
+    this.flushInterval = opts.flushInterval ?? 1000;
+    this.maxBatchSize = opts.maxBatchSize ?? 100;
 
     setInterval(() => this.flush(), this.flushInterval).unref();
   }
 
   log(info: any, callback: () => void) {
-    setImmediate(() => this.emit("logged", info));
+    setImmediate(() => this.emit('logged', info));
 
     const timestamp = `${Date.now()}000000`; // ms to ns
-    const message = `[${info.level === "http" ? "info" : info.level}] ${
-      info.message
-    }`;
+    const message = `[${info.level === 'http' ? 'info' : info.level}] ${info.message}`;
 
     this.logBuffer.push([timestamp, message]);
 
@@ -61,10 +59,10 @@ export class LokiTransport extends TransportStream {
 
     try {
       await axios.post(this.lokiUrl, payload, {
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch (err: any) {
-      console.error("Loki transport push failed:", err.message);
+      console.error('Loki transport push failed:', err.message);
     }
   }
 }

@@ -3,7 +3,7 @@ import { Tag } from '@/features/tags/model';
 import { fallbackTagSeeds } from '../clusterSeedConfig';
 
 export async function ensureTags(transaction: Transaction) {
-  await Tag.bulkCreate(fallbackTagSeeds, {
+  await Tag.bulkCreate(fallbackTagSeeds as any, {
     transaction,
     ignoreDuplicates: true,
   });

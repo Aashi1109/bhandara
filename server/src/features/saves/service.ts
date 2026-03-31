@@ -15,21 +15,12 @@ import MessageService from '@/features/messages/service';
 import ThreadService from '@/features/threads/service';
 import UserService from '@/features/users/service';
 import { getSafeUser } from '@/features/users/helpers';
-import {
-  decodePaginationCursor,
-  encodePaginationCursor,
-  findAllWithPagination,
-} from '@/utils/dbUtils';
+import { decodePaginationCursor, encodePaginationCursor, findAllWithPagination } from '@/utils/dbUtils';
 
-import {
-  SUPPORTED_SAVED_ENTITY_TYPES,
-  type SupportedSavedEntityType,
-} from './constants';
+import { SUPPORTED_SAVED_ENTITY_TYPES, type SupportedSavedEntityType } from './constants';
 import { SavedEntity } from './model';
 
-type SavedEntityRecord = ISavedEntity & {
-  deletedAt?: Date | null;
-};
+type SavedEntityRecord = ISavedEntity;
 
 type SavedEntityPayload = IEvent | IBaseThread | IMessage | IBaseUser | null;
 
@@ -46,18 +37,11 @@ class SavedEntityService {
     this.userService = new UserService();
   }
 
-  isSupportedEntityType(
-    entityType: string,
-  ): entityType is SupportedSavedEntityType {
-    return SUPPORTED_SAVED_ENTITY_TYPES.includes(
-      entityType as SupportedSavedEntityType,
-    );
+  isSupportedEntityType(entityType: string): entityType is SupportedSavedEntityType {
+    return SUPPORTED_SAVED_ENTITY_TYPES.includes(entityType as SupportedSavedEntityType);
   }
 
-  private async findEntity(
-    entityType: SupportedSavedEntityType,
-    entityId: string,
-  ): Promise<SavedEntityPayload> {
+  private async findEntity(entityType: SupportedSavedEntityType, entityId: string): Promise<SavedEntityPayload> {
     switch (entityType) {
       case 'event':
         return this.eventService.getEventPreview(entityId);
@@ -66,18 +50,13 @@ class SavedEntityService {
       case 'message':
         return this.messageService.getById(entityId);
       case 'user':
-        return this.userService.getById(entityId).then((user) =>
-          user ? getSafeUser(user) : null,
-        );
+        return this.userService.getById(entityId).then((user) => (user ? getSafeUser(user) : null));
       default:
         return null;
     }
   }
 
-  private getSearchText(
-    item: ISavedEntityListItem,
-    entityType: SupportedSavedEntityType,
-  ): string {
+  private getSearchText(item: ISavedEntityListItem, entityType: SupportedSavedEntityType): string {
     const entity = item.entity as unknown as Record<string, unknown> | null;
     if (!entity) {
       return '';
@@ -86,33 +65,18 @@ class SavedEntityService {
     switch (entityType) {
       case 'event': {
         const location =
-          entity.location && typeof entity.location === 'object'
-            ? (entity.location as Record<string, unknown>)
-            : null;
-        return [
-          entity.name,
-          entity.description,
-          location?.address,
-        ]
+          entity.location && typeof entity.location === 'object' ? (entity.location as Record<string, unknown>) : null;
+        return [entity.name, entity.description, location?.address]
           .filter((value): value is string => typeof value === 'string')
           .join(' ');
       }
       case 'thread':
-        return [entity.title, entity.type]
-          .filter((value): value is string => typeof value === 'string')
-          .join(' ');
+        return [entity.title, entity.type].filter((value): value is string => typeof value === 'string').join(' ');
       case 'message': {
         const content =
-          entity.content && typeof entity.content === 'object'
-            ? (entity.content as Record<string, unknown>)
-            : null;
-        const user =
-          entity.user && typeof entity.user === 'object'
-            ? (entity.user as Record<string, unknown>)
-            : null;
-        return [content?.text, user?.name]
-          .filter((value): value is string => typeof value === 'string')
-          .join(' ');
+          entity.content && typeof entity.content === 'object' ? (entity.content as Record<string, unknown>) : null;
+        const user = entity.user && typeof entity.user === 'object' ? (entity.user as Record<string, unknown>) : null;
+        return [content?.text, user?.name].filter((value): value is string => typeof value === 'string').join(' ');
       }
       case 'user':
         return [entity.name, entity.username, entity.bio]
@@ -123,16 +87,11 @@ class SavedEntityService {
     }
   }
 
-  private async hydrateSavedItems(
-    items: SavedEntityRecord[],
-  ): Promise<ISavedEntityListItem[]> {
+  private async hydrateSavedItems(items: SavedEntityRecord[]): Promise<ISavedEntityListItem[]> {
     return Promise.all(
       items.map(async (item) => ({
         ...(item as unknown as ISavedEntity),
-        entity: await this.findEntity(
-          item.entityType as SupportedSavedEntityType,
-          item.entityId,
-        ),
+        entity: await this.findEntity(item.entityType as SupportedSavedEntityType, item.entityId),
       })),
     );
   }
@@ -145,12 +104,7 @@ class SavedEntityService {
     },
     pagination: Partial<IPaginationParams> = {},
   ): Promise<PaginatedResult<ISavedEntityListItem>> {
-    const {
-      limit = 10,
-      next = null,
-      sortBy = 'updatedAt',
-      sortOrder = 'desc',
-    } = pagination;
+    const { limit = 10, next = null, sortBy = 'updatedAt', sortOrder = 'desc' } = pagination;
     const where: Record<string, unknown> = { userId };
     if (filters.entityType) {
       where.entityType = filters.entityType;
@@ -171,10 +125,7 @@ class SavedEntityService {
       if (!item.entity) {
         return false;
       }
-      const searchText = this.getSearchText(
-        item,
-        item.entityType as SupportedSavedEntityType,
-      ).toLowerCase();
+      const searchText = this.getSearchText(item, item.entityType as SupportedSavedEntityType).toLowerCase();
       return searchText.includes(normalizedQuery);
     });
 
@@ -186,22 +137,16 @@ class SavedEntityService {
           if (!(rawSortValue instanceof Date) && typeof rawSortValue !== 'string') {
             return true;
           }
-          const itemSortValue = rawSortValue instanceof Date
-            ? rawSortValue
-            : new Date(rawSortValue);
+          const itemSortValue = rawSortValue instanceof Date ? rawSortValue : new Date(rawSortValue);
           const cursorDate = new Date(cursor.sortValue);
-          return sortOrder === 'asc'
-            ? itemSortValue > cursorDate
-            : itemSortValue < cursorDate;
+          return sortOrder === 'asc' ? itemSortValue > cursorDate : itemSortValue < cursorDate;
         });
 
     const pagedWindow = afterCursor.slice(0, limit + 1);
     const hasNext = pagedWindow.length > limit;
     const items = pagedWindow.slice(0, limit);
-    const nextSortValue = hasNext && items.length
-      ? (items[items.length - 1][sortBy as keyof ISavedEntityListItem] as
-          Date | string)
-      : null;
+    const nextSortValue =
+      hasNext && items.length ? (items[items.length - 1][sortBy as keyof ISavedEntityListItem] as Date | string) : null;
 
     return {
       items,
@@ -216,10 +161,7 @@ class SavedEntityService {
     };
   }
 
-  private async assertEntityExists(
-    entityType: SupportedSavedEntityType,
-    entityId: string,
-  ) {
+  private async assertEntityExists(entityType: SupportedSavedEntityType, entityId: string) {
     const entity = await this.findEntity(entityType, entityId);
     if (!entity) {
       throw new NotFoundError('Entity not found');
@@ -227,10 +169,7 @@ class SavedEntityService {
     return entity;
   }
 
-  private async getSaveCount(
-    entityType: SupportedSavedEntityType,
-    entityId: string,
-  ) {
+  private async getSaveCount(entityType: SupportedSavedEntityType, entityId: string) {
     return SavedEntity.count({
       where: { entityType, entityId },
     });
@@ -267,13 +206,7 @@ class SavedEntityService {
       this.getSaveCount(entityType, entityId),
     ]);
 
-    return this.toSaveSummary(
-      entityType,
-      entityId,
-      !!savedEntity,
-      saveCount,
-      savedEntity?.updatedAt ?? null,
-    );
+    return this.toSaveSummary(entityType, entityId, !!savedEntity, saveCount, savedEntity?.updatedAt ?? null);
   }
 
   async saveEntity(
@@ -289,7 +222,6 @@ class SavedEntityService {
 
     const existing = await SavedEntity.findOne({
       where: { userId, entityType, entityId },
-      paranoid: false,
     });
 
     if (!existing) {
@@ -297,9 +229,7 @@ class SavedEntityService {
         userId,
         entityType,
         entityId,
-      } as Partial<ISavedEntity>);
-    } else if (existing.deletedAt) {
-      await existing.restore();
+      } as any);
     } else {
       existing.updatedAt = new Date();
       await existing.save();

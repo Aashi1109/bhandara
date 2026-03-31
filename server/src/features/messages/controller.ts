@@ -8,12 +8,12 @@ import { PLATFORM_SOCKET_EVENTS } from "@/constants";
 import ThreadsService from "@/features/threads/service";
 import ActivityService from "@/features/activity/service";
 import {
-  EActivityEntityType,
   EActivityType,
-  EActivityVisibility,
 } from "@/features/activity/constants";
 import AchievementService from "@/features/achievements/service";
 import EntityEngagementService from "@/features/engagement/service";
+import { buildMessageActivities } from "@/features/activity/chat";
+import { getThreadRoom } from "@/socket/rooms";
 
 const messagesService = new MessageService();
 const threadsService = new ThreadsService();
@@ -53,8 +53,12 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
   const threadId = asString(req.params.threadId);
   if (!threadId) throw new NotFoundError("Thread not found");
 
-  // Check if the thread (or its parent chain) is locked before creating a message
-  const lockStatus = await threadsService.isThreadChainLocked(threadId);
+  const [thread, lockStatus] = await Promise.all([
+    threadsService.getById(threadId),
+    threadsService.isThreadChainLocked(threadId),
+  ]);
+  if (!thread) throw new NotFoundError("Thread not found");
+
   if (lockStatus.isLocked) {
     throw new ForbiddenError(
       "Cannot add messages to a locked thread or its children"
@@ -72,22 +76,16 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
     true
   );
   await Promise.all([
-    activityService.create({
+    ...buildMessageActivities({
       actorId: req.user.id,
-      type: EActivityType.MessageCreated,
-      entityType: EActivityEntityType.Message,
-      entityId: message.id,
-      payload: {
-        messageId: message.id,
-        threadId,
-      },
-      visibility: EActivityVisibility.Public,
-    }),
+      message,
+      threadOwnerId: thread.createdBy,
+    }).map((activity) => activityService.create(activity)),
     achievementService.trackActivity(req.user.id, EActivityType.MessageCreated),
   ]);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
     data: message,
-    });
+    }, { room: getThreadRoom(threadId) });
   return res.status(200).json({
     data: message,
     });
@@ -97,17 +95,19 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
   const messageId = asString(req.params.messageId);
   if (!messageId) throw new NotFoundError("Message not found");
 
-  // Get the message to check its thread
   const existingMessage = await messagesService.getById(messageId);
-  if (existingMessage && existingMessage.threadId) {
-    const lockStatus = await threadsService.isThreadChainLocked(
-      existingMessage.threadId
+  if (!existingMessage) throw new NotFoundError("Message not found");
+  if (existingMessage.userId !== req.user.id) {
+    throw new ForbiddenError("You can only edit your own messages");
+  }
+
+  const lockStatus = await threadsService.isThreadChainLocked(
+    existingMessage.threadId
+  );
+  if (lockStatus.isLocked) {
+    throw new ForbiddenError(
+      "Cannot edit messages in a locked thread or its children"
     );
-    if (lockStatus.isLocked) {
-      throw new ForbiddenError(
-        "Cannot edit messages in a locked thread or its children"
-      );
-    }
   }
 
   const message = await messagesService.update(
@@ -116,8 +116,8 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
     true
   );
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
-    data: { id: messageId, ...req.body },
-    });
+    data: message,
+    }, { room: getThreadRoom(existingMessage.threadId) });
   return res.status(200).json({
     data: message,
     });
@@ -127,23 +127,25 @@ export const deleteMessage = async (req: ICustomRequest, res: Response) => {
   const messageId = asString(req.params.messageId);
   if (!messageId) throw new NotFoundError("Message not found");
 
-  // Get the message to check its thread
   const existingMessage = await messagesService.getById(messageId);
-  if (existingMessage && existingMessage.threadId) {
-    const lockStatus = await threadsService.isThreadChainLocked(
-      existingMessage.threadId
+  if (!existingMessage) throw new NotFoundError("Message not found");
+  if (existingMessage.userId !== req.user.id) {
+    throw new ForbiddenError("You can only delete your own messages");
+  }
+
+  const lockStatus = await threadsService.isThreadChainLocked(
+    existingMessage.threadId
+  );
+  if (lockStatus.isLocked) {
+    throw new ForbiddenError(
+      "Cannot delete messages in a locked thread or its children"
     );
-    if (lockStatus.isLocked) {
-      throw new ForbiddenError(
-        "Cannot delete messages in a locked thread or its children"
-      );
-    }
   }
 
   const message = await messagesService.delete(messageId);
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, {
-    data: { id: messageId },
-    });
+    data: { id: messageId, threadId: existingMessage.threadId },
+    }, { room: getThreadRoom(existingMessage.threadId) });
   return res.status(200).json({
     data: message,
     });

@@ -70,16 +70,16 @@ class CloudinaryService {
       upload_preset: 'bhandara',
       context: `rid=${rid}`,
     };
-    const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret);
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret as string);
 
     const url = `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/${resourceType}/upload`;
 
     const params = new URLSearchParams({
-      ...paramsToSign,
+      ...Object.fromEntries(Object.entries(paramsToSign).map(([k, v]) => [k, String(v)])),
       signature,
       // Cloudinary API key is not a secret and is safe to expose
       // in client side direct upload parameters
-      api_key: config.cloudinary.apiKey,
+      api_key: config.cloudinary.apiKey ?? '',
     });
     return {
       signedURL: `${url}?${params.toString()}`,

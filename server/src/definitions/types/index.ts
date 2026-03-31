@@ -15,9 +15,8 @@ export interface PaginatedResult<T> {
 }
 
 export interface ITimeStamp {
-  createdAt: Date; // Always present
-  updatedAt: Date; // Always present
-  deletedAt?: Date | null; // Soft delete column
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Base User Interface
@@ -139,11 +138,11 @@ export interface IMessageStats {
 }
 
 export interface IEntityRatingHistogram {
-  "1": number;
-  "2": number;
-  "3": number;
-  "4": number;
-  "5": number;
+  '1': number;
+  '2': number;
+  '3': number;
+  '4': number;
+  '5': number;
 }
 
 export interface IEntityEngagementStats {
@@ -261,7 +260,7 @@ export interface IActivity extends ITimeStamp {
   entityType: string;
   entityId: string;
   payload: Record<string, any>;
-  visibility: "public" | "private";
+  visibility: 'public' | 'private';
   readAt?: Date | null;
   actor?: IBaseUser | null;
   recipient?: IBaseUser | null;

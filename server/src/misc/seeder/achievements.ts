@@ -107,20 +107,17 @@ export async function persistAchievementDataForUsers(
   const progressUpdates = nextProgressRows.filter((row) => progressByUserId.has(String(row.userId)));
 
   if (progressInserts.length > 0) {
-    await AchievementProgress.bulkCreate(progressInserts, {
+    await AchievementProgress.bulkCreate(progressInserts as any, {
       transaction,
       returning: false,
     });
   }
 
   for (const row of progressUpdates) {
-    await AchievementProgress.update(
-      { metrics: row.metrics },
-      {
-        where: { id: row.id },
-        transaction,
-      },
-    );
+    await AchievementProgress.update({ metrics: row.metrics } as any, {
+      where: { id: row.id as string },
+      transaction,
+    });
   }
 
   const existingAchievements = (await UserAchievement.findAll({
@@ -165,7 +162,7 @@ export async function persistAchievementDataForUsers(
   }
 
   if (createdAchievementRows.length > 0) {
-    await UserAchievement.bulkCreate(createdAchievementRows, {
+    await UserAchievement.bulkCreate(createdAchievementRows as any, {
       transaction,
       returning: false,
     });

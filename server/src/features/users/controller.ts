@@ -22,7 +22,7 @@ const getViewerIp = (req: ICustomRequest) => {
 export const getAllUser = async (req: IRequestPagination & ICustomRequest, res: Response) => {
   const { self = 'false', email } = req.query;
 
-  let where = [];
+  let where: any[] = [];
   if (self !== 'true') {
     where = [{ id: { [Op.ne]: req.user.id } }];
   }
@@ -55,13 +55,13 @@ export const getUserById = async (req: ICustomRequest, res: Response) => {
     userAgent: req.headers['user-agent'] || null,
   });
 
-  return res.status(200).json({ data: getSafeUser(data) });
+  return res.status(200).json({ data: getSafeUser(data!) });
 };
 
 export const deleteUser = async (req: ICustomRequest, res: Response) => {
   const { id } = req.params;
   const data = await userService.delete(id as string);
-  return res.status(200).json({ data: getSafeUser(data) });
+  return res.status(200).json({ data: getSafeUser(data!) });
 };
 
 export const updateUser = async (req: ICustomRequest, res: Response) => {

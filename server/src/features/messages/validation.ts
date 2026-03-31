@@ -3,6 +3,7 @@ import { MESSAGE_TABLE_NAME } from './constants';
 
 const dynamicMediaSchema = {
   type: 'array',
+  minItems: 1,
   items: {
     type: 'string',
     format: 'uuid',
@@ -14,6 +15,10 @@ const dynamicMediaSchema = {
 
 const messageContentSchema = {
   oneOf: [
+    {
+      type: 'string',
+      errorMessage: 'Message text must be a valid string',
+    },
     {
       type: 'object',
       properties: {
@@ -33,6 +38,7 @@ const messageContentSchema = {
         },
         media: dynamicMediaSchema,
       },
+      required: ['media'],
       additionalProperties: false,
       errorMessage: 'Rich object message must have valid fields',
     },

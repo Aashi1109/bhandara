@@ -1,19 +1,14 @@
-import { type IRequestContext, RequestContext } from "@/contexts";
-import { getAlphaNumericId } from "@/helpers";
-import logger from "@/logger";
-import { AsyncLocalStorage } from "async_hooks";
-import type { Request, Response, NextFunction } from "express";
+import { type IRequestContext, RequestContext } from '@/contexts';
+import { getAlphaNumericId } from '@/helpers';
+import logger from '@/logger';
+import { AsyncLocalStorage } from 'async_hooks';
+import type { Request, Response, NextFunction } from 'express';
 
 const asyncLocalStorage = new AsyncLocalStorage<IRequestContext>();
 
-const requestContextMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const requestContextMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   // Generate a unique request ID or use one from headers if provided
-  const requestId =
-    (req.headers["x-request-id"] as string) || getAlphaNumericId();
+  const requestId = (req.headers['x-request-id'] as string) || getAlphaNumericId();
 
   const startTime = Date.now();
 
@@ -43,11 +38,12 @@ const requestContextMiddleware = async (
   // Store the original next function
 
   try {
-    RequestContext.run(context, async () => {
+    RequestContext.run(context, () => {
       next();
     });
   } catch (error) {
-    logger.error("In context error", error);
+    logger.error('In context error', error);
+    next(error);
   }
 };
 

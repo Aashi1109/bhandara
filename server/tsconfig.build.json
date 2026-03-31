@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "CommonJS",
     "esModuleInterop": true,
@@ -12,7 +13,8 @@
       "*": ["node_modules/*"],
       "@/*": ["./*"]
     },
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "skipLibCheck": true
   },
   "include": ["types.d.ts", "src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

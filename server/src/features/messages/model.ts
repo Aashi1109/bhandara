@@ -3,7 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
 import { MESSAGE_TABLE_NAME } from './constants';
 import type { IMessage, IMessageStats } from '@/definitions/types';
-type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'deletedAt' | 'user' | 'reactions'>;
+type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'user' | 'reactions'>;
 
 export class Message extends Model<MessageAttributes, MessageAttributes> {
   declare id: string;
@@ -15,7 +15,6 @@ export class Message extends Model<MessageAttributes, MessageAttributes> {
   declare stats: IMessageStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare user?: any;
   declare reactions?: any[];
 }
@@ -59,11 +58,8 @@ Message.init(
   {
     modelName: 'Message',
     tableName: MESSAGE_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-    indexes: [
-      { name: 'messages_updatedAt_idx', fields: ['updatedAt'] },
-    ],
+    indexes: [{ name: 'messages_updatedAt_idx', fields: ['updatedAt'] }],
   },
 );

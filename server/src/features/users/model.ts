@@ -4,8 +4,8 @@ import { getUUIDv7 } from '@/helpers';
 import { USER_TABLE_NAME } from './constants';
 import type { IBaseUser } from '@/definitions/types';
 
-const sequelize = getDBConnection();
-type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'deletedAt' | 'media' | 'profilePic'> & {
+const sequelize = getDBConnection()!;
+type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'media' | 'profilePic'> & {
   profilePic: Record<string, any> | null;
   media?: any;
 };
@@ -25,7 +25,6 @@ export class User extends Model<UserAttributes, UserAttributes> {
   declare meta: Record<string, any>;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare media?: any;
 }
 
@@ -59,7 +58,6 @@ User.init(
     tableName: USER_TABLE_NAME,
     sequelize,
     timestamps: true,
-    paranoid: true,
     indexes: [
       {
         name: 'users_updatedAt_idx',

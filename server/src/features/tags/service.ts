@@ -1,8 +1,8 @@
-import type { IEvent, IPaginationParams, ITag } from "@/definitions/types";
-import { findAllWithPagination } from "@/utils/dbUtils";
-import { validateTagCreate, validateTagUpdate } from "./validation";
-import { Tag } from "./model";
-import { Event } from "../events/model";
+import type { IEvent, IPaginationParams, ITag } from '@/definitions/types';
+import { findAllWithPagination } from '@/utils/dbUtils';
+import { validateTagCreate, validateTagUpdate } from './validation';
+import { Tag } from './model';
+import { Event } from '../events/model';
 import {
   getTagCache,
   setTagCache,
@@ -13,10 +13,10 @@ import {
   getSubTagsCache,
   setSubTagsCache,
   deleteSubTagsCache,
-} from "./helpers";
-import { NotFoundError } from "@/exceptions";
-import type { FindOptions } from "sequelize";
-import EntityStatsService from "@/features/stats/service";
+} from './helpers';
+import { NotFoundError } from '@/exceptions';
+import type { FindOptions } from 'sequelize';
+import EntityStatsService from '@/features/stats/service';
 
 class TagService {
   private readonly getCache = getTagCache;
@@ -36,11 +36,7 @@ class TagService {
     return res;
   }
 
-  async getAll(
-    options: FindOptions<ITag> = {},
-    pagination?: Partial<IPaginationParams>,
-    select?: string
-  ) {
+  async getAll(options: FindOptions<ITag> = {}, pagination?: Partial<IPaginationParams>, select?: string) {
     return findAllWithPagination(Tag, options, pagination, select);
   }
 
@@ -52,9 +48,9 @@ class TagService {
   async getRootTags() {
     const [results] = await Tag.sequelize!.query(
       `SELECT t.*, COUNT(c.id) > 0 AS "hasChildren" FROM "Tags" t
-       LEFT JOIN "Tags" c ON c."parentId" = t."id" AND c."deletedAt" IS NULL
-       WHERE t."deletedAt" IS NULL AND t."parentId" IS NULL
-       GROUP BY t."id";`
+       LEFT JOIN "Tags" c ON c."parentId" = t."id"
+       WHERE t."parentId" IS NULL
+       GROUP BY t."id";`,
     );
     return results as ITag[];
   }
@@ -69,22 +65,18 @@ class TagService {
 
     if (!tagIds.length) return [];
 
-    const data = await findAllWithPagination(
-      Tag,
-      { where: { id: tagIds } },
-      { limit: tagIds.length }
-    );
+    const data = await findAllWithPagination(Tag, { where: { id: tagIds } }, { limit: tagIds.length });
 
-    const {items} = data;
+    const { items } = data;
     if (cacheKey && items) {
       await setEventTagsCache(cacheKey, items);
     }
     return items;
   }
 
-  async create<U extends Partial<Omit<ITag, "id" | "updatedAt">>>(data: U) {
+  async create<U extends Partial<Omit<ITag, 'id' | 'updatedAt'>>>(data: U) {
     const res = await validateTagCreate(data, async (validatedData: U) => {
-      const row = await Tag.create(validatedData as Partial<ITag>);
+      const row = await Tag.create(validatedData as any);
       return row.toJSON() as ITag;
     });
     const created = res as ITag;
@@ -97,7 +89,7 @@ class TagService {
   async update<U extends Partial<ITag>>(id: string, data: U): Promise<ITag> {
     const res = await validateTagUpdate(data, async (validatedData: U) => {
       const row = await Tag.findByPk(id);
-      if (!row) throw new Error("Tag not found");
+      if (!row) throw new NotFoundError('Tag not found');
       await row.update(validatedData as Partial<ITag>);
       return row.toJSON() as ITag;
     });
@@ -115,10 +107,10 @@ class TagService {
 
   async dissociateTag(eventId: string, tagId: string) {
     const event = await Event.findByPk(eventId);
-    if (!event) throw new NotFoundError("Event not found");
+    if (!event) throw new NotFoundError('Event not found');
     const tags = new Set((event.tags || []) as string[]);
 
-    if (!tags.has(tagId)) throw new NotFoundError("Tag not found");
+    if (!tags.has(tagId)) throw new NotFoundError('Tag not found');
     tags.delete(tagId);
 
     await event.update({ tags: Array.from(tags) });
@@ -129,7 +121,7 @@ class TagService {
 
   async associateTag(eventId: string, tagId: string) {
     const event = await Event.findByPk(eventId);
-    if (!event) throw new NotFoundError("Event not found");
+    if (!event) throw new NotFoundError('Event not found');
     const tags = new Set((event.tags || []) as string[]);
 
     if (tags.has(tagId)) {
@@ -146,11 +138,7 @@ class TagService {
   async getSubTags(tagId: string, limit?: number) {
     const cached = await getSubTagsCache(tagId);
     if (cached) return cached;
-    const res = await findAllWithPagination(
-      Tag,
-      { where: { parentId: tagId } },
-      limit ? { limit } : {}
-    );
+    const res = await findAllWithPagination(Tag, { where: { parentId: tagId } }, limit ? { limit } : {});
     if (res.items) await setSubTagsCache(tagId, res.items as ITag[]);
     return res;
   }

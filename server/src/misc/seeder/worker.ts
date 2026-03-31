@@ -14,7 +14,7 @@ type WorkerMessage =
 process.on('message', async (message: WorkerMessage) => {
   if (message.type !== 'run') return;
 
-  const sequelize = getDBConnection();
+  const sequelize = getDBConnection()!;
   const shardLabel = `worker=${message.payload.workerIndex + 1}/${message.payload.totalWorkers}`;
 
   try {

@@ -1,5 +1,5 @@
-import { NotFoundError, UnauthorizedError } from "@/exceptions";
-import { isEmpty } from "@/utils";
+import { NotFoundError, UnauthorizedError } from '@/exceptions';
+import { isEmpty } from '@/utils';
 
 /**
  * @deprecated This decorator is no longer maintained. Use the
@@ -7,7 +7,7 @@ import { isEmpty } from "@/utils";
  * relying on this wrapper.
  */
 
-export type MethodType = "create" | "update" | "delete" | "get";
+export type MethodType = 'create' | 'update' | 'delete' | 'get';
 
 // Base interface for cache operations
 interface CacheOperations<T = any> {
@@ -26,21 +26,21 @@ export interface CacheableClass<T = any> extends CacheOperations<T> {
 export interface CacheDecoratorOptions<T = any> {
   methodType?: MethodType;
   cacheGetter?: (key: string) => Promise<T | T[] | null>;
-  cacheSetter?: (key: string, value: T | T[]) => Promise<"OK">;
+  cacheSetter?: (key: string, value: T | T[]) => Promise<'OK'>;
   cacheDeleter?: (key: string, existingData: T | T[]) => Promise<any>;
-  cacheSetterWithExistingTTL?: (key: string, value: T) => Promise<"OK">;
+  cacheSetterWithExistingTTL?: (key: string, value: T) => Promise<'OK'>;
   customCacheKey?: (...args: any[]) => string;
 }
 
 const extractData = <T>(result: any): T | null => {
-  if (result && typeof result === "object" && "data" in result) {
+  if (result && typeof result === 'object' && 'data' in result) {
     return result.data as T;
   }
   return (result ?? null) as T | null;
 };
 
 const extractError = (result: any) => {
-  if (result && typeof result === "object" && "error" in result) {
+  if (result && typeof result === 'object' && 'error' in result) {
     return result.error;
   }
   return null;
@@ -50,7 +50,7 @@ const checkAndThrowRLSError = <T>(result: any, existingData: T | null) => {
   const data = extractData<T>(result);
   const error = extractError(result);
   if (!error && !data && !isEmpty(existingData)) {
-    throw new UnauthorizedError("Operation not allowed");
+    throw new UnauthorizedError('Operation not allowed');
   }
 };
 
@@ -70,16 +70,14 @@ const checkAndThrowRLSError = <T>(result: any, existingData: T | null) => {
  * }
  * ```
  */
-function MethodCacheSync<T = any>(
-  options?: CacheDecoratorOptions<T>
-): (...args: unknown[]) => unknown {
+function MethodCacheSync<T = any>(options?: CacheDecoratorOptions<T>): any {
   return function <M extends (...args: any[]) => Promise<any>>(
     target: object,
     propertyKey: string,
-    descriptor: TypedPropertyDescriptor<M>
+    descriptor: TypedPropertyDescriptor<M>,
   ): TypedPropertyDescriptor<M> {
     const originalMethod = descriptor.value!;
-    const methodPrefix = propertyKey.match(/^[a-z]+/)?.[0] || "";
+    const methodPrefix = propertyKey.match(/^[a-z]+/)?.[0] || '';
     const methodType = options?.methodType || (methodPrefix as MethodType);
 
     /**
@@ -88,57 +86,47 @@ function MethodCacheSync<T = any>(
      * @param {...Parameters<M>} args The arguments passed to the original method
      * @returns {Promise<ReturnType<M>>} The result of the method execution
      */
-    descriptor.value = async function (
-      this: CacheableClass<T>,
-      ...args: Parameters<M>
-    ): Promise<ReturnType<M>> {
+    descriptor.value = async function (this: CacheableClass<T>, ...args: Parameters<M>): Promise<ReturnType<M>> {
       // Bind the methods to the current instance
       const boundGetCache = (options?.cacheGetter || this.getCache).bind(this);
       const boundSetCache = (options?.cacheSetter || this.setCache).bind(this);
-      const boundDeleteCache = (options?.cacheDeleter || this.deleteCache).bind(
-        this
-      );
+      const boundDeleteCache = (options?.cacheDeleter || this.deleteCache).bind(this);
       const boundGetById = (this?._getByIdNoCache || this.getById).bind(this);
 
-      const cacheKey = options?.customCacheKey
-        ? options.customCacheKey(...args)
-        : args[0];
+      const cacheKey = options?.customCacheKey ? options.customCacheKey(...args) : args[0];
 
       switch (methodType) {
-        case "create": {
+        case 'create': {
           const result = await originalMethod.apply(this, args);
           const data = extractData<T>(result);
 
           if (data) {
-            const getCacheKey = (id: string) =>
-              options?.customCacheKey ? options.customCacheKey(id) : id;
+            const getCacheKey = (id: string) => (options?.customCacheKey ? options.customCacheKey(id) : id);
 
             if (Array.isArray(data)) {
               const promises = data.map(async (item: any) => {
                 await boundSetCache(getCacheKey(item.id), item);
               });
               await Promise.all(promises);
-            } else if (typeof data === "object") {
+            } else if (typeof data === 'object') {
               await boundSetCache(getCacheKey((data as any).id), data);
             }
           }
           return result as ReturnType<M>;
         }
 
-        case "update": {
+        case 'update': {
           const existingData = await boundGetById(cacheKey);
-          if (isEmpty(existingData))
-            throw new NotFoundError("Resource not found");
+          if (isEmpty(existingData)) throw new NotFoundError('Resource not found');
 
           const result = await originalMethod.apply(this, args);
           checkAndThrowRLSError(result, existingData);
 
-          const cacheSaver =
-            options?.cacheSetterWithExistingTTL || boundSetCache;
+          const cacheSaver = options?.cacheSetterWithExistingTTL || boundSetCache;
           const data = extractData<T>(result);
 
           if (data) {
-            if (typeof data === "object") {
+            if (typeof data === 'object') {
               await cacheSaver(cacheKey, { ...existingData, ...data });
             } else {
               await cacheSaver(cacheKey, data);
@@ -147,10 +135,9 @@ function MethodCacheSync<T = any>(
           return result as ReturnType<M>;
         }
 
-        case "delete": {
+        case 'delete': {
           const existingData = await boundGetById(cacheKey);
-          if (isEmpty(existingData))
-            throw new NotFoundError("Resource not found");
+          if (isEmpty(existingData)) throw new NotFoundError('Resource not found');
 
           const result = await originalMethod.apply(this, args);
           checkAndThrowRLSError(result, existingData);
@@ -161,7 +148,7 @@ function MethodCacheSync<T = any>(
           return result as ReturnType<M>;
         }
 
-        case "get": {
+        case 'get': {
           const cachedData = await boundGetCache(cacheKey);
           if (!isEmpty(cachedData)) return cachedData as ReturnType<M>;
 

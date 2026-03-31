@@ -4,7 +4,7 @@ import { getUUIDv7 } from '@/helpers';
 import type { IActivity } from '@/definitions/types';
 import { ACTIVITY_TABLE_NAME, EActivityEntityType, EActivityVisibility } from './constants';
 
-type ActivityAttributes = Omit<IActivity, 'createdAt' | 'updatedAt' | 'deletedAt'>;
+type ActivityAttributes = Omit<IActivity, 'createdAt' | 'updatedAt'>;
 
 export class Activity extends Model<ActivityAttributes, ActivityAttributes> {
   declare id: string;
@@ -18,7 +18,6 @@ export class Activity extends Model<ActivityAttributes, ActivityAttributes> {
   declare readAt?: Date | null;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 Activity.init(
@@ -70,9 +69,8 @@ Activity.init(
   {
     modelName: 'Activity',
     tableName: ACTIVITY_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
     indexes: [
       { fields: ['actorId', 'createdAt'] },
       { fields: ['actorId', 'updatedAt'] },

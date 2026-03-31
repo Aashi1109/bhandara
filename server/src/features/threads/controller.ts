@@ -9,6 +9,7 @@ import { PLATFORM_SOCKET_EVENTS } from '@/constants';
 import EventService from '@/features/events/service';
 import MessageService from '@/features/messages/service';
 import EntityEngagementService from '@/features/engagement/service';
+import { getThreadRoom } from '@/socket/rooms';
 
 const threadsService = new ThreadsService();
 const eventService = new EventService();
@@ -106,7 +107,7 @@ export const lockThread = async (req: ICustomRequest, res: Response) => {
       lockHistory: thread.lockHistory,
       lockedBy: userId,
     },
-  });
+  }, { room: getThreadRoom(threadId) });
 
   return res.status(200).json({
     data: thread,
@@ -126,7 +127,7 @@ export const unlockThread = async (req: ICustomRequest, res: Response) => {
       lockHistory: thread.lockHistory,
       unlockedBy: userId,
     },
-  });
+  }, { room: getThreadRoom(threadId) });
 
   return res.status(200).json({
     data: thread,

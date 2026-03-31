@@ -1,16 +1,13 @@
-import type { IAchievementProgress, IUserAchievement } from "@/definitions/types";
-import { AchievementProgress, UserAchievement } from "./model";
-import {
-  ACHIEVEMENT_DEFINITIONS,
-  type IAchievementDefinition,
-} from "./constants";
+import type { IAchievementProgress, IUserAchievement } from '@/definitions/types';
+import { AchievementProgress, UserAchievement } from './model';
+import { ACHIEVEMENT_DEFINITIONS, type IAchievementDefinition } from './constants';
 import {
   deleteUserAchievementsCache,
   getUserAchievementProgressCache,
   setUserAchievementProgressCache,
-} from "./helpers";
-import { EActivityEntityType, EActivityType, EActivityVisibility } from "@/features/activity/constants";
-import ActivityService from "@/features/activity/service";
+} from './helpers';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import ActivityService from '@/features/activity/service';
 
 class AchievementService {
   private readonly activityService: ActivityService;
@@ -26,7 +23,7 @@ class AchievementService {
   async getUserAchievements(userId: string): Promise<IUserAchievement[]> {
     const rows = await UserAchievement.findAll({
       where: { userId },
-      order: [["unlockedAt", "DESC"]],
+      order: [['unlockedAt', 'DESC']],
       raw: true,
     });
 
@@ -53,16 +50,12 @@ class AchievementService {
     const created = await AchievementProgress.create({
       userId,
       metrics: {},
-    });
+    } as any);
 
     return created.toJSON() as IAchievementProgress;
   }
 
-  private buildUpdatedMetrics(
-    currentMetrics: Record<string, any>,
-    activityType: string,
-    occurredAt: Date
-  ) {
+  private buildUpdatedMetrics(currentMetrics: Record<string, any>, activityType: string, occurredAt: Date) {
     const metrics = { ...currentMetrics };
 
     metrics[activityType] = (metrics[activityType] || 0) + 1;
@@ -75,9 +68,7 @@ class AchievementService {
     };
 
     if (streak.lastActiveDate !== today) {
-      const lastDate = streak.lastActiveDate
-        ? new Date(`${streak.lastActiveDate}T00:00:00.000Z`)
-        : null;
+      const lastDate = streak.lastActiveDate ? new Date(`${streak.lastActiveDate}T00:00:00.000Z`) : null;
       const yesterday = new Date(`${today}T00:00:00.000Z`);
       yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
@@ -97,7 +88,7 @@ class AchievementService {
 
   private async unlockAchievement(
     userId: string,
-    definition: IAchievementDefinition
+    definition: IAchievementDefinition,
   ): Promise<IUserAchievement | null> {
     const existing = await UserAchievement.findOne({
       where: { userId, key: definition.key },
@@ -118,7 +109,7 @@ class AchievementService {
         type: definition.type,
       },
       unlockedAt: new Date(),
-    });
+    } as any);
 
     const achievement = created.toJSON() as IUserAchievement;
 
@@ -144,17 +135,9 @@ class AchievementService {
     return achievement;
   }
 
-  async trackActivity(
-    userId: string,
-    activityType: string,
-    occurredAt: Date = new Date()
-  ) {
+  async trackActivity(userId: string, activityType: string, occurredAt: Date = new Date()) {
     const progress = await this.getOrCreateProgress(userId);
-    const metrics = this.buildUpdatedMetrics(
-      progress.metrics || {},
-      activityType,
-      occurredAt
-    );
+    const metrics = this.buildUpdatedMetrics(progress.metrics || {}, activityType, occurredAt);
 
     const row = await AchievementProgress.findByPk(progress.id);
     if (!row) return { unlocked: [], progress };
@@ -167,14 +150,12 @@ class AchievementService {
     const unlocked = await Promise.all(
       ACHIEVEMENT_DEFINITIONS.map(async (def) => {
         const value =
-          def.type === "streak"
-            ? Number(metrics?.streak?.current || 0)
-            : Number(metrics?.[def.metric] || 0);
+          def.type === 'streak' ? Number(metrics?.streak?.current || 0) : Number(metrics?.[def.metric] || 0);
 
         if (value < def.threshold) return null;
 
         return this.unlockAchievement(userId, def);
-      })
+      }),
     );
 
     return {

@@ -13,6 +13,7 @@ import {
   getEventById,
   createEvent,
   getEvents,
+  getEventMarkers,
   deleteEventTag,
   eventJoinLeaveHandler,
   verifyEvent,
@@ -87,6 +88,8 @@ router
   .route('/')
   .get([paginationParser], asyncHandler(getEvents))
   .post(validateRequest('EVENT_CREATE', eventSchema), asyncHandler(createEvent));
+
+router.get('/markers', asyncHandler(getEventMarkers));
 
 router
   .route('/:eventId')

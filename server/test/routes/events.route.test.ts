@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import { createTestApp } from "../helpers/app";
-import { authHeaders, invokeApp } from "../helpers/http";
+import { describe, expect, it, vi } from 'vitest';
+import { createTestApp } from '../helpers/app';
+import { authHeaders, invokeApp } from '../helpers/http';
 
 const getEventsMock = vi.fn();
 const getEventByIdMock = vi.fn();
@@ -13,6 +13,7 @@ const buildEventsModuleMock = () => ({
   disassociateMediaFromEvent: vi.fn(),
   eventJoinLeaveHandler: vi.fn(),
   getEventById: getEventByIdMock,
+  getEventMarkers: vi.fn(),
   getEvents: getEventsMock,
   getEventThreads: vi.fn(),
   updateEvent: vi.fn(),
@@ -37,12 +38,12 @@ const buildMessagesModuleMock = () => ({
   updateMessage: vi.fn(),
 });
 
-describe("events routes", () => {
-  it("returns paginated events from GET /events", async () => {
+describe('events routes', () => {
+  it('returns paginated events from GET /events', async () => {
     getEventsMock.mockImplementation(async (_req, res) =>
       res.status(200).json({
         data: {
-          items: [{ id: "event-1", name: "Community Dinner" }],
+          items: [{ id: 'event-1', name: 'Community Dinner' }],
           pagination: { hasNext: false, limit: 20, next: null, total: 1 },
         },
       }),
@@ -51,20 +52,20 @@ describe("events routes", () => {
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: "@/features/events/controller" },
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
       ],
-      activeRoutes: ["@/routes/events.route"],
+      activeRoutes: ['@/routes/events.route'],
     });
 
     const response = await invokeApp(app, {
       headers: authHeaders,
-      url: "/api/events",
+      url: '/api/events',
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.data.items).toEqual([{ id: "event-1", name: "Community Dinner" }]);
+    expect(response.body.data.items).toEqual([{ id: 'event-1', name: 'Community Dinner' }]);
     expect(response.body.data.pagination).toMatchObject({
       hasNext: false,
       limit: 20,
@@ -73,46 +74,46 @@ describe("events routes", () => {
     });
   });
 
-  it("returns event detail from GET /events/:eventId", async () => {
+  it('returns event detail from GET /events/:eventId', async () => {
     getEventByIdMock.mockImplementation(async (_req, res) =>
       res.status(200).json({
-        data: { id: "event-1", name: "Community Dinner", status: "published" },
+        data: { id: 'event-1', name: 'Community Dinner', status: 'published' },
       }),
     );
 
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: "@/features/events/controller" },
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
       ],
-      activeRoutes: ["@/routes/events.route"],
+      activeRoutes: ['@/routes/events.route'],
     });
 
     const response = await invokeApp(app, {
       headers: authHeaders,
-      url: "/api/events/event-1",
+      url: '/api/events/event-1',
     });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      data: { id: "event-1", name: "Community Dinner", status: "published" },
+      data: { id: 'event-1', name: 'Community Dinner', status: 'published' },
     });
   });
 
-  it("rejects unauthenticated access", async () => {
+  it('rejects unauthenticated access', async () => {
     const app = await createTestApp({
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: "@/features/events/controller" },
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
       ],
-      activeRoutes: ["@/routes/events.route"],
+      activeRoutes: ['@/routes/events.route'],
     });
 
     const response = await invokeApp(app, {
-      url: "/api/events",
+      url: '/api/events',
     });
 
     expect(response.status).toBe(401);

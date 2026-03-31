@@ -31,7 +31,7 @@ class ActivityService {
   }
 
   async create(data: Partial<IActivity>): Promise<IActivity> {
-    const row = await Activity.create(data as Partial<IActivity>);
+    const row = await Activity.create(data as any);
     const activity = row.toJSON() as IActivity;
 
     await Promise.all([

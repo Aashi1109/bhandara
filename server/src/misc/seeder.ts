@@ -17,7 +17,7 @@ async function main() {
     `Resolved options: users=${formatRange(options.users)}, eventsPerUser=${formatRange(options.eventsPerUser)}, threadsPerEvent=${formatRange(options.threadsPerEvent)}, messagesPerThread=${formatRange(options.messagesPerThread)}, tagsPerEvent=${formatRange(options.tagsPerEvent)}, reuseExistingUsers=${options.reuseExistingUsers ? 'true' : 'false'}, reuseMaxUsers=${options.reuseMaxUsers ?? 'none'}, seedWorkers=${options.seedWorkers ?? process.env.SEED_WORKERS ?? 'auto'}, authBatchSize=${AUTH_SIGNUP_BATCH_SIZE}, dbBatchSize=${DB_BULK_INSERT_CHUNK_SIZE}, dbPoolMax=${process.env.DB_POOL_MAX}, dbPoolMin=${process.env.DB_POOL_MIN}`,
   );
 
-  const sequelize = getDBConnection();
+  const sequelize = getDBConnection()!;
 
   try {
     await seedFreshDatabase(sequelize, options);

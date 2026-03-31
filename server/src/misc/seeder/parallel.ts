@@ -190,7 +190,7 @@ export async function runSeedWorkers({
 
   if (workerCount <= 1) {
     logSeedProgress(formatSeedStep('coordinator', 'workers', `mode=single users=${allUsers.length}`));
-    const sequelize = getDBConnection();
+    const sequelize = getDBConnection()!;
     return [
       await seedContentForUsers({
         sequelize,

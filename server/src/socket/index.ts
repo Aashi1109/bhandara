@@ -1,8 +1,7 @@
-import { type Namespace, type Socket, Server } from 'socket.io';
+import { type Namespace, type Socket, Server, type DefaultEventsMap } from 'socket.io';
 import config from '@/config';
 import logger from '@/logger';
 import { requestContextMiddleware, socketUserParser } from '@/middlewares';
-import type { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import type { IncomingMessage } from 'http';
 import type { IBaseUser } from '@/definitions/types';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
@@ -10,7 +9,6 @@ import type http from 'http';
 import {
   EventService,
   getSafeUser,
-  MediaService,
   MessageService,
   ReactionService,
   ThreadService,
@@ -26,8 +24,10 @@ import { setPlatformNamespace, emitSocketEvent } from './emitter';
 import { EAllowedReactionTables } from '@/features/reactions/constants';
 import { EAccessLevel, EEventStatus } from '@/definitions/enums';
 import ActivityService from '@/features/activity/service';
-import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import { EActivityType } from '@/features/activity/constants';
 import AchievementService from '@/features/achievements/service';
+import { buildMessageActivities } from '@/features/activity/chat';
+import { getThreadRoom } from './rooms';
 
 interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, IBaseUser> {
   request: IncomingMessage & {
@@ -41,7 +41,6 @@ let platformNamespace: Namespace;
 
 const messageService = new MessageService();
 const threadService = new ThreadService();
-const mediaService = new MediaService();
 const reactionService = new ReactionService();
 const eventService = new EventService();
 const activityService = new ActivityService();
@@ -61,7 +60,7 @@ export function initializeSocket(server: http.Server) {
 
   platformNamespace = io.of('/platform');
   setPlatformNamespace(platformNamespace);
-  platformNamespace.use((socket, next) => requestContextMiddleware(socket.request as any, null, next as any));
+  platformNamespace.use((socket, next) => requestContextMiddleware(socket.request as any, null as any, next as any));
   platformNamespace.use(socketUserParser);
 
   platformNamespace.on(PLATFORM_SOCKET_EVENTS.CONNECT, async (socket: CustomSocket) => {
@@ -70,45 +69,41 @@ export function initializeSocket(server: http.Server) {
 
     socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, cb) => {
       try {
-        const messageData = request || {};
+        const messageData = {
+          ...(request || {}),
+          isEdited: false,
+          userId: socketUserId,
+        };
         const threadResponse = await threadService.getById(messageData.threadId);
-        if (isEmpty(threadResponse.data)) throw new NotFoundError('Thread not found');
+        if (isEmpty(threadResponse)) throw new NotFoundError('Thread not found');
 
-        const message = await messageService.create(messageData);
-        const media = (message.content?.media || []) as string[];
-
-        if (!isEmpty(media)) {
-          const mediaData = await mediaService.getMediaByIds(media);
-          const populatedMedia = media.map((i) => mediaData.data[i]);
-          message.content.media = populatedMedia;
+        const lockStatus = await threadService.isThreadChainLocked(messageData.threadId);
+        if (lockStatus.isLocked) {
+          throw new ForbiddenError('Cannot add messages to a locked thread or its children');
         }
 
-        if (message) {
-          (message as any).thread = threadResponse;
-          (message as any).user = socket.request.user;
-        }
+        const message = await messageService.create(messageData, true);
         await Promise.all([
-          activityService.create({
+          ...buildMessageActivities({
             actorId: socketUserId,
-            type: EActivityType.MessageCreated,
-            entityType: EActivityEntityType.Message,
-            entityId: message.id,
-            payload: {
-              messageId: message.id,
-              threadId: message.threadId,
-            },
-            visibility: EActivityVisibility.Public,
-          }),
+            message,
+            threadOwnerId: threadResponse.createdBy,
+          }).map((activity) => activityService.create(activity)),
           achievementService.trackActivity(socketUserId, EActivityType.MessageCreated),
         ]);
-        emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
-          data: message,
-        });
-        cb({ data: true });
+        emitSocketEvent(
+          PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED,
+          {
+            data: message,
+          },
+          { room: getThreadRoom(message.threadId) },
+        );
+        cb?.({ data: message });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error sending new message`, error);
         cb?.({
-          error: error?.message || 'Something went wrong',
+          error: errorMessage,
           stack: error,
         });
       }
@@ -118,8 +113,9 @@ export function initializeSocket(server: http.Server) {
       try {
         // TODO: implement message update handling
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error updating message`, error);
-        cb?.({ error: error?.message || 'Something went wrong' });
+        cb?.({ error: errorMessage });
       }
     });
 
@@ -130,6 +126,43 @@ export function initializeSocket(server: http.Server) {
       if (!conversationId) return cb?.({ error: 'Conversation id is required' });
     });
 
+    socket.on(PLATFORM_SOCKET_EVENTS.JOIN_ROOM, async (request, cb) => {
+      try {
+        const room = request?.room;
+        if (typeof room !== 'string' || room.trim().length === 0) {
+          throw new BadRequestError('Room is required');
+        }
+
+        const trimmedRoom = room.trim();
+        if (trimmedRoom.startsWith('thread:')) {
+          const threadId = trimmedRoom.replace('thread:', '');
+          const thread = await threadService.getById(threadId);
+          if (!thread) throw new NotFoundError('Thread not found');
+        }
+
+        createJoinRoom(socket, trimmedRoom);
+        cb?.({ data: true });
+      } catch (error) {
+        cb?.({ error: error instanceof Error ? error.message : 'Something went wrong' });
+      }
+    });
+
+    socket.on(PLATFORM_SOCKET_EVENTS.LEAVE_ROOM, async (request, cb) => {
+      try {
+        const room = request?.room;
+        if (typeof room !== 'string' || room.trim().length === 0) {
+          throw new BadRequestError('Room is required');
+        }
+
+        const trimmedRoom = room.trim();
+        socket.leave(trimmedRoom);
+        removeRoom(trimmedRoom);
+        cb?.({ data: true });
+      } catch (error) {
+        cb?.({ error: error instanceof Error ? error.message : 'Something went wrong' });
+      }
+    });
+
     socket.on(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, async (request, cb) => {
       try {
         const { contentId, contentPath, reaction, parentId } = request;
@@ -138,6 +171,7 @@ export function initializeSocket(server: http.Server) {
           throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
         }
 
+        const targetPath = contentPath as EAllowedReactionTables;
         const serviceMap = {
           [EAllowedReactionTables.Message]: messageService,
           [EAllowedReactionTables.Event]: eventService,
@@ -148,7 +182,7 @@ export function initializeSocket(server: http.Server) {
 
         // delete previous reaction from current user on that content
         const responses = await Promise.all([
-          serviceMap[contentPath].getById(contentId),
+          serviceMap[targetPath].getById(contentId),
           reactionService.deleteByQuery({
             contentId: reactionContentId,
             userId: socketUserId,
@@ -183,43 +217,35 @@ export function initializeSocket(server: http.Server) {
 
         newReaction.user = getSafeUser(socket.request.user);
 
-        const entityTypeMap = {
-          [EAllowedReactionTables.Event]: EActivityEntityType.Event,
-          [EAllowedReactionTables.Message]: EActivityEntityType.Message,
-          [EAllowedReactionTables.Thread]: EActivityEntityType.Thread,
-        };
+        const threadId =
+          contentPath === EAllowedReactionTables.Message
+            ? responses[0]?.threadId
+            : contentPath === EAllowedReactionTables.Thread
+              ? String(contentId)
+              : undefined;
 
-        await Promise.all([
-          activityService.create({
-            actorId: socketUserId,
-            type: EActivityType.ReactionCreated,
-            entityType: entityTypeMap[contentPath] || EActivityEntityType.Reaction,
-            entityId: String(contentId),
-            payload: {
-              reactionId: newReaction.id,
-              emoji: reaction,
+        await achievementService.trackActivity(socketUserId, EActivityType.ReactionCreated);
+
+        emitSocketEvent(
+          PLATFORM_SOCKET_EVENTS.REACTION_CREATED,
+          {
+            data: {
+              id: contentId,
               contentPath,
-              contentId,
+              reaction: newReaction,
+              parentId,
+              threadId,
             },
-            visibility: EActivityVisibility.Public,
-          }),
-          achievementService.trackActivity(socketUserId, EActivityType.ReactionCreated),
-        ]);
-
-        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, {
-          data: {
-            id: contentId,
-            contentPath,
-            reaction: newReaction,
-            parentId,
           },
-        });
+          threadId ? { room: getThreadRoom(threadId) } : undefined,
+        );
 
         cb?.({ data: true });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error sending new message`, error);
         cb?.({
-          error: error?.message || 'Something went wrong',
+          error: errorMessage,
           stack: error,
         });
       }
@@ -234,6 +260,7 @@ export function initializeSocket(server: http.Server) {
           throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
         }
 
+        const targetPath = contentPath as EAllowedReactionTables;
         const serviceMap = {
           [EAllowedReactionTables.Message]: messageService,
           [EAllowedReactionTables.Event]: eventService,
@@ -244,7 +271,7 @@ export function initializeSocket(server: http.Server) {
 
         // delete previous reaction from current user on that content
         const responses = await Promise.all([
-          serviceMap[contentPath].getById(contentId),
+          serviceMap[targetPath].getById(contentId),
           reactionService.getReactions(reactionContentId),
         ]);
 
@@ -277,20 +304,33 @@ export function initializeSocket(server: http.Server) {
 
         updatedReaction.user = getSafeUser(socket.request.user);
 
-        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_UPDATED, {
-          data: {
-            id: contentId,
-            contentPath,
-            reaction: updatedReaction,
-            parentId,
+        const threadId =
+          contentPath === EAllowedReactionTables.Message
+            ? content?.threadId
+            : contentPath === EAllowedReactionTables.Thread
+              ? String(contentId)
+              : undefined;
+
+        emitSocketEvent(
+          PLATFORM_SOCKET_EVENTS.REACTION_UPDATED,
+          {
+            data: {
+              id: contentId,
+              contentPath,
+              reaction: updatedReaction,
+              parentId,
+              threadId,
+            },
           },
-        });
+          threadId ? { room: getThreadRoom(threadId) } : undefined,
+        );
 
         cb?.({ data: true });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error sending new message`, error);
         cb?.({
-          error: error?.message || 'Something went wrong',
+          error: errorMessage,
           stack: error,
         });
       }
@@ -305,6 +345,7 @@ export function initializeSocket(server: http.Server) {
           throw new BadRequestError(`Invalid content path provided. Provided:${contentPath}`);
         }
 
+        const targetPath = contentPath as EAllowedReactionTables;
         const serviceMap = {
           [EAllowedReactionTables.Message]: messageService,
           [EAllowedReactionTables.Event]: eventService,
@@ -315,7 +356,7 @@ export function initializeSocket(server: http.Server) {
 
         // delete previous reaction from current user on that content
         const responses = await Promise.all([
-          serviceMap[contentPath].getById(contentId),
+          serviceMap[targetPath].getById(contentId),
           reactionService.getReactions(reactionContentId),
         ]);
 
@@ -344,20 +385,33 @@ export function initializeSocket(server: http.Server) {
 
         const deletedReaction = await reactionService.delete(previousReaction.id);
 
-        emitSocketEvent(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, {
-          data: {
-            id: contentId,
-            contentPath,
-            reaction: previousReaction,
-            parentId,
+        const threadId =
+          contentPath === EAllowedReactionTables.Message
+            ? content?.threadId
+            : contentPath === EAllowedReactionTables.Thread
+              ? String(contentId)
+              : undefined;
+
+        emitSocketEvent(
+          PLATFORM_SOCKET_EVENTS.REACTION_DELETED,
+          {
+            data: {
+              id: contentId,
+              contentPath,
+              reaction: previousReaction,
+              parentId,
+              threadId,
+            },
           },
-        });
+          threadId ? { room: getThreadRoom(threadId) } : undefined,
+        );
 
         cb?.({ data: true });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error sending new message`, error);
         cb?.({
-          error: error?.message || 'Something went wrong',
+          error: errorMessage,
           stack: error,
         });
       }
@@ -412,8 +466,9 @@ export function initializeSocket(server: http.Server) {
         }
         cb?.({ data: true });
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
         logger.error('Explore event failed', err);
-        cb?.({ error: err?.message || 'Something went wrong' });
+        cb?.({ error: errorMessage });
       }
     });
 
@@ -437,19 +492,7 @@ export function initializeSocket(server: http.Server) {
 
         messageData.threadId = newThread.id;
 
-        const message = await messageService.create(messageData);
-        const media = (message.content?.media || []) as string[];
-
-        if (!isEmpty(media)) {
-          const mediaData = await mediaService.getMediaByIds(media);
-          const populatedMedia = media.map((i) => mediaData.data[i]);
-          message.content.media = populatedMedia;
-        }
-
-        if (message) {
-          (message as any).thread = eventResponse;
-          (message as any).user = socket.request.user;
-        }
+        const message = await messageService.create(messageData, true);
 
         newThread.messages = [message];
         newThread.creator = socket.request.user;
@@ -459,9 +502,10 @@ export function initializeSocket(server: http.Server) {
         });
         cb({ data: true });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error sending new message`, error);
         cb?.({
-          error: error?.message || 'Something went wrong',
+          error: errorMessage,
           stack: error,
         });
       }

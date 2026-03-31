@@ -146,7 +146,7 @@ export async function createAuthUsersForCount(options: SeedOptions, totalUsers: 
           gender,
           accessToken: sessionData.session.access_token,
           refreshToken: sessionData.session.refresh_token,
-          expiresAt: new Date(new Date(0).setUTCSeconds(sessionData.session.expires_at)).toISOString(),
+          expiresAt: new Date(new Date(0).setUTCSeconds(sessionData.session.expires_at ?? 0)).toISOString(),
           expiresIn: sessionData.session.expires_in,
         } satisfies SeededAuthUser;
       }),
@@ -209,7 +209,7 @@ export async function streamAuthUsers(
           gender,
           accessToken: sessionData.session.access_token,
           refreshToken: sessionData.session.refresh_token,
-          expiresAt: new Date(new Date(0).setUTCSeconds(sessionData.session.expires_at)).toISOString(),
+          expiresAt: new Date(new Date(0).setUTCSeconds(sessionData.session.expires_at ?? 0)).toISOString(),
           expiresIn: sessionData.session.expires_in,
         } satisfies SeededAuthUser;
       }),

@@ -1,44 +1,24 @@
-import { getDBConnection } from "@/connections/db";
-import { getUUIDv7 } from "@/helpers";
-import type {
-  IEntityEngagement,
-  IEntityEngagementStats,
-  IEntityRating,
-} from "@/definitions/types";
-import { DataTypes, Model } from "sequelize";
+import { getDBConnection } from '@/connections/db';
+import { getUUIDv7 } from '@/helpers';
+import type { IEntityEngagement, IEntityEngagementStats, IEntityRating } from '@/definitions/types';
+import { DataTypes, Model } from 'sequelize';
 
-import {
-  ENTITY_ENGAGEMENT_TABLE_NAME,
-  ENTITY_RATING_TABLE_NAME,
-} from "./constants";
+import { ENTITY_ENGAGEMENT_TABLE_NAME, ENTITY_RATING_TABLE_NAME } from './constants';
 
-type EntityEngagementAttributes = Omit<
-  IEntityEngagement,
-  "createdAt" | "updatedAt" | "deletedAt"
->;
+type EntityEngagementAttributes = Omit<IEntityEngagement, 'createdAt' | 'updatedAt'>;
 
-type EntityRatingAttributes = Omit<
-  IEntityRating,
-  "createdAt" | "updatedAt" | "deletedAt"
->;
+type EntityRatingAttributes = Omit<IEntityRating, 'createdAt' | 'updatedAt'>;
 
-export class EntityEngagement extends Model<
-  EntityEngagementAttributes,
-  EntityEngagementAttributes
-> {
+export class EntityEngagement extends Model<EntityEngagementAttributes, EntityEngagementAttributes> {
   declare id: string;
   declare entityType: string;
   declare entityId: string;
   declare stats: IEntityEngagementStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date | null;
 }
 
-export class EntityRating extends Model<
-  EntityRatingAttributes,
-  EntityRatingAttributes
-> {
+export class EntityRating extends Model<EntityRatingAttributes, EntityRatingAttributes> {
   declare id: string;
   declare entityType: string;
   declare entityId: string;
@@ -47,7 +27,6 @@ export class EntityRating extends Model<
   declare review?: string | null;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date | null;
 }
 
 EntityEngagement.init(
@@ -72,15 +51,11 @@ EntityEngagement.init(
     },
   },
   {
-    modelName: "EntityEngagement",
+    modelName: 'EntityEngagement',
     tableName: ENTITY_ENGAGEMENT_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-    indexes: [
-      { unique: true, fields: ["entityType", "entityId"] },
-      { fields: ["updatedAt"] },
-    ],
+    indexes: [{ unique: true, fields: ['entityType', 'entityId'] }, { fields: ['updatedAt'] }],
   },
 );
 
@@ -102,8 +77,8 @@ EntityRating.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
-      onDelete: "CASCADE",
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     value: {
       type: DataTypes.INTEGER,
@@ -115,15 +90,14 @@ EntityRating.init(
     },
   },
   {
-    modelName: "EntityRating",
+    modelName: 'EntityRating',
     tableName: ENTITY_RATING_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
     indexes: [
-      { unique: true, fields: ["entityType", "entityId", "userId"] },
-      { fields: ["entityType", "entityId"] },
-      { fields: ["userId", "updatedAt"] },
+      { unique: true, fields: ['entityType', 'entityId', 'userId'] },
+      { fields: ['entityType', 'entityId'] },
+      { fields: ['userId', 'updatedAt'] },
     ],
   },
 );

@@ -1,7 +1,7 @@
 import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
 import type { Response } from 'express';
-import EventService from './service';
-import { BadRequestError, NotFoundError } from '@/exceptions';
+import EventService, { type IEventListFilters } from './service';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@/exceptions';
 import { isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
@@ -27,7 +27,7 @@ const getViewerIp = (req: ICustomRequest) => {
   return req.socket.remoteAddress || null;
 };
 
-export const getEvents = async (req: ICustomRequest & IRequestPagination, res: Response) => {
+function parseEventListFilters(req: ICustomRequest): IEventListFilters {
   const { createdBy, status, type, latitude, longitude, radiusKm, tagIds, datePreset } = req.query;
 
   let statuses: EEventStatus[] | undefined;
@@ -46,17 +46,14 @@ export const getEvents = async (req: ICustomRequest & IRequestPagination, res: R
     }
   }
 
-  const parsedLatitude =
-    typeof latitude === 'string' && latitude.length > 0 ? Number(latitude) : undefined;
-  const parsedLongitude =
-    typeof longitude === 'string' && longitude.length > 0 ? Number(longitude) : undefined;
-  const parsedRadiusKm =
-    typeof radiusKm === 'string' && radiusKm.length > 0 ? Number(radiusKm) : undefined;
+  const parsedLatitude = typeof latitude === 'string' && latitude.length > 0 ? Number(latitude) : undefined;
+  const parsedLongitude = typeof longitude === 'string' && longitude.length > 0 ? Number(longitude) : undefined;
+  const parsedRadiusKm = typeof radiusKm === 'string' && radiusKm.length > 0 ? Number(radiusKm) : undefined;
 
   if (
-    (latitude != null && !Number.isFinite(parsedLatitude)) ||
-    (longitude != null && !Number.isFinite(parsedLongitude)) ||
-    (radiusKm != null && (!Number.isFinite(parsedRadiusKm) || (parsedRadiusKm ?? 0) <= 0))
+    (parsedLatitude !== undefined && !Number.isFinite(parsedLatitude)) ||
+    (parsedLongitude !== undefined && !Number.isFinite(parsedLongitude)) ||
+    (parsedRadiusKm !== undefined && (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
   ) {
     throw new BadRequestError('Invalid location filter');
   }
@@ -71,7 +68,7 @@ export const getEvents = async (req: ICustomRequest & IRequestPagination, res: R
       endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, -1);
     } else if (normalizedDatePreset === 'this_week') {
       const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() + 6) % 7);
+      startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
       startDate = startOfWeek;
       endDate = new Date(startOfWeek);
       endDate.setDate(endDate.getDate() + 7);
@@ -84,35 +81,57 @@ export const getEvents = async (req: ICustomRequest & IRequestPagination, res: R
     }
   }
 
-  const events = await eventService.getAll(
-    {
-      createdBy: typeof createdBy === 'string' && createdBy.length > 0 ? createdBy : undefined,
-      statuses,
-      types,
-      latitude:
-        Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
-          ? parsedLatitude
-          : undefined,
-      longitude:
-        Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
-          ? parsedLongitude
-          : undefined,
-      radiusKm:
-        Number.isFinite(parsedLatitude) &&
-        Number.isFinite(parsedLongitude) &&
-        Number.isFinite(parsedRadiusKm)
-          ? parsedRadiusKm
-          : undefined,
-      tagIds:
-        typeof tagIds === 'string' && tagIds.length > 0
-          ? tagIds.split(',').map((item) => item.trim()).filter(Boolean)
-          : undefined,
-      startDate,
-      endDate,
-    },
-    req.pagination,
-  );
+  return {
+    createdBy: typeof createdBy === 'string' && createdBy.length > 0 ? createdBy : undefined,
+    statuses,
+    types,
+    latitude: Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) ? parsedLatitude : undefined,
+    longitude: Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) ? parsedLongitude : undefined,
+    radiusKm:
+      Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) && Number.isFinite(parsedRadiusKm)
+        ? parsedRadiusKm
+        : undefined,
+    tagIds:
+      typeof tagIds === 'string' && tagIds.length > 0
+        ? tagIds
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : undefined,
+    startDate,
+    endDate,
+  };
+}
+
+export const getEvents = async (req: ICustomRequest & IRequestPagination, res: Response) => {
+  const filters = parseEventListFilters(req);
+  const events = await eventService.getAll(filters, req.pagination);
   return res.status(200).json({ data: events });
+};
+
+export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
+  const filters = parseEventListFilters(req);
+  const { zoom, tiles } = req.query;
+
+  const parsedZoom = typeof zoom === 'string' && zoom.length > 0 ? Number(zoom) : undefined;
+  if (parsedZoom !== undefined && (!Number.isFinite(parsedZoom) || parsedZoom < 0)) {
+    throw new BadRequestError('Invalid zoom level');
+  }
+
+  const parsedTiles =
+    typeof tiles === 'string' && tiles.length > 0
+      ? tiles
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : undefined;
+
+  if (parsedTiles && parsedTiles.length > 100) {
+    throw new BadRequestError('Too many tiles requested (max 100)');
+  }
+
+  const result = await eventService.getMarkers(filters, { zoom: parsedZoom, tiles: parsedTiles });
+  return res.status(200).json({ data: result });
 };
 
 export const getEventById = async (req: ICustomRequest, res: Response) => {
@@ -159,25 +178,29 @@ export const createEvent = async (req: ICustomRequest, res: Response) => {
 
 export const updateEvent = async (req: ICustomRequest, res: Response) => {
   const event = await eventService.getById(req.params.eventId as string);
+  if (!event) throw new NotFoundError('Event not found');
+  if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only update your own events');
   const updatedEvent = await eventService.update({
     existing: event,
     data: req.body,
     populate: true,
   });
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
-    data: { id: req.params.eventId, ...updatedEvent },
-    });
+    data: { ...updatedEvent, id: req.params.eventId },
+  });
   return res.status(200).json({ data: updatedEvent });
 };
 
 export const deleteEvent = async (req: ICustomRequest, res: Response) => {
-  const event = await eventService.delete(req.params.eventId as string);
+  const event = await eventService.getById(req.params.eventId as string);
+  if (!event) throw new NotFoundError('Event not found');
+  if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only delete your own events');
 
-  if (isEmpty(event)) throw new NotFoundError('Event not found');
+  await eventService.delete(req.params.eventId as string);
 
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_DELETED, {
     data: { id: req.params.eventId },
-    });
+  });
 
   return res.status(200).json({ data: event });
 };

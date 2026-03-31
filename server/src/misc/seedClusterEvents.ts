@@ -187,7 +187,7 @@ async function ensureTags() {
   let tags = await Tag.findAll({ attributes: ['id'], raw: true });
 
   if (tags.length === 0) {
-    await Tag.bulkCreate(fallbackTagSeeds);
+    await Tag.bulkCreate(fallbackTagSeeds as any);
     tags = await Tag.findAll({ attributes: ['id'], raw: true });
   }
 
@@ -195,7 +195,7 @@ async function ensureTags() {
 }
 
 async function main() {
-  const sequelize = getDBConnection();
+  const sequelize = getDBConnection()!;
   await sequelize.authenticate();
 
   const users = await User.findAll({ attributes: ['id'], raw: true });

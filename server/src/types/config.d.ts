@@ -29,18 +29,18 @@ export interface AppConfig {
   baseUrl: string;
   port: string | number;
   jwt: {
-    secret: string;
+    secret: string | undefined;
     expiresIn: string;
   };
   cloudinary: {
-    cloudName: string;
-    apiKey: string;
-    apiSecret: string;
+    cloudName: string | undefined;
+    apiKey: string | undefined;
+    apiSecret: string | undefined;
     secure: boolean;
-    folderPath: string;
-    uploadPreset: string;
+    folderPath: string | undefined;
+    uploadPreset: string | undefined;
   };
-  dbUrl: string;
+  dbUrl: string | undefined;
   saltRounds: number;
   express: {
     fileSizeLimit: string;
@@ -72,7 +72,7 @@ export interface AppConfig {
     iosClientId: string;
   };
   db: {
-    [key: string]: string;
+    [key: string]: string | undefined;
   };
   infrastructure: InfrastructureConfig;
   serviceability: ServiceabilityConfig;
@@ -82,7 +82,7 @@ export interface AppConfig {
 }
 
 export interface SentryConfig {
-  dsn: string;
+  dsn: string | undefined;
   environment: string;
   release: string;
 }

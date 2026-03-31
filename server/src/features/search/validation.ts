@@ -1,29 +1,16 @@
-import Joi from "joi";
-import { EEventStatus, EEventType } from "@/definitions/enums";
+import Joi from 'joi';
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),
   next: Joi.string().allow(null, '').optional(),
   limit: Joi.number().integer().min(1).max(100).default(20),
-  filters: Joi.object({
-    types: Joi.array().items(Joi.string().valid("event", "user", "tag")),
-    eventStatus: Joi.array().items(
-      Joi.string().valid(...Object.values(EEventStatus))
-    ),
-    eventType: Joi.array().items(
-      Joi.string().valid(...Object.values(EEventType))
-    ),
-    dateRange: Joi.object({
-      start: Joi.string().isoDate().required(),
-      end: Joi.string().isoDate().required(),
-    }),
-    location: Joi.object({
-      latitude: Joi.number().min(-90).max(90).required(),
-      longitude: Joi.number().min(-180).max(180).required(),
-      radius: Joi.number().positive().max(1000).required(), // max 1000km
-    }),
-    tags: Joi.array().items(Joi.string()),
-  }),
+  status: Joi.string().optional(),
+  type: Joi.string().optional(),
+  datePreset: Joi.string().valid('anytime', 'today', 'this_week', 'this_month').optional(),
+  latitude: Joi.number().min(-90).max(90).optional(),
+  longitude: Joi.number().min(-180).max(180).optional(),
+  radiusKm: Joi.number().positive().max(1000).optional(),
+  tagIds: Joi.string().optional(),
 });
 
 export const suggestionsQuerySchema = Joi.object({

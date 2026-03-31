@@ -1,11 +1,11 @@
-import config from "@/config";
-import type { IBaseUser } from "@/definitions/types";
-import logger from "@/logger";
-import { jnstringify } from "@/utils";
-import * as bcrypt from "bcrypt";
-import * as jwt from "jsonwebtoken";
-import { nanoid } from "nanoid";
-import { v7 as uuidv7 } from "uuid";
+import config from '@/config';
+import type { IBaseUser } from '@/definitions/types';
+import logger from '@/logger';
+import { jnstringify } from '@/utils';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import { nanoid } from 'nanoid';
+import { v7 as uuidv7 } from 'uuid';
 
 /**
  * Hashes a password using bcrypt.
@@ -20,7 +20,7 @@ export const hashPassword = async (password: string): Promise<string> => {
     return hashedPassword;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to hash password");
+    throw new Error('Failed to hash password');
   }
 };
 
@@ -36,11 +36,11 @@ export const signJWTPayload = async (user: IBaseUser): Promise<string> => {
       email: user.email,
       id: user.id,
     };
-    return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn as jwt.SignOptions["expiresIn"],
+    return jwt.sign(payload, config.jwt.secret as string, {
+      expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'],
     });
   } catch (error) {
-    throw new Error("Failed to generate access token");
+    throw new Error('Failed to generate access token');
   }
 };
 
@@ -51,15 +51,12 @@ export const signJWTPayload = async (user: IBaseUser): Promise<string> => {
  * @returns {Promise<boolean>} A Promise that resolves with a boolean indicating whether the passwords match.
  * @throws {Error} Throws an error if the comparison fails.
  */
-export const validatePassword = async (
-  originalPassword: string,
-  comparePassword: string
-): Promise<boolean> => {
+export const validatePassword = async (originalPassword: string, comparePassword: string): Promise<boolean> => {
   try {
     return await bcrypt.compare(comparePassword, originalPassword);
   } catch (error) {
     logger.error(`Error validating password: ${error}`);
-    throw new Error("Failed to validate password");
+    throw new Error('Failed to validate password');
   }
 };
 
@@ -68,9 +65,7 @@ export const validatePassword = async (
  * @param rawToken The token string prefixed with type.
  */
 export const getJWTPayload = async (rawToken: string) => {
-  const jwtPayload = <any>(
-    jwt.verify(rawToken?.split(" ")[0], config.jwt.secret, { complete: true })
-  );
+  const jwtPayload = <any>jwt.verify(rawToken?.split(' ')[0], config.jwt.secret as string, { complete: true });
 
   return jwtPayload.payload;
 };
@@ -79,12 +74,15 @@ export const getJWTPayload = async (rawToken: string) => {
  * Build a filter object containing only non-empty values.
  */
 export const createFilterFromParams = (params: Record<string, any>) => {
-  return Object.entries(params).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, any>);
+  return Object.entries(params).reduce(
+    (acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 };
 
 interface RetryConfig {
@@ -115,16 +113,12 @@ export const withRetry =
       } catch (error) {
         logger.error(`Error in withRetry`, error);
         if (attempt === maxAttempts) {
-          logger.error(
-            `Failed after ${maxAttempts} attempts ${jnstringify(error)}`
-          );
+          logger.error(`Failed after ${maxAttempts} attempts ${jnstringify(error)}`);
           throw error;
         }
 
         const delay = Math.min(Math.pow(2, attempt - 1) * delayMs, maxDelayMs);
-        logger.warn(
-          `Attempt ${attempt}/${maxAttempts} failed. Retrying in ${delay}ms...`
-        );
+        logger.warn(`Attempt ${attempt}/${maxAttempts} failed. Retrying in ${delay}ms...`);
 
         await new Promise((resolve) => setTimeout(resolve, delay));
         attempt++;
@@ -132,14 +126,14 @@ export const withRetry =
     }
   };
 
-export * from "./validation";
-export { default as ajv } from "./validation";
+export * from './validation';
+export { default as ajv } from './validation';
 
 /**
  * Retrieve geo location data for an IP address using ip-api.
  */
 export const getGeoLocationData = async (ip: string) => {
-  const skippedIps = ["127.0.0.1", "::1", "localhost"];
+  const skippedIps = ['127.0.0.1', '::1', 'localhost'];
   // Return null for localhost IPs
   if (skippedIps.includes(ip)) {
     return null;
@@ -147,7 +141,7 @@ export const getGeoLocationData = async (ip: string) => {
   const response = await fetch(`http://ip-api.com/json/${ip}`);
   const data = await response.json();
 
-  if (data?.status === "fail") {
+  if (data?.status === 'fail') {
     logger.error(`Error getting geo location data: ${data.message}`);
     return {};
   }
@@ -175,23 +169,16 @@ export const getUUIDv7 = () => uuidv7();
 /**
  * Compute the distance in meters between two latitude/longitude pairs.
  */
-export function getDistanceInMeters(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-) {
+export function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const toRad = (x: number) => (x * Math.PI) / 180;
   const R = 6371000; // Earth radius in meters
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
 
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
 }
 
-export * from "./hashing";
+export * from './hashing';

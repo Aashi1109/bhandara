@@ -113,7 +113,9 @@ export async function findAllWithPagination<T extends Model>(
     hasNext,
     next:
       hasNext && normalizedRows.length
-        ? encodePaginationCursor(normalizedRows[normalizedRows.length - 1][_pagination.sortBy] as Date | string)
+        ? encodePaginationCursor(
+            (normalizedRows[normalizedRows.length - 1] as any)[_pagination.sortBy] as Date | string,
+          )
         : null,
     sortBy: _pagination.sortBy,
     sortOrder: _pagination.sortOrder,
