@@ -135,7 +135,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
   Widget _buildEventCard(Event event) {
     return GestureDetector(
-      onTap: () => context.go(
+      onTap: () => context.push(
         EventDetailScreen.routePath.replaceAll(':id', event.id),
         extra: event,
       ),
@@ -221,7 +221,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         AppButton(
           label: 'Create Event',
           size: AppButtonSize.lg,
-          onPressed: () => context.go(CreateEventScreen.routePath),
+          onPressed: () => context.push(CreateEventScreen.routePath),
         ),
       ],
     );

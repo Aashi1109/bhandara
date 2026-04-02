@@ -8,7 +8,7 @@ import 'user.dart';
 
 part 'auth.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class Auth extends _$Auth {
   @override
   FutureOr<bool> build() async {

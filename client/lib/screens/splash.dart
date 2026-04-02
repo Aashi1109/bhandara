@@ -8,10 +8,9 @@ import '../theme/theme.dart';
 import '../services/secure_storage.dart';
 import '../services/local_storage.dart';
 import '../services/auth.dart';
-import '../services/socket.dart';
 import '../providers/user.dart';
 
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 import 'onboarding.dart';
 import 'auth.dart';
 
@@ -75,7 +74,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
         if (user != null) {
           ref.read(userProfileProvider.notifier).setUser(user);
-          unawaited(socketService.startAuthenticatedSession());
+          // Socket session is started by AppSessionCoordinator when user state changes.
           if (!mounted) return;
 
           if (user.meta?.hasOnboarded ?? false) {
@@ -84,7 +83,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             context.go(PreferencesScreen.routePath);
           }
         } else {
-          await socketService.endAuthenticatedSession();
           ref.read(userProfileProvider.notifier).setUser(null);
           await authService.logout();
           if (!mounted) return;
@@ -92,7 +90,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         }
       } catch (_) {
         // Invalid session
-        await socketService.endAuthenticatedSession();
         ref.read(userProfileProvider.notifier).setUser(null);
         await authService.logout();
         if (!mounted) return;
@@ -100,7 +97,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       }
     } else {
       // No active session
-      await socketService.endAuthenticatedSession();
       ref.read(userProfileProvider.notifier).setUser(null);
       if (!mounted) return;
       if (onboarded) {

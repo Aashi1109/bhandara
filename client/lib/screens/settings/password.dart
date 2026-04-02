@@ -6,12 +6,11 @@ import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
 
-import '../settings.dart';
-
 class PasswordSettingsScreen extends StatefulWidget {
   const PasswordSettingsScreen({super.key});
 
   static const String routePath = '/settings/password';
+  static const String _settingsRoutePath = '/settings';
 
   @override
   State<PasswordSettingsScreen> createState() => _PasswordSettingsScreenState();
@@ -21,21 +20,32 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
   bool _showCurrent = false;
   bool _showNew = false;
   bool _showConfirm = false;
-  String _password = '';
+  String _currentPassword = '';
+  String _newPassword = '';
+  String _confirmPassword = '';
+
+  bool get _hasLength => _newPassword.length >= 8;
+  bool get _hasNumber => RegExp(r'[0-9]').hasMatch(_newPassword);
+  bool get _hasSpecial => RegExp(r'[^A-Za-z0-9]').hasMatch(_newPassword);
+  bool get _passwordsMatch =>
+      _confirmPassword.isNotEmpty && _confirmPassword == _newPassword;
+  bool get _canSubmit =>
+      _currentPassword.isNotEmpty &&
+      _newPassword.isNotEmpty &&
+      _hasLength &&
+      _hasNumber &&
+      _hasSpecial &&
+      _passwordsMatch;
 
   @override
   Widget build(BuildContext context) {
-    final hasLength = _password.length >= 8;
-    final hasNumber = RegExp(r'[0-9]').hasMatch(_password);
-    final hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(_password);
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
           AppHeader(
             title: 'Change Password',
-            onBack: () => context.go(SettingsScreen.routePath),
+            onBack: () => context.go(PasswordSettingsScreen._settingsRoutePath),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -87,6 +97,8 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                     label: 'Current Password',
                     placeholder: '••••••••',
                     obscureText: !_showCurrent,
+                    onChanged: (val) =>
+                        setState(() => _currentPassword = val.trim()),
                     rightElement: GestureDetector(
                       onTap: () => setState(() => _showCurrent = !_showCurrent),
                       child: Icon(
@@ -101,7 +113,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                     label: 'New Password',
                     placeholder: 'Create a new password',
                     obscureText: !_showNew,
-                    onChanged: (val) => setState(() => _password = val),
+                    onChanged: (val) => setState(() => _newPassword = val.trim()),
                     rightElement: GestureDetector(
                       onTap: () => setState(() => _showNew = !_showNew),
                       child: Icon(
@@ -117,13 +129,13 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          _passwordStrengthBar(_password.isNotEmpty),
+                          _passwordStrengthBar(_newPassword.isNotEmpty),
                           const SizedBox(width: 4),
-                          _passwordStrengthBar(_password.length > 4),
+                          _passwordStrengthBar(_newPassword.length > 4),
                           const SizedBox(width: 4),
-                          _passwordStrengthBar(_password.length > 8),
+                          _passwordStrengthBar(_newPassword.length > 8),
                           const SizedBox(width: 4),
-                          _passwordStrengthBar(_password.length > 10),
+                          _passwordStrengthBar(_newPassword.length > 10),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -137,13 +149,13 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _requirementItem('At least 8 characters', hasLength),
+                      _requirementItem('At least 8 characters', _hasLength),
                       const SizedBox(height: 8),
-                      _requirementItem('Contains a number', hasNumber),
+                      _requirementItem('Contains a number', _hasNumber),
                       const SizedBox(height: 8),
                       _requirementItem(
                         'Contains a special character',
-                        hasSpecial,
+                        _hasSpecial,
                       ),
                     ],
                   ),
@@ -152,6 +164,8 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                     label: 'Confirm New Password',
                     placeholder: 'Re-enter new password',
                     obscureText: !_showConfirm,
+                    onChanged: (val) =>
+                        setState(() => _confirmPassword = val.trim()),
                     rightElement: GestureDetector(
                       onTap: () => setState(() => _showConfirm = !_showConfirm),
                       child: Icon(
@@ -171,7 +185,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
               size: AppButtonSize.xl,
               fullWidth: true,
               label: 'Update Password',
-              onPressed: () {},
+              onPressed: _canSubmit ? () {} : null,
             ),
           ),
         ],

@@ -16,11 +16,13 @@ class FloatingMessageBar extends StatefulWidget {
     this.placeholder = 'Add a reply...',
     required this.onSend,
     this.isVisible = true,
+    this.padding,
   });
 
   final String placeholder;
   final Function(String message, List<ChatAttachment> attachments) onSend;
   final bool isVisible;
+  final EdgeInsetsGeometry? padding;
 
   @override
   State<FloatingMessageBar> createState() => _FloatingMessageBarState();
@@ -145,7 +147,9 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
       final mediaId = await fileService.uploadFile(
         XFile(attachment.localPath, name: attachment.name),
       );
-      final media = mediaId != null ? await fileService.getMediaById(mediaId) : null;
+      final media = mediaId != null
+          ? await fileService.getMediaById(mediaId)
+          : null;
       final previewUrl = (media?['publicUrl'] ?? media?['url']) as String?;
 
       if (!mounted) return;
@@ -229,12 +233,14 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
             final actionSize = isCompact ? 36.0 : 38.0;
 
             return Padding(
-              padding: EdgeInsets.fromLTRB(
-                isCompact ? 16 : 24,
-                0,
-                isCompact ? 16 : 24,
-                bottomInset + 16,
-              ),
+              padding:
+                  widget.padding ??
+                  EdgeInsets.fromLTRB(
+                    isCompact ? 16 : 24,
+                    0,
+                    isCompact ? 16 : 24,
+                    bottomInset + 16,
+                  ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,6 +395,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                             controller: _controller,
                             focusNode: _focusNode,
                             onChanged: (val) => setState(() {}),
+                            onSubmitted: (_) => _handleSend(),
                             decoration: InputDecoration(
                               hintText: widget.placeholder,
                               hintStyle: TextStyle(
@@ -409,6 +416,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
+                            textInputAction: TextInputAction.send,
                           ),
                         ),
                         GestureDetector(

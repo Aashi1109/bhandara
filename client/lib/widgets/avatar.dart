@@ -35,12 +35,18 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = CachedNetworkImage(
-      imageUrl: imageUrl ?? '',
-      fit: BoxFit.cover,
-      placeholder: (_, _) => Container(color: backgroundColor),
-      errorWidget: (_, _, _) => _fallback(),
-    );
+    final normalizedImageUrl = imageUrl?.trim();
+    final Widget child;
+    if (normalizedImageUrl == null || normalizedImageUrl.isEmpty) {
+      child = _fallback();
+    } else {
+      child = CachedNetworkImage(
+        imageUrl: normalizedImageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => Container(color: backgroundColor),
+        errorWidget: (_, _, _) => _fallback(),
+      );
+    }
 
     return Container(
       width: size,
@@ -52,7 +58,7 @@ class Avatar extends StatelessWidget {
             : Border.all(color: borderColor!, width: borderWidth),
       ),
       child: ClipOval(
-        child: imageBuilder == null ? image : imageBuilder!(context, image),
+        child: imageBuilder == null ? child : imageBuilder!(context, child),
       ),
     );
   }

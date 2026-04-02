@@ -157,13 +157,35 @@ class _AppButtonState extends State<AppButton> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     final isLoading = widget.isLoading || _internalLoading;
+    final isDisabled = widget.onPressed == null && !isLoading;
+    final backgroundColor = isDisabled
+        ? switch (widget.variant) {
+            AppButtonVariant.primary => AppColors.muted,
+            AppButtonVariant.secondary => AppColors.muted,
+            AppButtonVariant.ghost => AppColors.transparent,
+            AppButtonVariant.outline => AppColors.transparent,
+          }
+        : isLoading
+        ? _backgroundColor.withValues(alpha: 0.5)
+        : _backgroundColor;
+    final foregroundColor = isDisabled
+        ? AppColors.mutedForeground
+        : _foregroundColor;
+    final border = isDisabled
+        ? switch (widget.variant) {
+            AppButtonVariant.secondary => Border.all(color: AppColors.border),
+            AppButtonVariant.outline => Border.all(color: AppColors.border),
+            _ => _border,
+          }
+        : _border;
+    final shadow = isDisabled ? null : _shadow;
 
     final loadingIndicator = SizedBox(
       width: _fontSize + 4,
       height: _fontSize + 4,
       child: CircularProgressIndicator(
         strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(_foregroundColor),
+        valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
       ),
     );
 
@@ -184,7 +206,7 @@ class _AppButtonState extends State<AppButton> {
                   if (widget.icon != null && !isLoading) ...[
                     IconTheme(
                       data: IconThemeData(
-                        color: _foregroundColor,
+                        color: foregroundColor,
                         size: _iconSize,
                       ),
                       child: widget.icon!,
@@ -199,7 +221,7 @@ class _AppButtonState extends State<AppButton> {
                         maxLines: 1,
                         style: typography.labelMD.copyWith(
                           fontSize: _fontSize,
-                          color: _foregroundColor,
+                          color: foregroundColor,
                         ),
                       ),
                     ),
@@ -207,7 +229,7 @@ class _AppButtonState extends State<AppButton> {
                     const SizedBox(width: 8),
                     IconTheme(
                       data: IconThemeData(
-                        color: _foregroundColor,
+                        color: foregroundColor,
                         size: _iconSize,
                       ),
                       child: widget.iconRight!,
@@ -221,11 +243,9 @@ class _AppButtonState extends State<AppButton> {
               );
 
     return GestureDetector(
-      onTap: isLoading
+      onTap: isLoading || widget.onPressed == null
           ? null
           : () async {
-              if (widget.onPressed == null) return;
-
               if (widget.loadable) {
                 if (mounted) setState(() => _internalLoading = true);
               }
@@ -243,12 +263,10 @@ class _AppButtonState extends State<AppButton> {
         width: widget.fullWidth ? double.infinity : null,
         padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
         decoration: BoxDecoration(
-          color: isLoading
-              ? _backgroundColor.withValues(alpha: 0.5)
-              : _backgroundColor,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(_borderRadius),
-          border: _border,
-          boxShadow: _shadow,
+          border: border,
+          boxShadow: shadow,
         ),
         child: Center(child: content),
       ),

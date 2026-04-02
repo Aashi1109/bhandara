@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../models/event.dart';
-import 'event_status.dart';
+import '../../../models/event.dart';
+import '../../../utils/event_status.dart';
+import 'explore_viewport.dart';
 
 const Object _exploreFilterUnset = Object();
 
@@ -103,7 +102,7 @@ bool matchesExploreFilters(
       return false;
     }
 
-    return _distanceInMeters(
+    return distanceInMetersBetween(
           effectiveLocation.latitude,
           effectiveLocation.longitude,
           lat,
@@ -142,50 +141,26 @@ List<Event> filterExploreEvents(
     case ExploreDatePresetValues.today:
       return (
         startOfToday,
-        startOfToday.add(const Duration(days: 1)).subtract(
-          const Duration(milliseconds: 1),
-        ),
+        startOfToday
+            .add(const Duration(days: 1))
+            .subtract(const Duration(milliseconds: 1)),
       );
     case ExploreDatePresetValues.thisWeek:
       final weekStart = startOfToday.subtract(
         Duration(days: now.weekday - DateTime.monday),
       );
-      final weekEnd = weekStart.add(const Duration(days: 7)).subtract(
-        const Duration(milliseconds: 1),
-      );
+      final weekEnd = weekStart
+          .add(const Duration(days: 7))
+          .subtract(const Duration(milliseconds: 1));
       return (weekStart, weekEnd);
     case ExploreDatePresetValues.thisMonth:
       final monthStart = DateTime(now.year, now.month);
       final nextMonth = now.month == DateTime.december
           ? DateTime(now.year + 1, DateTime.january)
           : DateTime(now.year, now.month + 1);
-      return (
-        monthStart,
-        nextMonth.subtract(const Duration(milliseconds: 1)),
-      );
+      return (monthStart, nextMonth.subtract(const Duration(milliseconds: 1)));
     case ExploreDatePresetValues.anytime:
     default:
       return null;
   }
 }
-
-double _distanceInMeters(
-  double startLat,
-  double startLng,
-  double endLat,
-  double endLng,
-) {
-  const earthRadius = 6371000.0;
-  final dLat = _toRadians(endLat - startLat);
-  final dLng = _toRadians(endLng - startLng);
-  final a =
-      sin(dLat / 2) * sin(dLat / 2) +
-      cos(_toRadians(startLat)) *
-          cos(_toRadians(endLat)) *
-          sin(dLng / 2) *
-          sin(dLng / 2);
-  final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  return earthRadius * c;
-}
-
-double _toRadians(double value) => value * pi / 180;

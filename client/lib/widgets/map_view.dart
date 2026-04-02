@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../services/maps/map_manager.dart';
+import '../theme/theme.dart';
 
 /// Shared map widget for consistent map usage across screens.
 ///
@@ -36,6 +38,7 @@ class AppMapView extends StatefulWidget {
     this.mapStyle,
     this.onMapReady,
     this.onTap,
+    this.onCameraMoveStarted,
     this.onCameraMove,
     this.onCameraIdle,
     this.gestureRecognizers = const <Factory<OneSequenceGestureRecognizer>>{},
@@ -77,6 +80,9 @@ class AppMapView extends StatefulWidget {
   /// Callback fired when user taps the map.
   final ValueChanged<LatLng>? onTap;
 
+  /// Callback fired when the camera starts moving.
+  final VoidCallback? onCameraMoveStarted;
+
   /// Callback fired when camera position changes.
   final ValueChanged<CameraPosition>? onCameraMove;
 
@@ -93,23 +99,27 @@ class AppMapView extends StatefulWidget {
 class _AppMapViewState extends State<AppMapView> {
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
-      initialCameraPosition: widget.initialCameraPosition,
-      markers: widget.markers,
-      circles: widget.circles,
-      mapType: widget.mapType,
-      zoomControlsEnabled: widget.zoomControlsEnabled,
-      myLocationButtonEnabled: widget.myLocationButtonEnabled,
-      myLocationEnabled: widget.myLocationEnabled,
-      padding: widget.padding,
-      style: widget.mapStyle ?? widget.manager.nativeMapStyle,
-      gestureRecognizers: widget.gestureRecognizers,
-      onTap: widget.onTap,
-      onCameraMove: widget.onCameraMove,
-      onCameraIdle: widget.onCameraIdle,
-      onMapCreated: (controller) {
-        widget.onMapReady?.call(controller);
-      },
+    return ColoredBox(
+      color: AppColors.muted,
+      child: GoogleMap(
+        initialCameraPosition: widget.initialCameraPosition,
+        markers: widget.markers,
+        circles: widget.circles,
+        mapType: widget.mapType,
+        zoomControlsEnabled: widget.zoomControlsEnabled,
+        myLocationButtonEnabled: widget.myLocationButtonEnabled,
+        myLocationEnabled: widget.myLocationEnabled,
+        padding: widget.padding,
+        style: widget.mapStyle ?? widget.manager.nativeMapStyle,
+        gestureRecognizers: widget.gestureRecognizers,
+        onTap: widget.onTap,
+        onCameraMoveStarted: widget.onCameraMoveStarted,
+        onCameraMove: widget.onCameraMove,
+        onCameraIdle: widget.onCameraIdle,
+        onMapCreated: (controller) {
+          widget.onMapReady?.call(controller);
+        },
+      ),
     );
   }
 }

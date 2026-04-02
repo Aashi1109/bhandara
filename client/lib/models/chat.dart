@@ -1,5 +1,9 @@
 enum MessageDeliveryStatus { pending, failed, sent }
 
+enum ChatMessageLane { left, center, right }
+
+enum ThreadMessageLane { left, center }
+
 class Thread {
   Thread({
     required this.id,
@@ -118,10 +122,22 @@ class Message {
     final raw = json['content'];
     List<MessageMedia> media = const [];
     List<MessageReaction> reactions = const [];
+    String sanitizeText(dynamic value) {
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.toLowerCase() == 'undefined' ||
+            trimmed.toLowerCase() == 'null') {
+          return '';
+        }
+        return value;
+      }
+      return '';
+    }
+
     if (raw is String) {
-      content = raw;
+      content = sanitizeText(raw);
     } else if (raw is Map) {
-      content = raw['text'] as String? ?? '';
+      content = sanitizeText(raw['text']);
       media = ((raw['media'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => MessageMedia.fromJson(item.cast<String, dynamic>()))
@@ -195,6 +211,22 @@ class Message {
 
   bool get isPending => deliveryStatus == MessageDeliveryStatus.pending;
   bool get hasFailed => deliveryStatus == MessageDeliveryStatus.failed;
+  bool get isSystemLike => type == 'system' || type == 'notification';
+
+  bool isCurrentUser(String? currentUserId) =>
+      !isSystemLike && currentUserId != null && senderId == currentUserId;
+
+  ChatMessageLane chatLaneFor(String? currentUserId) {
+    if (isSystemLike) return ChatMessageLane.center;
+    return isCurrentUser(currentUserId)
+        ? ChatMessageLane.right
+        : ChatMessageLane.left;
+  }
+
+  ThreadMessageLane threadLaneFor(String? currentUserId) {
+    if (isSystemLike) return ThreadMessageLane.center;
+    return ThreadMessageLane.left;
+  }
 
   Message copyWith({
     String? id,

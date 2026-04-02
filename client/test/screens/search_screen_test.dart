@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:foody_mobile/screens/search.dart';
 import 'package:foody_mobile/services/api.dart';
+import 'package:foody_mobile/screens/saved.dart';
 
 void main() {
   late HttpClientAdapter originalAdapter;
@@ -27,11 +27,11 @@ void main() {
     'pull to refresh reloads saved items and preserves query/filter',
     (tester) async {
       final router = GoRouter(
-        initialLocation: SearchScreen.routePath,
+        initialLocation: SavedScreen.routePath,
         routes: [
           GoRoute(
-            path: SearchScreen.routePath,
-            builder: (context, state) => const SearchScreen(),
+            path: SavedScreen.routePath,
+            builder: (context, state) => const SavedScreen(),
           ),
         ],
       );

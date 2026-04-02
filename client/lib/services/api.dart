@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
+import '../config.dart';
 import '../router.dart';
 import '../constants/api.dart' as api_constants;
 import '../screens/auth.dart';
@@ -13,12 +14,13 @@ class ApiService {
   ApiService() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 360),
-        receiveTimeout: const Duration(seconds: 360),
+        baseUrl: AppConfig.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'x-client-platform': AppConfig.clientPlatform,
         },
       ),
     );
@@ -34,6 +36,7 @@ class ApiService {
           return handler.next(options);
         },
         onError: (error, handler) async {
+          debugPrint('=== DIO ERROR: ${error.requestOptions.path} status=${error.response?.statusCode} msg=${error.message} ===');
           if (await _shouldRedirectToLogin(error)) {
             await _handleUnauthorized();
           }
@@ -44,7 +47,7 @@ class ApiService {
 
     // Add interceptors for logging
     _dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
+      LogInterceptor(requestBody: false, responseBody: false),
     );
   }
 
@@ -53,59 +56,6 @@ class ApiService {
   static const String _tokenKey = 'token';
   bool _isHandlingUnauthorized = false;
   Future<void> Function()? onUnauthorized;
-  static const String _configuredHost = String.fromEnvironment(
-    'API_HOST',
-    defaultValue: '',
-  );
-
-  static const String _configuredScheme = String.fromEnvironment(
-    'API_SCHEME',
-    defaultValue: 'http',
-  );
-  static const String _configuredPort = String.fromEnvironment(
-    'API_PORT',
-    defaultValue: '3000',
-  );
-
-  static String get host {
-    if (_configuredHost.isNotEmpty) {
-      if (Platform.isAndroid &&
-          (_configuredHost == 'localhost' || _configuredHost == '127.0.0.1')) {
-        return '10.0.2.2';
-      }
-      return _configuredHost;
-    }
-    if (Platform.isAndroid) {
-      return '10.0.2.2';
-    }
-    return 'localhost';
-  }
-
-  static int? get port {
-    if (_configuredPort.isEmpty) {
-      return null;
-    }
-
-    return int.tryParse(_configuredPort);
-  }
-
-  static Uri get apiUri {
-    final configuredPort = port;
-    if (configuredPort == null) {
-      return Uri(scheme: _configuredScheme, host: host, path: '/api');
-    }
-
-    return Uri(
-      scheme: _configuredScheme,
-      host: host,
-      port: configuredPort,
-      path: '/api',
-    );
-  }
-
-  static String get baseUrl {
-    return apiUri.toString();
-  }
 
   Future<bool> _shouldRedirectToLogin(DioException error) async {
     final response = error.response;
@@ -116,12 +66,12 @@ class ApiService {
       return false;
     }
 
-    if (statusCode == 401) {
-      return true;
-    }
-
     if (_isAuthEndpoint(path)) {
       return false;
+    }
+
+    if (statusCode == 401) {
+      return true;
     }
 
     final errorMessage = _extractErrorMessage(response?.data);
@@ -160,6 +110,8 @@ class ApiService {
 
   Future<void> _handleUnauthorized() async {
     _isHandlingUnauthorized = true;
+    debugPrint('=== UNAUTHORIZED TRIGGERED ===');
+    debugPrint('Stack: ${StackTrace.current}');
     try {
       await _storage.delete(_tokenKey);
       await onUnauthorized?.call();
@@ -171,6 +123,7 @@ class ApiService {
           location == LoginScreen.routePath ||
           location == OnboardingScreen.routePath;
 
+      debugPrint('=== UNAUTHORIZED: location=$location redirecting=${!isAlreadyInPublicAuthFlow} ===');
       if (!isAlreadyInPublicAuthFlow) {
         router.go(AuthScreen.routePath);
       }

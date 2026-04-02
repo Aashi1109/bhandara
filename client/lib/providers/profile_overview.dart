@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/achievement.dart';
 import '../models/api_response.dart';
@@ -9,39 +9,41 @@ import '../services/activity.dart';
 import '../services/event.dart';
 import '../services/user.dart';
 
-final profileOverviewProvider =
-    FutureProvider.family<ProfileOverview, String>((ref, userId) async {
-      final currentUser = await userService.getCurrentUser();
-      final isOwnProfile = currentUser?.id == userId;
-      final results = await Future.wait([
-        eventService.getEvents(createdBy: userId, limit: 50),
-        userService.getUserAchievements(userId),
-        activityService.getUserActivity(
-          userId,
-          includePrivate: isOwnProfile,
-          limit: 3,
-        ),
-      ]);
+part 'profile_overview.g.dart';
 
-      final allEvents = results[0] as PaginatedResponse<Event>;
-      final achievements = results[1] as List<Achievement>;
-      final activity = results[2] as PaginatedResponse<AppUpdate>;
+@riverpod
+Future<ProfileOverview> profileOverview(Ref ref, {required String userId}) async {
+  final currentUser = await userService.getCurrentUser();
+  final isOwnProfile = currentUser?.id == userId;
+  final results = await Future.wait([
+    eventService.getEvents(createdBy: userId, limit: 50),
+    userService.getUserAchievements(userId),
+    activityService.getUserActivity(
+      userId,
+      includePrivate: isOwnProfile,
+      limit: 3,
+    ),
+  ]);
 
-      final myEvents =
-          await Future.wait(
-              allEvents.items.map((event) async {
-                try {
-                  return await eventService.getEventPreview(event.id);
-                } catch (_) {
-                  return event;
-                }
-              }),
-            )
-            ..sort((a, b) => b.startTime.compareTo(a.startTime));
+  final allEvents = results[0] as PaginatedResponse<Event>;
+  final achievements = results[1] as List<Achievement>;
+  final activity = results[2] as PaginatedResponse<AppUpdate>;
 
-      return ProfileOverview(
-        myEvents: myEvents,
-        achievements: achievements,
-        recentActivity: activity.items,
-      );
-    });
+  final myEvents =
+      await Future.wait(
+          allEvents.items.map((event) async {
+            try {
+              return await eventService.getEventPreview(event.id);
+            } catch (_) {
+              return event;
+            }
+          }),
+        )
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+
+  return ProfileOverview(
+    myEvents: myEvents,
+    achievements: achievements,
+    recentActivity: activity.items,
+  );
+}

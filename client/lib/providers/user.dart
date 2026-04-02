@@ -6,15 +6,15 @@ import '../services/file.dart';
 
 part 'user.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class UserProfile extends _$UserProfile {
   @override
-  FutureOr<User?> build() async {
-    try {
-      return await userService.getCurrentUser();
-    } catch (_) {
-      return null;
-    }
+  FutureOr<User?> build() {
+    // Return null synchronously. The splash screen handles session
+    // validation and calls setUser() with the authenticated user.
+    // An async fetch here races with setUser() and can overwrite the
+    // manually-set state, causing the app to flash a white screen.
+    return null;
   }
 
   Future<void> updateProfile({

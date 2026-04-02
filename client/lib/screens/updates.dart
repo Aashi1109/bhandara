@@ -48,7 +48,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients || _isLoading || _isFetchingMore || !_hasNext) {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isFetchingMore ||
+        !_hasNext) {
       return;
     }
     if (_scrollController.position.extentAfter < 320) {
@@ -79,10 +82,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       if (!mounted) return;
 
       final merged = <String, AppUpdate>{
-        for (final update in refresh ? <AppUpdate>[] : _updates) update.id: update,
+        for (final update in refresh ? <AppUpdate>[] : _updates)
+          update.id: update,
         for (final update in response.items) update.id: update,
-      }.values.toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       setState(() {
         _updates = merged;
@@ -144,7 +147,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     if (!mounted) return;
     if (update.entityType == 'event') {
       final eventId = (update.payload['eventId'] ?? update.entityId).toString();
-      context.go(EventDetailScreen.routePath.replaceAll(':id', eventId));
+      context.push(EventDetailScreen.routePath.replaceAll(':id', eventId));
       return;
     }
 
@@ -155,7 +158,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           threadId.isNotEmpty &&
           messageId != null &&
           messageId.isNotEmpty) {
-        context.go(
+        context.push(
           ThreadScreen.routePath.replaceAll(':id', messageId),
           extra: {'threadId': threadId, 'chatId': threadId},
         );
@@ -164,7 +167,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     }
 
     if (update.entityType == 'achievement') {
-      context.go(ProfileBadgesScreen.routePath);
+      context.push(ProfileBadgesScreen.routePath);
     }
   }
 
@@ -176,7 +179,9 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         return (
           icon: LucideIcons.messageSquare,
           title: 'New message',
-          body: 'Someone added a new message to a discussion.',
+          body:
+              update.payload['preview']?.toString() ??
+              'Someone added a new message to a discussion.',
           color: AppColors.primary,
         );
       case 'event.joined':
@@ -342,7 +347,9 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           update.createdAt.month == now.month &&
           update.createdAt.day == now.day;
     }).toList();
-    final earlier = _updates.where((update) => !today.contains(update)).toList();
+    final earlier = _updates
+        .where((update) => !today.contains(update))
+        .toList();
 
     return ListView(
       controller: _scrollController,
@@ -359,7 +366,9 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 borderRadius: BorderRadius.circular(50),
               ),
               child: Text(
-                unreadCount > 0 ? '$unreadCount UNREAD' : 'You are all caught up.',
+                unreadCount > 0
+                    ? '$unreadCount UNREAD'
+                    : 'You are all caught up.',
                 style: TextStyle(
                   fontSize: unreadCount > 0 ? 10 : 12,
                   fontWeight: FontWeight.w900,
@@ -440,7 +449,9 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 title: 'Updates',
                 showBack: false,
                 rightElement: GestureDetector(
-                  onTap: _updates.isEmpty || _isMarkingAll ? null : _markAllRead,
+                  onTap: _updates.isEmpty || _isMarkingAll
+                      ? null
+                      : _markAllRead,
                   child: Text(
                     _isMarkingAll ? 'Marking...' : 'Mark all as read',
                     style: TextStyle(

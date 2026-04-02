@@ -22,6 +22,7 @@ When working in a subdirectory, apply the root guidance first, then the nearest 
 - Do not assume Docker runtime paths match source paths; verify what the final image actually copies.
 - Keep runtime assets explicit in Docker builds. Compiled JS alone is not enough when SQL, templates, or static assets are loaded at runtime.
 - Organize code by feature or scope of responsibility, not by creating files mechanically. Prefer keeping related logic together when it serves one feature, and only split files when the boundary is meaningful.
+- Default to delegating substantive work to subagents instead of implementing directly in one pass. For each delegated task, define the exact scope, file or responsibility boundary, expected behavior, non-goals, required output format, and verification expectations before execution.
 
 ## Current Project Patterns
 

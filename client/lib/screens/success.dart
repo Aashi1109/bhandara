@@ -7,7 +7,7 @@ import '../models/event.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/card.dart';
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 
 class SuccessScreen extends StatelessWidget {
   const SuccessScreen({super.key, this.event});

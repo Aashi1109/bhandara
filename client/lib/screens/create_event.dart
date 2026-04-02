@@ -32,7 +32,7 @@ import '../widgets/attachment_pill.dart';
 import '../widgets/map_view.dart';
 import '../widgets/media_preview.dart';
 import '../widgets/snackbar.dart';
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 import 'settings/location.dart';
 import 'success.dart';
 
@@ -939,7 +939,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
     final categoriesAsync = ref.watch(tagsProvider(rootOnly: true));
-    final user = userAsync.valueOrNull;
+    final user = userAsync.value;
     if (!_didHydrateLocation && user?.address != null) {
       _selectedLocation = user!.address;
       if (user.address?.latitude != null && user.address?.longitude != null) {
@@ -1009,7 +1009,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildDetailsSection(
-                          categoriesAsync.valueOrNull ?? const [],
+                          categoriesAsync.value ?? const [],
                         ),
                         const SizedBox(height: 24),
                         _buildLocationCard(),

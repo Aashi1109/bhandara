@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:video_player/video_player.dart';
 
 import '../models/chat.dart';
 import '../services/socket.dart';
@@ -333,14 +334,9 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                           borderRadius: BorderRadius.circular(24),
                           child: item.type == 'image'
                               ? Image.network(item.url, fit: BoxFit.contain)
-                              : Container(
-                                  color: AppColors.muted,
-                                  child: const Center(
-                                    child: Icon(
-                                      LucideIcons.play,
-                                      size: AppIconSizes.display,
-                                    ),
-                                  ),
+                              : _VideoPreviewCard(
+                                  key: ValueKey(item.id),
+                                  url: item.url,
                                 ),
                         ),
                       ),
@@ -564,6 +560,395 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VideoPreviewCard extends StatefulWidget {
+  const _VideoPreviewCard({super.key, required this.url});
+
+  final String url;
+
+  @override
+  State<_VideoPreviewCard> createState() => _VideoPreviewCardState();
+}
+
+class _VideoPreviewCardState extends State<_VideoPreviewCard> {
+  static const List<double> _playbackSpeeds = [0.75, 1.0, 1.25, 1.5, 2.0];
+
+  VideoPlayerController? _controller;
+  Timer? _hideControlsTimer;
+  bool _showControls = true;
+  bool _isMuted = false;
+  bool _fitToFill = false;
+  double _playbackSpeed = 1.0;
+
+  VideoPlayerValue? get _value => _controller?.value;
+  bool get _isReady => _value?.isInitialized ?? false;
+  Duration get _position => _value?.position ?? Duration.zero;
+  Duration get _duration => _value?.duration ?? Duration.zero;
+  bool get _isPlaying => _value?.isPlaying ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  @override
+  void dispose() {
+    _hideControlsTimer?.cancel();
+    _controller?.removeListener(_onControllerUpdated);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initialize() async {
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller = controller;
+    controller.addListener(_onControllerUpdated);
+
+    try {
+      await controller.initialize();
+      await controller.setLooping(false);
+      await controller.setVolume(1);
+      await controller.setPlaybackSpeed(_playbackSpeed);
+      if (!mounted) return;
+      setState(() {});
+      _scheduleControlsHide();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {});
+    }
+  }
+
+  void _onControllerUpdated() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _scheduleControlsHide() {
+    _hideControlsTimer?.cancel();
+    if (!_isPlaying) return;
+    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() {
+        _showControls = false;
+      });
+    });
+  }
+
+  Future<void> _togglePlayback() async {
+    final controller = _controller;
+    if (controller == null || !_isReady) return;
+
+    if (_isPlaying) {
+      await controller.pause();
+      _hideControlsTimer?.cancel();
+    } else {
+      await controller.play();
+      _scheduleControlsHide();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _showControls = true;
+    });
+  }
+
+  Future<void> _seekBy(Duration delta) async {
+    final controller = _controller;
+    if (controller == null || !_isReady) return;
+
+    final target = _position + delta;
+    final clamped = target < Duration.zero
+        ? Duration.zero
+        : target > _duration
+        ? _duration
+        : target;
+    await controller.seekTo(clamped);
+    _showControlsTemporarily();
+  }
+
+  Future<void> _setPosition(double millis) async {
+    final controller = _controller;
+    if (controller == null || !_isReady) return;
+
+    await controller.seekTo(Duration(milliseconds: millis.round()));
+    _showControlsTemporarily();
+  }
+
+  Future<void> _toggleMute() async {
+    final controller = _controller;
+    if (controller == null || !_isReady) return;
+
+    final nextMuted = !_isMuted;
+    await controller.setVolume(nextMuted ? 0 : 1);
+    if (!mounted) return;
+    setState(() {
+      _isMuted = nextMuted;
+    });
+    _showControlsTemporarily();
+  }
+
+  Future<void> _cyclePlaybackSpeed() async {
+    final controller = _controller;
+    if (controller == null || !_isReady) return;
+
+    final currentIndex = _playbackSpeeds.indexOf(_playbackSpeed);
+    final nextIndex =
+        currentIndex == -1 || currentIndex == _playbackSpeeds.length - 1
+        ? 0
+        : currentIndex + 1;
+    final nextSpeed = _playbackSpeeds[nextIndex];
+    await controller.setPlaybackSpeed(nextSpeed);
+    if (!mounted) return;
+    setState(() {
+      _playbackSpeed = nextSpeed;
+    });
+    _showControlsTemporarily();
+  }
+
+  void _toggleFit() {
+    setState(() {
+      _fitToFill = !_fitToFill;
+    });
+    _showControlsTemporarily();
+  }
+
+  void _showControlsTemporarily() {
+    if (!mounted) return;
+    setState(() {
+      _showControls = true;
+    });
+    _scheduleControlsHide();
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:$minutes:$seconds';
+    }
+    return '${duration.inMinutes}:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isReady) {
+      return Container(
+        color: AppColors.muted,
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    final controller = _controller!;
+    final progressMax = _duration.inMilliseconds <= 0
+        ? 1.0
+        : _duration.inMilliseconds.toDouble();
+    final progressValue = _position.inMilliseconds
+        .toDouble()
+        .clamp(0.0, progressMax)
+        .toDouble();
+
+    return GestureDetector(
+      onTap: _showControlsTemporarily,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            color: const Color(0xFF081117),
+            child: FittedBox(
+              fit: _fitToFill ? BoxFit.cover : BoxFit.contain,
+              child: SizedBox(
+                width: controller.value.size.width,
+                height: controller.value.size.height,
+                child: VideoPlayer(controller),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _showControls ? 1 : 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.18),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.52),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_showControls)
+            Positioned.fill(
+              child: Center(
+                child: GestureDetector(
+                  onTap: _togglePlayback,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Icon(
+                      _isPlaying ? LucideIcons.pause : LucideIcons.play,
+                      size: 28,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: _showControls ? 1 : 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2B3238).withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    _controlIcon(
+                      icon: _isPlaying ? LucideIcons.pause : LucideIcons.play,
+                      onTap: _togglePlayback,
+                    ),
+                    const SizedBox(width: 12),
+                    _controlIcon(
+                      icon: LucideIcons.rotateCcw,
+                      onTap: () => _seekBy(const Duration(seconds: -10)),
+                    ),
+                    const SizedBox(width: 8),
+                    _controlIcon(
+                      icon: LucideIcons.rotateCw,
+                      onTap: () => _seekBy(const Duration(seconds: 10)),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _formatDuration(_position),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: Colors.white,
+                          inactiveTrackColor: Colors.white.withValues(
+                            alpha: 0.28,
+                          ),
+                          overlayShape: SliderComponentShape.noOverlay,
+                          thumbColor: Colors.white,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 5,
+                          ),
+                          trackHeight: 4,
+                        ),
+                        child: Slider(
+                          value: progressValue,
+                          min: 0,
+                          max: progressMax,
+                          onChanged: _setPosition,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _formatDuration(_duration),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: _cyclePlaybackSpeed,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          '${_playbackSpeed.toStringAsFixed(_playbackSpeed.truncateToDouble() == _playbackSpeed ? 0 : 2)}x',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _controlIcon(
+                      icon: _isMuted
+                          ? LucideIcons.volumeX
+                          : LucideIcons.volume2,
+                      onTap: _toggleMute,
+                    ),
+                    const SizedBox(width: 8),
+                    _controlIcon(
+                      icon: _fitToFill
+                          ? LucideIcons.minimize
+                          : LucideIcons.maximize,
+                      onTap: _toggleFit,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _controlIcon({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Icon(icon, size: 20, color: Colors.white),
     );
   }
 }

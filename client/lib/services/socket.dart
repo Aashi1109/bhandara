@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:web_socket/web_socket.dart';
 
-import 'api.dart';
+import '../config.dart';
 import 'secure_storage.dart';
 
 typedef SocketConnector = Future<WebSocket> Function(Uri uri);
@@ -33,6 +33,7 @@ class SocketService {
   final _statusController =
       StreamController<SocketConnectionStatus>.broadcast();
   final Map<int, Completer<dynamic>> _ackHandlers = {};
+  final Set<String> _joinedRooms = <String>{};
 
   int _ackCounter = 0;
   bool _isSessionActive = false;
@@ -94,6 +95,7 @@ class SocketService {
     _connectCompleter = null;
     _ackHandlers.forEach((id, c) => c.completeError('Socket disconnected'));
     _ackHandlers.clear();
+    _joinedRooms.clear();
   }
 
   Future<void> _connectInternal() async {
@@ -104,7 +106,7 @@ class SocketService {
       return;
     }
 
-    final baseUri = Uri.parse(ApiService.baseUrl);
+    final baseUri = AppConfig.apiUri;
     final wsScheme = baseUri.scheme == 'https' ? 'wss' : 'ws';
     final uri = Uri(
       scheme: wsScheme,
@@ -146,12 +148,17 @@ class SocketService {
     if (payload.startsWith('0')) {
       print('Socket transport handshake received, joining $namespace');
       _sendRaw('40$namespace,');
+    } else if (payload.startsWith('44$namespace')) {
+      // Namespace connection error — server rejected auth.
+      print('Socket namespace connection error: $payload');
+      _onDisconnect();
     } else if (payload.startsWith('40$namespace')) {
       _updateStatus(SocketConnectionStatus.connected);
       print('Socket namespace connection established for $namespace');
       if (!(_connectCompleter?.isCompleted ?? true)) {
         _connectCompleter?.complete();
       }
+      unawaited(_restoreJoinedRooms());
     } else if (payload.startsWith('2')) {
       _sendRaw('3');
     } else if (payload.startsWith('42$namespace,')) {
@@ -176,7 +183,9 @@ class SocketService {
       final String eventName = eventData[0];
       final dynamic body = eventData[1];
 
-      _messageController.add({'event': eventName, 'data': body});
+      if (!_messageController.isClosed) {
+        _messageController.add({'event': eventName, 'data': body});
+      }
 
       if (ackId != null) {
         _sendRaw('43$namespace,$ackId[{"data":true}]');
@@ -225,6 +234,32 @@ class SocketService {
 
   Future<dynamic> emit(String event, Map<String, dynamic> data) {
     return sendMessage(event, data);
+  }
+
+  Future<void> joinRoom(String room) async {
+    _joinedRooms.add(room);
+    if (!isConnected) {
+      return;
+    }
+
+    try {
+      await emit('join:room', {'room': room});
+    } catch (error) {
+      print('Socket joinRoom failed for $room: $error');
+    }
+  }
+
+  Future<void> leaveRoom(String room) async {
+    _joinedRooms.remove(room);
+    if (!isConnected) {
+      return;
+    }
+
+    try {
+      await emit('leave:room', {'room': room});
+    } catch (error) {
+      print('Socket leaveRoom failed for $room: $error');
+    }
   }
 
   void _sendRaw(String message) {
@@ -294,6 +329,20 @@ class SocketService {
     _updateStatus(SocketConnectionStatus.disconnected);
     _messageController.close();
     _statusController.close();
+  }
+
+  Future<void> _restoreJoinedRooms() async {
+    if (!isConnected || _joinedRooms.isEmpty) {
+      return;
+    }
+
+    for (final room in _joinedRooms) {
+      try {
+        await emit('join:room', {'room': room});
+      } catch (error) {
+        print('Socket restoreJoinedRooms failed for $room: $error');
+      }
+    }
   }
 }
 

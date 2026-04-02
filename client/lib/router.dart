@@ -6,8 +6,9 @@ import 'screens/onboarding.dart';
 import 'screens/auth.dart';
 import 'screens/login.dart';
 import 'screens/preferences.dart';
-import 'screens/explore.dart';
+import 'screens/explore/explore_screen.dart';
 import 'screens/search.dart';
+import 'screens/saved.dart';
 import 'screens/event_detail.dart';
 import 'screens/event_ratings.dart';
 import 'screens/event_attendees.dart';
@@ -36,6 +37,8 @@ import 'models/event.dart';
 import 'models/location_picker.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
+Map<String, dynamic>? _extraAsMap(Object? extra) =>
+    extra is Map<String, dynamic> ? extra : null;
 
 final router = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -57,7 +60,7 @@ final router = GoRouter(
     GoRoute(
       path: LoginScreen.routePath,
       builder: (context, state) =>
-          LoginScreen(extra: state.extra as Map<String, dynamic>?),
+          LoginScreen(extra: _extraAsMap(state.extra)),
     ),
     GoRoute(
       path: ProfileSetupScreen.routePath,
@@ -76,6 +79,10 @@ final router = GoRouter(
       builder: (context, state) => const SearchScreen(),
     ),
     GoRoute(
+      path: SavedScreen.routePath,
+      builder: (context, state) => const SavedScreen(),
+    ),
+    GoRoute(
       path: EventDetailScreen.routePath,
       builder: (context, state) {
         final extra = state.extra;
@@ -88,7 +95,7 @@ final router = GoRouter(
     GoRoute(
       path: EventRatingsScreen.routePath,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        final extra = _extraAsMap(state.extra) ?? const <String, dynamic>{};
         return EventRatingsScreen(
           eventId: state.pathParameters['id']!,
           eventName: extra['eventName'] as String? ?? 'Event',
@@ -99,7 +106,7 @@ final router = GoRouter(
     GoRoute(
       path: EventAttendeesScreen.routePath,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>? ?? const {};
+        final extra = _extraAsMap(state.extra) ?? const <String, dynamic>{};
         return EventAttendeesScreen(
           eventName: extra['eventName'] as String? ?? 'Event',
           attendees: (extra['attendees'] as List<dynamic>? ?? const [])
@@ -123,7 +130,7 @@ final router = GoRouter(
     GoRoute(
       path: ChatScreen.routePath,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = _extraAsMap(state.extra);
         return ChatScreen(
           id: state.pathParameters['id']!,
           eventId: extra?['eventId'] as String?,
@@ -133,7 +140,7 @@ final router = GoRouter(
     GoRoute(
       path: ThreadScreen.routePath,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = _extraAsMap(state.extra);
         return ThreadScreen(
           id: state.pathParameters['id']!,
           threadId: extra?['threadId'] as String?,
@@ -146,7 +153,7 @@ final router = GoRouter(
     GoRoute(
       path: ProfileScreen.routePath,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
+        final extra = _extraAsMap(state.extra);
         return ProfileScreen(userId: extra?['userId'] as String?);
       },
     ),

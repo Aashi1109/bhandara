@@ -31,7 +31,7 @@ import 'chat.dart';
 import 'create_event.dart';
 import 'event_attendees.dart';
 import 'event_ratings.dart';
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 
 enum _EventDetailActionKey { share, save, edit }
 
@@ -69,6 +69,11 @@ class EventDetailScreen extends ConsumerStatefulWidget {
 
 class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   static const Duration _heroAnimationDuration = Duration(milliseconds: 260);
+  static const String _defaultHeroImageSeed = 'event-detail-fallback';
+  static const String _defaultEventName = 'Event';
+  static const String _defaultEventStatus = 'draft';
+  static const String _defaultLocationLabel = 'Location unavailable';
+  static const String _defaultPrimaryTag = 'Food';
 
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   Event? _event;
@@ -264,18 +269,60 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     _socketSubscription = socketService.messages.listen((event) {
       if (!mounted) return;
       final eventName = event['event'];
-      final eventData = event['data'];
+      if (eventName != SocketEvents.eventUpdated) {
+        return;
+      }
+
+      final updatedEvent = _parseSocketEventUpdate(event['data']);
+      if (updatedEvent == null || updatedEvent.id != widget.id) {
+        return;
+      }
+
       setState(() {
-        if (eventName == SocketEvents.eventUpdated) {
-          final updatedEvent = Event.fromJson(eventData);
-          if (updatedEvent.id == widget.id) {
-            _event = _event?.merge(updatedEvent) ?? updatedEvent;
-            _heroMediaIndex = _clampMediaIndexFor(_event);
-            _checkIfJoined();
-          }
-        }
+        _event = _event?.merge(updatedEvent) ?? updatedEvent;
+        _heroMediaIndex = _clampMediaIndexFor(_event);
       });
+      _checkIfJoined();
     });
+  }
+
+  Event? _parseSocketEventUpdate(dynamic payload) {
+    final normalized = _extractSocketEventPayload(payload);
+    if (normalized == null) {
+      return null;
+    }
+
+    final eventId = normalized['id'];
+    if (eventId is! String || eventId.isEmpty) {
+      return null;
+    }
+
+    try {
+      return Event.fromJson(normalized);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic>? _extractSocketEventPayload(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      final nested = payload['data'];
+      if (nested is Map<String, dynamic>) {
+        return nested;
+      }
+      return payload;
+    }
+
+    if (payload is Map) {
+      final castPayload = Map<String, dynamic>.from(payload);
+      final nested = castPayload['data'];
+      if (nested is Map) {
+        return Map<String, dynamic>.from(nested);
+      }
+      return castPayload;
+    }
+
+    return null;
   }
 
   @override
@@ -298,11 +345,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           orElse: () => result.items.first,
         );
       } else {
-        selected = await chatService.createThread(widget.id, type: 'general');
+        selected = await chatService.createThread(widget.id);
       }
 
       if (!mounted) return;
-      context.go(
+      await context.push(
         ChatScreen.routePath.replaceAll(':id', selected.id),
         extra: {'eventId': widget.id},
       );
@@ -388,9 +435,51 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   String get _currentHeroMediaUrl {
     if (_heroMedia.isEmpty) {
-      return 'https://picsum.photos/seed/${_event!.id}/800/800';
+      return 'https://picsum.photos/seed/${_event?.id ?? _defaultHeroImageSeed}/800/800';
     }
     return _heroMedia[_heroMediaIndex].url;
+  }
+
+  String get _eventDescription {
+    final description = _event?.description?.trim();
+    if (description != null && description.isNotEmpty) {
+      return description;
+    }
+    return _isHydratingFullEvent
+        ? 'Loading event details...'
+        : 'No description provided.';
+  }
+
+  String get _locationAddressLabel {
+    final address = _event?.location.address.trim();
+    if (address != null && address.isNotEmpty) {
+      return address.toUpperCase();
+    }
+    return _defaultLocationLabel.toUpperCase();
+  }
+
+  String get _heroStatusLabel {
+    final status = _event?.status.trim();
+    if (status != null && status.isNotEmpty) {
+      return status.toUpperCase();
+    }
+    return _defaultEventStatus.toUpperCase();
+  }
+
+  String get _heroTitle {
+    final name = _event?.name.trim();
+    if (name != null && name.isNotEmpty) {
+      return name;
+    }
+    return _defaultEventName;
+  }
+
+  bool get _canShowFullEventDetails => _event?.hasFullDetail == true;
+
+  String get _primaryTagLabel {
+    final firstTag = _event?.tags?.isNotEmpty == true ? _event?.tags?.first : null;
+    final tagName = firstTag?.name.trim() ?? '';
+    return tagName.isNotEmpty ? tagName : _defaultPrimaryTag;
   }
 
   bool get _hasPreviousHeroMedia => _heroMediaIndex > 0;
@@ -594,17 +683,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = ref.watch(userProfileProvider).value;
-    if (currentUser != null &&
-        !_isOwner &&
-        _saveSummary == null &&
-        !_isLoadingSaveState) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _saveSummary == null && !_isLoadingSaveState) {
-          _loadSaveState();
-        }
-      });
-    }
+    ref.watch(userProfileProvider);
 
     if (_isLoading) {
       return const Scaffold(
@@ -849,10 +928,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          _event!.description ??
-                              (_isHydratingFullEvent
-                                  ? 'Loading event details...'
-                                  : 'No description provided.'),
+                          _eventDescription,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -917,7 +993,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      _event!.location.address.toUpperCase(),
+                                      _locationAddressLabel,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
@@ -952,7 +1028,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   ? null
                                   : _openAttendees,
                               child: Text(
-                                _isHydratingFullEvent && !_event!.hasFullDetail
+                                _isHydratingFullEvent && !_canShowFullEventDetails
                                     ? 'Loading attendees...'
                                     : '$_participantCount Attending',
                                 textAlign: TextAlign.right,
@@ -1477,7 +1553,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      _event!.status.toUpperCase(),
+                                      _heroStatusLabel,
                                       style: const TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w900,
@@ -1512,7 +1588,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        _event!.name,
+                        _heroTitle,
                         maxLines: _isHeroExpanded ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1617,9 +1693,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       _infoPill(LucideIcons.timer, 'Active'),
                                       _infoPill(
                                         LucideIcons.utensils,
-                                        _event!.tags?.isNotEmpty == true
-                                            ? _event!.tags!.first.name
-                                            : 'Food',
+                                        _primaryTagLabel,
                                       ),
                                       _infoPill(
                                         LucideIcons.navigation,
@@ -1670,41 +1744,35 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _verifiedHostChip() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          decoration: BoxDecoration(
-            color: AppColors.muted.withValues(alpha: 0.82),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.border),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.muted.withValues(alpha: 0.82),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 6,
+        children: [
+          Icon(
+            LucideIcons.badgeCheck,
+            size: AppIconSizes.s,
+            color: AppColors.primary,
           ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              Icon(
-                LucideIcons.badgeCheck,
-                size: AppIconSizes.s,
-                color: AppColors.primary,
-              ),
-              Flexible(
-                child: Text(
-                  'Verified Host',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              // Verifier avatar listing intentionally hidden for now.
-            ],
+          Text(
+            'Verified Host',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
           ),
-        );
-      },
+          // Verifier avatar listing intentionally hidden for now.
+        ],
+      ),
     );
   }
 

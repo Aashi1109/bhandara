@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'services/maps/map_platform_config.dart';
 import 'theme/theme.dart';
 import 'router.dart';
 import 'services/local_storage.dart';
@@ -10,6 +14,18 @@ import 'widgets/app_session_coordinator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  unawaited(configureGoogleMapsPlatform(warmupSdk: false));
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('=== FLUTTER ERROR: ${details.exception} ===');
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('=== PLATFORM ERROR: $error ===');
+    return true;
+  };
+
   await LocalStorage.init();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

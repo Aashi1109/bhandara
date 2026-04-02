@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
+import '../../config.dart';
 import 'map_models.dart';
 import 'map_provider_service.dart';
 import 'map_provider_type.dart';
@@ -10,7 +11,7 @@ class GoogleMapsService implements MapProviderService {
 
   final Dio _dio;
 
-  static const String _apiKey = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  static const String _apiKey = AppConfig.googleMapsApiKey;
 
   static const String _nativeStyle = '''
 [

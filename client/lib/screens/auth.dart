@@ -6,7 +6,7 @@ import '../providers/login_flow.dart';
 import '../providers/auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/card.dart';
@@ -16,7 +16,7 @@ import '../widgets/snackbar.dart';
 import '../utils/error.dart';
 
 import 'login.dart';
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -156,57 +156,48 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
 
                           // Social buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppButton(
-                                  variant: AppButtonVariant.outline,
-                                  size: AppButtonSize.lg,
-                                  onPressed: () async {
-                                    try {
-                                      await ref
-                                          .read(authProvider.notifier)
-                                          .signInWithGoogle();
-                                      if (context.mounted) {
-                                        context.go(ExploreScreen.routePath);
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        final message = extractExceptionMessage(
-                                          e,
-                                        );
-                                        AppSnackBar.show(
-                                          context,
-                                          message: message,
-                                          type: SnackBarType.error,
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: ClipOval(
-                                    child: CachedNetworkImage(
-                                      imageUrl:
-                                          'https://picsum.photos/seed/google/24/24',
-                                      width: 20,
-                                      height: 20,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              const Expanded(
-                                child: AppButton(
-                                  variant: AppButtonVariant.outline,
-                                  size: AppButtonSize.lg,
-                                  child: Icon(
-                                    LucideIcons.apple,
-                                    size: AppIconSizes.defaultSize,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          AppButton(
+                            variant: AppButtonVariant.outline,
+                            size: AppButtonSize.lg,
+                            fullWidth: true,
+                            onPressed: () async {
+                              try {
+                                await ref
+                                    .read(authProvider.notifier)
+                                    .signInWithGoogle();
+                                if (context.mounted) {
+                                  context.go(ExploreScreen.routePath);
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  final message = extractExceptionMessage(e);
+                                  AppSnackBar.show(
+                                    context,
+                                    message: message,
+                                    type: SnackBarType.error,
+                                  );
+                                }
+                              }
+                            },
+                            child: SvgPicture.asset(
+                              'assets/svg/google_logo.svg',
+                              width: 20,
+                              height: 20,
+                            ),
                           ),
+                          // TODO: Re-enable Apple Sign-In when iOS support is ready
+                          // const SizedBox(width: 16),
+                          // const Expanded(
+                          //   child: AppButton(
+                          //     variant: AppButtonVariant.outline,
+                          //     size: AppButtonSize.lg,
+                          //     child: Icon(
+                          //       LucideIcons.apple,
+                          //       size: AppIconSizes.defaultSize,
+                          //       color: AppColors.primary,
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),

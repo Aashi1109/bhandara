@@ -21,7 +21,6 @@ import '../../widgets/button.dart';
 import '../../widgets/header.dart';
 import '../../widgets/map_view.dart';
 import '../../widgets/snackbar.dart';
-import '../settings.dart';
 
 class LocationSettingsScreen extends ConsumerStatefulWidget {
   const LocationSettingsScreen({
@@ -37,6 +36,7 @@ class LocationSettingsScreen extends ConsumerStatefulWidget {
   });
 
   static const String routePath = '/settings/location';
+  static const String _settingsRoutePath = '/settings';
   final LocationSelectionMode mode;
   final UserAddress? initialLocation;
   final double? initialCameraLatitude;
@@ -69,7 +69,6 @@ class _LocationSettingsScreenState
   LatLng _cameraTarget = _defaultLocation;
   LatLng _initialLocation = _defaultLocation;
   String _selectedLabel = 'Not set';
-  String _initialLabel = 'Not set';
   List<MapSearchSuggestion> _suggestions = const [];
   Timer? _debounce;
   bool _isSearching = false;
@@ -111,7 +110,6 @@ class _LocationSettingsScreenState
     );
     _currentZoom = widget.initialZoom ?? _initialZoom;
     _initialLocation = _selectedLocation;
-    _initialLabel = _selectedLabel;
     _searchController.text = _selectedLabel;
     _didHydrate = true;
   }
@@ -124,7 +122,7 @@ class _LocationSettingsScreenState
     final lngChanged =
         (_selectedLocation.longitude - _initialLocation.longitude).abs() >
         epsilon;
-    return latChanged || lngChanged || _selectedLabel != _initialLabel;
+    return latChanged || lngChanged;
   }
 
   Future<void> _changeZoom(double delta) async {
@@ -322,7 +320,7 @@ class _LocationSettingsScreenState
     });
     if (!mounted) return;
     AppSnackBar.success(context, 'Location saved.');
-    context.go(SettingsScreen.routePath);
+    context.go(LocationSettingsScreen._settingsRoutePath);
   }
 
   String? _distanceLabel(MapSearchSuggestion suggestion) {
@@ -393,7 +391,7 @@ class _LocationSettingsScreenState
             title: _isPickerMode ? 'Select Location' : 'Default Location',
             onBack: () => _isPickerMode
                 ? context.pop()
-                : context.go(SettingsScreen.routePath),
+                : context.go(LocationSettingsScreen._settingsRoutePath),
           ),
           Expanded(
             child: Stack(

@@ -16,82 +16,104 @@ class Event {
     this.creator,
     this.capacity,
     this.stats,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
-    // timings: { start, end } — server shape
-    final timings = json['timings'] as Map<String, dynamic>?;
+    final timings = _asMap(json['timings']);
     DateTime startTime = DateTime.now();
     DateTime endTime = DateTime.now();
     if (timings != null) {
-      if (timings['start'] != null) {
-        startTime = DateTime.tryParse(timings['start'] as String) ?? startTime;
-      }
-      if (timings['end'] != null) {
-        endTime = DateTime.tryParse(timings['end'] as String) ?? endTime;
-      }
+      startTime = _parseDateTime(timings['start']) ?? startTime;
+      endTime = _parseDateTime(timings['end']) ?? endTime;
     }
+    startTime = _parseDateTime(json['startTime']) ?? startTime;
+    startTime = _parseDateTime(json['start']) ?? startTime;
+    endTime = _parseDateTime(json['endTime']) ?? endTime;
+    endTime = _parseDateTime(json['end']) ?? endTime;
 
-    // participants: [{user: string|object, status: string}] — extract user IDs
     List<String>? participants;
     List<EventUser>? participantUsers;
-    if (json['participants'] != null) {
+    final rawParticipants = _asList(json['participants']);
+    if (rawParticipants != null) {
       participantUsers = [];
-      participants = (json['participants'] as List).map((p) {
-        if (p is Map) {
-          final user = p['user'];
-          if (user is Map<String, dynamic>) {
-            participantUsers!.add(EventUser.fromJson(user));
-            return user['id'] as String;
-          }
-          return user as String;
+      participants = [];
+      for (final participant in rawParticipants) {
+        final participantMap = _asMap(participant);
+        final rawUser = participantMap != null && participantMap.containsKey('user')
+            ? participantMap['user']
+            : participant;
+
+        if (rawUser is String && rawUser.isNotEmpty) {
+          participants.add(rawUser);
+          continue;
         }
-        return p as String;
-      }).toList();
+
+        final userMap = _asMap(rawUser);
+        final userId = _stringValue(userMap?['id']);
+        if (userMap == null || userId == null || userId.isEmpty) {
+          continue;
+        }
+
+        participantUsers.add(EventUser.fromJson(userMap));
+        participants.add(userId);
+      }
     }
 
-    // media: may be string IDs or full objects
     List<Media>? media;
-    if (json['media'] != null) {
-      media = (json['media'] as List).whereType<Map<String, dynamic>>().map(
-          Media.fromJson).toList();
+    final rawMedia = _asList(json['media']);
+    if (rawMedia != null) {
+      media = rawMedia
+          .map((item) => Media.tryFromJson(_asMap(item)))
+          .whereType<Media>()
+          .toList();
     }
 
-    // tags: may be string IDs or full objects
     List<Tag>? tags;
-    if (json['tags'] != null) {
-      tags = (json['tags'] as List).whereType<Map<String, dynamic>>().map(
-          Tag.fromJson).toList();
+    final rawTags = _asList(json['tags']);
+    if (rawTags != null) {
+      tags = rawTags
+          .map((item) => Tag.tryFromJson(_asMap(item)))
+          .whereType<Tag>()
+          .toList();
     }
 
-    final creator = json['creator'] is Map<String, dynamic>
-        ? EventUser.fromJson(json['creator'] as Map<String, dynamic>)
-        : null;
-    final verifiers = (json['verifiers'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(EventVerifier.fromJson)
+    final creator = EventUser.tryFromJson(_asMap(json['creator']));
+    final verifiers = (_asList(json['verifiers']) ?? const [])
+        .map((item) => EventVerifier.tryFromJson(_asMap(item)))
+        .whereType<EventVerifier>()
         .toList();
-    final stats = json['stats'] is Map<String, dynamic>
-        ? EventStats.fromJson(json['stats'] as Map<String, dynamic>)
+    final stats = _asMap(json['stats']) != null
+        ? EventStats.fromJson(_asMap(json['stats'])!)
         : null;
+    final createdBy =
+        _stringValue(json['createdBy']) ??
+        _stringValue(_asMap(json['createdBy'])?['id']) ??
+        creator?.id ??
+        '';
+    final location = Location.tryFromJson(_asMap(json['location'])) ??
+        const Location(address: '');
 
     return Event(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      status: json['status'] as String? ?? 'DRAFT',
-      type: json['type'] as String? ?? 'PUBLIC',
+      id: _stringValue(json['id']) ?? '',
+      name: _stringValue(json['name']) ?? '',
+      description: _stringValue(json['description']),
+      status: _stringValue(json['status']) ?? 'DRAFT',
+      type: _stringValue(json['type']) ?? 'PUBLIC',
       startTime: startTime,
       endTime: endTime,
-      createdBy: json['createdBy'] as String,
-      location: Location.fromJson(json['location'] as Map<String, dynamic>),
+      createdBy: createdBy,
+      location: location,
       media: media,
       tags: tags,
       participants: participantUsers?.isNotEmpty == true ? participantUsers : participants,
       verifiers: verifiers,
       creator: creator,
-      capacity: json['capacity'] as int?,
+      capacity: (json['capacity'] as num?)?.toInt(),
       stats: stats,
+      createdAt: _parseDateTime(json['createdAt']),
+      updatedAt: _parseDateTime(json['updatedAt']),
     );
   }
 
@@ -112,6 +134,8 @@ class Event {
     EventUser? creator,
     int? capacity,
     EventStats? stats,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Event(
       id: id ?? this.id,
@@ -130,6 +154,8 @@ class Event {
       creator: creator ?? this.creator,
       capacity: capacity ?? this.capacity,
       stats: stats ?? this.stats,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -151,6 +177,8 @@ class Event {
       creator: other.creator ?? creator,
       capacity: other.capacity ?? capacity,
       stats: other.stats ?? stats,
+      createdAt: other.createdAt ?? createdAt,
+      updatedAt: other.updatedAt ?? updatedAt,
     );
   }
 
@@ -181,6 +209,8 @@ class Event {
   final EventUser? creator;
   final int? capacity;
   final EventStats? stats;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 }
 
 class EventStats {
@@ -229,17 +259,28 @@ class EventUser {
   });
 
   factory EventUser.fromJson(Map<String, dynamic> json) {
-    String? avatarUrl = json['avatarUrl'] as String?;
-    if (avatarUrl == null && json['profilePic'] is Map) {
-      avatarUrl =
-          (json['profilePic'] as Map<String, dynamic>)['url'] as String?;
+    String? avatarUrl = _stringValue(json['avatarUrl']);
+    final profilePic = _asMap(json['profilePic']);
+    if (avatarUrl == null && profilePic != null) {
+      avatarUrl = _stringValue(profilePic['url']);
     }
 
     return EventUser(
-      id: json['id'] as String,
-      name: json['name'] as String?,
+      id: _stringValue(json['id']) ?? '',
+      name: _stringValue(json['name']),
       avatarUrl: avatarUrl,
     );
+  }
+
+  static EventUser? tryFromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    final id = _stringValue(json['id']);
+    if (id == null || id.isEmpty) {
+      return null;
+    }
+    return EventUser.fromJson(json);
   }
 
   final String id;
@@ -255,14 +296,27 @@ class EventVerifier {
 
   factory EventVerifier.fromJson(Map<String, dynamic> json) {
     final rawUser = json['user'];
+    final userMap = _asMap(rawUser);
+    final userId = _stringValue(rawUser) ?? _stringValue(userMap?['id']) ?? '';
     return EventVerifier(
-      user: rawUser is Map<String, dynamic>
-          ? EventUser.fromJson(rawUser)
-          : EventUser(id: rawUser as String, name: null, avatarUrl: null),
-      verifiedAt: json['verifiedAt'] != null
-          ? DateTime.tryParse(json['verifiedAt'] as String)
-          : null,
+      user: userMap != null
+          ? EventUser.fromJson(userMap)
+          : EventUser(id: userId, name: null, avatarUrl: null),
+      verifiedAt: _parseDateTime(json['verifiedAt']),
     );
+  }
+
+  static EventVerifier? tryFromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    final rawUser = json['user'];
+    final userId =
+        _stringValue(rawUser) ?? _stringValue(_asMap(rawUser)?['id']);
+    if (userId == null || userId.isEmpty) {
+      return null;
+    }
+    return EventVerifier.fromJson(json);
   }
 
   final EventUser user;
@@ -270,29 +324,34 @@ class EventVerifier {
 }
 
 class Location {
-  Location({
+  const Location({
     required this.address,
     this.latitude,
     this.longitude,
   });
 
   factory Location.fromJson(Map<String, dynamic> json) {
-    // Server ILocation: { address, latitude?, longitude? }
-    // Also handles nested coordinates: { coordinates: { latitude, longitude } }
     double? lat = (json['latitude'] as num?)?.toDouble();
     double? lng = (json['longitude'] as num?)?.toDouble();
 
-    if (lat == null && json['coordinates'] is Map) {
-      final coords = json['coordinates'] as Map<String, dynamic>;
+    final coords = _asMap(json['coordinates']);
+    if (lat == null && coords != null) {
       lat = (coords['latitude'] as num?)?.toDouble();
       lng = (coords['longitude'] as num?)?.toDouble();
     }
 
     return Location(
-      address: json['address'] as String? ?? '',
+      address: _stringValue(json['address']) ?? '',
       latitude: lat,
       longitude: lng,
     );
+  }
+
+  static Location? tryFromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    return Location.fromJson(json);
   }
 
   final String address;
@@ -305,10 +364,22 @@ class Media {
 
   factory Media.fromJson(Map<String, dynamic> json) {
     return Media(
-      id: json['id'] as String,
-      url: (json['publicUrl'] ?? json['url']) as String,
-      type: json['type'] as String? ?? 'image',
+      id: _stringValue(json['id']) ?? '',
+      url: _stringValue(json['publicUrl']) ?? _stringValue(json['url']) ?? '',
+      type: _stringValue(json['type']) ?? 'image',
     );
+  }
+
+  static Media? tryFromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    final id = _stringValue(json['id']);
+    final url = _stringValue(json['publicUrl']) ?? _stringValue(json['url']);
+    if (id == null || id.isEmpty || url == null || url.isEmpty) {
+      return null;
+    }
+    return Media.fromJson(json);
   }
 
   final String id;
@@ -329,14 +400,26 @@ class Tag {
 
   factory Tag.fromJson(Map<String, dynamic> json) {
     return Tag(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      value: json['value'] as String?,
-      icon: json['icon'] as String?,
-      color: json['color'] as String?,
-      parentId: json['parentId'] as String?,
+      id: _stringValue(json['id']) ?? '',
+      name: _stringValue(json['name']) ?? '',
+      value: _stringValue(json['value']),
+      icon: _stringValue(json['icon']),
+      color: _stringValue(json['color']),
+      parentId: _stringValue(json['parentId']),
       hasChildren: json['hasChildren'] as bool? ?? false,
     );
+  }
+
+  static Tag? tryFromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return null;
+    }
+    final id = _stringValue(json['id']);
+    final name = _stringValue(json['name']);
+    if (id == null || id.isEmpty || name == null || name.isEmpty) {
+      return null;
+    }
+    return Tag.fromJson(json);
   }
 
   final String id;
@@ -346,4 +429,39 @@ class Tag {
   final String? color;
   final String? parentId;
   final bool hasChildren;
+}
+
+Map<String, dynamic>? _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  return null;
+}
+
+List<dynamic>? _asList(dynamic value) {
+  if (value is List<dynamic>) {
+    return value;
+  }
+  if (value is List) {
+    return List<dynamic>.from(value);
+  }
+  return null;
+}
+
+String? _stringValue(dynamic value) {
+  if (value is String) {
+    return value;
+  }
+  return null;
+}
+
+DateTime? _parseDateTime(dynamic value) {
+  final raw = _stringValue(value);
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(raw);
 }

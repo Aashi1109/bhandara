@@ -51,8 +51,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _refreshOverview(String userId) async {
-    ref.invalidate(profileOverviewProvider(userId));
-    await ref.read(profileOverviewProvider(userId).future);
+    ref.invalidate(profileOverviewProvider(userId: userId));
+    await ref.read(profileOverviewProvider(userId: userId).future);
   }
 
   void _ensureSaveState(User viewedUser) {
@@ -129,10 +129,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Widget _profileHeaderAction(User viewedUser, {required bool showSelfActions}) {
+  Widget _profileHeaderAction(
+    User viewedUser, {
+    required bool showSelfActions,
+  }) {
     if (showSelfActions) {
       return GestureDetector(
-        onTap: () => context.go(SettingsScreen.routePath),
+        onTap: () => context.push(SettingsScreen.routePath),
         child: Container(
           width: 40,
           height: 40,
@@ -437,7 +440,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     User user, {
     required bool showSelfActions,
   }) {
-    final overviewAsync = ref.watch(profileOverviewProvider(user.id));
+    final overviewAsync = ref.watch(profileOverviewProvider(userId: user.id));
     final overview = overviewAsync.value;
 
     return Column(
@@ -455,294 +458,276 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onRefresh: () => _refreshOverview(user.id),
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
             child: Column(
-                  children: [
-                    // Avatar
-                    GestureDetector(
-                      onTap: showSelfActions
-                          ? () => _showEditPhotoOptions(context)
-                          : null,
-                      child: Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          Container(
-                            width: 96,
-                            height: 96,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.border,
-                                width: 3,
-                              ),
+              children: [
+                // Avatar
+                GestureDetector(
+                  onTap: showSelfActions
+                      ? () => _showEditPhotoOptions(context)
+                      : null,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.border, width: 3),
+                        ),
+                        child: ClipOval(
+                          child: ColorFiltered(
+                            colorFilter: const ColorFilter.mode(
+                              AppColors.mutedForeground,
+                              BlendMode.saturation,
                             ),
-                            child: ClipOval(
-                              child: ColorFiltered(
-                                colorFilter: const ColorFilter.mode(
-                                  AppColors.mutedForeground,
-                                  BlendMode.saturation,
-                                ),
-                                child: CachedNetworkImage(
-                                  imageUrl:
-                                      user.avatarUrl ??
-                                      'https://picsum.photos/seed/${user.id}/200/200',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
+                            child: CachedNetworkImage(
+                              imageUrl:
+                                  user.avatarUrl ??
+                                  'https://picsum.photos/seed/${user.id}/200/200',
+                              fit: BoxFit.cover,
                             ),
                           ),
-                          if (showSelfActions)
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.surface,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                LucideIcons.camera,
-                                size: AppIconSizes.s,
-                                color: AppColors.surface,
-                              ),
+                        ),
+                      ),
+                      if (showSelfActions)
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.surface,
+                              width: 2,
                             ),
-                        ],
-                      ),
+                          ),
+                          child: const Icon(
+                            LucideIcons.camera,
+                            size: AppIconSizes.s,
+                            color: AppColors.surface,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user.name ?? 'Anonymous',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'PROFILE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      LucideIcons.calendar,
+                      size: AppIconSizes.s,
+                      color: AppColors.mutedForeground,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(width: 6),
                     Text(
-                      user.name ?? 'Anonymous',
+                      'MEMBER SINCE ${DateFormat('MMM yyyy').format(user.createdAt ?? DateTime.now()).toUpperCase()}',
                       style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'PROFILE',
-                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 2,
                         color: AppColors.mutedForeground,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          LucideIcons.calendar,
-                          size: AppIconSizes.s,
-                          color: AppColors.mutedForeground,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'MEMBER SINCE ${DateFormat('MMM yyyy').format(user.createdAt ?? DateTime.now()).toUpperCase()}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                            color: AppColors.mutedForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Stats
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.muted,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _stat('Events', '${overview?.myEvents.length ?? 0}'),
-                          Container(
-                            width: 1,
-                            height: 48,
-                            color: AppColors.border,
-                          ),
-                          _stat('Impact', '4.8k'),
-                          Container(
-                            width: 1,
-                            height: 48,
-                            color: AppColors.border,
-                          ),
-                          _stat('Rating', '4.9'),
-                        ],
-                      ),
-                    ),
-                    if (overviewAsync.isLoading && overview == null) ...[
-                      const SizedBox(height: 12),
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-
-                    // Badges
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Badges',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (showSelfActions)
-                          GestureDetector(
-                            onTap: () =>
-                                context.go(ProfileBadgesScreen.routePath),
-                            child: const Text(
-                              'View All',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: _buildBadgeRow(
-                        overview?.achievements ?? const [],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    if (showSelfActions) ...[
-                      AppButton(
-                        variant: AppButtonVariant.outline,
-                        size: AppButtonSize.lg,
-                        fullWidth: true,
-                        onPressed: () => context.push(MyEventsScreen.routePath),
-                        icon: const Icon(
-                          LucideIcons.calendar,
-                          color: AppColors.primary,
-                          size: AppIconSizes.defaultSize,
-                        ),
-                        label: 'Manage My Events',
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-
-                    // Recent activity
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Recent Activity',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (showSelfActions)
-                          GestureDetector(
-                            onTap: () => context.go(UpdatesScreen.routePath),
-                            child: const Text(
-                              'View All',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ..._buildRecentActivity(
-                      overview?.recentActivity ?? const [],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Impact
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Impact Overview',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.muted,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: List.generate(7, (i) {
-                          final heights = [
-                            40.0,
-                            64.0,
-                            48.0,
-                            80.0,
-                            56.0,
-                            72.0,
-                            96.0,
-                          ];
-                          final days = [
-                            'Mon',
-                            'Tue',
-                            'Wed',
-                            'Thu',
-                            'Fri',
-                            'Sat',
-                            'Sun',
-                          ];
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: heights[i],
-                                decoration: BoxDecoration(
-                                  color: i == 6
-                                      ? AppColors.primary
-                                      : AppColors.border,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                days[i],
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.mutedForeground,
-                                ),
-                              ),
-                            ],
-                          );
-                        }),
-                      ),
-                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 32),
+
+                // Stats
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _stat('Events', '${overview?.myEvents.length ?? 0}'),
+                      Container(width: 1, height: 48, color: AppColors.border),
+                      _stat('Impact', '4.8k'),
+                      Container(width: 1, height: 48, color: AppColors.border),
+                      _stat('Rating', '4.9'),
+                    ],
+                  ),
+                ),
+                if (overviewAsync.isLoading && overview == null) ...[
+                  const SizedBox(height: 12),
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 32),
+
+                // Badges
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Badges',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (showSelfActions)
+                      GestureDetector(
+                        onTap: () =>
+                            context.push(ProfileBadgesScreen.routePath),
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: _buildBadgeRow(overview?.achievements ?? const []),
+                ),
+                const SizedBox(height: 32),
+
+                if (showSelfActions) ...[
+                  AppButton(
+                    variant: AppButtonVariant.outline,
+                    size: AppButtonSize.lg,
+                    fullWidth: true,
+                    onPressed: () => context.push(MyEventsScreen.routePath),
+                    icon: const Icon(
+                      LucideIcons.calendar,
+                      color: AppColors.primary,
+                      size: AppIconSizes.defaultSize,
+                    ),
+                    label: 'Manage My Events',
+                  ),
+                  const SizedBox(height: 32),
+                ],
+
+                // Recent activity
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recent Activity',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (showSelfActions)
+                      GestureDetector(
+                        onTap: () => context.push(UpdatesScreen.routePath),
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ..._buildRecentActivity(overview?.recentActivity ?? const []),
+                const SizedBox(height: 32),
+
+                // Impact
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Impact Overview',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(7, (i) {
+                      final heights = [
+                        40.0,
+                        64.0,
+                        48.0,
+                        80.0,
+                        56.0,
+                        72.0,
+                        96.0,
+                      ];
+                      final days = [
+                        'Mon',
+                        'Tue',
+                        'Wed',
+                        'Thu',
+                        'Fri',
+                        'Sat',
+                        'Sun',
+                      ];
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 32,
+                            height: heights[i],
+                            decoration: BoxDecoration(
+                              color: i == 6
+                                  ? AppColors.primary
+                                  : AppColors.border,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            days[i],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -904,6 +889,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           icon: LucideIcons.messageCircle,
           title: 'Posted a message',
           body:
+              update.payload['preview']?.toString() ??
               update.payload['message']?.toString() ??
               'You added to the conversation.',
         );

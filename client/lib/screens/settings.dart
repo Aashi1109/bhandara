@@ -108,7 +108,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 bottom: 0,
                                 right: 0,
                                 child: GestureDetector(
-                                  onTap: () => context.go(
+                                  onTap: () => context.push(
                                     ProfileDetailsScreen.routePath,
                                   ),
                                   child: Container(
@@ -171,7 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LucideIcons.mail,
                       'Email',
                       user?.email ?? '',
-                      onTap: () => context.go(EmailSettingsScreen.routePath),
+                      onTap: () => context.push(EmailSettingsScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
@@ -180,7 +180,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       user?.bio?.trim().isNotEmpty == true
                           ? user!.bio!.trim()
                           : 'Add a short bio',
-                      onTap: () => context.go(ProfileDetailsScreen.routePath),
+                      onTap: () => context.push(ProfileDetailsScreen.routePath),
                       showBorder: !(user?.isSocialLogin ?? false),
                     ),
                     if (!(user?.isSocialLogin ?? false))
@@ -189,7 +189,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Change Password',
                         'Update your security',
                         onTap: () =>
-                            context.go(PasswordSettingsScreen.routePath),
+                            context.push(PasswordSettingsScreen.routePath),
                       ),
                   ]),
                   const SizedBox(height: 32),
@@ -215,7 +215,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           'Cuisine Interests',
                           label,
                           onTap: () =>
-                              context.go(CuisineInterestsScreen.routePath),
+                              context.push(CuisineInterestsScreen.routePath),
                           showBorder: true,
                         );
                       },
@@ -226,7 +226,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       user?.address?.label.isNotEmpty == true
                           ? user!.address!.label
                           : 'Not set',
-                      onTap: () => context.go(LocationSettingsScreen.routePath),
+                      onTap: () => context.push(LocationSettingsScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
@@ -234,7 +234,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       'Notifications',
                       'Configure alerts',
                       onTap: () =>
-                          context.go(NotificationsSettingsScreen.routePath),
+                          context.push(NotificationsSettingsScreen.routePath),
                     ),
                   ]),
                   const SizedBox(height: 32),
@@ -268,14 +268,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       LucideIcons.helpCircle,
                       'Help & Support',
                       'FAQs and guides',
-                      onTap: () => context.go(HelpSupportScreen.routePath),
+                      onTap: () => context.push(HelpSupportScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
                       LucideIcons.info,
                       'About App',
                       'v2.4.0',
-                      onTap: () => context.go(AboutAppScreen.routePath),
+                      onTap: () => context.push(AboutAppScreen.routePath),
                     ),
                   ]),
                   const SizedBox(height: 32),

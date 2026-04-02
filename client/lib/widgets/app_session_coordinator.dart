@@ -33,8 +33,8 @@ class _AppSessionCoordinatorState extends ConsumerState<AppSessionCoordinator> {
     _userSubscription = ref.listenManual<AsyncValue<User?>>(
       userProfileProvider,
       (previous, next) {
-        final previousUser = previous?.valueOrNull;
-        final nextUser = next.valueOrNull;
+        final previousUser = previous?.value;
+        final nextUser = next.value;
 
         if (nextUser != null) {
           unawaited(socketService.startAuthenticatedSession());

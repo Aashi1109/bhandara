@@ -17,7 +17,7 @@ import '../services/maps/map_manager.dart';
 import '../services/maps/map_marker_factory.dart';
 import '../services/maps/map_provider_type.dart';
 
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 
 class PreferencesScreen extends ConsumerStatefulWidget {
   const PreferencesScreen({super.key});
@@ -281,6 +281,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
   }
 
   Widget _buildLocationSection() {
+    final locationBadges = _locationBadgeLabels();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -353,45 +355,58 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   color: AppColors.surface,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'CURRENT SELECTION',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 2,
-                              color: AppColors.mutedForeground,
+                          const Expanded(
+                            child: Text(
+                              'CURRENT SELECTION',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2,
+                                color: AppColors.mutedForeground,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _isLocating
-                                ? 'Detecting location...'
-                                : _locationLabel,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: AppColors.muted,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              LucideIcons.edit2,
+                              size: AppIconSizes.m,
                               color: AppColors.primary,
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.muted,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.edit2,
-                          size: AppIconSizes.m,
-                          color: AppColors.primary,
-                        ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              for (var i = 0; i < locationBadges.length; i++)
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: constraints.maxWidth,
+                                  ),
+                                  child: _locationBadge(
+                                    label: locationBadges[i],
+                                    isPrimary: i == 0,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -413,6 +428,72 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  List<String> _locationBadgeLabels() {
+    if (_isLocating) {
+      return const ['Detecting location...'];
+    }
+
+    final badges = _locationLabel
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    if (badges.isNotEmpty) {
+      return badges;
+    }
+
+    return const ['Location unavailable'];
+  }
+
+  Widget _locationBadge({required String label, required bool isPrimary}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isPrimary ? 14 : 12,
+        vertical: isPrimary ? 12 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: isPrimary ? AppColors.primary : AppColors.muted,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isPrimary ? AppColors.primary : AppColors.border,
+        ),
+        boxShadow: isPrimary
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPrimary ? LucideIcons.mapPin : LucideIcons.navigation,
+            size: isPrimary ? 14 : 12,
+            color: isPrimary ? AppColors.surface : AppColors.mutedForeground,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              softWrap: true,
+              style: TextStyle(
+                fontSize: isPrimary ? 14 : 12,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+                color: isPrimary ? AppColors.surface : AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

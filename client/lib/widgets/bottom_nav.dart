@@ -3,11 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 
-import '../screens/explore.dart';
-import '../screens/search.dart';
+import '../screens/explore/explore_screen.dart';
 import '../screens/create_event.dart';
 import '../screens/updates.dart';
 import '../screens/profile.dart';
+import '../screens/saved.dart';
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key});
@@ -18,7 +18,7 @@ class AppBottomNav extends StatelessWidget {
 
     final items = [
       _NavItem(ExploreScreen.routePath, LucideIcons.compass, 'Explore'),
-      _NavItem(SearchScreen.routePath, LucideIcons.heart, 'Saved'),
+      _NavItem(SavedScreen.routePath, LucideIcons.heart, 'Saved'),
       _NavItem(
         CreateEventScreen.routePath,
         LucideIcons.plus,

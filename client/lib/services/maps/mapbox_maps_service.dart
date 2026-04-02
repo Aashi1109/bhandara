@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../config.dart';
 import 'map_models.dart';
 import 'map_provider_service.dart';
 import 'map_provider_type.dart';
@@ -8,13 +9,8 @@ class MapboxMapsService implements MapProviderService {
 
   final Dio _dio;
 
-  static const String _accessToken = String.fromEnvironment(
-    'MAPBOX_ACCESS_TOKEN',
-  );
-  static const String _styleId = String.fromEnvironment(
-    'MAPBOX_STYLE_ID',
-    defaultValue: 'mapbox/streets-v12',
-  );
+  static const String _accessToken = AppConfig.mapboxAccessToken;
+  static const String _styleId = AppConfig.mapboxStyleId;
 
   @override
   MapProviderType get type => MapProviderType.mapbox;

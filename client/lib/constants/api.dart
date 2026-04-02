@@ -16,7 +16,6 @@ class Api {
 
   static String getUserById(String id) => '/users/$id';
 
-  static String getUserByEmail(String email) => '/users/email/$email';
   static const String getUserByQuery = '/users/query';
 
   static String userInterests(String userId) => '/users/$userId/interests';
@@ -32,6 +31,7 @@ class Api {
 
   // Event endpoints
   static const String events = '/events';
+  static const String eventMarkers = '/events/markers';
 
   static String eventById(String eventId) => '/events/$eventId';
 

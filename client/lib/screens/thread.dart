@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../constants/socket_rooms.dart';
 import '../models/chat.dart';
 import '../theme/theme.dart';
 import '../widgets/floating_message_bar.dart';
@@ -17,7 +18,9 @@ import '../services/socket.dart';
 import '../services/user.dart';
 import '../constants/socket_events.dart';
 import '../models/user.dart';
+import '../utils/error.dart';
 import 'chat.dart';
+import 'explore/explore_screen.dart';
 import '../widgets/media_preview.dart';
 import '../widgets/message_reactions.dart';
 
@@ -49,12 +52,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
   bool _isInputVisible = true;
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isThreadLocked = false;
   final List<Message> _replies = [];
   Message? _originalMessage;
   User? _currentUser;
 
   String get _parentMessageId => widget.id;
   String get _threadId => widget.threadId ?? widget.chatId ?? widget.id;
+  String get _threadRoom => SocketRooms.thread(_threadId);
 
   List<MediaItem> _buildPreviewItems(List<MessageMedia> media) {
     return media
@@ -108,7 +113,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
     _scrollController.addListener(_scrollListener);
     _loadCurrentUser();
     _loadReplies();
+    _loadThreadState();
     _listenToSocketMessages();
+    unawaited(_joinThreadRoom());
+  }
+
+  Future<void> _joinThreadRoom() async {
+    try {
+      await socketService.joinRoom(_threadRoom);
+    } catch (error) {
+      debugPrint('Failed to join thread room $_threadRoom: $error');
+    }
   }
 
   Future<void> _loadCurrentUser() async {
@@ -118,7 +133,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
       setState(() {
         _currentUser = user;
       });
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load current user: $e');
+    }
   }
 
   Future<void> _loadReplies() async {
@@ -140,10 +157,23 @@ class _ThreadScreenState extends State<ThreadScreen> {
           ..addAll(replyResponse.items);
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to load replies: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _loadThreadState() async {
+    try {
+      final thread = await chatService.getThread(_threadId);
+      if (!mounted) return;
+      setState(() {
+        _isThreadLocked = thread.isLocked;
+      });
+    } catch (e) {
+      debugPrint('Failed to load thread state: $e');
     }
   }
 
@@ -162,7 +192,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   Future<void> _sendReply(String msg, List<ChatAttachment> attachments) async {
-    if (_isSending || (msg.trim().isEmpty && attachments.isEmpty)) return;
+    if (_isThreadLocked ||
+        _isSending ||
+        (msg.trim().isEmpty && attachments.isEmpty)) {
+      return;
+    }
 
     final optimistic = _createOptimisticReply(msg, attachments);
     setState(() {
@@ -257,7 +291,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         }
         _isSending = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         final index = _replies.indexWhere(
@@ -272,7 +306,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
       });
       AppSnackBar.show(
         context,
-        message: 'Failed to send reply',
+        message: extractExceptionMessage(error, 'Failed to send reply'),
         type: SnackBarType.error,
       );
     }
@@ -304,7 +338,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
         ChatScreen.routePath.replaceAll(':id', chatId),
         extra: {'eventId': widget.eventId},
       );
+      return;
     }
+    context.go(ExploreScreen.routePath);
   }
 
   Future<void> _listenToSocketMessages() async {
@@ -322,8 +358,13 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
       if (eventName == SocketEvents.messageCreated) {
         final message = Message.fromJson(eventData);
+        if (message.threadId != _threadId) {
+          return;
+        }
         final optimisticIndex = _replies.indexWhere(
-          (item) => item.parentId == _parentMessageId && _isOptimisticMatch(item, message),
+          (item) =>
+              item.parentId == _parentMessageId &&
+              _isOptimisticMatch(item, message),
         );
         if (optimisticIndex != -1) {
           setState(() {
@@ -340,6 +381,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
       if (eventName == SocketEvents.messageUpdated) {
         final message = Message.fromJson(eventData);
+        if (message.threadId != _threadId) {
+          return;
+        }
         if (message.id == _originalMessage?.id) {
           setState(() {
             _originalMessage = message;
@@ -357,6 +401,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
       if (eventName == SocketEvents.messageDeleted) {
         final messageId = eventData['id'] as String?;
+        if (eventData['threadId'] != _threadId) {
+          return;
+        }
         if (messageId == null) {
           return;
         }
@@ -372,7 +419,28 @@ class _ThreadScreenState extends State<ThreadScreen> {
       if (eventName == SocketEvents.reactionCreated ||
           eventName == SocketEvents.reactionUpdated ||
           eventName == SocketEvents.reactionDeleted) {
+        if (eventData['threadId'] != _threadId) {
+          return;
+        }
         _applyReactionEvent(eventName, eventData);
+        return;
+      }
+
+      if (eventName == SocketEvents.threadLocked) {
+        if (eventData['id'] == _threadId) {
+          setState(() {
+            _isThreadLocked = true;
+          });
+        }
+        return;
+      }
+
+      if (eventName == SocketEvents.threadUnlocked) {
+        if (eventData['id'] == _threadId) {
+          setState(() {
+            _isThreadLocked = false;
+          });
+        }
       }
     });
   }
@@ -495,7 +563,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
     _socketSubscription?.cancel();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    unawaited(_leaveThreadRoom());
     super.dispose();
+  }
+
+  Future<void> _leaveThreadRoom() async {
+    try {
+      await socketService.leaveRoom(_threadRoom);
+    } catch (error) {
+      debugPrint('Failed to leave thread room $_threadRoom: $error');
+    }
   }
 
   @override
@@ -541,7 +618,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
                               currentUserId: _currentUser?.id,
                               onReactionTap: _toggleMessageReaction,
                               onLongPress: (targetContext, message) =>
-                                  _showMessageReactionBar(targetContext, message),
+                                  _showMessageReactionBar(
+                                    targetContext,
+                                    message,
+                                  ),
                             ),
                             const SizedBox(height: 16),
                             Padding(
@@ -599,7 +679,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
             right: 0,
             child: FloatingMessageBar(
               isVisible: _isInputVisible,
-              placeholder: 'Reply to thread...',
+              placeholder: _isThreadLocked
+                  ? 'Thread locked'
+                  : 'Reply to thread...',
               onSend: _sendReply,
             ),
           ),
@@ -611,6 +693,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
   Widget _reply(Message reply) {
     final bubbleKey = GlobalKey();
     final imageKey = GlobalKey();
+    final lane = reply.threadLaneFor(_currentUser?.id);
+    final isSystemLike = lane == ThreadMessageLane.center;
     final attachmentCount = reply.media.isNotEmpty
         ? reply.media.length
         : reply.retryMediaIds.length;
@@ -630,6 +714,47 @@ class _ThreadScreenState extends State<ThreadScreen> {
               .map((part) => part[0].toUpperCase())
               .join()
         : 'U';
+
+    if (isSystemLike) {
+      return Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  reply.type?.toUpperCase() ?? 'SYSTEM',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                if (reply.content.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    reply.content,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -808,19 +933,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(width: 16),
-                  const Icon(
-                    LucideIcons.reply,
-                    size: AppIconSizes.s,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 4),
                   const Text(
-                    'Reply',
+                    'In thread',
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.mutedForeground,
                     ),
                   ),
                 ],
@@ -845,88 +963,83 @@ class _OriginalMessageCard extends StatelessWidget {
   final String? currentUserId;
   final Future<void> Function(Message message, String emoji) onReactionTap;
   final Future<void> Function(BuildContext targetContext, Message message)
-      onLongPress;
+  onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final contentKey = GlobalKey();
-    final isCurrentUser =
-        message != null &&
-        currentUserId != null &&
-        message!.senderId == currentUserId;
-    final bubbleAlignment =
-        isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
-    final columnAlignment =
-        isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final isSystemLike = message?.isSystemLike ?? false;
+    final isCurrentUser = message?.isCurrentUser(currentUserId) ?? false;
+
+    if (isSystemLike) {
+      return Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(
+              message?.content ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Align(
-      alignment: bubbleAlignment,
+      alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.82,
         ),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.muted,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
             border: Border.all(color: AppColors.border),
           ),
           child: Column(
-            crossAxisAlignment: columnAlignment,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Align(
-                alignment: bubbleAlignment,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: const Text(
-                        'ORIGINAL',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                          color: AppColors.surface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        message?.senderName ?? 'Unknown',
-                        textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+              Text(
+                isCurrentUser ? 'You' : (message?.senderName ?? 'Unknown'),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               GestureDetector(
                 key: contentKey,
-                onLongPress:
-                    message == null
-                        ? null
-                        : () => onLongPress(
-                          contentKey.currentContext ?? context,
-                          message!,
-                        ),
+                onLongPress: message == null
+                    ? null
+                    : () => onLongPress(
+                        contentKey.currentContext ?? context,
+                        message!,
+                      ),
                 child: Text(
                   message?.content ?? '',
-                  textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
+                  textAlign: TextAlign.left,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 1.5,
                   ),
@@ -934,28 +1047,22 @@ class _OriginalMessageCard extends StatelessWidget {
               ),
               if (message != null && message!.reactions.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Align(
-                  alignment: bubbleAlignment,
-                  child: MessageReactionSummaryRow(
-                    reactions: message!.reactions,
-                    currentUserId: currentUserId,
-                    onTap: (emoji) => onReactionTap(message!, emoji),
-                  ),
+                MessageReactionSummaryRow(
+                  reactions: message!.reactions,
+                  currentUserId: currentUserId,
+                  onTap: (emoji) => onReactionTap(message!, emoji),
                 ),
               ],
               const SizedBox(height: 12),
-              Align(
-                alignment: bubbleAlignment,
-                child: Text(
-                  message != null
-                      ? DateFormat('hh:mm a').format(message!.createdAt)
-                      : '',
-                  textAlign: isCurrentUser ? TextAlign.right : TextAlign.left,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mutedForeground,
-                  ),
+              Text(
+                message != null
+                    ? DateFormat('hh:mm a').format(message!.createdAt)
+                    : '',
+                textAlign: TextAlign.left,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],

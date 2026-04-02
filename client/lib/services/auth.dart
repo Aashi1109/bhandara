@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
-import '../constants/api.dart';
-import 'api.dart';
-import 'secure_storage.dart';
-import '../models/user.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../constants/api.dart';
+import '../models/user.dart';
+import 'api.dart';
 import 'base.dart';
+import 'secure_storage.dart';
 
 class AuthService extends BaseService {
   final Dio _dio = apiService.dio;

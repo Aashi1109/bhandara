@@ -14,7 +14,7 @@ import '../widgets/password_requirements.dart';
 
 import 'auth.dart';
 import 'profile_setup.dart';
-import 'explore.dart';
+import 'explore/explore_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.extra});
@@ -136,10 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 32),
-                        Text(
-                          'Welcome back',
-                          style: typography.heading2,
-                        ),
+                        Text('Welcome back', style: typography.heading2),
                         const SizedBox(height: 8),
                         Text(
                           'Enter your password to continue',

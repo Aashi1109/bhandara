@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-import '../theme/theme.dart';
+import '../../../theme/theme.dart';
 
 class ExploreSearchBar extends StatelessWidget {
   const ExploreSearchBar({
@@ -10,12 +10,18 @@ class ExploreSearchBar extends StatelessWidget {
     this.controller,
     this.placeholder = 'Find food events...',
     this.onChanged,
+    this.onTap,
+    this.readOnly = false,
+    this.autofocus = false,
   });
 
   final VoidCallback? onOpenFilters;
   final TextEditingController? controller;
   final String placeholder;
   final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
+  final bool readOnly;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +62,9 @@ class ExploreSearchBar extends StatelessWidget {
                     child: TextField(
                       controller: controller,
                       onChanged: onChanged,
+                      onTap: onTap,
+                      readOnly: readOnly,
+                      autofocus: autofocus,
                       decoration: InputDecoration(
                         hintText: placeholder,
                         hintStyle: TextStyle(

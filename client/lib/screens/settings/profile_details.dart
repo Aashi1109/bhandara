@@ -8,14 +8,15 @@ import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
 import '../../widgets/textarea.dart';
+import '../../models/user.dart';
 import '../../providers/user.dart';
 import '../../widgets/snackbar.dart';
-import '../settings.dart';
 
 class ProfileDetailsScreen extends ConsumerStatefulWidget {
   const ProfileDetailsScreen({super.key});
 
   static const String routePath = '/settings/profile';
+  static const String _settingsRoutePath = '/settings';
 
   @override
   ConsumerState<ProfileDetailsScreen> createState() =>
@@ -25,7 +26,24 @@ class ProfileDetailsScreen extends ConsumerStatefulWidget {
 class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
-  bool _isInit = false;
+  bool _didHydrate = false;
+  String _initialName = '';
+  String _initialBio = '';
+
+  String get _currentName => _nameController.text.trim();
+  String get _currentBio => _bioController.text.trim();
+  bool get _isDirty =>
+      _currentName != _initialName || _currentBio != _initialBio;
+
+  void _hydrate(User? user) {
+    if (_didHydrate || user == null) return;
+
+    _nameController.text = user.name ?? '';
+    _bioController.text = user.bio ?? '';
+    _initialName = (user.name ?? '').trim();
+    _initialBio = (user.bio ?? '').trim();
+    _didHydrate = true;
+  }
 
   @override
   void dispose() {
@@ -35,14 +53,25 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final user = ref.read(userProfileProvider).value;
+    if (user == null || !_isDirty) return;
+
     FocusScope.of(context).unfocus();
+    final name = _currentName;
+    final bio = _currentBio;
 
     try {
       await ref
           .read(userProfileProvider.notifier)
-          .updateProfile(name: _nameController.text, bio: _bioController.text);
+          .updateProfile(name: name, bio: bio);
 
       if (mounted) {
+        setState(() {
+          _initialName = name;
+          _initialBio = bio;
+          _nameController.text = name;
+          _bioController.text = bio;
+        });
         AppSnackBar.show(
           context,
           message: 'Profile updated successfully',
@@ -77,15 +106,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
-
-    // Initial state sync
-    userAsync.whenData((user) {
-      if (!_isInit && user != null) {
-        _nameController.text = user.name ?? '';
-        _bioController.text = user.bio ?? '';
-        _isInit = true;
-      }
-    });
+    final user = userAsync.value;
+    _hydrate(user);
+    final isSaving = userAsync.isLoading && _didHydrate;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -93,7 +116,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
         children: [
           AppHeader(
             title: 'Profile Details',
-            onBack: () => context.go(SettingsScreen.routePath),
+            onBack: () => context.go(ProfileDetailsScreen._settingsRoutePath),
           ),
           Expanded(
             child: userAsync.when(
@@ -200,6 +223,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       label: 'Display Name',
                       placeholder: 'Enter your full name',
                       controller: _nameController,
+                      onChanged: (_) => setState(() {}),
                       borderRadius: 16,
                     ),
                     const SizedBox(height: 24),
@@ -207,6 +231,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       label: 'Bio',
                       placeholder: 'Tell us a bit about yourself...',
                       controller: _bioController,
+                      onChanged: (_) => setState(() {}),
                       height: 132,
                       minLines: 5,
                     ),
@@ -220,8 +245,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
             child: AppButton(
               size: AppButtonSize.xl,
               fullWidth: true,
-              label: userAsync.isLoading ? 'Updating...' : 'Update Profile',
-              onPressed: userAsync.isLoading ? null : _saveProfile,
+              label: isSaving ? 'Updating...' : 'Update Profile',
+              onPressed: user == null || !_isDirty || isSaving
+                  ? null
+                  : _saveProfile,
             ),
           ),
         ],
