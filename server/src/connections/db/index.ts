@@ -40,7 +40,7 @@ const connect = (name: DB_CONNECTION_NAMES) => {
     },
     dialectOptions: {
       application_name: config.infrastructure.appName || 'Local',
-      fallback_application_name: 'Bhandara',
+      fallback_application_name: 'Zentry',
     },
   });
 

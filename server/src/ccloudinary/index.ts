@@ -9,7 +9,7 @@ cloudinary.config({
 });
 
 class CloudinaryService {
-  private readonly baseFolderPath = `Bhandara/`;
+  private readonly baseFolderPath = `Zentry/`;
   private readonly uploadPreset = config.cloudinary.uploadPreset;
 
   async uploadFile({
@@ -67,7 +67,7 @@ class CloudinaryService {
       timestamp,
       folder: `${this.baseFolderPath}${bucket}`,
       public_id: path,
-      upload_preset: 'bhandara',
+      upload_preset: 'zentry',
       context: `rid=${rid}`,
     };
     const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret as string);

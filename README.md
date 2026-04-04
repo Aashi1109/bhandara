@@ -1,6 +1,6 @@
-# Bhandara
+# Zentry
 
-This repository contains both the mobile client and the server for the **Bhandara** application.
+This repository contains both the mobile client and the server for the **Zentry** application.
 
 - **client/** – Expo based React Native app.
 - **server/** – Node.js REST API built with Express and Sequelize.

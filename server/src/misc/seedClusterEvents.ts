@@ -70,7 +70,7 @@ const metersByBand: Record<SeedBand, { min: number; max: number }> = {
 };
 
 const eventNamePrefixes = [
-  'Bhandara Meetup',
+  'Zentry Meetup',
   'Community Feast',
   'Street Food Circle',
   'Open Plate Gathering',

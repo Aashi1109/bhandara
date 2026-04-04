@@ -1,6 +1,6 @@
 # Server Agent Guide
 
-Apply this file together with the root [AGENTS.md](/Users/ashishpal/Desktop/coding/projects/bhandara/AGENTS.md).
+Apply this file together with the root [AGENTS.md](/Users/ashishpal/Desktop/coding/projects/zentry/AGENTS.md).
 
 ## Stack
 

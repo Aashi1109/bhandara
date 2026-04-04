@@ -30,7 +30,7 @@ class AboutAppScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bhandara',
+                      'Zentry',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -48,7 +48,7 @@ class AboutAppScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 20),
                     Text(
-                      'Bhandara helps people discover food events, join conversations around them, and track what matters after the event is live.',
+                      'Zentry helps people discover food events, join conversations around them, and track what matters after the event is live.',
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.6,

@@ -103,7 +103,7 @@ function buildAuthSeedInputs(options: SeedOptions, totalUsers: number) {
 
     return {
       name,
-      email: `${options.emailPrefix}.${emailSlug}.${uniqueSuffix}@bhandara.dev`,
+      email: `${options.emailPrefix}.${emailSlug}.${uniqueSuffix}@zentry.dev`,
       gender: faker.helpers.arrayElement(['male', 'female', 'non-binary']),
     };
   });

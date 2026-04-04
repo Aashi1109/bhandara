@@ -27,7 +27,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - bhandara-network
+      - zentry-network
     volumes:
       - video-temp:/app/tmp
 
@@ -35,9 +35,9 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    image: aashishpal09/bhandara-server:latest
+    image: aashishpal09/zentry-server:latest
     platform: linux/amd64
-    container_name: bhandara-server
+    container_name: zentry-server
     ports:
       - "3000:3000"
     environment:
@@ -52,15 +52,15 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - bhandara-network
+      - zentry-network
 
   video-worker:
     build:
       context: ./server
       dockerfile: Dockerfile
-    image: bhandara-server
+    image: zentry-server
     platform: linux/amd64
-    container_name: bhandara-video-worker
+    container_name: zentry-video-worker
     environment:
       - NODE_ENV=production
       - WORKER_TYPE=video-processor
@@ -69,14 +69,14 @@ services:
     restart: unless-stopped
     command: ["node", "workers/index.js"]
     networks:
-      - bhandara-network
+      - zentry-network
     volumes:
       - video-temp:/app/tmp
     depends_on:
       - server
 
 networks:
-  bhandara-network:
+  zentry-network:
     driver: bridge
 
 volumes:

@@ -85,8 +85,8 @@ const config: AppConfig = {
     [DB_CONNECTION_NAMES.Default]: process.env.DATABASE_URL || '',
   },
   infrastructure: {
-    appName: 'bhandara',
-    serviceName: 'bhandara-main-server',
+    appName: 'zentry',
+    serviceName: 'zentry-main-server',
   },
   serviceability: {
     loki: {

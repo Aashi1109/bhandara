@@ -187,7 +187,7 @@ export async function seedContentForUsers({
             }));
 
           const eventId = getUUIDv7();
-          const eventName = `${faker.company.name()} ${faker.helpers.arrayElement(['Bhandara', 'Dinner', 'Tasting', 'Meetup'])}`;
+          const eventName = `${faker.company.name()} ${faker.helpers.arrayElement(['Zentry', 'Dinner', 'Tasting', 'Meetup'])}`;
           const location = buildEventLocation();
           const threadsForEvent =
             options.totalThreads !== undefined

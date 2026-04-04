@@ -466,7 +466,7 @@ export async function flushPendingRows<T extends object>(
 }
 
 export function buildSeedUserEmailLikePattern(emailPrefix: string) {
-  return `${emailPrefix}.%@bhandara.dev`;
+  return `${emailPrefix}.%@zentry.dev`;
 }
 
 export function computeWorkerCount(requestedWorkers: number | undefined, finalUserCount: number, cpuCount: number) {

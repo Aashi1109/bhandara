@@ -43,28 +43,28 @@ describe("seeder utils", () => {
   it("shards users evenly across workers", () => {
     const shards = shardSeedUsers(
       [
-        { id: "1", email: "seed.a@bhandara.dev", name: "A", source: "existing" as const },
-        { id: "2", email: "seed.b@bhandara.dev", name: "B", source: "existing" as const },
-        { id: "3", email: "seed.c@bhandara.dev", name: "C", source: "created" as const },
-        { id: "4", email: "seed.d@bhandara.dev", name: "D", source: "created" as const },
+        { id: "1", email: "seed.a@zentry.dev", name: "A", source: "existing" as const },
+        { id: "2", email: "seed.b@zentry.dev", name: "B", source: "existing" as const },
+        { id: "3", email: "seed.c@zentry.dev", name: "C", source: "created" as const },
+        { id: "4", email: "seed.d@zentry.dev", name: "D", source: "created" as const },
       ],
       2,
     );
 
     expect(shards).toEqual([
       [
-        { id: "1", email: "seed.a@bhandara.dev", name: "A", source: "existing" },
-        { id: "3", email: "seed.c@bhandara.dev", name: "C", source: "created" },
+        { id: "1", email: "seed.a@zentry.dev", name: "A", source: "existing" },
+        { id: "3", email: "seed.c@zentry.dev", name: "C", source: "created" },
       ],
       [
-        { id: "2", email: "seed.b@bhandara.dev", name: "B", source: "existing" },
-        { id: "4", email: "seed.d@bhandara.dev", name: "D", source: "created" },
+        { id: "2", email: "seed.b@zentry.dev", name: "B", source: "existing" },
+        { id: "4", email: "seed.d@zentry.dev", name: "D", source: "created" },
       ],
     ]);
   });
 
   it("builds the reusable user email pattern from the seed prefix", () => {
-    expect(buildSeedUserEmailLikePattern("seed")).toBe("seed.%@bhandara.dev");
+    expect(buildSeedUserEmailLikePattern("seed")).toBe("seed.%@zentry.dev");
   });
 
   it("derives hierarchy-based lower bounds for fixed fanout counts", () => {

@@ -1,4 +1,4 @@
-# Bhandara Agent Guide
+# Zentry Agent Guide
 
 This repository has three instruction layers:
 

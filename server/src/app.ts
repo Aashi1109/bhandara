@@ -67,8 +67,8 @@ const createServer = () => {
 
   app.get('/', (req, res) => {
     res.send({
-      name: 'Bhandara API',
-      description: 'Bhandara backend service',
+      name: 'Zentry API',
+      description: 'Zentry backend service',
       version: '1.0.0',
     });
   });

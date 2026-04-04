@@ -5,7 +5,7 @@ export const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Bhandara API",
+      title: "Zentry API",
       version: "1.0.0",
     },
     servers: [{ url: "/api" }],
