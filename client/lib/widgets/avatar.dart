@@ -38,13 +38,13 @@ class Avatar extends StatelessWidget {
     final normalizedImageUrl = imageUrl?.trim();
     final Widget child;
     if (normalizedImageUrl == null || normalizedImageUrl.isEmpty) {
-      child = _fallback();
+      child = _fallback(context);
     } else {
       child = CachedNetworkImage(
         imageUrl: normalizedImageUrl,
         fit: BoxFit.cover,
         placeholder: (_, _) => Container(color: backgroundColor),
-        errorWidget: (_, _, _) => _fallback(),
+        errorWidget: (_, _, _) => _fallback(context),
       );
     }
 
@@ -63,16 +63,17 @@ class Avatar extends StatelessWidget {
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(BuildContext context) {
     return Container(
       color: backgroundColor,
       alignment: Alignment.center,
       child: Text(
         _initial,
-        style: TextStyle(
+        style: context.appTypography.titleSM.copyWith(
           fontSize: textSize,
           fontWeight: FontWeight.w800,
           color: textColor,
+          height: 1,
         ),
       ),
     );

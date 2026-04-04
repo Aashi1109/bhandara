@@ -25,6 +25,7 @@ class AppTabs<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Row(
       children: items.map((item) {
         final isSelected = currentValue == item.value;
@@ -47,12 +48,12 @@ class AppTabs<T> extends StatelessWidget {
                   ),
                   boxShadow: isSelected
                       ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
                       : null,
                 ),
                 child: Row(
@@ -61,8 +62,7 @@ class AppTabs<T> extends StatelessWidget {
                     if (item.icon != null) ...[
                       Text(
                         item.icon!,
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: typography.titleMD.copyWith(
                           color: isSelected
                               ? AppColors.surface
                               : AppColors.primary,
@@ -72,9 +72,8 @@ class AppTabs<T> extends StatelessWidget {
                     ],
                     Text(
                       item.label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                      style: typography.labelMD.copyWith(
+                        fontWeight: FontWeight.w700,
                         color: isSelected
                             ? AppColors.surface
                             : AppColors.mutedForeground,

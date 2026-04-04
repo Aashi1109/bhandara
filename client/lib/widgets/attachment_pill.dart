@@ -23,6 +23,7 @@ class AttachmentPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasError = file.hasFailed;
+    final typography = context.appTypography;
 
     return GestureDetector(
       onTap: onTap,
@@ -141,8 +142,7 @@ class AttachmentPill extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 120),
               child: Text(
                 file.name,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: typography.bodySM.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary,
                 ),

@@ -15,6 +15,7 @@ class AppBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentPath = GoRouterState.of(context).uri.path;
+    final typography = context.appTypography;
 
     final items = [
       _NavItem(ExploreScreen.routePath, LucideIcons.compass, 'Explore'),
@@ -115,10 +116,10 @@ class AppBottomNav extends StatelessWidget {
                     ),
                     Text(
                       item.label,
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: typography.bodySM.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
+                        height: 1.2,
                       ),
                     ),
                   ],

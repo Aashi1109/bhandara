@@ -88,12 +88,11 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final typography = context.appTypography;
 
     return Material(
       color: AppColors.surface,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(28),
-      ),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: Padding(
         padding: EdgeInsets.fromLTRB(24, 20, 24, bottomInset + 24),
         child: Column(
@@ -113,20 +112,15 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Edit Review' : 'Add Review',
-              style: const TextStyle(
-                fontSize: 20,
+              style: typography.titleLG.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Share your rating and an optional note for other attendees.',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.mutedForeground,
-              ),
+              style: typography.bodyBase,
             ),
             const SizedBox(height: 20),
             Row(
@@ -154,8 +148,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: typography.bodySM.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.error,
                 ),

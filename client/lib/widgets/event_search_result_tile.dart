@@ -21,6 +21,7 @@ class EventSearchResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Material(
       color: AppColors.surface,
       child: InkWell(
@@ -46,9 +47,7 @@ class EventSearchResultTile extends StatelessWidget {
                       item.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      style: typography.titleSM.copyWith(
                         color: AppColors.primary,
                         height: 1.2,
                       ),
@@ -61,8 +60,7 @@ class EventSearchResultTile extends StatelessWidget {
                             distanceLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: typography.bodySM.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppColors.mutedForeground,
                             ),
@@ -73,8 +71,7 @@ class EventSearchResultTile extends StatelessWidget {
                           createdAgoLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: typography.bodySM.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.mutedForeground,
                           ),
