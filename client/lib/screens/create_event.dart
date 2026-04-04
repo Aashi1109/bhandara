@@ -316,8 +316,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 15,
+        style: context.appTypography.titleXS.copyWith(
           fontWeight: FontWeight.w700,
           color: AppColors.primary,
         ),
@@ -601,8 +600,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                   title: Text(
                     tag.name,
-                    style: const TextStyle(
-                      fontSize: 15,
+                    style: context.appTypography.titleXS.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
@@ -1008,9 +1006,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailsSection(
-                          categoriesAsync.value ?? const [],
-                        ),
+                        _buildDetailsSection(categoriesAsync.value ?? const []),
                         const SizedBox(height: 24),
                         _buildLocationCard(),
                         const SizedBox(height: 24),
@@ -1093,9 +1089,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                         children: [
                           Text(
                             _submitLabel,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                            style: context.appTypography.titleMD.copyWith(
                               color: AppColors.surface,
                             ),
                           ),
@@ -1187,23 +1181,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Upload Event Media',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: context.appTypography.labelMD.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'ADD PHOTOS OR VIDEO FOR THE EVENT',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
-                      color: AppColors.mutedForeground,
-                    ),
+                    style: context.appTypography.overline,
                   ),
                 ],
               ),
@@ -1243,18 +1230,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             GestureDetector(
               key: const ValueKey('create_event_current_location_action'),
               onTap: _useCurrentLocation,
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     LucideIcons.locateFixed,
                     size: AppIconSizes.s,
                     color: AppColors.primary,
                   ),
-                  SizedBox(width: 6),
+                  const SizedBox(width: 6),
                   Text(
                     'Use Current',
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: context.appTypography.bodyXS.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                       decoration: TextDecoration.underline,
@@ -1272,10 +1258,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
               _locationError!,
-              style: const TextStyle(
+              style: context.appTypography.labelSM.copyWith(
                 color: AppColors.error,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1327,10 +1311,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                               : 'TAP TO PINPOINT',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
+                          style: context.appTypography.overline.copyWith(
                             color: AppColors.primary,
                           ),
                         ),
@@ -1427,8 +1408,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                         (categories.isEmpty
                             ? 'Loading categories...'
                             : 'Select Category'),
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: context.appTypography.bodyMD.copyWith(
                       fontWeight: FontWeight.w700,
                       color: _selectedCategory != null
                           ? AppColors.primary
@@ -1451,10 +1431,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               _categoryError!,
-              style: const TextStyle(
+              style: context.appTypography.labelSM.copyWith(
                 color: AppColors.error,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1487,10 +1465,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               _timingError!,
-              style: const TextStyle(
+              style: context.appTypography.labelSM.copyWith(
                 color: AppColors.error,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -1531,17 +1507,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     children: [
                       Text(
                         _dateFormat.format(value),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                        style: context.appTypography.captionMD.copyWith(
                           color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         _timeFormat.format(value),
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: context.appTypography.bodySM.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
@@ -1600,15 +1573,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 
   Widget _sectionLabel(String text) {
-    return Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2,
-        color: AppColors.mutedForeground,
-      ),
-    );
+    return Text(text.toUpperCase(), style: context.appTypography.overline);
   }
 
   void _hydrateInitialEvent() {

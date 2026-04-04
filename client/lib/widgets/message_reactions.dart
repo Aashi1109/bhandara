@@ -217,6 +217,7 @@ class MessageReactionSummaryRow extends StatelessWidget {
     if (summaries.isEmpty) {
       return const SizedBox.shrink();
     }
+    final typography = context.appTypography;
 
     final selectedEmoji = MessageReactionUtils.currentUserReactionEmoji(
       reactions,
@@ -289,7 +290,7 @@ class MessageReactionSummaryRow extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(summary.emoji, style: const TextStyle(fontSize: 14)),
+                    Text(summary.emoji, style: typography.bodyMD),
                     const SizedBox(width: 6),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 180),
@@ -305,8 +306,7 @@ class MessageReactionSummaryRow extends StatelessWidget {
                       child: Text(
                         '${summary.count}',
                         key: ValueKey('${summary.emoji}_${summary.count}'),
-                        style: TextStyle(
-                          fontSize: 11,
+                        style: typography.bodyXS.copyWith(
                           fontWeight: isSelected
                               ? FontWeight.w800
                               : FontWeight.w700,
@@ -339,6 +339,7 @@ class MessageReactionQuickBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Material(
       color: AppColors.transparent,
       child: Container(
@@ -382,7 +383,7 @@ class MessageReactionQuickBar extends StatelessWidget {
                         : AppColors.transparent,
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  child: Text(emoji, style: typography.titleLG),
                 ),
               ),
             );
@@ -525,6 +526,7 @@ Future<void> showMessageReactionDetailsSheet({
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setModalState) {
+          final typography = context.appTypography;
           final filtered =
               MessageReactionUtils.filterByEmoji(
                 reactions,
@@ -568,14 +570,13 @@ Future<void> showMessageReactionDetailsSheet({
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(
                         children: [
                           Text(
                             'Reactions',
-                            style: TextStyle(
-                              fontSize: 18,
+                            style: typography.titleMD.copyWith(
                               fontWeight: FontWeight.w800,
                               color: AppColors.primary,
                             ),
@@ -647,9 +648,7 @@ Future<void> showMessageReactionDetailsSheet({
                                 Expanded(
                                   child: Text(
                                     displayName,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
+                                    style: typography.labelMD.copyWith(
                                       color: AppColors.primary,
                                     ),
                                   ),
@@ -666,7 +665,7 @@ Future<void> showMessageReactionDetailsSheet({
                                   ),
                                   child: Text(
                                     reaction.emoji,
-                                    style: const TextStyle(fontSize: 16),
+                                    style: typography.titleSM,
                                   ),
                                 ),
                               ],
@@ -701,6 +700,7 @@ class _ReactionFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -720,17 +720,14 @@ class _ReactionFilterChip extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+              style: typography.captionMD.copyWith(
                 color: isSelected ? AppColors.primary : AppColors.primary,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               '$count',
-              style: TextStyle(
-                fontSize: 12,
+              style: typography.bodySM.copyWith(
                 fontWeight: FontWeight.w800,
                 color: isSelected
                     ? AppColors.primary

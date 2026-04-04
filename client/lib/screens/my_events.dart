@@ -49,7 +49,10 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients || _isLoading || _isFetchingMore || !_hasNext) {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isFetchingMore ||
+        !_hasNext) {
       return;
     }
     if (_scrollController.position.extentAfter < 320) {
@@ -88,8 +91,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
 
     try {
-      final userId =
-          _currentUserId ?? (await userService.getCurrentUser())?.id;
+      final userId = _currentUserId ?? (await userService.getCurrentUser())?.id;
       if (userId == null) {
         if (!mounted) return;
         setState(() {
@@ -114,8 +116,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       final merged = <String, Event>{
         for (final event in refresh ? <Event>[] : _events) event.id: event,
         for (final event in pageEvents) event.id: event,
-      }.values.toList()
-        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+      }.values.toList()..sort((a, b) => b.startTime.compareTo(a.startTime));
 
       setState(() {
         _events = merged;
@@ -134,6 +135,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   }
 
   Widget _buildEventCard(Event event) {
+    final typography = context.appTypography;
     return GestureDetector(
       onTap: () => context.push(
         EventDetailScreen.routePath.replaceAll(':id', event.id),
@@ -151,17 +153,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           children: [
             Text(
               event.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
+              style: typography.titleSM.copyWith(color: AppColors.primary),
             ),
             const SizedBox(height: 8),
             Text(
               DateFormat('EEE, d MMM • h:mm a').format(event.startTime),
-              style: const TextStyle(
-                fontSize: 12,
+              style: typography.bodySM.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppColors.mutedForeground,
               ),
@@ -169,8 +166,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
             const SizedBox(height: 8),
             Text(
               event.location.address,
-              style: const TextStyle(
-                fontSize: 13,
+              style: typography.bodyBase.copyWith(
                 color: AppColors.mutedForeground,
               ),
             ),
@@ -199,6 +195,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final typography = context.appTypography;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -208,10 +205,10 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           color: AppColors.mutedForeground,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'You have not created any events yet.',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: typography.bodyLG.copyWith(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: AppColors.primary,
@@ -245,13 +242,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
 
     if (_events.isNotEmpty && !_hasNext) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 4, bottom: 12),
+      return Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 12),
         child: Center(
           child: Text(
             'You are all caught up.',
-            style: TextStyle(
-              fontSize: 12,
+            style: context.appTypography.bodySM.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.mutedForeground,
             ),
@@ -319,8 +315,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         Text(
           text,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 12,
+          style: context.appTypography.bodySM.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.mutedForeground,
           ),

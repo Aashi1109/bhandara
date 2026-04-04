@@ -185,11 +185,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
             onBack: () => context.pop(),
             rightElement: GestureDetector(
               onTap: () => context.go(ExploreScreen.routePath),
-              child: const Text(
+              child: Text(
                 'Skip',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                style: context.appTypography.labelMD.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -202,31 +200,25 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     "Let's set up your preferences",
-                    style: TextStyle(
-                      fontSize: 28,
+                    style: context.appTypography.titleXL.copyWith(
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                       color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Customize your feed to see the free food events you actually care about.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                    style: context.appTypography.bodyLG.copyWith(
                       color: AppColors.mutedForeground,
-                      height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 40),
-                  const Text(
+                  Text(
                     'What do you like?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                    style: context.appTypography.titleMD.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -260,7 +252,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                     error: (err, stack) => Center(
                       child: Text(
                         'Failed to load categories: ${err.toString()}',
-                        style: const TextStyle(color: AppColors.error),
+                        style: context.appTypography.bodyMD.copyWith(
+                          color: AppColors.error,
+                        ),
                       ),
                     ),
                   ),
@@ -287,20 +281,15 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const Text(
+            Text(
               'Set Your Base Location',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
+              style: context.appTypography.titleMD,
             ),
             GestureDetector(
               onTap: _useCurrentLocation,
-              child: const Text(
+              child: Text(
                 'Use Current Location',
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.appTypography.bodySM.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary,
                   decoration: TextDecoration.underline,
@@ -360,12 +349,10 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'CURRENT SELECTION',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                              style: context.appTypography.labelSM.copyWith(
                                 letterSpacing: 2,
                                 color: AppColors.mutedForeground,
                               ),
@@ -414,13 +401,12 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             'We use this to show you events nearby. You can always change this in your profile settings later.',
-            style: TextStyle(
+            style: context.appTypography.bodyXS.copyWith(
               fontSize: 10,
-              fontWeight: FontWeight.w500,
               color: AppColors.mutedForeground,
             ),
           ),
@@ -482,10 +468,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
             child: Text(
               label,
               softWrap: true,
-              style: TextStyle(
+              style: context.appTypography.labelMD.copyWith(
                 fontSize: isPrimary ? 14 : 12,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
                 color: isPrimary ? AppColors.surface : AppColors.primary,
               ),
             ),
@@ -723,13 +707,12 @@ class TagChip extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildIcon(isSelected || isIntermediate),
+                  _buildIcon(context, isSelected || isIntermediate),
                   const SizedBox(width: 8),
                   Text(
                     tag.name + (count != null ? ' ($count)' : ''),
-                    style: TextStyle(
+                    style: context.appTypography.labelMD.copyWith(
                       fontSize: isSmall ? 12 : 14,
-                      fontWeight: FontWeight.w700,
                       color: isSelected ? AppColors.surface : AppColors.primary,
                     ),
                   ),
@@ -764,7 +747,7 @@ class TagChip extends StatelessWidget {
     );
   }
 
-  Widget _buildIcon(bool active) {
+  Widget _buildIcon(BuildContext context, bool active) {
     if (tag.icon == null || tag.icon!.isEmpty) {
       return Icon(
         LucideIcons.utensils,
@@ -774,7 +757,12 @@ class TagChip extends StatelessWidget {
     }
 
     if (_isEmoji(tag.icon!)) {
-      return Text(tag.icon!, style: TextStyle(fontSize: isSmall ? 14 : 16));
+      return Text(
+        tag.icon!,
+        style: context.appTypography.bodyMD.copyWith(
+          fontSize: isSmall ? 14 : 16,
+        ),
+      );
     }
 
     if (tag.icon!.startsWith('http')) {

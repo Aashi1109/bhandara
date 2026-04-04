@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -147,7 +149,9 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     if (!mounted) return;
     if (update.entityType == 'event') {
       final eventId = (update.payload['eventId'] ?? update.entityId).toString();
-      context.push(EventDetailScreen.routePath.replaceAll(':id', eventId));
+      unawaited(
+        context.push(EventDetailScreen.routePath.replaceAll(':id', eventId)),
+      );
       return;
     }
 
@@ -158,16 +162,18 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           threadId.isNotEmpty &&
           messageId != null &&
           messageId.isNotEmpty) {
-        context.push(
-          ThreadScreen.routePath.replaceAll(':id', messageId),
-          extra: {'threadId': threadId, 'chatId': threadId},
+        unawaited(
+          context.push(
+            ThreadScreen.routePath.replaceAll(':id', messageId),
+            extra: {'threadId': threadId, 'chatId': threadId},
+          ),
         );
       }
       return;
     }
 
     if (update.entityType == 'achievement') {
-      context.push(ProfileBadgesScreen.routePath);
+      unawaited(context.push(ProfileBadgesScreen.routePath));
     }
   }
 
@@ -233,22 +239,16 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
   }
 
   Widget _sectionLabel(String text) {
+    final typography = context.appTypography;
     return Padding(
       padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2,
-          color: AppColors.mutedForeground,
-        ),
-      ),
+      child: Text(text, style: typography.overline),
     );
   }
 
   Widget _notif(AppUpdate update) {
     final content = _contentFor(update);
+    final typography = context.appTypography;
 
     return GestureDetector(
       onTap: () => _openUpdate(update),
@@ -289,8 +289,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                       Expanded(
                         child: Text(
                           content.title,
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: typography.labelMD.copyWith(
                             fontWeight: update.isUnread
                                 ? FontWeight.w700
                                 : FontWeight.w600,
@@ -314,8 +313,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                   const SizedBox(height: 4),
                   Text(
                     content.body,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: typography.bodyBase.copyWith(
                       fontWeight: FontWeight.w500,
                       color: AppColors.mutedForeground,
                       height: 1.5,
@@ -324,8 +322,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _timeAgo(update.createdAt),
-                    style: const TextStyle(
-                      fontSize: 11,
+                    style: typography.captionSM.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.mutedForeground,
                     ),
@@ -369,7 +366,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 unreadCount > 0
                     ? '$unreadCount UNREAD'
                     : 'You are all caught up.',
-                style: TextStyle(
+                style: context.appTypography.labelSM.copyWith(
                   fontSize: unreadCount > 0 ? 10 : 12,
                   fontWeight: FontWeight.w900,
                   letterSpacing: unreadCount > 0 ? 2 : 0,
@@ -395,11 +392,10 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         if (_updates.isEmpty)
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.55,
-            child: const Center(
+            child: Center(
               child: Text(
                 'No updates yet.',
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.appTypography.bodyMD.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -420,13 +416,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             ),
           ),
         if (_updates.isNotEmpty && !_hasNext)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Center(
               child: Text(
                 'You are all caught up.',
-                style: TextStyle(
-                  fontSize: 12,
+                style: context.appTypography.bodySM.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
@@ -439,6 +434,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -454,8 +450,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                       : _markAllRead,
                   child: Text(
                     _isMarkingAll ? 'Marking...' : 'Mark all as read',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: typography.bodySM.copyWith(
                       fontWeight: FontWeight.w700,
                       color: _updates.isEmpty || _isMarkingAll
                           ? AppColors.mutedForeground

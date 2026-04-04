@@ -64,6 +64,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
+    final typography = context.appTypography;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -177,20 +178,18 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      const Text(
+                      Text(
                         'Upload Photo',
-                        style: TextStyle(
-                          fontSize: 24,
+                        style: typography.heading3.copyWith(
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                           color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Personalize your profile',
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: typography.bodyMD.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
@@ -202,12 +201,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Text(
                               'FULL NAME',
-                              style: TextStyle(
-                                fontSize: 10,
+                              style: typography.overline.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 2,
                                 color: AppColors.mutedForeground,
@@ -227,12 +225,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Text(
                               'GENDER',
-                              style: TextStyle(
-                                fontSize: 10,
+                              style: typography.overline.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 2,
                                 color: AppColors.mutedForeground,

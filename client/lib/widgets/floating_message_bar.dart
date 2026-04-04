@@ -215,6 +215,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     final canSend =
         (_controller.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
         _attachments.every((a) => !a.isUploading);
@@ -269,9 +270,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                           border: Border.all(color: AppColors.border),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(
-                                alpha: 0.08,
-                              ),
+                              color: AppColors.primary.withValues(alpha: 0.08),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -287,14 +286,14 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                                 onEmojiSelected: (_, emoji) {
                                   _insertEmoji(emoji.emoji);
                                 },
-                                config: const Config(
+                                config: Config(
                                   height: 256,
                                   checkPlatformCompatibility: true,
-                                  emojiViewConfig: EmojiViewConfig(
+                                  emojiViewConfig: const EmojiViewConfig(
                                     backgroundColor: AppColors.surface,
                                     columns: 8,
                                   ),
-                                  categoryViewConfig: CategoryViewConfig(
+                                  categoryViewConfig: const CategoryViewConfig(
                                     initCategory: Category.SMILEYS,
                                     backgroundColor: AppColors.surface,
                                     indicatorColor: AppColors.primary,
@@ -305,22 +304,18 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                                   searchViewConfig: SearchViewConfig(
                                     backgroundColor: AppColors.surface,
                                     buttonIconColor: AppColors.mutedForeground,
-                                    inputTextStyle: TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    hintTextStyle: TextStyle(
+                                    inputTextStyle: typography.bodyMDSemi
+                                        .copyWith(color: AppColors.primary),
+                                    hintTextStyle: typography.bodyMD.copyWith(
                                       color: AppColors.mutedForeground,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  bottomActionBarConfig: BottomActionBarConfig(
-                                    backgroundColor: AppColors.surface,
-                                    buttonColor: AppColors.muted,
-                                    buttonIconColor: AppColors.primary,
-                                  ),
+                                  bottomActionBarConfig:
+                                      const BottomActionBarConfig(
+                                        backgroundColor: AppColors.surface,
+                                        buttonColor: AppColors.muted,
+                                        buttonIconColor: AppColors.primary,
+                                      ),
                                 ),
                               ),
                             ),
@@ -405,9 +400,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                             onSubmitted: (_) => _handleSend(),
                             decoration: InputDecoration(
                               hintText: widget.placeholder,
-                              hintStyle: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                              hintStyle: typography.labelMD.copyWith(
                                 color: AppColors.mutedForeground.withValues(
                                   alpha: 0.6,
                                 ),
@@ -418,9 +411,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                                 horizontal: isCompact ? 4 : 8,
                               ),
                             ),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                            style: typography.labelMD.copyWith(
                               color: AppColors.primary,
                             ),
                             textInputAction: TextInputAction.send,

@@ -10,6 +10,7 @@ class AboutAppScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -26,31 +27,28 @@ class AboutAppScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Zentry',
-                      style: TextStyle(
-                        fontSize: 24,
+                      style: typography.heading3.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Version 2.4.0',
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: typography.captionMD.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.mutedForeground,
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     Text(
                       'Zentry helps people discover food events, join conversations around them, and track what matters after the event is live.',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         height: 1.6,
                         color: AppColors.mutedForeground,
                       ),

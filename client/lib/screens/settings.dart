@@ -139,8 +139,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               children: [
                                 Text(
                                   user?.name ?? user?.email ?? 'User',
-                                  style: const TextStyle(
-                                    fontSize: 20,
+                                  style: context.appTypography.titleLG.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.primary,
                                   ),
@@ -148,8 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   user?.email ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 14,
+                                  style: context.appTypography.bodyMD.copyWith(
                                     fontWeight: FontWeight.w500,
                                     color: AppColors.mutedForeground,
                                   ),
@@ -226,7 +224,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       user?.address?.label.isNotEmpty == true
                           ? user!.address!.label
                           : 'Not set',
-                      onTap: () => context.push(LocationSettingsScreen.routePath),
+                      onTap: () =>
+                          context.push(LocationSettingsScreen.routePath),
                       showBorder: true,
                     ),
                     _settingItem(
@@ -307,15 +306,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     label: 'Sign Out',
                   ),
                   const SizedBox(height: 24),
-                  const Center(
+                  Center(
                     child: Text(
                       'FOODEVENTS INC. © 2024',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: context.appTypography.overline,
                     ),
                   ),
                 ],
@@ -346,17 +340,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _sectionLabel(String text) {
+    final typography = context.appTypography;
     return Padding(
       padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2,
-          color: AppColors.mutedForeground,
-        ),
-      ),
+      child: Text(text, style: typography.overline),
     );
   }
 
@@ -367,6 +354,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     VoidCallback? onTap,
     bool showBorder = false,
   }) {
+    final typography = context.appTypography;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -398,16 +386,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: typography.labelMD.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: 10,
+                    style: typography.labelSM.copyWith(
                       fontWeight: FontWeight.w500,
                       color: AppColors.mutedForeground,
                     ),
@@ -434,6 +419,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ValueChanged<bool> onChanged, {
     bool showBorder = false,
   }) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -463,16 +449,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+                  style: typography.labelMD.copyWith(color: AppColors.primary),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 10,
+                  style: typography.labelSM.copyWith(
                     fontWeight: FontWeight.w500,
                     color: AppColors.mutedForeground,
                   ),

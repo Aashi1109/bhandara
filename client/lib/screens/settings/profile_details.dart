@@ -110,6 +110,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final user = userAsync.value;
     _hydrate(user);
     final isSaving = userAsync.isLoading && _didHydrate;
+    final typography = context.appTypography;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -208,10 +209,9 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'Tap to change photo',
-                            style: TextStyle(
-                              fontSize: 14,
+                            style: typography.bodyMD.copyWith(
                               fontWeight: FontWeight.w500,
                               color: AppColors.mutedForeground,
                             ),

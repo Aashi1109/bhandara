@@ -56,6 +56,7 @@ class SuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -89,9 +90,9 @@ class SuccessScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Event Live!',
-                      style: TextStyle(
+                      style: typography.heading1.copyWith(
                         fontSize: 36,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
@@ -99,9 +100,9 @@ class SuccessScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Your contribution is now visible on the map.',
-                      style: TextStyle(
+                      style: typography.bodyLG.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                         color: AppColors.mutedForeground,
@@ -152,8 +153,7 @@ class SuccessScreen extends StatelessWidget {
                                           ),
                                           child: Text(
                                             _categoryLabel,
-                                            style: const TextStyle(
-                                              fontSize: 8,
+                                            style: typography.labelXS.copyWith(
                                               fontWeight: FontWeight.w900,
                                               letterSpacing: 2,
                                               color: AppColors.surface,
@@ -161,10 +161,9 @@ class SuccessScreen extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        const Text(
+                                        Text(
                                           'Just now',
-                                          style: TextStyle(
-                                            fontSize: 10,
+                                          style: typography.labelSM.copyWith(
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.mutedForeground,
                                           ),
@@ -174,8 +173,7 @@ class SuccessScreen extends StatelessWidget {
                                     const SizedBox(height: 4),
                                     Text(
                                       _title,
-                                      style: const TextStyle(
-                                        fontSize: 18,
+                                      style: typography.titleMD.copyWith(
                                         fontWeight: FontWeight.w700,
                                         height: 1.2,
                                         color: AppColors.primary,
@@ -195,8 +193,7 @@ class SuccessScreen extends StatelessWidget {
                                             _locationLabel,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 12,
+                                            style: typography.bodySM.copyWith(
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.mutedForeground,
                                             ),
@@ -230,8 +227,7 @@ class SuccessScreen extends StatelessWidget {
                                     const SizedBox(width: 8),
                                     Text(
                                       _timeRange,
-                                      style: const TextStyle(
-                                        fontSize: 12,
+                                      style: typography.bodySM.copyWith(
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.primary,
                                       ),
@@ -254,8 +250,7 @@ class SuccessScreen extends StatelessWidget {
                                       child: Center(
                                         child: Text(
                                           _participantLabel,
-                                          style: const TextStyle(
-                                            fontSize: 8,
+                                          style: typography.labelXS.copyWith(
                                             fontWeight: FontWeight.w900,
                                             color: AppColors.mutedForeground,
                                           ),

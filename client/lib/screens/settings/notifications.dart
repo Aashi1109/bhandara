@@ -84,7 +84,7 @@ class _NotificationsSettingsScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel('ALERTS'),
+                  _sectionLabel(context, 'ALERTS'),
                   const SizedBox(height: 16),
                   _notificationItem(
                     LucideIcons.calendar,
@@ -151,18 +151,11 @@ class _NotificationsSettingsScreenState
     );
   }
 
-  Widget _sectionLabel(String text) {
+  Widget _sectionLabel(BuildContext context, String text) {
+    final typography = context.appTypography;
     return Padding(
       padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 2,
-          color: AppColors.mutedForeground,
-        ),
-      ),
+      child: Text(text, style: typography.overline),
     );
   }
 
@@ -173,6 +166,7 @@ class _NotificationsSettingsScreenState
     bool value,
     ValueChanged<bool> onChanged,
   ) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -209,17 +203,12 @@ class _NotificationsSettingsScreenState
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+                  style: typography.labelMD.copyWith(color: AppColors.primary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 10,
+                  style: typography.labelSM.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
                     color: AppColors.mutedForeground,

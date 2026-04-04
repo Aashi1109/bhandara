@@ -21,21 +21,18 @@ class EventAttendeesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
-          AppHeader(
-            title: 'Attendees',
-            subtitle: eventName,
-          ),
+          AppHeader(title: 'Attendees', subtitle: eventName),
           Expanded(
             child: attendees.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No attendees yet.',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.mutedForeground,
                       ),
@@ -44,10 +41,8 @@ class EventAttendeesScreen extends StatelessWidget {
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                     itemCount: attendees.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      color: AppColors.border,
-                    ),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final attendee = attendees[index];
                       return InkWell(
@@ -69,9 +64,7 @@ class EventAttendeesScreen extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   attendee.name ?? 'Unknown attendee',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
+                                  style: typography.titleSM.copyWith(
                                     color: AppColors.primary,
                                   ),
                                 ),

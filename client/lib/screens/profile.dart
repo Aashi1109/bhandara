@@ -267,86 +267,86 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            MediaQuery.of(sheetContext).padding.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Row(
-                children: [
-                  Text(
-                    'Profile Photo',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
+      builder: (sheetContext) {
+        final typography = sheetContext.appTypography;
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(sheetContext).padding.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Manage how your profile photo appears across the app.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedForeground,
-                        height: 1.35,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Text(
+                      'Profile Photo',
+                      style: typography.titleLG.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _sheetItem(
-                label: 'View Photo',
-                icon: LucideIcons.eye,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _viewPhoto();
-                },
-              ),
-              const SizedBox(height: 12),
-              _sheetItem(
-                label: 'Change Photo',
-                icon: LucideIcons.image,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _changePhoto();
-                },
-              ),
-              const SizedBox(height: 12),
-              _sheetItem(
-                label: 'Remove Photo',
-                icon: LucideIcons.trash2,
-                isDestructive: true,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _removePhoto();
-                },
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Manage how your profile photo appears across the app.',
+                        style: typography.bodyBase.copyWith(
+                          color: AppColors.mutedForeground,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _sheetItem(
+                  label: 'View Photo',
+                  icon: LucideIcons.eye,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _viewPhoto();
+                  },
+                ),
+                const SizedBox(height: 12),
+                _sheetItem(
+                  label: 'Change Photo',
+                  icon: LucideIcons.image,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _changePhoto();
+                  },
+                ),
+                const SizedBox(height: 12),
+                _sheetItem(
+                  label: 'Remove Photo',
+                  icon: LucideIcons.trash2,
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _removePhoto();
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -356,6 +356,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
+    final typography = context.appTypography;
     return Material(
       color: AppColors.transparent,
       child: InkWell(
@@ -395,8 +396,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 15,
+                  style: typography.titleXS.copyWith(
                     fontWeight: FontWeight.w700,
                     color: isDestructive ? AppColors.error : AppColors.primary,
                   ),
@@ -483,6 +483,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }) {
     final overviewAsync = ref.watch(profileOverviewProvider(userId: user.id));
     final overview = overviewAsync.value;
+    final typography = context.appTypography;
 
     return Column(
       children: [
@@ -554,21 +555,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 16),
                 Text(
                   user.name ?? 'Anonymous',
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: typography.heading3.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'PROFILE',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
+                Text('PROFILE', style: typography.overline),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -581,12 +573,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(width: 6),
                     Text(
                       'MEMBER SINCE ${DateFormat('MMM yyyy').format(user.createdAt ?? DateTime.now()).toUpperCase()}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: typography.overline,
                     ),
                   ],
                 ),
@@ -627,21 +614,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Badges',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text('Badges', style: typography.titleMD),
                     if (showSelfActions)
                       GestureDetector(
                         onTap: () =>
                             context.push(ProfileBadgesScreen.routePath),
-                        child: const Text(
+                        child: Text(
                           'View All',
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: typography.bodySM.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
                             decoration: TextDecoration.underline,
@@ -676,20 +656,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Recent Activity',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text('Recent Activity', style: typography.titleMD),
                     if (showSelfActions)
                       GestureDetector(
                         onTap: () => context.push(UpdatesScreen.routePath),
-                        child: const Text(
+                        child: Text(
                           'View All',
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: typography.bodySM.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
                             decoration: TextDecoration.underline,
@@ -703,12 +676,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 32),
 
                 // Impact
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Impact Overview',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
+                  child: Text('Impact Overview', style: typography.titleMD),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -755,9 +725,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           const SizedBox(height: 8),
                           Text(
                             days[i],
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                            style: typography.labelSM.copyWith(
                               color: AppColors.mutedForeground,
                             ),
                           ),
@@ -775,27 +743,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _stat(String label, String value) {
+    final typography = context.appTypography;
     return Column(
       spacing: 4,
       children: [
         Text(
           value,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+          style: typography.heading3.copyWith(fontWeight: FontWeight.w800),
         ),
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
-            color: AppColors.mutedForeground,
-          ),
-        ),
+        Text(label.toUpperCase(), style: typography.overline),
       ],
     );
   }
 
   Widget _badge(String label, IconData icon) {
+    final typography = context.appTypography;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -811,11 +773,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-              ),
+              style: typography.labelSM.copyWith(height: 1.3),
             ),
           ],
         ),
@@ -835,11 +793,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.border),
             ),
-            child: const Text(
+            child: Text(
               'No badges unlocked yet.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
+              style: context.appTypography.bodySM.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppColors.mutedForeground,
               ),
@@ -872,9 +829,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.border),
           ),
-          child: const Text(
+          child: Text(
             'No recent activity yet.',
-            style: TextStyle(color: AppColors.mutedForeground),
+            style: context.appTypography.bodySM.copyWith(
+              color: AppColors.mutedForeground,
+            ),
           ),
         ),
       ];
@@ -994,6 +953,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     String time,
     String subtitle,
   ) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1023,18 +983,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text(title, style: typography.labelMD),
                     Text(
                       time,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
+                      style: typography.labelSM.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -1043,8 +995,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: typography.bodySM.copyWith(
                     color: AppColors.mutedForeground,
                   ),
                 ),

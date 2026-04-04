@@ -39,6 +39,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -69,22 +70,20 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'Update Security',
-                        style: TextStyle(
-                          fontSize: 20,
+                        style: typography.titleLG.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 32),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
                           'Please enter your current password to create a new one.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: typography.bodyMD.copyWith(
                             fontWeight: FontWeight.w500,
                             color: AppColors.mutedForeground,
                           ),
@@ -140,15 +139,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'FAIR PASSWORD',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2,
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
+                      Text('FAIR PASSWORD', style: typography.overline),
                       const SizedBox(height: 12),
                       _requirementItem('At least 8 characters', _hasLength),
                       const SizedBox(height: 8),
@@ -202,6 +193,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
   }
 
   Widget _requirementItem(String label, bool met) {
+    final typography = context.appTypography;
     return Row(
       spacing: 8,
       children: [
@@ -214,8 +206,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
+          style: typography.bodySM.copyWith(
             fontWeight: FontWeight.w700,
             color: met
                 ? AppColors.primary

@@ -149,6 +149,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
 
   Future<void> _openEmojiPicker() async {
     if (!_hasReactionContext) return;
+    final typography = context.appTypography;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.transparent,
@@ -162,14 +163,14 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                 Navigator.of(context).pop();
                 _handleReactionTap(emoji.emoji);
               },
-              config: const Config(
+              config: Config(
                 height: 320,
                 checkPlatformCompatibility: true,
-                emojiViewConfig: EmojiViewConfig(
+                emojiViewConfig: const EmojiViewConfig(
                   backgroundColor: AppColors.surface,
                   columns: 8,
                 ),
-                categoryViewConfig: CategoryViewConfig(
+                categoryViewConfig: const CategoryViewConfig(
                   initCategory: Category.SMILEYS,
                   backgroundColor: AppColors.surface,
                   indicatorColor: AppColors.primary,
@@ -180,18 +181,16 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                 searchViewConfig: SearchViewConfig(
                   backgroundColor: AppColors.surface,
                   buttonIconColor: AppColors.mutedForeground,
-                  inputTextStyle: TextStyle(
+                  inputTextStyle: typography.bodyMDSemi.copyWith(
                     color: AppColors.primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
                   ),
-                  hintTextStyle: TextStyle(
+                  hintTextStyle: typography.bodyMD.copyWith(
                     color: AppColors.mutedForeground,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                bottomActionBarConfig: BottomActionBarConfig(enabled: false),
+                bottomActionBarConfig: const BottomActionBarConfig(
+                  enabled: false,
+                ),
               ),
             ),
           ),
@@ -253,6 +252,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Material(
       color: AppColors.surface,
       child: Column(
@@ -282,19 +282,15 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                   children: [
                     Text(
                       widget.items[_currentIndex].name.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: typography.overline.copyWith(
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${_currentIndex + 1} OF ${widget.items.length}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
+                      style: typography.labelSM.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -526,6 +522,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
   }
 
   Widget _mediaDetails() {
+    final typography = context.appTypography;
     final item = widget.items[_currentIndex];
     final subtitle = item.sizeBytes == null
         ? item.type.toUpperCase()
@@ -541,17 +538,12 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                 item.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+                style: typography.labelMD.copyWith(color: AppColors.primary),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: typography.bodySM.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
@@ -736,6 +728,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     if (!_isReady) {
       return Container(
         color: AppColors.muted,
@@ -861,8 +854,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                     const SizedBox(width: 12),
                     Text(
                       _formatDuration(_position),
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: typography.bodySM.copyWith(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -893,8 +885,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                     const SizedBox(width: 12),
                     Text(
                       _formatDuration(_duration),
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: typography.bodySM.copyWith(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -913,8 +904,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                         ),
                         child: Text(
                           '${_playbackSpeed.toStringAsFixed(_playbackSpeed.truncateToDouble() == _playbackSpeed ? 0 : 2)}x',
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: typography.bodySM.copyWith(
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),

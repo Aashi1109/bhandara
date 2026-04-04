@@ -134,7 +134,8 @@ class _SavedScreenState extends State<SavedScreen> {
       final merged = <String, SearchResult>{
         for (final result in refresh ? <SearchResult>[] : _results)
           '${result.type}:${result.id}': result,
-        for (final result in response.items) '${result.type}:${result.id}': result,
+        for (final result in response.items)
+          '${result.type}:${result.id}': result,
       }.values.toList();
 
       setState(() {
@@ -166,30 +167,27 @@ class _SavedScreenState extends State<SavedScreen> {
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-          children: const [
-            SizedBox(height: 120),
-            Icon(
+          children: [
+            const SizedBox(height: 120),
+            const Icon(
               LucideIcons.searchX,
               size: AppIconSizes.hero,
               color: AppColors.mutedForeground,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Center(
               child: Text(
                 'No saved items found',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                style: context.appTypography.titleSM.copyWith(
                   color: AppColors.primary,
                 ),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Center(
               child: Text(
                 'Try a different search or filter',
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.appTypography.bodyMD.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -251,21 +249,23 @@ class _SavedScreenState extends State<SavedScreen> {
     final bio = metadata['bio'] as String?;
     final startTime = rawStart != null ? DateTime.tryParse(rawStart) : null;
     final endTime = rawEnd != null ? DateTime.tryParse(rawEnd) : null;
-    final createdAtTime = createdAt != null ? DateTime.tryParse(createdAt) : null;
+    final createdAtTime = createdAt != null
+        ? DateTime.tryParse(createdAt)
+        : null;
     final resolvedStatus =
         result.type == 'event' && startTime != null && endTime != null
-            ? deriveEventStatus(
-                startTime: startTime,
-                endTime: endTime,
-                currentStatus: rawStatus,
-              )
-            : null;
+        ? deriveEventStatus(
+            startTime: startTime,
+            endTime: endTime,
+            currentStatus: rawStatus,
+          )
+        : null;
     final isMessage = result.type == 'message';
     final secondaryText = startTime != null
         ? '${_formatTime(startTime)}${address != null && address.isNotEmpty ? ' • $address' : ''}'
         : result.type == 'user'
-            ? (username != null && username.isNotEmpty ? '@$username' : bio)
-            : result.description;
+        ? (username != null && username.isNotEmpty ? '@$username' : bio)
+        : result.description;
 
     return AppCard(
       padding: AppCardPadding.none,
@@ -304,8 +304,9 @@ class _SavedScreenState extends State<SavedScreen> {
                       ),
                       if (resolvedStatus != null)
                         _buildBadge(
-                          label:
-                              formatEventStatusLabel(resolvedStatus).toUpperCase(),
+                          label: formatEventStatusLabel(
+                            resolvedStatus,
+                          ).toUpperCase(),
                           background: _statusBackground(resolvedStatus),
                           foreground: _statusForeground(resolvedStatus),
                         ),
@@ -313,15 +314,22 @@ class _SavedScreenState extends State<SavedScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    isMessage ? (result.description ?? 'Open message') : result.title,
+                    isMessage
+                        ? (result.description ?? 'Open message')
+                        : result.title,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: isMessage ? 15 : 16,
-                      fontWeight: isMessage ? FontWeight.w500 : FontWeight.w700,
-                      height: 1.25,
-                      color: AppColors.primary,
-                    ),
+                    style:
+                        (isMessage
+                                ? context.appTypography.titleXS
+                                : context.appTypography.titleSM)
+                            .copyWith(
+                              fontWeight: isMessage
+                                  ? FontWeight.w500
+                                  : FontWeight.w700,
+                              height: 1.25,
+                              color: AppColors.primary,
+                            ),
                   ),
                   if (!isMessage && secondaryText != null) ...[
                     const SizedBox(height: 4),
@@ -329,8 +337,7 @@ class _SavedScreenState extends State<SavedScreen> {
                       secondaryText,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: context.appTypography.bodySM.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -339,9 +346,7 @@ class _SavedScreenState extends State<SavedScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _formatRelative(createdAtTime),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                      style: context.appTypography.captionSM.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -368,8 +373,7 @@ class _SavedScreenState extends State<SavedScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 8,
+        style: context.appTypography.labelXS.copyWith(
           fontWeight: FontWeight.w900,
           letterSpacing: 1.5,
           color: foreground,
@@ -413,10 +417,10 @@ class _SavedScreenState extends State<SavedScreen> {
         result.type == 'event'
             ? LucideIcons.calendar
             : result.type == 'message'
-                ? LucideIcons.messageCircle
-                : result.type == 'user'
-                    ? LucideIcons.user
-                    : LucideIcons.messagesSquare,
+            ? LucideIcons.messageCircle
+            : result.type == 'user'
+            ? LucideIcons.user
+            : LucideIcons.messagesSquare,
         size: AppIconSizes.xl,
         color: AppColors.mutedForeground,
       ),
@@ -441,9 +445,7 @@ class _SavedScreenState extends State<SavedScreen> {
           const SizedBox(height: 16),
           Text(
             _errorMessage ?? 'Unable to load saved items right now.',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+            style: context.appTypography.titleSM.copyWith(
               color: AppColors.primary,
             ),
             textAlign: TextAlign.center,
@@ -466,29 +468,29 @@ class _SavedScreenState extends State<SavedScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-        children: const [
-          SizedBox(height: 120),
-          Icon(
+        children: [
+          const SizedBox(height: 120),
+          const Icon(
             LucideIcons.search,
             size: AppIconSizes.hero,
             color: AppColors.mutedForeground,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Center(
             child: Text(
               'No saved items yet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              style: context.appTypography.titleSM.copyWith(
                 color: AppColors.primary,
               ),
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Center(
             child: Text(
               'Save events, threads, messages, and profiles to find them here',
-              style: TextStyle(fontSize: 14, color: AppColors.mutedForeground),
+              style: context.appTypography.bodyMD.copyWith(
+                color: AppColors.mutedForeground,
+              ),
             ),
           ),
         ],
@@ -526,10 +528,7 @@ class _SavedScreenState extends State<SavedScreen> {
     }
 
     if (result.type == 'user') {
-      context.push(
-        ProfileScreen.routePath,
-        extra: {'userId': result.id},
-      );
+      context.push(ProfileScreen.routePath, extra: {'userId': result.id});
     }
   }
 
@@ -567,8 +566,7 @@ class _SavedScreenState extends State<SavedScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 12,
+        style: context.appTypography.bodySM.copyWith(
           fontWeight: FontWeight.w700,
           color: selected
               ? AppColors.surface
@@ -598,11 +596,10 @@ class _SavedScreenState extends State<SavedScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Center(
+                    Center(
                       child: Text(
                         'Saved',
-                        style: TextStyle(
-                          fontSize: 24,
+                        style: context.appTypography.heading3.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
@@ -646,10 +643,10 @@ class _SavedScreenState extends State<SavedScreen> {
                         ),
                       )
                     : _errorMessage != null
-                        ? _buildErrorState()
-                        : _hasSearched || _results.isNotEmpty
-                            ? _buildResults()
-                            : _buildEmptyState(),
+                    ? _buildErrorState()
+                    : _hasSearched || _results.isNotEmpty
+                    ? _buildResults()
+                    : _buildEmptyState(),
               ),
             ],
           ),

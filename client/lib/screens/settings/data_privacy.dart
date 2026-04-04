@@ -53,6 +53,7 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -66,16 +67,11 @@ class _InfoCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+            style: typography.titleSM.copyWith(color: AppColors.primary),
           ),
           Text(
             body,
-            style: const TextStyle(
-              fontSize: 13,
+            style: typography.bodyBase.copyWith(
               height: 1.5,
               color: AppColors.mutedForeground,
             ),

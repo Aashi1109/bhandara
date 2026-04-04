@@ -46,6 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -59,10 +60,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.all(24),
                 child: GestureDetector(
                   onTap: _finish,
-                  child: const Text(
+                  child: Text(
                     'Skip',
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: typography.bodyMD.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.mutedForeground,
                     ),
@@ -128,6 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildSlide(_OnboardingSlide slide) {
+    final typography = context.appTypography;
     return Column(
       key: ValueKey(slide.title),
       mainAxisAlignment: MainAxisAlignment.center,
@@ -148,8 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 40),
         Text(
           slide.title,
-          style: const TextStyle(
-            fontSize: 28,
+          style: typography.titleXL.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.primary,
           ),
@@ -160,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Text(
             slide.description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: typography.bodyLG.copyWith(
               fontSize: 16,
               color: AppColors.mutedForeground,
               height: 1.5,

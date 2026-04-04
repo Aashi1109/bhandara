@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EEventStatus } from '@/definitions/enums';
 import {
+  buildActiveEventStatusPredicate,
   deriveEventStatus,
   resolveEventStatus,
   validateEventTimings,
@@ -70,5 +71,17 @@ describe('event status helpers', () => {
         { now },
       ),
     ).toThrow('Event duration cannot exceed 7 days');
+  });
+
+  it('builds a db-safe active status predicate for enum-backed queries', () => {
+    const predicate = buildActiveEventStatusPredicate({
+      escape: (value) => `'${String(value)}'`,
+    });
+
+    expect(predicate).toContain('"status" IS NULL');
+    expect(predicate).toContain(`'${EEventStatus.Cancelled}'`);
+    expect(predicate).toContain(`'${EEventStatus.Draft}'`);
+    expect(predicate).not.toContain("''");
+    expect(predicate).not.toContain('COALESCE');
   });
 });

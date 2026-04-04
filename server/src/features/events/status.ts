@@ -6,13 +6,9 @@ type EventTimingInput = {
   end: string | Date;
 };
 
-export const asDate = (value: string | Date) =>
-  value instanceof Date ? value : new Date(value);
+export const asDate = (value: string | Date) => (value instanceof Date ? value : new Date(value));
 
-export const deriveEventStatus = (
-  timings: EventTimingInput,
-  now: Date = new Date(),
-): EEventStatus => {
+export const deriveEventStatus = (timings: EventTimingInput, now: Date = new Date()): EEventStatus => {
   const start = asDate(timings.start);
   const end = asDate(timings.end);
 
@@ -26,6 +22,15 @@ export const deriveEventStatus = (
 
   return EEventStatus.Upcoming;
 };
+
+export const buildActiveEventStatusPredicate = ({
+  escape,
+  statusColumn = '"status"',
+}: {
+  escape: (value: string | number | Date) => string;
+  statusColumn?: string;
+}) =>
+  `(${statusColumn} IS NULL OR ${statusColumn} NOT IN (${escape(EEventStatus.Cancelled)}, ${escape(EEventStatus.Draft)}))`;
 
 export const validateEventTimings = (
   timings: EventTimingInput,
@@ -63,11 +68,7 @@ export const validateEventTimings = (
   }
 };
 
-export const resolveEventStatus = (
-  timings: EventTimingInput,
-  status?: string | null,
-  now: Date = new Date(),
-) => {
+export const resolveEventStatus = (timings: EventTimingInput, status?: string | null, now: Date = new Date()) => {
   if (status === EEventStatus.Cancelled) {
     return EEventStatus.Cancelled;
   }

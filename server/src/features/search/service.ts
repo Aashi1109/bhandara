@@ -5,7 +5,7 @@ import type { IPaginationParams, PaginatedResult } from '@/definitions/types';
 
 import AddressService from '../addresses/service';
 import { Event } from '../events/model';
-import { deriveEventStatus } from '../events/status';
+import { buildActiveEventStatusPredicate, deriveEventStatus } from '../events/status';
 
 export interface ISearchFilters {
   eventStatus?: EEventStatus[];
@@ -63,7 +63,7 @@ class SearchService {
     const now = escape(new Date().toISOString());
     const startExpr = this.jsonTimestampExpression('start');
     const endExpr = this.jsonTimestampExpression('end');
-    const activeStatuses = `COALESCE("status", '') NOT IN (${escape('cancelled')}, ${escape('draft')})`;
+    const activeStatuses = buildActiveEventStatusPredicate({ escape });
 
     switch (status) {
       case 'draft':

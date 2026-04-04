@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../models/event.dart';
@@ -98,7 +97,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return query.isNotEmpty && query.length < 2;
   }
 
-  UserAddress? get _currentUserAddress => ref.watch(userProfileProvider).value?.address;
+  UserAddress? get _currentUserAddress =>
+      ref.watch(userProfileProvider).value?.address;
 
   void _onScroll() {
     if (!_scrollController.hasClients ||
@@ -163,7 +163,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final recentFuture = eventService.getEvents(
         status: _suggestedStatusQuery(),
         type: _appliedFilters.eventType,
-        datePreset: _appliedFilters.datePreset == ExploreDatePresetValues.anytime
+        datePreset:
+            _appliedFilters.datePreset == ExploreDatePresetValues.anytime
             ? null
             : _appliedFilters.datePreset,
         latitude: _currentUserAddress?.latitude,
@@ -190,7 +191,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _isLoadingLanding = false;
         _landingErrorMessage = null;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint(e.toString());
       if (!mounted) return;
       setState(() {
         _isLoadingLanding = false;
@@ -236,7 +238,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
       if (!mounted) return;
 
-      final nextItems = response.items.map(SearchEventItem.fromSearchResult).toList();
+      final nextItems = response.items
+          .map(SearchEventItem.fromSearchResult)
+          .toList();
       final merged = <String, SearchEventItem>{
         for (final item in refresh ? <SearchEventItem>[] : _searchResults)
           item.id: item,
@@ -282,6 +286,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         rootTags = const <Tag>[];
       }
     }
+    if (!mounted) return;
     final nextFilters = await showModalBottomSheet<ExploreFilterState>(
       context: context,
       isScrollControlled: true,
@@ -330,12 +335,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final eventLat = item.location.latitude;
     final eventLng = item.location.longitude;
 
-    if (userLat == null || userLng == null || eventLat == null || eventLng == null) {
+    if (userLat == null ||
+        userLng == null ||
+        eventLat == null ||
+        eventLng == null) {
       return 'Distance unavailable';
     }
 
-    final distanceInMeters =
-        Geolocator.distanceBetween(userLat, userLng, eventLat, eventLng);
+    final distanceInMeters = Geolocator.distanceBetween(
+      userLat,
+      userLng,
+      eventLat,
+      eventLng,
+    );
     if (distanceInMeters >= 1000) {
       return '${(distanceInMeters / 1000).toStringAsFixed(1)} km away';
     }
@@ -520,8 +532,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       children: [
         Text(
           title,
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 24,
+          style: context.appTypography.heading3.copyWith(
+            fontWeight: FontWeight.w700,
             color: AppColors.primary,
           ),
         ),
@@ -529,8 +541,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         if (items.isEmpty)
           Text(
             emptyLabel,
-            style: const TextStyle(
-              fontSize: 14,
+            style: context.appTypography.bodyMD.copyWith(
               color: AppColors.mutedForeground,
             ),
           )
@@ -539,7 +550,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: EventSearchResultTile(
-                key: ValueKey('section-event-${title}-${item.id}'),
+                key: ValueKey('section-event-$title-${item.id}'),
                 item: item,
                 distanceLabel: _distanceLabel(item),
                 createdAgoLabel: _createdAgoLabel(item.createdAt),
@@ -571,9 +582,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+              style: context.appTypography.titleMD.copyWith(
                 color: AppColors.primary,
               ),
             ),
@@ -581,8 +590,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
+              style: context.appTypography.bodyMD.copyWith(
                 color: AppColors.mutedForeground,
               ),
             ),
@@ -673,11 +681,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Filter Events',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                  style: context.appTypography.titleLG.copyWith(
                     color: AppColors.primary,
                   ),
                 ),
@@ -712,7 +718,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _SearchScreenState._quickStatusOptions.map((option) {
+                    children: _SearchScreenState._quickStatusOptions.map((
+                      option,
+                    ) {
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -733,8 +741,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   const SizedBox(height: 16),
                   Text(
                     '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: context.appTypography.bodyMD.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
@@ -759,7 +766,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _SearchScreenState._eventTypeOptions.map((option) {
+                    children: _SearchScreenState._eventTypeOptions.map((
+                      option,
+                    ) {
                       final selected =
                           _draftFilters.eventType == option.value ||
                           (_draftFilters.eventType == null &&
@@ -782,7 +791,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _SearchScreenState._datePresetOptions.map((option) {
+                    children: _SearchScreenState._datePresetOptions.map((
+                      option,
+                    ) {
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -802,10 +813,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   _sectionLabel('CATEGORIES'),
                   const SizedBox(height: 12),
                   if (widget.rootTags.isEmpty)
-                    const Text(
+                    Text(
                       'Categories are unavailable right now.',
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: context.appTypography.bodyBase.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     )
@@ -862,10 +872,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
   Widget _sectionLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2,
+      style: context.appTypography.overline.copyWith(
         color: AppColors.mutedForeground,
       ),
     );
@@ -892,8 +899,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
       ),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 14,
+        style: context.appTypography.bodyMD.copyWith(
           fontWeight: FontWeight.w700,
           color: selected ? AppColors.surface : AppColors.primary,
         ),

@@ -684,6 +684,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(userProfileProvider);
+    final typography = context.appTypography;
 
     if (_isLoading) {
       return const Scaffold(
@@ -840,25 +841,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'HOSTED BY',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 2,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                  ),
+                                  Text('HOSTED BY', style: typography.overline),
                                   Text(
                                     _event?.creator?.name ??
                                         (_isHydratingFullEvent
                                             ? 'Loading host...'
                                             : 'Host'),
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
+                                    style: typography.titleSM,
                                   ),
                                 ],
                               ),
@@ -881,14 +870,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         const SizedBox(height: 40),
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'About the Event',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
+                                style: typography.titleMD,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -903,19 +888,18 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   borderRadius: BorderRadius.circular(50),
                                   border: Border.all(color: AppColors.border),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       LucideIcons.messageCircle,
                                       size: AppIconSizes.m,
                                       color: AppColors.primary,
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: 8),
                                     Text(
                                       'Join Discussion',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                                      style: typography.bodySM.copyWith(
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.primary,
                                       ),
@@ -929,27 +913,18 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         const SizedBox(height: 12),
                         Text(
                           _eventDescription,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.mutedForeground,
-                            height: 1.6,
-                          ),
+                          style: typography.bodyLG.copyWith(height: 1.6),
                         ),
                         const SizedBox(height: 40),
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               child: Text(
                                 'Location',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
+                                style: typography.titleMD,
                               ),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Flexible(
                               child: Align(
                                 alignment: Alignment.centerRight,
@@ -958,8 +933,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 12,
+                                  style: typography.bodySM.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.primary,
                                     decoration: TextDecoration.underline,
@@ -1006,10 +980,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       _locationAddressLabel,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 2,
+                                      style: typography.overline.copyWith(
                                         color: AppColors.primary,
                                       ),
                                     ),
@@ -1022,14 +993,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         const SizedBox(height: 40),
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 "Who's Going",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
+                                style: typography.titleMD,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1043,8 +1010,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     ? 'Loading attendees...'
                                     : '$_participantCount Attending',
                                 textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: 12,
+                                style: typography.bodySM.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: _participantUsers.isEmpty
                                       ? AppColors.mutedForeground
@@ -1074,14 +1040,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             ),
                           )
                         else if (_participantUsers.isEmpty)
-                          const SizedBox(
+                          SizedBox(
                             height: 40,
                             child: Align(
                               alignment: Alignment.center,
                               child: Text(
                                 'No attendees yet',
-                                style: TextStyle(
-                                  fontSize: 14,
+                                style: typography.bodyMD.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.mutedForeground,
                                 ),
@@ -1123,8 +1088,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                       child: Center(
                                         child: Text(
                                           '+${_participantCount - 4}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
+                                          style: typography.bodySM.copyWith(
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.mutedForeground,
                                           ),
@@ -1197,6 +1161,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _ratingsAndReviewsSection() {
+    final typography = context.appTypography;
     final hasRatings = _eventStats.ratingCount > 0;
 
     return Column(
@@ -1207,11 +1172,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             Expanded(
               child: Text(
                 hasRatings ? 'Ratings & Reviews' : 'No review yet',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
+                style: typography.titleMD.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(width: 12),
@@ -1226,9 +1187,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     ? 'No reviews yet'
                     : 'Be the first to review',
                 textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                style: typography.captionMD.copyWith(
                   color: _isSubmittingReview && !hasRatings
                       ? AppColors.mutedForeground
                       : AppColors.primary,
@@ -1254,10 +1213,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               children: [
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       'Your Review',
-                      style: TextStyle(
-                        fontSize: 13,
+                      style: typography.captionMD.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
                       ),
@@ -1293,12 +1251,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   const SizedBox(height: 10),
                   Text(
                     _engagementSummary!.currentUserReview!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.primary,
-                      height: 1.5,
-                    ),
+                    style: typography.bodyMD.copyWith(color: AppColors.primary),
                   ),
                 ],
               ],
@@ -1337,6 +1290,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _buildTopActions() {
+    final typography = context.appTypography;
     final actions = _topActions;
     if (actions.length <= 2) {
       return Row(
@@ -1374,9 +1328,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   Expanded(
                     child: Text(
                       action.tooltip ?? action.label,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                      style: typography.labelMD.copyWith(
                         color: action.enabled
                             ? AppColors.primary
                             : AppColors.mutedForeground,
@@ -1489,6 +1441,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _buildHeroHeader() {
+    final typography = context.appTypography;
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
       child: BackdropFilter(
@@ -1571,10 +1524,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           const SizedBox(width: 6),
                                           Text(
                                             _heroStatusLabel,
-                                            style: const TextStyle(
-                                              fontSize: 10,
+                                            style: typography.overline.copyWith(
                                               fontWeight: FontWeight.w900,
-                                              letterSpacing: 2,
                                               color: AppColors.surface,
                                             ),
                                           ),
@@ -1605,7 +1556,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         _heroTitle,
                         maxLines: _isHeroExpanded ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: typography.heading1.copyWith(
                           fontSize: _isHeroExpanded ? 36 : 20,
                           fontWeight: FontWeight.w800,
                           height: 1.1,
@@ -1758,6 +1709,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _verifiedHostChip() {
+    final typography = context.appTypography;
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 160),
       child: Container(
@@ -1767,22 +1719,21 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               LucideIcons.badgeCheck,
               size: AppIconSizes.s,
               color: AppColors.primary,
             ),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Flexible(
               child: Text(
                 'Verified Host',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
+                style: typography.bodyXS.copyWith(
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
@@ -1816,6 +1767,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     String text, {
     bool isInteractive = false,
   }) {
+    final typography = context.appTypography;
     return Row(
       mainAxisSize: MainAxisSize.min,
       spacing: 6,
@@ -1829,9 +1781,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         ),
         Text(
           text,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
+          style: typography.captionMD.copyWith(
             color: isInteractive
                 ? AppColors.surface
                 : AppColors.surface.withValues(alpha: 0.82),
@@ -1845,6 +1795,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _infoPill(IconData icon, String text) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -1866,8 +1817,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           Icon(icon, size: AppIconSizes.m, color: AppColors.surface),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 12,
+            style: typography.bodySM.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.surface,
             ),

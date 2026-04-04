@@ -17,7 +17,7 @@ import { getDistanceInMeters } from '@/helpers';
 import { Event } from './model';
 import MessageService from '@/features/messages/service';
 import EntityStatsService from '@/features/stats/service';
-import { deriveEventStatus, resolveEventStatus } from './status';
+import { buildActiveEventStatusPredicate, deriveEventStatus, resolveEventStatus } from './status';
 import ngeohash from 'ngeohash';
 
 export interface IEventListFilters {
@@ -115,7 +115,7 @@ class EventService {
     const now = escape(new Date().toISOString());
     const startExpr = this.jsonTimestampExpression('start');
     const endExpr = this.jsonTimestampExpression('end');
-    const activeStatuses = `COALESCE("status", '') NOT IN (${escape(EEventStatus.Cancelled)}, ${escape(EEventStatus.Draft)})`;
+    const activeStatuses = buildActiveEventStatusPredicate({ escape });
 
     switch (status) {
       case EEventStatus.Draft:
@@ -288,12 +288,7 @@ class EventService {
       const { location, ...rest } = data;
       const row = await Event.sequelize!.transaction(async (transaction) => {
         const created = await Event.create(rest as any, { transaction });
-        await this.addressService.replaceAddress(
-          EAddressEntityType.Event,
-          created.id,
-          location,
-          transaction,
-        );
+        await this.addressService.replaceAddress(EAddressEntityType.Event, created.id, location, transaction);
         return created;
       });
       return (await this.getById(row.id)) as IEvent;
@@ -327,17 +322,15 @@ class EventService {
       await Event.sequelize!.transaction(async (transaction) => {
         const row = await Event.findByPk(existing.id, { transaction });
         if (!row) throw new NotFoundError('Event not found');
-        await row.update({
-          ...(rest as Partial<IEvent>),
-          status: nextStatus,
-        } as Partial<IEvent>, { transaction });
+        await row.update(
+          {
+            ...(rest as Partial<IEvent>),
+            status: nextStatus,
+          } as Partial<IEvent>,
+          { transaction },
+        );
         if (location !== undefined) {
-          await this.addressService.replaceAddress(
-            EAddressEntityType.Event,
-            existing.id,
-            location,
-            transaction,
-          );
+          await this.addressService.replaceAddress(EAddressEntityType.Event, existing.id, location, transaction);
         }
       });
       return (await this.getById(existing.id)) as IEvent;
@@ -407,10 +400,7 @@ class EventService {
     }));
   }
 
-  async getMarkers(
-    filters: IEventListFilters = {},
-    options: { zoom?: number; tiles?: string[]; flat?: boolean } = {},
-  ) {
+  async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[]; flat?: boolean } = {}) {
     const { zoom = 0, tiles, flat = false } = options;
     if (flat) {
       return this.getFlatMarkers(filters);
@@ -446,8 +436,8 @@ class EventService {
       }
 
       const nextCount = existing.count + 1;
-      existing.latitude = ((existing.latitude * existing.count) + marker.latitude) / nextCount;
-      existing.longitude = ((existing.longitude * existing.count) + marker.longitude) / nextCount;
+      existing.latitude = (existing.latitude * existing.count + marker.latitude) / nextCount;
+      existing.longitude = (existing.longitude * existing.count + marker.longitude) / nextCount;
       existing.count = nextCount;
     }
 
@@ -508,7 +498,10 @@ class EventService {
     };
   }
 
-  async getAll(filters: IEventListFilters = {}, pagination?: Partial<IPaginationParams>): Promise<PaginatedResult<IEventSummary>> {
+  async getAll(
+    filters: IEventListFilters = {},
+    pagination?: Partial<IPaginationParams>,
+  ): Promise<PaginatedResult<IEventSummary>> {
     const where = this.buildWhere(filters);
     const data = (await findAllWithPagination(
       Event,

@@ -166,13 +166,12 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _summaryCard(summary),
+                        _summaryCard(context, summary),
                         if (currentUserReview != null) ...[
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'Your review',
-                            style: TextStyle(
-                              fontSize: 18,
+                            style: context.appTypography.titleMD.copyWith(
                               fontWeight: FontWeight.w800,
                               color: AppColors.primary,
                             ),
@@ -183,11 +182,10 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                         const Divider(height: 32, color: AppColors.border),
                         Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'Reviews',
-                                style: TextStyle(
-                                  fontSize: 18,
+                                style: context.appTypography.titleMD.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.primary,
                                 ),
@@ -223,9 +221,11 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
               onPressed: _isSubmitting ? null : _openEditor,
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.surface,
-              label: const Text(
+              label: Text(
                 'Add Review',
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: context.appTypography.labelMD.copyWith(
+                  color: AppColors.surface,
+                ),
               ),
               icon: _isSubmitting
                   ? const SizedBox(
@@ -242,7 +242,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     );
   }
 
-  Widget _summaryCard(EngagementSummary summary) {
+  Widget _summaryCard(BuildContext context, EngagementSummary summary) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -264,17 +264,13 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                   summary.ratingAverage > 0
                       ? summary.ratingAverage.toStringAsFixed(1)
                       : '0.0',
-                  style: const TextStyle(
-                    fontSize: 44,
-                    fontWeight: FontWeight.w900,
+                  style: context.appTypography.headingXL.copyWith(
                     color: AppColors.primary,
                   ),
                 ),
                 Text(
                   '${summary.ratingCount} ratings',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                  style: context.appTypography.captionMD.copyWith(
                     color: AppColors.mutedForeground,
                   ),
                 ),
@@ -296,8 +292,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                             children: [
                               Text(
                                 '$stars',
-                                style: const TextStyle(
-                                  fontSize: 14,
+                                style: context.appTypography.bodyMD.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.primary,
                                 ),
@@ -330,8 +325,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                         const SizedBox(width: 10),
                         Text(
                           '${summary.ratingHistogram.valueFor(stars)}',
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: context.appTypography.bodySM.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
                           ),
@@ -357,11 +351,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
           color: AppColors.mutedForeground,
         ),
         borderRadius: BorderRadius.circular(18),
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.primary,
-        ),
+        style: context.appTypography.labelMD.copyWith(color: AppColors.primary),
         items: _filterOptions
             .map(
               (value) => DropdownMenuItem<int?>(
@@ -393,9 +383,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
       ),
       child: Text(
         message,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
+        style: context.appTypography.bodyMDSemi.copyWith(
           color: AppColors.mutedForeground,
         ),
         textAlign: TextAlign.center,
@@ -422,8 +410,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: context.appTypography.titleSM.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
                       ),
@@ -431,8 +418,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                     if (review.updatedAt != null)
                       Text(
                         _formatDate(review.updatedAt),
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: context.appTypography.bodySM.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
@@ -451,8 +437,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                   const SizedBox(width: 4),
                   Text(
                     '${review.value}',
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: context.appTypography.titleSM.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.primary,
                     ),
@@ -492,11 +477,8 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
             const SizedBox(height: 16),
             Text(
               review.review!,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+              style: context.appTypography.bodyMD.copyWith(
                 color: AppColors.primary,
-                height: 1.5,
               ),
             ),
           ],

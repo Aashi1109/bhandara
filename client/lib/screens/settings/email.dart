@@ -35,6 +35,7 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProfileProvider).value;
+    final typography = context.appTypography;
     if (!_didHydrate && user != null) {
       _emailController.text = user.email;
       _initialEmail = user.email;
@@ -71,10 +72,9 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Email Address',
-                      style: TextStyle(
-                        fontSize: 24,
+                      style: typography.heading3.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                       ),
@@ -82,8 +82,7 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Current: ${user?.email ?? ''}',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         fontWeight: FontWeight.w500,
                         color: AppColors.mutedForeground,
                       ),

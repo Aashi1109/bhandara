@@ -53,6 +53,7 @@ class _FaqItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -66,16 +67,11 @@ class _FaqItem extends StatelessWidget {
         children: [
           Text(
             question,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+            style: typography.titleXS.copyWith(color: AppColors.primary),
           ),
           Text(
             answer,
-            style: const TextStyle(
-              fontSize: 13,
+            style: typography.bodyBase.copyWith(
               height: 1.5,
               color: AppColors.mutedForeground,
             ),

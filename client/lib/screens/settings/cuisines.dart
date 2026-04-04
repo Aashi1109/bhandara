@@ -87,6 +87,7 @@ class _CuisineInterestsScreenState
     final user = ref.watch(userProfileProvider).value;
     final tagsAsync = ref.watch(tagsProvider(rootOnly: true));
     final query = _searchController.text.trim().toLowerCase();
+    final typography = context.appTypography;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -101,13 +102,12 @@ class _CuisineInterestsScreenState
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Select the types of cuisine you\'re interested in to get personalized event recommendations.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         fontWeight: FontWeight.w500,
                         color: AppColors.mutedForeground,
                       ),
@@ -135,7 +135,9 @@ class _CuisineInterestsScreenState
                       error: (error, _) => Center(
                         child: Text(
                           error.toString(),
-                          style: const TextStyle(color: AppColors.error),
+                          style: typography.bodyMD.copyWith(
+                            color: AppColors.error,
+                          ),
                         ),
                       ),
                       data: (tags) {
@@ -209,17 +211,14 @@ class _CuisineInterestsScreenState
                                         children: [
                                           Text(
                                             tag.name,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w700,
+                                            style: typography.labelMD.copyWith(
                                               color: AppColors.primary,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             _descriptionForTag(tag),
-                                            style: const TextStyle(
-                                              fontSize: 10,
+                                            style: typography.labelSM.copyWith(
                                               fontWeight: FontWeight.w700,
                                               letterSpacing: 1.2,
                                               color: AppColors.mutedForeground,

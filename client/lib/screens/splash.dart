@@ -139,11 +139,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         RichText(
                           text: TextSpan(
                             style: typography.displayXL,
-                            children: const [
-                              TextSpan(text: 'Foody'),
+                            children: [
+                              const TextSpan(text: 'Foody'),
                               TextSpan(
                                 text: '.',
-                                style: TextStyle(fontStyle: FontStyle.normal),
+                                style: typography.displayXL.copyWith(
+                                  fontStyle: FontStyle.normal,
+                                ),
                               ),
                             ],
                           ),

@@ -569,6 +569,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -584,11 +585,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       )
                     : _messages.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'No messages yet. Start the conversation!',
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: typography.bodyMD.copyWith(
                             color: AppColors.mutedForeground,
                           ),
                         ),
@@ -668,6 +668,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final typography = context.appTypography;
     final subtitle = _eventName?.trim().isNotEmpty == true
         ? _eventName!
         : 'LIVE DISCUSSION';
@@ -717,11 +718,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   _isThreadLocked ? 'Thread (Locked)' : 'Live Discussion',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+                  style: typography.titleMD,
                 ),
                 Row(
                   children: [
@@ -730,12 +727,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                          color: AppColors.mutedForeground,
-                        ),
+                        style: typography.overline.copyWith(letterSpacing: 1.5),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -822,6 +814,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildTimestamp(String text) {
+    final typography = context.appTypography;
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -831,12 +824,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: Text(
           text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-            color: AppColors.mutedForeground,
-          ),
+          style: typography.overline.copyWith(letterSpacing: 1.5),
         ),
       ),
     );
@@ -1015,6 +1003,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInlineReplyComposer(Message parent) {
+    final typography = context.appTypography;
     final replyingTo = parent.senderName?.trim().isNotEmpty == true
         ? parent.senderName!
         : 'this message';
@@ -1034,10 +1023,8 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: Text(
                   'Replying to $replyingTo',
-                  style: const TextStyle(
-                    fontSize: 11,
+                  style: typography.bodyXS.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppColors.mutedForeground,
                   ),
                 ),
               ),
@@ -1078,6 +1065,7 @@ class _ChatScreenState extends State<ChatScreen> {
     List<MessageMedia> media = const [],
     int attachmentCount = 0,
   }) {
+    final typography = context.appTypography;
     final bubbleKey = GlobalKey();
     final imageKey = GlobalKey();
     final isPending = status == MessageDeliveryStatus.pending;
@@ -1092,21 +1080,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final bubbleAlignment = isCurrentUser
         ? Alignment.centerRight
         : Alignment.centerLeft;
-    final timeLabel = Text(
-      time,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        color: AppColors.mutedForeground,
-      ),
-    );
+    final timeLabel = Text(time, style: typography.overline);
     final metadataChildren = <Widget>[
       if (!isCurrentUser) timeLabel,
       if (isPending)
-        const Row(
+        Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 12,
               height: 12,
               child: CircularProgressIndicator(
@@ -1114,36 +1095,25 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: AppColors.primary,
               ),
             ),
-            SizedBox(width: 6),
-            Text(
-              'Sending',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.mutedForeground,
-              ),
-            ),
+            const SizedBox(width: 6),
+            Text('Sending', style: typography.labelSM),
           ],
         ),
       if (isFailed && onRetry != null)
         GestureDetector(
           onTap: onRetry,
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 LucideIcons.rotateCcw,
                 size: AppIconSizes.xs,
                 color: AppColors.error,
               ),
-              SizedBox(width: 4),
+              const SizedBox(width: 4),
               Text(
                 'Retry',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.error,
-                ),
+                style: typography.labelSM.copyWith(color: AppColors.error),
               ),
             ],
           ),
@@ -1151,10 +1121,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (threadMessage != null && isCurrentUser)
         GestureDetector(
           onTap: () => _openThread(threadMessage),
-          child: const Text(
+          child: Text(
             'Start thread',
-            style: TextStyle(
-              fontSize: 10,
+            style: typography.labelSM.copyWith(
               fontWeight: FontWeight.w800,
               color: AppColors.primary,
             ),
@@ -1172,8 +1141,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 }),
           child: Text(
             _replyingToMessageId == threadMessage.id ? 'Cancel reply' : 'Reply',
-            style: TextStyle(
-              fontSize: 10,
+            style: typography.labelSM.copyWith(
               fontWeight: FontWeight.w800,
               color: _isThreadLocked
                   ? AppColors.mutedForeground
@@ -1207,11 +1175,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   badge ?? name,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10,
+                  style: typography.overline.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
-                    color: AppColors.mutedForeground,
                   ),
                 ),
                 if (text.isNotEmpty) ...[
@@ -1219,22 +1185,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     text,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: typography.bodyBase.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
                   ),
                 ],
                 const SizedBox(height: 8),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
+                Text(time, style: typography.overline),
               ],
             ),
           ),
@@ -1317,10 +1275,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   text.isEmpty && attachmentCount > 0
                       ? 'Media attachment'
                       : text,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    height: 1.5,
+                  style: typography.bodyMD.copyWith(
                     color: isCurrentUser
                         ? AppColors.surface
                         : AppColors.primary,
@@ -1338,11 +1293,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (attachmentCount > 0)
           Text(
             '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.mutedForeground,
-            ),
+            style: typography.bodyXS.copyWith(fontWeight: FontWeight.w700),
           ),
         Wrap(
           alignment: isCurrentUser ? WrapAlignment.end : WrapAlignment.start,
@@ -1373,6 +1324,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildThreadCard(Message message) {
+    final typography = context.appTypography;
     final replyCount = message.children.length;
     final latestReply = replyCount > 0 ? message.children.last : null;
     final previewText = latestReply == null
@@ -1392,19 +1344,17 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 12,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'THREAD',
-                style: TextStyle(
-                  fontSize: 10,
+                style: typography.overline.copyWith(
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2,
-                  color: AppColors.mutedForeground,
                 ),
               ),
-              Icon(
+              const Icon(
                 LucideIcons.externalLink,
                 size: AppIconSizes.xs,
                 color: AppColors.mutedForeground,
@@ -1420,19 +1370,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Text(
-                  'Original',
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700),
-                ),
+                child: Text('Original', style: typography.labelXS),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '$replyCount repl${replyCount == 1 ? 'y' : 'ies'}',
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: typography.bodySM.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.mutedForeground,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1444,8 +1389,7 @@ class _ChatScreenState extends State<ChatScreen> {
             previewText,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
+            style: typography.bodyBase.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.primary,
             ),
@@ -1461,6 +1405,7 @@ class _ChatScreenState extends State<ChatScreen> {
     required String caption,
     required String time,
   }) {
+    final typography = context.appTypography;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       spacing: 8,
@@ -1507,8 +1452,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 left: 16,
                 child: Text(
                   caption,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: typography.bodyMD.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.surface,
                   ),
@@ -1560,14 +1504,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              time,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.mutedForeground,
-              ),
-            ),
+            Text(time, style: typography.overline),
           ],
         ),
       ],

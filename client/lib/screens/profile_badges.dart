@@ -16,6 +16,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider);
+    final typography = context.appTypography;
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Column(
@@ -46,10 +47,12 @@ class ProfileBadgesScreen extends ConsumerWidget {
 
                     final badges = snapshot.data ?? const <Achievement>[];
                     if (badges.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           'No badges unlocked yet.',
-                          style: TextStyle(color: AppColors.mutedForeground),
+                          style: typography.bodySM.copyWith(
+                            color: AppColors.mutedForeground,
+                          ),
                         ),
                       );
                     }
@@ -86,17 +89,14 @@ class ProfileBadgesScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       badge.title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
+                                      style: typography.titleSM.copyWith(
                                         color: AppColors.primary,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
                                       badge.description,
-                                      style: const TextStyle(
-                                        fontSize: 13,
+                                      style: typography.bodyBase.copyWith(
                                         height: 1.4,
                                         color: AppColors.mutedForeground,
                                       ),

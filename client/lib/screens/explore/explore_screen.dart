@@ -1465,12 +1465,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             event.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                              color: AppColors.primary,
-                            ),
+                            style: context.appTypography.titleLG,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1509,8 +1504,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             '${formatEventStatusLabel(status).toUpperCase()} · Free Entry',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: context.appTypography.bodySM.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.mutedForeground,
                             ),
@@ -1532,8 +1526,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             _getRelativeTime(event.startTime, event.endTime),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
+                            style: context.appTypography.bodyMDSemi.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
                             ),
@@ -1681,8 +1674,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           const SizedBox(width: 8),
           Text(
             filter.name,
-            style: TextStyle(
-              fontSize: 12,
+            style: context.appTypography.bodySM.copyWith(
               fontWeight: FontWeight.w700,
               color: isSelected ? AppColors.surface : AppColors.primary,
             ),
@@ -1712,8 +1704,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 12,
+                style: context.appTypography.bodySM.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.primary,
                   height: 1.35,
@@ -1725,7 +1716,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     TextSpan(
                       text: ctaLabel,
                       recognizer: TapGestureRecognizer()..onTap = onTap,
-                      style: const TextStyle(
+                      style: context.appTypography.bodySM.copyWith(
                         fontWeight: FontWeight.w800,
                         decoration: TextDecoration.underline,
                       ),
@@ -1801,11 +1792,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.5,
-        ),
+        style: context.appTypography.labelSM.copyWith(letterSpacing: 1.5),
       ),
     );
   }
@@ -1821,8 +1808,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             text,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
-            style: const TextStyle(
-              fontSize: 12,
+            style: context.appTypography.bodySM.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.mutedForeground,
             ),
@@ -1868,12 +1854,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Filter Events',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: context.appTypography.titleLG,
                       ),
                       GestureDetector(
                         onTap: () => setState(() => _isFilterOpen = false),
@@ -1905,8 +1888,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         const SizedBox(height: 16),
                         Text(
                           '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: context.appTypography.bodyMD.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1978,12 +1960,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                         _sectionLabel('CATEGORIES'),
                         const SizedBox(height: 12),
                         if (_rootTags.isEmpty)
-                          const Text(
+                          Text(
                             'Categories are unavailable right now.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.mutedForeground,
-                            ),
+                            style: context.appTypography.bodyBase,
                           )
                         else
                           Wrap(
@@ -2045,15 +2024,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _sectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2,
-        color: AppColors.mutedForeground,
-      ),
-    );
+    return Text(text, style: context.appTypography.overline);
   }
 
   Widget _chipButton(String text, {bool selected = false}) {
@@ -2077,8 +2048,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
       child: Text(
         text,
-        style: TextStyle(
-          fontSize: 14,
+        style: context.appTypography.bodyMD.copyWith(
           fontWeight: FontWeight.w700,
           color: selected ? AppColors.surface : AppColors.primary,
         ),

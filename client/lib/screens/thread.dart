@@ -638,23 +638,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
                                   const SizedBox(width: 12),
                                   Text(
                                     '${_replies.length} REPL${_replies.length == 1 ? 'Y' : 'IES'}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 2,
-                                      color: AppColors.mutedForeground,
-                                    ),
+                                    style: context.appTypography.overline,
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 16),
                             if (_replies.isEmpty)
-                              const Center(
+                              Center(
                                 child: Text(
                                   'No replies yet. Be the first to reply!',
-                                  style: TextStyle(
-                                    fontSize: 14,
+                                  style: context.appTypography.bodyMD.copyWith(
                                     color: AppColors.mutedForeground,
                                   ),
                                 ),
@@ -691,6 +685,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   Widget _reply(Message reply) {
+    final typography = context.appTypography;
     final bubbleKey = GlobalKey();
     final imageKey = GlobalKey();
     final lane = reply.threadLaneFor(_currentUser?.id);
@@ -731,11 +726,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
               children: [
                 Text(
                   reply.type?.toUpperCase() ?? 'SYSTEM',
-                  style: const TextStyle(
-                    fontSize: 10,
+                  style: typography.overline.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
-                    color: AppColors.mutedForeground,
                   ),
                 ),
                 if (reply.content.isNotEmpty) ...[
@@ -743,9 +736,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   Text(
                     reply.content,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: typography.bodyBase.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
@@ -786,8 +779,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             alignment: Alignment.center,
             child: Text(
               initials,
-              style: const TextStyle(
-                fontSize: 12,
+              style: typography.bodySM.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
@@ -800,10 +792,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             children: [
               Text(
                 reply.senderName ?? 'User',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: typography.labelMD.copyWith(color: AppColors.primary),
               ),
               if (imageMedia != null)
                 GestureDetector(
@@ -857,8 +846,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       reply.content.isEmpty && attachmentCount > 0
                           ? 'Media attachment'
                           : reply.content,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         fontWeight: FontWeight.w500,
                         height: 1.5,
                       ),
@@ -874,8 +862,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
               if (attachmentCount > 0) ...[
                 Text(
                   '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                    fontSize: 11,
+                  style: typography.captionSM.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.mutedForeground,
                   ),
@@ -886,9 +873,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 children: [
                   Text(
                     DateFormat('hh:mm a').format(reply.createdAt),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                    style: typography.labelSM.copyWith(
                       color: AppColors.mutedForeground,
                     ),
                   ),
@@ -901,11 +886,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                         color: AppColors.primary,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Sending',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
+                      style: typography.labelSM.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -913,19 +896,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   if (reply.hasFailed) ...[
                     GestureDetector(
                       onTap: () => _retryReply(reply),
-                      child: const Row(
+                      child: Row(
                         spacing: 4,
                         children: [
-                          Icon(
+                          const Icon(
                             LucideIcons.rotateCcw,
                             size: AppIconSizes.xs,
                             color: AppColors.error,
                           ),
                           Text(
                             'Retry',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                            style: typography.labelSM.copyWith(
                               color: AppColors.error,
                             ),
                           ),
@@ -933,10 +914,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       ),
                     ),
                   ],
-                  const Text(
+                  Text(
                     'In thread',
-                    style: TextStyle(
-                      fontSize: 10,
+                    style: typography.labelSM.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.mutedForeground,
                     ),
@@ -967,6 +947,7 @@ class _OriginalMessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     final contentKey = GlobalKey();
     final isSystemLike = message?.isSystemLike ?? false;
     final isCurrentUser = message?.isCurrentUser(currentUserId) ?? false;
@@ -986,8 +967,7 @@ class _OriginalMessageCard extends StatelessWidget {
             child: Text(
               message?.content ?? '',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
+              style: typography.bodyMD.copyWith(
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
               ),
@@ -1021,11 +1001,7 @@ class _OriginalMessageCard extends StatelessWidget {
             children: [
               Text(
                 isCurrentUser ? 'You' : (message?.senderName ?? 'Unknown'),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+                style: typography.labelMD.copyWith(color: AppColors.primary),
               ),
               GestureDetector(
                 key: contentKey,
@@ -1038,8 +1014,7 @@ class _OriginalMessageCard extends StatelessWidget {
                 child: Text(
                   message?.content ?? '',
                   textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: typography.bodyMD.copyWith(
                     fontWeight: FontWeight.w500,
                     height: 1.5,
                   ),
@@ -1057,9 +1032,7 @@ class _OriginalMessageCard extends StatelessWidget {
                     ? DateFormat('hh:mm a').format(message!.createdAt)
                     : '',
                 textAlign: TextAlign.left,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+                style: typography.labelSM.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),

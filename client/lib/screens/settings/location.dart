@@ -396,6 +396,7 @@ class _LocationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     _hydrateFromUser();
+    final typography = context.appTypography;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -520,8 +521,7 @@ class _LocationSettingsScreenState
                                                   : _selectedLabel,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                              style: typography.bodySM.copyWith(
                                                 fontWeight: FontWeight.w700,
                                                 color: AppColors.primary,
                                               ),
@@ -628,13 +628,11 @@ class _LocationSettingsScreenState
                                                   children: [
                                                     Text(
                                                       suggestion.title,
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color:
-                                                            AppColors.primary,
-                                                      ),
+                                                      style: typography.labelMD
+                                                          .copyWith(
+                                                            color: AppColors
+                                                                .primary,
+                                                          ),
                                                     ),
                                                     if ((suggestion.subtitle !=
                                                                 null &&
@@ -646,13 +644,14 @@ class _LocationSettingsScreenState
                                                       const SizedBox(height: 4),
                                                       Text(
                                                         details.join(' • '),
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color: AppColors
-                                                              .mutedForeground,
-                                                        ),
+                                                        style: typography.bodySM
+                                                            .copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color: AppColors
+                                                                  .mutedForeground,
+                                                            ),
                                                       ),
                                                     ],
                                                   ],
@@ -737,6 +736,7 @@ class _LocationSettingsScreenState
   }
 
   Widget _buildSearchBar() {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -779,16 +779,14 @@ class _LocationSettingsScreenState
                 },
                 decoration: InputDecoration(
                   hintText: 'Search address or area',
-                  hintStyle: TextStyle(
-                    fontSize: 14,
+                  hintStyle: typography.bodyMD.copyWith(
                     fontWeight: FontWeight.w500,
                     color: AppColors.mutedForeground.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   isCollapsed: true,
                 ),
-                style: const TextStyle(
-                  fontSize: 14,
+                style: typography.bodyMD.copyWith(
                   fontWeight: FontWeight.w500,
                   color: AppColors.primary,
                 ),

@@ -25,6 +25,7 @@ class ExploreSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typography = context.appTypography;
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -67,8 +68,7 @@ class ExploreSearchBar extends StatelessWidget {
                       autofocus: autofocus,
                       decoration: InputDecoration(
                         hintText: placeholder,
-                        hintStyle: TextStyle(
-                          fontSize: 14,
+                        hintStyle: typography.bodyMD.copyWith(
                           fontWeight: FontWeight.w500,
                           color: AppColors.mutedForeground.withValues(
                             alpha: 0.5,
@@ -77,8 +77,7 @@ class ExploreSearchBar extends StatelessWidget {
                         border: InputBorder.none,
                         isCollapsed: true,
                       ),
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: typography.bodyMD.copyWith(
                         fontWeight: FontWeight.w500,
                         color: AppColors.primary,
                       ),
