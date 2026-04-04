@@ -1,13 +1,15 @@
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getAllMock } = vi.hoisted(() => ({
+const { getAllMock, getMarkersMock } = vi.hoisted(() => ({
   getAllMock: vi.fn(),
+  getMarkersMock: vi.fn(),
 }));
 
 vi.mock('@/features/events/service', () => ({
   default: class {
     getAll = getAllMock;
+    getMarkers = getMarkersMock;
   },
 }));
 
@@ -30,6 +32,7 @@ vi.mock('@/features/engagement/service', () => ({
 describe('events controller', () => {
   beforeEach(() => {
     getAllMock.mockReset();
+    getMarkersMock.mockReset();
     vi.useRealTimers();
   });
 
@@ -98,5 +101,50 @@ describe('events controller', () => {
     await expect(getEvents(req as any, res)).rejects.toThrow(
       'Invalid event type filter',
     );
+  });
+
+  it('forwards flat marker requests to EventService.getMarkers', async () => {
+    getMarkersMock.mockResolvedValue({
+      mode: 'flat',
+      items: [{ id: 'event-1', name: 'Community Dinner', latitude: 18.52, longitude: 73.85 }],
+    });
+
+    const { getEventMarkers } = await import('@/features/events/controller');
+    const status = vi.fn().mockReturnThis();
+    const json = vi.fn();
+    const req = {
+      query: {
+        status: 'upcoming',
+        latitude: '18.5204',
+        longitude: '73.8567',
+        radiusKm: '25',
+        flat: 'true',
+      },
+    } as unknown as Request;
+    const res = { json, status } as unknown as Response;
+
+    await getEventMarkers(req as any, res);
+
+    expect(getMarkersMock).toHaveBeenCalledTimes(1);
+    expect(getMarkersMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statuses: ['upcoming'],
+        latitude: 18.5204,
+        longitude: 73.8567,
+        radiusKm: 25,
+      }),
+      expect.objectContaining({
+        flat: true,
+        tiles: undefined,
+        zoom: undefined,
+      }),
+    );
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith({
+      data: {
+        mode: 'flat',
+        items: [{ id: 'event-1', name: 'Community Dinner', latitude: 18.52, longitude: 73.85 }],
+      },
+    });
   });
 });

@@ -1,9 +1,10 @@
 import { faker } from '@faker-js/faker';
 import { type Sequelize } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
-import { EAccessLevel, EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { EAccessLevel, EAddressEntityType, EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
 import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
 import { Activity } from '@/features/activity/model';
+import { Address } from '@/features/addresses/model';
 import { EntityEngagement, EntityRating } from '@/features/engagement/model';
 import { Event } from '@/features/events/model';
 import { Message } from '@/features/messages/model';
@@ -162,6 +163,7 @@ export async function seedContentForUsers({
       try {
         const eventsForUser = plannedEventCounts.get(user.id) ?? 0;
         const eventRows = [];
+        const eventAddressRows = [];
         const eventActivityRows = [];
         const userEvents: Array<{ id: string; threadsForEvent: number }> = [];
         const userThreadBudget = plannedThreadTotals.get(user.id) ?? 0;
@@ -186,6 +188,7 @@ export async function seedContentForUsers({
 
           const eventId = getUUIDv7();
           const eventName = `${faker.company.name()} ${faker.helpers.arrayElement(['Bhandara', 'Dinner', 'Tasting', 'Meetup'])}`;
+          const location = buildEventLocation();
           const threadsForEvent =
             options.totalThreads !== undefined
               ? 0
@@ -200,7 +203,6 @@ export async function seedContentForUsers({
             id: eventId,
             name: eventName,
             description: faker.lorem.paragraph(),
-            location: buildEventLocation(),
             participants,
             verifiers: [],
             type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
@@ -210,6 +212,18 @@ export async function seedContentForUsers({
             tags: eventTags,
             media: [],
             timings: buildTimings(),
+          });
+          eventAddressRows.push({
+            id: getUUIDv7(),
+            entityType: EAddressEntityType.Event,
+            entityId: eventId,
+            address: location.address,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            metadata: {
+              venue: location.venue,
+              coordinates: location.coordinates,
+            },
           });
           eventActivityRows.push({
             id: getUUIDv7(),
@@ -277,6 +291,13 @@ export async function seedContentForUsers({
         }
 
         await bulkCreateInChunks(Event, eventRows, transaction, step('events', `user=${user.email}`), currentChunkSize);
+        await bulkCreateInChunks(
+          Address,
+          eventAddressRows,
+          transaction,
+          step('event-addresses', `user=${user.email}`),
+          currentChunkSize,
+        );
         await bulkCreateInChunks(Activity, eventActivityRows, transaction, step('event-activities', `user=${user.email}`), currentChunkSize);
         userStats.eventsCreated += eventRows.length;
 

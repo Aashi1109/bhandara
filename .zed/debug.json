@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Flutter (dev env) - client",
+    "adapter": "Dart",
+    "type": "dart",
+    "request": "launch",
+    "program": "$ZED_WORKTREE_ROOT/client/lib/main.dart",
+    "cwd": "$ZED_WORKTREE_ROOT/client",
+    "args": ["--dart-define-from-file=.env.dev.json", "--debug"],
+  },
+  {
+    "label": "Server (dev)",
+    "adapter": "vscode-js-debug",
+    "type": "pwa-node",
+    "request": "launch",
+    "cwd": "$ZED_WORKTREE_ROOT/server",
+    "runtimeExecutable": "pnpm",
+    "runtimeArgs": ["run", "dev"],
+    "console": "integratedTerminal",
+  },
+  {
+    "label": "Server (attach)",
+    "adapter": "vscode-js-debug",
+    "type": "pwa-node",
+    "request": "attach",
+    "cwd": "$ZED_WORKTREE_ROOT/server",
+    "tcp_connection": { "host": "127.0.0.1", "port": 9229 },
+  },
+]

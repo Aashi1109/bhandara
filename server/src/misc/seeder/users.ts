@@ -1,6 +1,7 @@
 import { Op, type Transaction } from 'sequelize';
+import { EAddressEntityType, EAuthProvider } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
-import { EAuthProvider } from '@/definitions/enums';
+import { Address } from '@/features/addresses/model';
 import { User } from '@/features/users/model';
 import type { SeedCoordinatorUser, SeedOptions, SeededAuthUser } from './types';
 import { buildAddress, buildSeedUserEmailLikePattern, bulkCreateInChunks, logSeedProgress } from './utils';
@@ -41,6 +42,7 @@ export async function findReusableSeedUsers(targetCount: number, options: SeedOp
 export function buildCreatedUserRows(createdAuthUsers: SeededAuthUser[]) {
   return createdAuthUsers.map((authUser) => {
     const id = getUUIDv7();
+    const address = buildAddress();
     const user = {
       id,
       email: authUser.email,
@@ -55,7 +57,6 @@ export function buildCreatedUserRows(createdAuthUsers: SeededAuthUser[]) {
         name: authUser.name,
         email: authUser.email,
         gender: authUser.gender,
-        address: buildAddress(),
         isVerified: true,
         profilePic: null,
         username: authUser.email.split('@')[0],
@@ -70,6 +71,17 @@ export function buildCreatedUserRows(createdAuthUsers: SeededAuthUser[]) {
             expiresIn: authUser.expiresIn,
           },
           hasOnboarded: true,
+        },
+      },
+      addressRow: {
+        id: getUUIDv7(),
+        entityType: EAddressEntityType.User,
+        entityId: id,
+        address: address.address,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        metadata: {
+          coordinates: address.coordinates,
         },
       },
     };
@@ -91,6 +103,12 @@ export async function insertCreatedUsers(
     builtRows.map((entry) => entry.row),
     transaction,
     label,
+  );
+  await bulkCreateInChunks(
+    Address,
+    builtRows.map((entry) => entry.addressRow),
+    transaction,
+    `${label}:addresses`,
   );
 
   return builtRows.map((entry) => entry.user);

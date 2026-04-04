@@ -23,8 +23,9 @@ void main() {
     apiService.dio.httpClientAdapter = originalAdapter;
   });
 
-  testWidgets('collapses hero and navigates multi-media carousel',
-      (WidgetTester tester) async {
+  testWidgets('collapses hero and navigates multi-media carousel', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -47,11 +48,11 @@ void main() {
         Media(id: 'media-2', url: 'https://example.com/2.jpg', type: 'image'),
         Media(id: 'media-3', url: 'https://example.com/3.jpg', type: 'image'),
       ],
-      tags: [
-        Tag(id: 'tag-1', name: 'Street Food'),
-      ],
+      tags: [Tag(id: 'tag-1', name: 'Street Food')],
       verifiers: [
-        EventVerifier(user: EventUser(id: 'verifier-1', name: 'Riya')),
+        EventVerifier(
+          user: EventUser(id: 'verifier-1', name: 'Riya'),
+        ),
       ],
       creator: EventUser(id: 'host-1', name: 'Ash'),
       stats: EventStats(
@@ -82,10 +83,7 @@ void main() {
     expect(find.byKey(const ValueKey('hero-carousel-prev')), findsNothing);
     expect(find.byKey(const ValueKey('hero-carousel-next')), findsOneWidget);
 
-    await _triggerTap(
-      tester,
-      find.byKey(const ValueKey('hero-carousel-next')),
-    );
+    await _triggerTap(tester, find.byKey(const ValueKey('hero-carousel-next')));
 
     expect(find.bySemanticsLabel('Expand hero header'), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-carousel-prev')), findsOneWidget);
@@ -103,10 +101,7 @@ void main() {
     expect(find.bySemanticsLabel('Minimize hero header'), findsOneWidget);
     expect(find.text('42 views'), findsOneWidget);
 
-    await _triggerTap(
-      tester,
-      find.byKey(const ValueKey('hero-carousel-next')),
-    );
+    await _triggerTap(tester, find.byKey(const ValueKey('hero-carousel-next')));
 
     expect(find.byKey(const ValueKey('hero-carousel-prev')), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-carousel-next')), findsNothing);
@@ -115,6 +110,65 @@ void main() {
       find.byType(CachedNetworkImage).first,
     );
     expect(lastImage.imageUrl, 'https://example.com/3.jpg');
+  });
+
+  testWidgets('expanded hero header avoids overflow on narrow widths', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final event = Event(
+      id: 'event-1',
+      name: 'Bhandara - Deckow Community Supper With A Very Long Title',
+      description: 'A neighborhood meal with a verified host badge.',
+      status: 'upcoming',
+      type: 'PUBLIC',
+      startTime: DateTime(2026, 3, 20, 19),
+      endTime: DateTime(2026, 3, 20, 22),
+      createdBy: 'host-1',
+      location: Location(address: 'Main Square'),
+      media: [
+        Media(id: 'media-1', url: 'https://example.com/1.jpg', type: 'image'),
+      ],
+      tags: [Tag(id: 'tag-1', name: 'Street Food')],
+      verifiers: [
+        EventVerifier(
+          user: EventUser(id: 'verifier-1', name: 'Riya'),
+        ),
+      ],
+      creator: EventUser(id: 'host-1', name: 'Ash'),
+      stats: EventStats(
+        reactionCount: 0,
+        threadCount: 0,
+        participantCount: 0,
+        verifierCount: 1,
+        mediaCount: 1,
+        tagCount: 1,
+        viewCount: 42,
+        ratingCount: 8,
+        ratingAverage: 4.6,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: EventDetailScreen(id: event.id, initialEvent: event),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Verified Host'), findsOneWidget);
+    expect(find.bySemanticsLabel('Minimize hero header'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
@@ -168,11 +222,7 @@ class _FakeHttpClientAdapter implements HttpClientAdapter {
               'user': {'id': 'verifier-1', 'name': 'Riya'},
             },
           ],
-          'stats': {
-            'viewCount': 42,
-            'ratingCount': 8,
-            'ratingAverage': 4.6,
-          },
+          'stats': {'viewCount': 42, 'ratingCount': 8, 'ratingAverage': 4.6},
         },
       });
     }

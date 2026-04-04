@@ -1017,6 +1017,7 @@ class _OriginalMessageCard extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 12,
             children: [
               Text(
                 isCurrentUser ? 'You' : (message?.senderName ?? 'Unknown'),
@@ -1026,7 +1027,6 @@ class _OriginalMessageCard extends StatelessWidget {
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 10),
               GestureDetector(
                 key: contentKey,
                 onLongPress: message == null
@@ -1046,14 +1046,12 @@ class _OriginalMessageCard extends StatelessWidget {
                 ),
               ),
               if (message != null && message!.reactions.isNotEmpty) ...[
-                const SizedBox(height: 12),
                 MessageReactionSummaryRow(
                   reactions: message!.reactions,
                   currentUserId: currentUserId,
                   onTap: (emoji) => onReactionTap(message!, emoji),
                 ),
               ],
-              const SizedBox(height: 12),
               Text(
                 message != null
                     ? DateFormat('hh:mm a').format(message!.createdAt)

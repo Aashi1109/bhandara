@@ -5,9 +5,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../providers/user.dart';
 import '../../theme/theme.dart';
-import '../../widgets/button.dart';
 import '../../widgets/header.dart';
 import '../../widgets/input.dart';
+import '../../widgets/settings_action_footer.dart';
 import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
@@ -102,22 +102,17 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              label: 'Save Changes',
-              onPressed: isDirty
-                  ? () {
-                      AppSnackBar.show(
-                        context,
-                        message: 'Email updates are not available yet.',
-                        type: SnackBarType.warning,
-                      );
-                    }
-                  : null,
-            ),
+          SettingsActionFooter(
+            label: 'Save Changes',
+            onPressed: isDirty
+                ? () {
+                    AppSnackBar.show(
+                      context,
+                      message: 'Email updates are not available yet.',
+                      type: SnackBarType.warning,
+                    );
+                  }
+                : null,
           ),
         ],
       ),

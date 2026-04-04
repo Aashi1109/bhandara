@@ -1,6 +1,40 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foody_mobile/screens/explore/utils/explore_viewport.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:dart_geohash/dart_geohash.dart';
+
+Set<String> _referenceVisibleGeohashTiles({
+  required LatLng sw,
+  required LatLng ne,
+  required double zoom,
+}) {
+  final precision = geohashPrecisionFromZoom(zoom);
+  final totalBits = precision * 5;
+  final lngBits = (totalBits / 2).ceil();
+  final latBits = totalBits ~/ 2;
+  final latStep = 180.0 / (1 << latBits);
+  final lngStep = 360.0 / (1 << lngBits);
+  final geoHasher = GeoHasher();
+
+  final tiles = <String>{};
+  var lat = sw.latitude;
+  while (lat <= ne.latitude + latStep) {
+    var lng = sw.longitude;
+    while (lng <= ne.longitude + lngStep) {
+      tiles.add(
+        geoHasher.encode(
+          lng.clamp(-180.0, 180.0),
+          lat.clamp(-90.0, 90.0),
+          precision: precision,
+        ),
+      );
+      lng += lngStep;
+    }
+    lat += latStep;
+  }
+
+  return tiles;
+}
 
 void main() {
   test(
@@ -70,4 +104,38 @@ void main() {
     expect(radiusKm, greaterThan(unbufferedKm));
     expect(radiusKm, closeTo(unbufferedKm * 1.1, 0.15));
   });
+
+  test(
+    'computeVisibleGeohashTiles matches reference grid at odd precision 5',
+    () {
+      const sw = LatLng(19.00, 72.80);
+      const ne = LatLng(19.18, 72.98);
+
+      final actual = computeVisibleGeohashTiles(sw: sw, ne: ne, zoom: 13.0);
+      final expected = _referenceVisibleGeohashTiles(
+        sw: sw,
+        ne: ne,
+        zoom: 13.0,
+      );
+
+      expect(actual, expected);
+    },
+  );
+
+  test(
+    'computeVisibleGeohashTiles matches reference grid at odd precision 7',
+    () {
+      const sw = LatLng(19.378, 72.810);
+      const ne = LatLng(19.381, 72.814);
+
+      final actual = computeVisibleGeohashTiles(sw: sw, ne: ne, zoom: 18.0);
+      final expected = _referenceVisibleGeohashTiles(
+        sw: sw,
+        ne: ne,
+        zoom: 18.0,
+      );
+
+      expect(actual, expected);
+    },
+  );
 }

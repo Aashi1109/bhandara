@@ -440,7 +440,7 @@ export function initializeSocket(server: http.Server) {
           let nearby = items;
 
           while (nearby.length === 0 && radius <= 1000 && !abortController.signal.aborted) {
-            nearby = items.filter((ev) => {
+            nearby = items.filter((ev: (typeof items)[number]) => {
               const { latitude: elat, longitude: elon } = ev.location || {};
               if (typeof elat !== 'number' || typeof elon !== 'number') return false;
               return getDistanceInMeters(latitude, longitude, elat, elon) <= radius;

@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
+import '../../widgets/settings_action_footer.dart';
 import '../../widgets/textarea.dart';
 import '../../models/user.dart';
 import '../../providers/user.dart';
@@ -240,16 +241,11 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              label: isSaving ? 'Updating...' : 'Update Profile',
-              onPressed: user == null || !_isDirty || isSaving
-                  ? null
-                  : _saveProfile,
-            ),
+          SettingsActionFooter(
+            label: isSaving ? 'Updating...' : 'Update Profile',
+            onPressed: user == null || !_isDirty || isSaving
+                ? null
+                : _saveProfile,
           ),
         ],
       ),

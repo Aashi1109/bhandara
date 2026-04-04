@@ -349,21 +349,19 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       }
 
       if (!mounted) return;
+      setState(() => _isOpeningChat = false);
       await context.push(
         ChatScreen.routePath.replaceAll(':id', selected.id),
         extra: {'eventId': widget.id},
       );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isOpeningChat = false);
       AppSnackBar.show(
         context,
         message: extractExceptionMessage(e),
         type: SnackBarType.error,
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isOpeningChat = false);
-      }
     }
   }
 
@@ -477,7 +475,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   bool get _canShowFullEventDetails => _event?.hasFullDetail == true;
 
   String get _primaryTagLabel {
-    final firstTag = _event?.tags?.isNotEmpty == true ? _event?.tags?.first : null;
+    final firstTag = _event?.tags?.isNotEmpty == true
+        ? _event?.tags?.first
+        : null;
     final tagName = firstTag?.name.trim() ?? '';
     return tagName.isNotEmpty ? tagName : _defaultPrimaryTag;
   }
@@ -938,23 +938,33 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         ),
                         const SizedBox(height: 40),
                         const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Location',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                            Expanded(
+                              child: Text(
+                                'Location',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
-                            Text(
-                              'Open in Maps',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                                decoration: TextDecoration.underline,
+                            SizedBox(width: 12),
+                            Flexible(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  'Open in Maps',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -1028,7 +1038,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                   ? null
                                   : _openAttendees,
                               child: Text(
-                                _isHydratingFullEvent && !_canShowFullEventDetails
+                                _isHydratingFullEvent &&
+                                        !_canShowFullEventDetails
                                     ? 'Loading attendees...'
                                     : '$_participantCount Attending',
                                 textAlign: TextAlign.right,
@@ -1140,7 +1151,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             child: Row(
               spacing: 16,
               children: [
-                Expanded(
+                SizedBox(
+                  width: 64,
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -1158,7 +1170,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   flex: 2,
                   child: AppButton(
                     size: AppButtonSize.lg,
-                    icon: _isJoining || _isOpeningChat
+                    icon: _isJoining
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -1173,9 +1185,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 : LucideIcons.utensils,
                           ),
                     label: _hasJoined ? 'Leave Event' : 'Participate Now',
-                    onPressed: _isJoining || _isOpeningChat
-                        ? null
-                        : _toggleParticipation,
+                    onPressed: _isJoining ? null : _toggleParticipation,
                   ),
                 ),
               ],
@@ -1522,56 +1532,60 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             bottom: _isHeroExpanded ? 10 : 0,
                           ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.62,
-                                  ),
-                                  borderRadius: BorderRadius.circular(50),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 12,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
-                                    Icon(
-                                      _statusIconForEvent(),
-                                      size: 12,
-                                      color: AppColors.surface,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _heroStatusLabel,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 2,
-                                        color: AppColors.surface,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.62,
+                                        ),
+                                        borderRadius: BorderRadius.circular(50),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            _statusIconForEvent(),
+                                            size: 12,
+                                            color: AppColors.surface,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            _heroStatusLabel,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 2,
+                                              color: AppColors.surface,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                    _verifiedHostChip(),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: _verifiedHostChip(),
-                                ),
-                              ),
-                              const Spacer(),
                               _heroToggleButton(
                                 icon: LucideIcons.chevronDown,
                                 semanticLabel: 'Minimize hero header',
@@ -1744,34 +1758,39 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   }
 
   Widget _verifiedHostChip() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 6,
-        children: [
-          Icon(
-            LucideIcons.badgeCheck,
-            size: AppIconSizes.s,
-            color: AppColors.primary,
-          ),
-          Text(
-            'Verified Host',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 160),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.muted.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.badgeCheck,
+              size: AppIconSizes.s,
               color: AppColors.primary,
             ),
-          ),
-          // Verifier avatar listing intentionally hidden for now.
-        ],
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'Verified Host',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            // Verifier avatar listing intentionally hidden for now.
+          ],
+        ),
       ),
     );
   }

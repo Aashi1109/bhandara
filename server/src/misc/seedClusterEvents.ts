@@ -3,7 +3,9 @@ import { faker } from '@faker-js/faker';
 import { QueryTypes, type CreationAttributes } from 'sequelize';
 
 import { disconnect, getDBConnection } from '@/connections/db';
-import { EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { EAddressEntityType, EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { getUUIDv7 } from '@/helpers';
+import { Address } from '@/features/addresses/model';
 import { Event } from '@/features/events/model';
 import { Tag } from '@/features/tags/model';
 import { User } from '@/features/users/model';
@@ -14,18 +16,9 @@ dotenv.config();
 type SeedBand = 'near' | 'medium' | 'far';
 
 type EventInsert = {
+  id: string;
   name: string;
   description: string;
-  location: {
-    address: string;
-    venue: string;
-    latitude: number;
-    longitude: number;
-    coordinates: {
-      latitude: number;
-      longitude: number;
-    };
-  };
   participants: { user: string; status: EEventParticipantStatus }[];
   verifiers: { user: string; verifiedAt: string }[];
   type: EEventType;
@@ -40,9 +33,34 @@ type EventInsert = {
   };
 };
 
+type EventLocation = {
+  address: string;
+  venue: string;
+  latitude: number;
+  longitude: number;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+};
+
+type SeedEventPayload = EventInsert & {
+  location: EventLocation;
+};
+
 type CreatedEvent = {
   id: string;
   createdBy: string;
+};
+
+type AddressInsert = {
+  id: string;
+  entityType: EAddressEntityType;
+  entityId: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  metadata: Record<string, unknown>;
 };
 
 const metersByBand: Record<SeedBand, { min: number; max: number }> = {
@@ -153,20 +171,24 @@ function buildEventPayload(args: {
     faker.number.int({ min: 1, max: Math.min(3, args.tagIds.length) }),
   );
   const venue = `${faker.company.name()} ${faker.helpers.arrayElement(['Hall', 'Ground', 'Courtyard', 'Center', 'Kitchen'])}`;
-
-  return {
-    name: `${faker.helpers.arrayElement(eventNamePrefixes)} ${args.clusterName} ${faker.helpers.arrayElement(eventNameSuffixes)}`,
-    description: `${faker.lorem.sentences({ min: 2, max: 4 })} Seed band: ${args.band}.`,
-    location: {
-      address: faker.location.streetAddress({ useFullAddress: true }),
-      venue,
+  const location = {
+    address: faker.location.streetAddress({ useFullAddress: true }),
+    venue,
+    latitude: args.latitude,
+    longitude: args.longitude,
+    coordinates: {
       latitude: args.latitude,
       longitude: args.longitude,
-      coordinates: {
-        latitude: args.latitude,
-        longitude: args.longitude,
-      },
     },
+  };
+
+  const eventId = getUUIDv7();
+
+  return {
+    id: eventId,
+    name: `${faker.helpers.arrayElement(eventNamePrefixes)} ${args.clusterName} ${faker.helpers.arrayElement(eventNameSuffixes)}`,
+    description: `${faker.lorem.sentences({ min: 2, max: 4 })} Seed band: ${args.band}.`,
+    location,
     participants,
     verifiers,
     type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
@@ -180,7 +202,7 @@ function buildEventPayload(args: {
     tags,
     media: [],
     timings,
-  } satisfies EventInsert;
+  } satisfies SeedEventPayload;
 }
 
 async function ensureTags() {
@@ -209,7 +231,8 @@ async function main() {
     throw new Error('No tags available for event creation.');
   }
 
-  const payloads: EventInsert[] = [];
+  const payloads: SeedEventPayload[] = [];
+  const addressRows: AddressInsert[] = [];
   for (const cluster of clusterSeedConfigs) {
     const bandCounts: Record<SeedBand, number> = {
       near: cluster.nearCount,
@@ -224,17 +247,29 @@ async function main() {
         const point = offsetCoordinates(cluster.latitude, cluster.longitude, distance, bearing);
         const ownerId = userIds[(payloads.length + index) % userIds.length];
 
-        payloads.push(
-          buildEventPayload({
-            ownerId,
-            allUserIds: userIds,
-            tagIds,
-            clusterName: cluster.name,
-            latitude: point.latitude,
-            longitude: point.longitude,
-            band,
-          }),
-        );
+        const payload = buildEventPayload({
+          ownerId,
+          allUserIds: userIds,
+          tagIds,
+          clusterName: cluster.name,
+          latitude: point.latitude,
+          longitude: point.longitude,
+          band,
+        });
+
+        payloads.push(payload);
+        addressRows.push({
+          id: getUUIDv7(),
+          entityType: EAddressEntityType.Event,
+          entityId: payload.id,
+          address: payload.location.address,
+          latitude: payload.location.latitude,
+          longitude: payload.location.longitude,
+          metadata: {
+            venue: payload.location.venue,
+            coordinates: payload.location.coordinates,
+          },
+        });
       }
     }
   }
@@ -242,10 +277,17 @@ async function main() {
   const transaction = await sequelize.transaction();
 
   try {
-    const created = (await Event.bulkCreate(payloads as unknown as CreationAttributes<Event>[], {
+    const created = (await Event.bulkCreate(
+      payloads.map(({ location: _location, ...event }) => event) as unknown as CreationAttributes<Event>[],
+      {
+        transaction,
+        returning: ['id', 'createdBy'],
+      },
+    )) as unknown as CreatedEvent[];
+
+    await Address.bulkCreate(addressRows as unknown as CreationAttributes<Address>[], {
       transaction,
-      returning: ['id', 'createdBy'],
-    })) as unknown as CreatedEvent[];
+    });
 
     await transaction.commit();
 

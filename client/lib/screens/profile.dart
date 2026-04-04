@@ -10,7 +10,6 @@ import '../widgets/bottom_nav.dart';
 import '../widgets/media_preview.dart';
 import 'package:intl/intl.dart';
 import 'settings.dart';
-import 'media_preview_screen.dart';
 import '../models/achievement.dart';
 import '../models/update.dart';
 import '../models/user.dart';
@@ -195,20 +194,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = ref.read(userProfileProvider).value;
     if (user == null) return;
 
-    Navigator.pop(context);
-    await context.push(
-      MediaPreviewScreen.routePath,
-      extra: [
-        MediaItem(
-          id: user.id,
-          url:
-              user.avatarUrl ?? 'https://picsum.photos/seed/${user.id}/600/600',
-          thumbnail:
-              user.avatarUrl ?? 'https://picsum.photos/seed/${user.id}/120/120',
-          type: 'image',
-          name: user.name ?? 'Profile Photo',
-        ),
-      ],
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Profile photo preview',
+      barrierColor: Colors.black54,
+      pageBuilder: (_, _, _) => AppMediaPreview(
+        items: [
+          MediaItem(
+            id: user.id,
+            url:
+                user.avatarUrl ??
+                'https://picsum.photos/seed/${user.id}/600/600',
+            thumbnail:
+                user.avatarUrl ??
+                'https://picsum.photos/seed/${user.id}/120/120',
+            type: 'image',
+            name: user.name ?? 'Profile Photo',
+          ),
+        ],
+        onClose: () => Navigator.of(context).pop(),
+      ),
     );
   }
 
@@ -256,76 +262,89 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showEditPhotoOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: AppColors.surface,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          24,
-          12,
-          24,
-          MediaQuery.of(context).padding.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 24,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Profile Photo',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(sheetContext).padding.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.muted,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      LucideIcons.x,
-                      size: AppIconSizes.m,
+              ),
+              const SizedBox(height: 20),
+              const Row(
+                children: [
+                  Text(
+                    'Profile Photo',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.primary,
                     ),
                   ),
-                ),
-              ],
-            ),
-            _sheetItem(
-              label: 'View Photo',
-              icon: LucideIcons.eye,
-              onTap: _viewPhoto,
-            ),
-            _sheetItem(
-              label: 'Change Photo',
-              icon: LucideIcons.image,
-              onTap: _changePhoto,
-            ),
-            _sheetItem(
-              label: 'Remove Photo',
-              icon: LucideIcons.trash2,
-              isDestructive: true,
-              onTap: _removePhoto,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Manage how your profile photo appears across the app.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.mutedForeground,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _sheetItem(
+                label: 'View Photo',
+                icon: LucideIcons.eye,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _viewPhoto();
+                },
+              ),
+              const SizedBox(height: 12),
+              _sheetItem(
+                label: 'Change Photo',
+                icon: LucideIcons.image,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _changePhoto();
+                },
+              ),
+              const SizedBox(height: 12),
+              _sheetItem(
+                label: 'Remove Photo',
+                icon: LucideIcons.trash2,
+                isDestructive: true,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _removePhoto();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -337,39 +356,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDestructive
-              ? AppColors.error.withValues(alpha: 0.05)
-              : AppColors.muted.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
             color: isDestructive
-                ? AppColors.error.withValues(alpha: 0.1)
-                : AppColors.border,
+                ? AppColors.error.withValues(alpha: 0.06)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDestructive
+                  ? AppColors.error.withValues(alpha: 0.18)
+                  : AppColors.border,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: isDestructive ? AppColors.error : AppColors.primary,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDestructive
+                      ? AppColors.error.withValues(alpha: 0.1)
+                      : AppColors.muted,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  icon,
+                  size: AppIconSizes.defaultSize,
+                  color: isDestructive ? AppColors.error : AppColors.primary,
+                ),
               ),
-            ),
-            Icon(
-              icon,
-              size: AppIconSizes.defaultSize,
-              color: isDestructive ? AppColors.error : AppColors.primary,
-            ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: isDestructive ? AppColors.error : AppColors.primary,
+                  ),
+                ),
+              ),
+              Icon(
+                LucideIcons.chevronRight,
+                size: AppIconSizes.defaultSize,
+                color: isDestructive
+                    ? AppColors.error.withValues(alpha: 0.8)
+                    : AppColors.mutedForeground,
+              ),
+            ],
+          ),
         ),
       ),
     );

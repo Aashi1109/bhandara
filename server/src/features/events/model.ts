@@ -2,31 +2,20 @@ import { getDBConnection } from '@/connections/db';
 import { EEventStatus, EEventType } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
 import { DataTypes, Model } from 'sequelize';
-import {
-  type IEvent,
-  type ILocation,
-  type IMedia,
-  type IParticipant,
-  type IEventStats,
-  type IVerifier,
-  type IBaseUser,
-  type IReaction,
-} from '@/definitions/types';
+import { type IEvent, type IMedia, type IParticipant, type IEventStats, type IVerifier, type IBaseUser, type IReaction } from '@/definitions/types';
 
 const sequelize = getDBConnection()!;
 
-// Create a type that makes timestamp fields optional for model attributes
-type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt'>;
+type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt' | 'location' | 'creator' | 'reactions'>;
 
 /**
- * Sequelize model representing an event. Complex fields like location and
- * participants are stored as JSONB columns.
+ * Sequelize model representing an event. Complex fields like participants are
+ * stored as JSONB columns; location is resolved via the Addresses table.
  */
 export class Event extends Model<EventAttributes, EventAttributes> {
   declare id: string;
   declare name: string;
   declare description: string;
-  declare location: ILocation;
   declare participants: IParticipant[];
   declare verifiers: IVerifier[];
   declare type: EEventType;
@@ -59,10 +48,6 @@ Event.init(
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    location: {
-      type: DataTypes.JSONB,
       allowNull: false,
     },
     participants: {
@@ -126,15 +111,6 @@ Event.init(
       {
         name: 'events_updatedAt_idx',
         fields: ['updatedAt'],
-      },
-      {
-        name: 'events_location_gix',
-        using: 'GIST',
-        fields: [
-          sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("location"->>'longitude' AS DOUBLE PRECISION), CAST("location"->>'latitude' AS DOUBLE PRECISION)), 4326)`,
-          ),
-        ],
       },
     ],
   },

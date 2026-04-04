@@ -43,6 +43,11 @@ export enum EAuthProvider {
   Email = "email",
 }
 
+export enum EAddressEntityType {
+  User = "user",
+  Event = "event",
+}
+
 export enum EEventParticipantStatus {
   Pending = "pending",
   Confirmed = "confirmed",

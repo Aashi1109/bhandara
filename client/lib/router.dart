@@ -29,10 +29,8 @@ import 'screens/settings/help_support.dart';
 import 'screens/settings/about.dart';
 import 'screens/updates.dart';
 import 'screens/profile_setup.dart';
-import 'screens/media_preview_screen.dart';
 import 'screens/profile_badges.dart';
 import 'screens/my_events.dart';
-import 'widgets/media_preview.dart';
 import 'models/event.dart';
 import 'models/location_picker.dart';
 
@@ -59,8 +57,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: LoginScreen.routePath,
-      builder: (context, state) =>
-          LoginScreen(extra: _extraAsMap(state.extra)),
+      builder: (context, state) => LoginScreen(extra: _extraAsMap(state.extra)),
     ),
     GoRoute(
       path: ProfileSetupScreen.routePath,
@@ -208,19 +205,6 @@ final router = GoRouter(
     GoRoute(
       path: AboutAppScreen.routePath,
       builder: (context, state) => const AboutAppScreen(),
-    ),
-    GoRoute(
-      path: MediaPreviewScreen.routePath,
-      builder: (context, state) {
-        final extra = state.extra;
-        final items = extra is Map<String, dynamic>
-            ? (extra['items'] as List<MediaItem>? ?? const [])
-            : (extra as List<MediaItem>? ?? const []);
-        final initialIndex = extra is Map<String, dynamic>
-            ? (extra['initialIndex'] as int? ?? 0)
-            : 0;
-        return MediaPreviewScreen(items: items, initialIndex: initialIndex);
-      },
     ),
     GoRoute(
       path: ProfileBadgesScreen.routePath,

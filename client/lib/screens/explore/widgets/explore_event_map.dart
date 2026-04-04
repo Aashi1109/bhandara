@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -11,8 +13,19 @@ import '../../../services/maps/map_marker_factory.dart';
 import '../../../theme/theme.dart';
 import '../models/event_cluster.dart' as models;
 import '../models/event_marker.dart';
+import '../utils/event_marker_clusterer.dart';
 import '../utils/explore_viewport.dart';
 import '../../../widgets/map_view.dart';
+
+// Top-level function so compute() can send it to an isolate.
+List<EventMarkerMapCluster> _computeEventMarkerClusters(
+  ({List<EventMarker> markers, double zoom}) params,
+) {
+  return const EventMarkerClusterer().clusterMarkers(
+    params.markers,
+    zoom: params.zoom,
+  );
+}
 
 class ExploreEventMap extends StatefulWidget {
   const ExploreEventMap({
@@ -64,9 +77,10 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   static const double _fitBoundsInset = 72;
   static const double _viewportEdgeBuffer = 16;
 
-  final _MarkerClusterer _markerClusterer = const _MarkerClusterer();
   final Map<int, BitmapDescriptor> _clusterMarkerCache = {};
   final Set<int> _pendingClusterIcons = <int>{};
+  int _clusterVersion = 0;
+  bool _iconRebuildPending = false;
   final ValueNotifier<Set<Marker>> _markersNotifier =
       ValueNotifier<Set<Marker>>(const <Marker>{});
   final ValueNotifier<Set<Circle>> _circlesNotifier =
@@ -196,9 +210,27 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   }
 
   void _rebuildMapMarkers() {
+    if (!widget.useServerClusters && widget.eventMarkers.isNotEmpty) {
+      _rebuildMapMarkersAsync();
+      return;
+    }
     final markers = _buildMarkers();
     debugPrint(
       '[MAP] _rebuildMapMarkers OUTPUT: ${markers.length} markers (useServerClusters=${widget.useServerClusters} clusterInput=${widget.serverClusters.length} markerInput=${widget.eventMarkers.length})',
+    );
+    _markersNotifier.value = markers;
+  }
+
+  Future<void> _rebuildMapMarkersAsync() async {
+    final version = ++_clusterVersion;
+    final clusters = await compute(_computeEventMarkerClusters, (
+      markers: widget.eventMarkers,
+      zoom: _mapZoom,
+    ));
+    if (!mounted || version != _clusterVersion) return;
+    final markers = _buildMarkersFromClusters(clusters);
+    debugPrint(
+      '[MAP] _rebuildMapMarkersAsync OUTPUT: ${markers.length} markers (markerInput=${widget.eventMarkers.length})',
     );
     _markersNotifier.value = markers;
   }
@@ -242,9 +274,6 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     if (widget.useServerClusters) {
       return _buildServerClusterMarkers();
     }
-    if (widget.eventMarkers.isNotEmpty) {
-      return _buildEventMarkerPins();
-    }
     // No data yet — just show user location if available.
     final markers = <Marker>{};
     _addUserLocationMarker(markers);
@@ -273,13 +302,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     return markers;
   }
 
-  Set<Marker> _buildEventMarkerPins() {
+  Set<Marker> _buildMarkersFromClusters(List<EventMarkerMapCluster> clusters) {
     final markers = <Marker>{};
-    final clusters = _markerClusterer.clusterMarkers(
-      widget.eventMarkers,
-      zoom: _mapZoom,
-    );
-
     for (final cluster in clusters) {
       if (cluster.isCluster) {
         markers.add(
@@ -313,7 +337,6 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         ),
       );
     }
-
     _addUserLocationMarker(markers);
     return markers;
   }
@@ -325,7 +348,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         Marker(
           markerId: const MarkerId('user_location'),
           position: userLocation,
-          anchor: const Offset(0.5, 0.5),
+          anchor: const Offset(0.5, 1),
           zIndexInt: 3,
           icon: _userLocationMarkerIcon!,
         ),
@@ -343,7 +366,13 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         if (!mounted) return;
         _clusterMarkerCache[count] = icon;
         _pendingClusterIcons.remove(count);
-        _rebuildMapMarkers();
+        if (!_iconRebuildPending) {
+          _iconRebuildPending = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _iconRebuildPending = false;
+            if (mounted) _rebuildMapMarkers();
+          });
+        }
       });
     }
 
@@ -462,7 +491,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     );
   }
 
-  Future<void> _focusOnMarkerCluster(_EventMarkerCluster cluster) async {
+  Future<void> _focusOnMarkerCluster(EventMarkerMapCluster cluster) async {
     widget.onClusterFocusStart?.call();
     await _animateCameraAndEmitViewport(
       CameraUpdate.newLatLngZoom(cluster.center, (_mapZoom + 2).clamp(4, 20)),
@@ -689,15 +718,18 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                         padding: widget.safeAreaPadding,
                         onMapReady: (controller) {
                           _mapController = controller;
-                          if (widget.shouldAutoFitOnContentChange) {
-                            Future<void>.delayed(
-                              const Duration(milliseconds: 250),
-                              () async {
-                                if (!mounted) return;
+                          Future<void>.delayed(
+                            const Duration(milliseconds: 250),
+                            () async {
+                              if (!mounted) return;
+                              if (widget.shouldAutoFitOnContentChange) {
                                 await _fitCameraToVisibleContent();
-                              },
-                            );
-                          }
+                              }
+                              // Always emit the initial viewport so the parent
+                              // can load data for the actual visible map area.
+                              await _emitViewportChanged(force: true);
+                            },
+                          );
                         },
                         onCameraMoveStarted: _handleCameraMoveStarted,
                         onCameraMove: (position) =>
@@ -712,8 +744,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
           ),
         ),
         Positioned(
-          right: 20,
-          top: MediaQuery.of(context).size.height * 0.5 - 60,
+          right: MediaQuery.of(context).padding.right + 20,
+          bottom: max(20, widget.safeAreaPadding.bottom + 20),
           child: Column(
             children: [
               _mapControl(LucideIcons.plus, false, onTap: _zoomIn),
@@ -743,97 +775,4 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     _circlesNotifier.dispose();
     super.dispose();
   }
-}
-
-class _EventMarkerCluster {
-  _EventMarkerCluster({required this.center, required this.markers});
-
-  final LatLng center;
-  final List<EventMarker> markers;
-
-  bool get isCluster => markers.length > 1;
-
-  EventMarker get primaryMarker => markers.first;
-
-  int get count => markers.length;
-}
-
-class _MarkerClusterer {
-  const _MarkerClusterer();
-
-  List<_EventMarkerCluster> clusterMarkers(
-    List<EventMarker> markers, {
-    required double zoom,
-    double clusterRadius = 88,
-  }) {
-    if (markers.isEmpty) return const [];
-
-    final worldSize = 256 * pow(2, zoom).toDouble();
-    final projected = <_ProjectedMarker>[];
-
-    for (final marker in markers) {
-      projected.add(
-        _ProjectedMarker(
-          marker: marker,
-          point: _project(marker.latitude, marker.longitude, worldSize),
-        ),
-      );
-    }
-
-    final visited = <int>{};
-    final clusters = <_EventMarkerCluster>[];
-
-    for (var i = 0; i < projected.length; i++) {
-      if (visited.contains(i)) continue;
-
-      final queue = <int>[i];
-      final clusterMarkers = <EventMarker>[];
-      var sumLat = 0.0;
-      var sumLng = 0.0;
-
-      while (queue.isNotEmpty) {
-        final currentIndex = queue.removeLast();
-        if (!visited.add(currentIndex)) continue;
-
-        final current = projected[currentIndex];
-        clusterMarkers.add(current.marker);
-        sumLat += current.marker.latitude;
-        sumLng += current.marker.longitude;
-
-        for (var j = 0; j < projected.length; j++) {
-          if (visited.contains(j) || currentIndex == j) continue;
-          if ((current.point - projected[j].point).magnitude <= clusterRadius) {
-            queue.add(j);
-          }
-        }
-      }
-
-      clusters.add(
-        _EventMarkerCluster(
-          center: LatLng(
-            sumLat / clusterMarkers.length,
-            sumLng / clusterMarkers.length,
-          ),
-          markers: clusterMarkers,
-        ),
-      );
-    }
-
-    clusters.sort((a, b) => b.count.compareTo(a.count));
-    return clusters;
-  }
-
-  Point<double> _project(double lat, double lng, double worldSize) {
-    final x = (lng + 180) / 360 * worldSize;
-    final sinLat = sin(lat * pi / 180).clamp(-0.9999, 0.9999);
-    final y = (0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi)) * worldSize;
-    return Point<double>(x, y);
-  }
-}
-
-class _ProjectedMarker {
-  const _ProjectedMarker({required this.marker, required this.point});
-
-  final EventMarker marker;
-  final Point<double> point;
 }

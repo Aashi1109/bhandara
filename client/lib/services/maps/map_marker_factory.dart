@@ -16,16 +16,16 @@ class MapMarkerFactory {
       painter: (canvas, markerSize) {
         final center = Offset(markerSize / 2, markerSize / 2);
         final outerRadius = markerSize * 0.32;
-        final innerRadius = highlighted ? markerSize * 0.245 : markerSize * 0.255;
+        final innerRadius = highlighted
+            ? markerSize * 0.245
+            : markerSize * 0.255;
         final outerColor = highlighted
             ? const Color(0xFF121212)
             : const Color(0xFF3C3C3C);
         final innerColor = highlighted
             ? const Color(0xFF121212)
             : const Color(0xFF3C3C3C);
-        final iconColor = highlighted
-            ? Colors.white
-            : const Color(0xFFF5F5F5);
+        final iconColor = highlighted ? Colors.white : const Color(0xFFF5F5F5);
 
         final shadowPaint = Paint()
           ..color = Colors.black.withValues(alpha: highlighted ? 0.22 : 0.12)
@@ -78,38 +78,57 @@ class MapMarkerFactory {
     );
   }
 
-  static Future<BitmapDescriptor> createUserLocationMarker({
-    double size = 56,
-  }) {
+  static Future<BitmapDescriptor> createUserLocationMarker({double size = 48}) {
     return _renderMarker(
       size: size,
       painter: (canvas, markerSize) {
-        final center = Offset(markerSize / 2, markerSize / 2);
-        final haloRadius = markerSize * 0.33;
-        final ringRadius = markerSize * 0.25;
-        final coreRadius = markerSize * 0.17;
-        final dotRadius = markerSize * 0.05;
+        final scale = markerSize / 24;
+        const offset = Offset.zero;
+        final pinPath = Path()
+          ..moveTo(offset.dx + (20 * scale), offset.dy + (10 * scale))
+          ..cubicTo(
+            offset.dx + (20 * scale),
+            offset.dy + (14.993 * scale),
+            offset.dx + (14.461 * scale),
+            offset.dy + (20.193 * scale),
+            offset.dx + (12.601 * scale),
+            offset.dy + (21.799 * scale),
+          )
+          ..arcToPoint(
+            Offset(offset.dx + (11.399 * scale), offset.dy + (21.799 * scale)),
+            radius: Radius.circular(1 * scale),
+            clockwise: true,
+          )
+          ..cubicTo(
+            offset.dx + (9.539 * scale),
+            offset.dy + (20.193 * scale),
+            offset.dx + (4 * scale),
+            offset.dy + (14.993 * scale),
+            offset.dx + (4 * scale),
+            offset.dy + (10 * scale),
+          )
+          ..arcToPoint(
+            Offset(offset.dx + (20 * scale), offset.dy + (10 * scale)),
+            radius: Radius.circular(8 * scale),
+            clockwise: true,
+          );
 
-        final haloPaint = Paint()
-          ..color = const Color(0xFFD9D9D9).withValues(alpha: 0.68)
+        final fillPaint = Paint()
+          ..color = const Color(0xFF2E2E2E)
           ..style = PaintingStyle.fill;
-        canvas.drawCircle(center, haloRadius, haloPaint);
+        canvas.drawPath(pinPath, fillPaint);
 
-        final ringPaint = Paint()
+        final strokePaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
-          ..strokeWidth = markerSize * 0.045;
-        canvas.drawCircle(center, ringRadius, ringPaint);
-
-        final corePaint = Paint()
-          ..color = Colors.black
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(center, coreRadius, corePaint);
-
-        final dotPaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(center, dotRadius, dotPaint);
+          ..strokeWidth = 2 * scale
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+        canvas.drawCircle(
+          Offset(offset.dx + (12 * scale), offset.dy + (10 * scale)),
+          3 * scale,
+          strokePaint,
+        );
       },
     );
   }
@@ -284,10 +303,7 @@ class MapMarkerFactory {
 
     final imageSize = (size * _markerRenderScale).round();
 
-    final image = await recorder.endRecording().toImage(
-      imageSize,
-      imageSize,
-    );
+    final image = await recorder.endRecording().toImage(imageSize, imageSize);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     if (bytes == null) {
       throw StateError('Failed to render marker bytes.');

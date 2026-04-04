@@ -8,6 +8,7 @@ import '../constants/socket_events.dart';
 import '../models/chat.dart';
 import '../services/socket.dart';
 import '../theme/theme.dart';
+import 'avatar.dart';
 
 class MessageReactionSummary {
   const MessageReactionSummary({required this.emoji, required this.count});
@@ -71,6 +72,35 @@ class MessageReactionUtils {
               MessageReactionSummary(emoji: emoji, count: grouped[emoji] ?? 0),
         )
         .toList();
+  }
+
+  static List<MessageReaction> filterByEmoji(
+    List<MessageReaction> reactions, {
+    String? emoji,
+  }) {
+    if (emoji == null || emoji.isEmpty) {
+      return List<MessageReaction>.from(reactions);
+    }
+
+    return reactions.where((reaction) => reaction.emoji == emoji).toList();
+  }
+
+  static String displayName(
+    MessageReaction reaction, {
+    required String? currentUserId,
+  }) {
+    if (currentUserId != null &&
+        currentUserId.isNotEmpty &&
+        reaction.userId == currentUserId) {
+      return 'You';
+    }
+
+    final name = reaction.user?.name?.trim();
+    if (name != null && name.isNotEmpty) {
+      return name;
+    }
+
+    return 'Unknown user';
   }
 
   static List<MessageReaction> applySocketEvent({
@@ -193,45 +223,106 @@ class MessageReactionSummaryRow extends StatelessWidget {
       currentUserId,
     );
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: summaries.map((summary) {
-        final isSelected = summary.emoji == selectedEmoji;
-        return GestureDetector(
-          onTap: isEnabled ? () => onTap(summary.emoji) : null,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.12)
-                  : AppColors.muted,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.border,
-              ),
+    final summaryKey = summaries
+        .map((summary) => '${summary.emoji}:${summary.count}')
+        .join('|');
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.96, end: 1).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(summary.emoji, style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 6),
-                Text(
-                  '${summary.count}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
+            child: child,
           ),
         );
-      }).toList(),
+      },
+      child: Wrap(
+        key: ValueKey(summaryKey),
+        spacing: 8,
+        runSpacing: 8,
+        children: summaries.map((summary) {
+          final isSelected = summary.emoji == selectedEmoji;
+          return GestureDetector(
+            onTap: () => showMessageReactionDetailsSheet(
+              context: context,
+              reactions: reactions,
+              currentUserId: currentUserId,
+              initialEmoji: summary.emoji,
+            ),
+            onLongPress: isEnabled
+                ? () async {
+                    await HapticFeedback.selectionClick();
+                    onTap(summary.emoji);
+                  }
+                : null,
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey(
+                'reaction_${summary.emoji}_${summary.count}_$isSelected',
+              ),
+              tween: Tween<double>(begin: 0.9, end: 1),
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : AppColors.muted,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.border,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(summary.emoji, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: animation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        '${summary.count}',
+                        key: ValueKey('${summary.emoji}_${summary.count}'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected
+                              ? FontWeight.w800
+                              : FontWeight.w700,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -251,7 +342,7 @@ class MessageReactionQuickBar extends StatelessWidget {
     return Material(
       color: AppColors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(999),
@@ -270,20 +361,29 @@ class MessageReactionQuickBar extends StatelessWidget {
             final isSelected = emoji == currentUserReactionEmoji;
             return GestureDetector(
               onTap: () => onSelected(emoji),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey('quick_${emoji}_$isSelected'),
+                tween: Tween<double>(begin: 0.88, end: 1),
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutBack,
+                builder: (context, scale, child) {
+                  return Transform.scale(scale: scale, child: child);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.12)
+                        : AppColors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
                 ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : AppColors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(emoji, style: const TextStyle(fontSize: 24)),
               ),
             );
           }).toList(),
@@ -375,13 +475,24 @@ Future<void> showMessageReactionOverlay({
             Positioned(
               left: left,
               top: top,
-              child: MessageReactionQuickBar(
-                currentUserReactionEmoji: currentUserReactionEmoji,
-                onSelected: (emoji) async {
-                  await HapticFeedback.selectionClick();
-                  dismiss();
-                  await onSelected(emoji);
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.9, end: 1),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value.clamp(0.0, 1.0),
+                    child: Transform.scale(scale: value, child: child),
+                  );
                 },
+                child: MessageReactionQuickBar(
+                  currentUserReactionEmoji: currentUserReactionEmoji,
+                  onSelected: (emoji) async {
+                    await HapticFeedback.selectionClick();
+                    dismiss();
+                    await onSelected(emoji);
+                  },
+                ),
               ),
             ),
           ],
@@ -392,4 +503,243 @@ Future<void> showMessageReactionOverlay({
 
   if (entry != null) overlay.insert(entry!);
   return completer.future;
+}
+
+Future<void> showMessageReactionDetailsSheet({
+  required BuildContext context,
+  required List<MessageReaction> reactions,
+  required String? currentUserId,
+  String? initialEmoji,
+}) async {
+  final summaries = MessageReactionUtils.summarize(reactions);
+  if (summaries.isEmpty) {
+    return;
+  }
+
+  String? selectedEmoji = initialEmoji;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.transparent,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final filtered =
+              MessageReactionUtils.filterByEmoji(
+                reactions,
+                emoji: selectedEmoji,
+              )..sort((a, b) {
+                final aIsCurrent = a.userId == currentUserId;
+                final bIsCurrent = b.userId == currentUserId;
+                if (aIsCurrent != bIsCurrent) {
+                  return aIsCurrent ? -1 : 1;
+                }
+
+                final aName = MessageReactionUtils.displayName(
+                  a,
+                  currentUserId: currentUserId,
+                );
+                final bName = MessageReactionUtils.displayName(
+                  b,
+                  currentUserId: currentUserId,
+                );
+                return aName.toLowerCase().compareTo(bName.toLowerCase());
+              });
+
+          return SafeArea(
+            top: false,
+            child: FractionallySizedBox(
+              heightFactor: 0.72,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Reactions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          _ReactionFilterChip(
+                            label: 'All',
+                            count: reactions.length,
+                            isSelected: selectedEmoji == null,
+                            onTap: () =>
+                                setModalState(() => selectedEmoji = null),
+                          ),
+                          ...summaries.map((summary) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: _ReactionFilterChip(
+                                label: summary.emoji,
+                                count: summary.count,
+                                isSelected: selectedEmoji == summary.emoji,
+                                onTap: () => setModalState(
+                                  () => selectedEmoji = summary.emoji,
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1, color: AppColors.border),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final reaction = filtered[index];
+                          final displayName = MessageReactionUtils.displayName(
+                            reaction,
+                            currentUserId: currentUserId,
+                          );
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.muted,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                Avatar(
+                                  name: reaction.user?.name ?? displayName,
+                                  imageUrl: reaction.user?.avatarUrl,
+                                  size: 36,
+                                  textSize: 14,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: Text(
+                                    reaction.emoji,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _ReactionFilterChip extends StatelessWidget {
+  const _ReactionFilterChip({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : AppColors.muted,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? AppColors.primary : AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -125,13 +125,14 @@ Set<String> computeVisibleGeohashTiles({
 }) {
   final precision = geohashPrecisionFromZoom(zoom);
   final geoHasher = GeoHasher();
+  final totalBits = precision * 5;
+  final lngBits = (totalBits / 2).ceil();
+  final latBits = totalBits ~/ 2;
 
-  // Approximate cell dimensions in degrees for each precision
-  // Precision 5: ~0.044 lat, ~0.044 lng
-  // Precision 6: ~0.011 lat, ~0.011 lng
-  // Precision 7: ~0.0027 lat, ~0.0027 lng
-  final latStep = 180.0 / pow(2, (precision * 5 / 2).ceil());
-  final lngStep = 360.0 / pow(2, (precision * 5 / 2).floor());
+  // Geohash interleaves longitude first, then latitude.
+  // Odd precisions therefore allocate the extra bit to longitude.
+  final latStep = 180.0 / pow(2, latBits);
+  final lngStep = 360.0 / pow(2, lngBits);
 
   final tiles = <String>{};
   var lat = sw.latitude;

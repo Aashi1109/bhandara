@@ -1177,7 +1177,7 @@ class _ChatScreenState extends State<ChatScreen> {
               fontWeight: FontWeight.w800,
               color: _isThreadLocked
                   ? AppColors.mutedForeground
-                  : AppColors.accent,
+                  : AppColors.primary,
             ),
           ),
         ),

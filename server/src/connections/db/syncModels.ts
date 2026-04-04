@@ -1,5 +1,6 @@
 import { QueryTypes } from 'sequelize';
 import { Activity } from '@/features/activity/model';
+import { Address } from '@/features/addresses/model';
 import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
 import { EntityEngagement, EntityRating } from '@/features/engagement/model';
 import { Event } from '@/features/events/model';
@@ -16,6 +17,7 @@ import { User } from '@/features/users/model';
 
 const REGISTERED_MODELS = [
   SearchResult,
+  Address,
   User,
   Media,
   Tag,

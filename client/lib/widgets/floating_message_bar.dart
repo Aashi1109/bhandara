@@ -261,60 +261,67 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                   if (_showEmojiPicker) ...[
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Container(
-                          key: _emojiPickerKey,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.08,
+                      child: Container(
+                        key: _emojiPickerKey,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(
+                                alpha: 0.08,
+                              ),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(1),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(23),
+                            child: Container(
+                              color: AppColors.surface,
+                              child: EmojiPicker(
+                                onEmojiSelected: (_, emoji) {
+                                  _insertEmoji(emoji.emoji);
+                                },
+                                config: const Config(
+                                  height: 256,
+                                  checkPlatformCompatibility: true,
+                                  emojiViewConfig: EmojiViewConfig(
+                                    backgroundColor: AppColors.surface,
+                                    columns: 8,
+                                  ),
+                                  categoryViewConfig: CategoryViewConfig(
+                                    initCategory: Category.SMILEYS,
+                                    backgroundColor: AppColors.surface,
+                                    indicatorColor: AppColors.primary,
+                                    iconColorSelected: AppColors.primary,
+                                    iconColor: AppColors.mutedForeground,
+                                    dividerColor: AppColors.border,
+                                  ),
+                                  searchViewConfig: SearchViewConfig(
+                                    backgroundColor: AppColors.surface,
+                                    buttonIconColor: AppColors.mutedForeground,
+                                    inputTextStyle: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    hintTextStyle: TextStyle(
+                                      color: AppColors.mutedForeground,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  bottomActionBarConfig: BottomActionBarConfig(
+                                    backgroundColor: AppColors.surface,
+                                    buttonColor: AppColors.muted,
+                                    buttonIconColor: AppColors.primary,
+                                  ),
                                 ),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: EmojiPicker(
-                            onEmojiSelected: (_, emoji) {
-                              _insertEmoji(emoji.emoji);
-                            },
-                            config: const Config(
-                              height: 256,
-                              checkPlatformCompatibility: true,
-                              emojiViewConfig: EmojiViewConfig(
-                                backgroundColor: AppColors.surface,
-                                columns: 8,
-                              ),
-                              categoryViewConfig: CategoryViewConfig(
-                                initCategory: Category.SMILEYS,
-                                backgroundColor: AppColors.surface,
-                                indicatorColor: AppColors.primary,
-                                iconColorSelected: AppColors.primary,
-                                iconColor: AppColors.mutedForeground,
-                                dividerColor: AppColors.border,
-                              ),
-                              searchViewConfig: SearchViewConfig(
-                                backgroundColor: AppColors.surface,
-                                buttonIconColor: AppColors.mutedForeground,
-                                inputTextStyle: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                hintTextStyle: TextStyle(
-                                  color: AppColors.mutedForeground,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              bottomActionBarConfig: BottomActionBarConfig(
-                                backgroundColor: AppColors.surface,
-                                buttonColor: AppColors.muted,
-                                buttonIconColor: AppColors.primary,
                               ),
                             ),
                           ),

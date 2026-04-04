@@ -6,8 +6,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../models/user.dart';
 import '../../providers/user.dart';
 import '../../theme/theme.dart';
-import '../../widgets/button.dart';
 import '../../widgets/header.dart';
+import '../../widgets/settings_action_footer.dart';
 import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
@@ -121,39 +121,30 @@ class _NotificationsSettingsScreenState
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.8),
-              border: const Border(top: BorderSide(color: AppColors.border)),
-            ),
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              label: 'Save Preferences',
-              loadable: true,
-              onPressed: user == null || !_isDirty
-                  ? null
-                  : () async {
-                      await ref
-                          .read(userProfileProvider.notifier)
-                          .updateUserData({
-                            'meta': {
-                              ...?user.meta?.toJson(),
-                              'notificationPreferences': _currentPreferences
-                                  .toJson(),
-                            },
-                          });
-                      if (!mounted) return;
-                      setState(() {
-                        _initialPreferences = _currentPreferences;
-                      });
-                      AppSnackBar.success(
-                        this.context,
-                        'Notification preferences saved.',
-                      );
-                    },
-            ),
+          SettingsActionFooter(
+            label: 'Save Preferences',
+            loadable: true,
+            onPressed: user == null || !_isDirty
+                ? null
+                : () async {
+                    await ref.read(userProfileProvider.notifier).updateUserData(
+                      {
+                        'meta': {
+                          ...?user.meta?.toJson(),
+                          'notificationPreferences': _currentPreferences
+                              .toJson(),
+                        },
+                      },
+                    );
+                    if (!mounted) return;
+                    setState(() {
+                      _initialPreferences = _currentPreferences;
+                    });
+                    AppSnackBar.success(
+                      this.context,
+                      'Notification preferences saved.',
+                    );
+                  },
           ),
         ],
       ),

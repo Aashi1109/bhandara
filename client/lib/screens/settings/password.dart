@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/theme.dart';
 import '../../widgets/header.dart';
-import '../../widgets/button.dart';
 import '../../widgets/input.dart';
+import '../../widgets/settings_action_footer.dart';
 
 class PasswordSettingsScreen extends StatefulWidget {
   const PasswordSettingsScreen({super.key});
@@ -113,7 +113,8 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                     label: 'New Password',
                     placeholder: 'Create a new password',
                     obscureText: !_showNew,
-                    onChanged: (val) => setState(() => _newPassword = val.trim()),
+                    onChanged: (val) =>
+                        setState(() => _newPassword = val.trim()),
                     rightElement: GestureDetector(
                       onTap: () => setState(() => _showNew = !_showNew),
                       child: Icon(
@@ -179,14 +180,9 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              label: 'Update Password',
-              onPressed: _canSubmit ? () {} : null,
-            ),
+          SettingsActionFooter(
+            label: 'Update Password',
+            onPressed: _canSubmit ? () {} : null,
           ),
         ],
       ),

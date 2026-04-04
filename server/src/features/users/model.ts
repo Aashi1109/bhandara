@@ -5,9 +5,8 @@ import { USER_TABLE_NAME } from './constants';
 import type { IBaseUser } from '@/definitions/types';
 
 const sequelize = getDBConnection()!;
-type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'media' | 'profilePic'> & {
+type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'media' | 'profilePic'> & {
   profilePic: Record<string, any> | null;
-  media?: any;
 };
 
 export class User extends Model<UserAttributes, UserAttributes> {
@@ -15,7 +14,6 @@ export class User extends Model<UserAttributes, UserAttributes> {
   declare name: string;
   declare email: string;
   declare gender: string;
-  declare address: Record<string, any> | null;
   declare isVerified: boolean;
   declare profilePic: Record<string, any> | null;
   declare mediaId: string | null;
@@ -38,7 +36,6 @@ User.init(
     name: { type: DataTypes.TEXT, allowNull: false },
     email: { type: DataTypes.TEXT, allowNull: false, unique: true },
     gender: { type: DataTypes.TEXT, allowNull: false },
-    address: { type: DataTypes.JSONB },
     isVerified: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -62,15 +59,6 @@ User.init(
       {
         name: 'users_updatedAt_idx',
         fields: ['updatedAt'],
-      },
-      {
-        name: 'users_address_gix',
-        using: 'GIST',
-        fields: [
-          sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("address"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("address"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`,
-          ),
-        ],
       },
     ],
   },

@@ -37,7 +37,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
   LatLng _selectedLocation = _fallbackLocation;
   String _locationLabel = 'San Francisco, CA';
   bool _isLocating = false;
-  bool _hasLocationAccess = false;
   bool _isSaving = false;
   bool _didHydrateFromProfile = false;
   BitmapDescriptor? _locationMarkerIcon;
@@ -135,7 +134,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
       if (!hasAccess) {
         if (mounted) {
           setState(() {
-            _hasLocationAccess = false;
             _isLocating = false;
           });
         }
@@ -161,7 +159,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
         _locationLabel = address?.formattedAddress.isNotEmpty == true
             ? address!.formattedAddress
             : '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
-        _hasLocationAccess = true;
         _isLocating = false;
       });
 
@@ -342,12 +339,13 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                             Marker(
                               markerId: const MarkerId('preferences-location'),
                               position: _selectedLocation,
+                              anchor: const Offset(0.5, 1),
                               icon: _locationMarkerIcon!,
                             ),
                         },
                         zoomControlsEnabled: false,
                         myLocationButtonEnabled: false,
-                        myLocationEnabled: _hasLocationAccess,
+                        myLocationEnabled: false,
                       ),
                     ],
                   ),

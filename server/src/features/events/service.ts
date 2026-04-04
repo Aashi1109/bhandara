@@ -1,8 +1,10 @@
-import type { IBaseThread, IBaseUser, IEvent, IPaginationParams } from '@/definitions/types';
+import AddressService from '@/features/addresses/service';
+import { Address } from '@/features/addresses/model';
+import { EAddressEntityType, EEventParticipantStatus, EEventStatus, type EEventType } from '@/definitions/enums';
+import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/definitions/types';
 import ThreadsService from '../threads/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { Op, Sequelize, type WhereOptions } from 'sequelize';
-import { EEventParticipantStatus, EEventStatus, type EEventType } from '@/definitions/enums';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
 import UserService from '../users/service';
@@ -30,7 +32,13 @@ export interface IEventListFilters {
   endDate?: Date;
 }
 
+type IEventSummary = Pick<
+  IEvent,
+  'id' | 'name' | 'status' | 'type' | 'createdBy' | 'location' | 'timings' | 'createdAt' | 'updatedAt' | 'media'
+>;
+
 class EventService {
+  private readonly addressService: AddressService;
   private readonly threadService: ThreadsService;
   private readonly tagService: TagService;
   private readonly mediaService: MediaService;
@@ -43,6 +51,7 @@ class EventService {
   private readonly deleteCache = deleteEventCache;
 
   constructor() {
+    this.addressService = new AddressService();
     this.threadService = new ThreadsService();
     this.tagService = new TagService();
     this.mediaService = new MediaService();
@@ -53,6 +62,22 @@ class EventService {
   }
 
   private readonly populateFields = ['threads', 'tags', 'media', 'creator', 'participants', 'verifiers', 'reactions'];
+
+  private async hydrateEventLocations<T extends Pick<IEvent, 'id'> & Partial<IEvent>>(events: T[]): Promise<T[]> {
+    if (events.length === 0) {
+      return events;
+    }
+
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.Event,
+      events.map((event) => event.id),
+    );
+
+    return events.map((event) => ({
+      ...event,
+      location: this.addressService.toLocation(addressMap[event.id]) ?? {},
+    }));
+  }
 
   private withResolvedStatus<T extends IEvent | null>(event: T): T {
     if (!event || event.status === EEventStatus.Cancelled) {
@@ -65,7 +90,7 @@ class EventService {
     } as T;
   }
 
-  private toEventSummary(event: IEvent) {
+  private toEventSummary(event: IEvent): IEventSummary {
     const resolved = this.withResolvedStatus(event) as IEvent;
     return {
       id: resolved.id,
@@ -145,13 +170,14 @@ class EventService {
       Number.isFinite(filters.radiusKm) &&
       (filters.radiusKm ?? 0) > 0
     ) {
-      const latitude = escape(filters.latitude!);
-      const longitude = escape(filters.longitude!);
-      const radiusMeters = escape((filters.radiusKm ?? 0) * 1000);
       clauses.push(
-        Sequelize.literal(
-          `(("location"->>'latitude') IS NOT NULL AND ("location"->>'longitude') IS NOT NULL AND ST_DWithin(ST_SetSRID(ST_MakePoint(CAST("location"->>'longitude' AS DOUBLE PRECISION), CAST("location"->>'latitude' AS DOUBLE PRECISION)), 4326)::geography, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography, ${radiusMeters}))`,
-        ),
+        this.addressService.buildEntityDistanceClause({
+          entityType: EAddressEntityType.Event,
+          entityIdColumn: `"Event"."id"`,
+          latitude: filters.latitude!,
+          longitude: filters.longitude!,
+          radiusKm: filters.radiusKm!,
+        }),
       );
     }
 
@@ -221,11 +247,12 @@ class EventService {
     const cached = await getEventCache(id);
     if (cached) return this.withResolvedStatus(cached as IEvent);
 
-    const data = await Event.findByPk(id, { raw: true });
+    const data = (await Event.findByPk(id, { raw: true })) as unknown as IEvent | null;
     if (!data) return null;
 
-    await setEventCache(id, data as IEvent);
-    return this.withResolvedStatus(data as IEvent);
+    const [hydrated] = await this.hydrateEventLocations([data as IEvent]);
+    await setEventCache(id, hydrated as IEvent);
+    return this.withResolvedStatus(hydrated as IEvent);
   }
 
   async getEventData(id: string) {
@@ -238,13 +265,14 @@ class EventService {
   async getEventPreview(id: string) {
     const event = (await Event.findByPk(id, {
       raw: true,
-      attributes: ['id', 'name', 'status', 'type', 'createdBy', 'location', 'timings', 'media', 'tags'],
-    })) as IEvent | null;
+      attributes: ['id', 'name', 'status', 'type', 'createdBy', 'timings', 'media', 'tags'],
+    })) as unknown as IEvent | null;
     if (!event) {
       return null;
     }
 
-    const preview = await this.populateEvent(event, ['media', 'tags']);
+    const [hydratedEvent] = await this.hydrateEventLocations([event]);
+    const preview = await this.populateEvent(hydratedEvent, ['media', 'tags']);
     await this.entityStatsService.hydrateEvent(preview);
 
     return this.withResolvedStatus(preview);
@@ -257,8 +285,18 @@ class EventService {
 
     body.status = resolveEventStatus(body.timings);
     const result = await validateEventCreate(body, async (data) => {
-      const row = await Event.create(data as any);
-      return row.toJSON() as IEvent;
+      const { location, ...rest } = data;
+      const row = await Event.sequelize!.transaction(async (transaction) => {
+        const created = await Event.create(rest as any, { transaction });
+        await this.addressService.replaceAddress(
+          EAddressEntityType.Event,
+          created.id,
+          location,
+          transaction,
+        );
+        return created;
+      });
+      return (await this.getById(row.id)) as IEvent;
     });
     const eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     if (eventData) {
@@ -285,13 +323,24 @@ class EventService {
       data.status === EEventStatus.Cancelled ? EEventStatus.Cancelled : resolveEventStatus(nextTimings);
 
     const result = await validateEventUpdate(data, async (d) => {
-      const row = await Event.findByPk(existing.id);
-      if (!row) throw new NotFoundError('Event not found');
-      await row.update({
-        ...(d as Partial<IEvent>),
-        status: nextStatus,
-      } as Partial<IEvent>);
-      return row.toJSON() as IEvent;
+      const { location, ...rest } = d;
+      await Event.sequelize!.transaction(async (transaction) => {
+        const row = await Event.findByPk(existing.id, { transaction });
+        if (!row) throw new NotFoundError('Event not found');
+        await row.update({
+          ...(rest as Partial<IEvent>),
+          status: nextStatus,
+        } as Partial<IEvent>, { transaction });
+        if (location !== undefined) {
+          await this.addressService.replaceAddress(
+            EAddressEntityType.Event,
+            existing.id,
+            location,
+            transaction,
+          );
+        }
+      });
+      return (await this.getById(existing.id)) as IEvent;
     });
     await this.deleteCache(existing.id);
     let eventData = this.withResolvedStatus(result as IEvent) as IEvent;
@@ -315,11 +364,6 @@ class EventService {
   private static readonly MARKERS_PER_TILE_LIMIT = 500;
   private static readonly MAX_CLUSTERS = 200;
 
-  // Shared SQL expressions for location JSONB extraction — matches the GIST index path.
-  private static readonly LAT_EXPR = `CAST("location"->>'latitude' AS DOUBLE PRECISION)`;
-  private static readonly LNG_EXPR = `CAST("location"->>'longitude' AS DOUBLE PRECISION)`;
-  private static readonly POINT_EXPR = `ST_MakePoint(${EventService.LNG_EXPR}, ${EventService.LAT_EXPR})`;
-
   private static gridSizeFromZoom(zoom: number): number {
     if (zoom <= 4) return 5.0;
     if (zoom <= 6) return 2.0;
@@ -328,8 +372,50 @@ class EventService {
     return 0.05;
   }
 
-  async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[] } = {}) {
-    const { zoom = 0, tiles } = options;
+  private async getMatchingEventMarkers(filters: IEventListFilters) {
+    const whereClauses: any[] = [
+      { entityType: EAddressEntityType.Event },
+      Sequelize.literal(`"latitude" IS NOT NULL AND "longitude" IS NOT NULL`),
+    ];
+
+    if (
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0
+    ) {
+      const escape = Event.sequelize!.escape.bind(Event.sequelize);
+      whereClauses.push(
+        Sequelize.literal(
+          `ST_DWithin(ST_SetSRID(ST_MakePoint("longitude", "latitude"), 4326)::geography, ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography, ${escape(filters.radiusKm! * 1000)})`,
+        ),
+      );
+    }
+
+    const rows = await Address.findAll({
+      where: { [Op.and]: whereClauses },
+      attributes: ['entityId', 'latitude', 'longitude'],
+      raw: true,
+      limit: 5000,
+    });
+
+    return rows.map((row) => ({
+      id: row.entityId,
+      name: '',
+      latitude: row.latitude as number,
+      longitude: row.longitude as number,
+    }));
+  }
+
+  async getMarkers(
+    filters: IEventListFilters = {},
+    options: { zoom?: number; tiles?: string[]; flat?: boolean } = {},
+  ) {
+    const { zoom = 0, tiles, flat = false } = options;
+    if (flat) {
+      return this.getFlatMarkers(filters);
+    }
+
     const isClusterMode = zoom < EventService.CLUSTER_ZOOM_THRESHOLD;
 
     if (isClusterMode) {
@@ -340,35 +426,36 @@ class EventService {
   }
 
   private async getClusterMarkers(filters: IEventListFilters, zoom: number) {
-    const where = this.buildWhere(filters);
-    const escape = Event.sequelize!.escape.bind(Event.sequelize);
-    const gridSize = escape(EventService.gridSizeFromZoom(zoom));
+    const markers = await this.getMatchingEventMarkers(filters);
+    const gridSize = EventService.gridSizeFromZoom(zoom);
+    const clusters = new Map<string, { latitude: number; longitude: number; count: number }>();
 
-    const whereClause = (where as any)[Op.and] ? where : {};
+    for (const marker of markers) {
+      const snappedLatitude = Math.round(marker.latitude / gridSize) * gridSize;
+      const snappedLongitude = Math.round(marker.longitude / gridSize) * gridSize;
+      const key = `${snappedLatitude.toFixed(6)}:${snappedLongitude.toFixed(6)}`;
+      const existing = clusters.get(key);
 
-    const results = await Event.findAll({
-      where: whereClause,
-      attributes: [
-        [Sequelize.fn('AVG', Sequelize.literal(EventService.LAT_EXPR)), 'latitude'],
-        [Sequelize.fn('AVG', Sequelize.literal(EventService.LNG_EXPR)), 'longitude'],
-        [Sequelize.fn('COUNT', Sequelize.col('id')), 'count'],
-      ],
-      group: [
-        Sequelize.fn('ST_SnapToGrid', Sequelize.literal(EventService.POINT_EXPR), Sequelize.literal(String(gridSize))),
-      ],
-      order: [[Sequelize.literal('count'), 'DESC']],
-      limit: EventService.MAX_CLUSTERS,
-      raw: true,
-      subQuery: false,
-    });
+      if (!existing) {
+        clusters.set(key, {
+          latitude: marker.latitude,
+          longitude: marker.longitude,
+          count: 1,
+        });
+        continue;
+      }
+
+      const nextCount = existing.count + 1;
+      existing.latitude = ((existing.latitude * existing.count) + marker.latitude) / nextCount;
+      existing.longitude = ((existing.longitude * existing.count) + marker.longitude) / nextCount;
+      existing.count = nextCount;
+    }
 
     return {
       mode: 'clusters' as const,
-      items: results.map((row: any) => ({
-        latitude: Number(row.latitude),
-        longitude: Number(row.longitude),
-        count: Number(row.count),
-      })),
+      items: Array.from(clusters.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, EventService.MAX_CLUSTERS),
     };
   }
 
@@ -377,26 +464,7 @@ class EventService {
       return { mode: 'tiles' as const, items: {} };
     }
 
-    const baseWhere = this.buildWhere(filters);
-    const escape = Event.sequelize!.escape.bind(Event.sequelize);
-
-    // Single query for all tiles — OR their bounding boxes together.
-    const tileConditions = tiles.map((tile) => {
-      const [minLat, minLng, maxLat, maxLng] = ngeohash.decode_bbox(tile);
-      return `(${EventService.LAT_EXPR} >= ${escape(minLat)} AND ${EventService.LAT_EXPR} <= ${escape(maxLat)} AND ${EventService.LNG_EXPR} >= ${escape(minLng)} AND ${EventService.LNG_EXPR} <= ${escape(maxLng)})`;
-    });
-
-    const baseClauses = (baseWhere as any)[Op.and] ? ((baseWhere as any)[Op.and] as any[]) : [];
-    const batchWhere = {
-      [Op.and]: [...baseClauses, Sequelize.literal(`(${tileConditions.join(' OR ')})`)],
-    };
-
-    const rows = await Event.findAll({
-      where: batchWhere,
-      attributes: ['id', 'name', 'location'],
-      raw: true,
-      limit: EventService.MARKERS_PER_TILE_LIMIT * tiles.length,
-    });
+    const markers = await this.getMatchingEventMarkers(filters);
 
     // Distribute rows into tile buckets
     const tileBboxes = tiles.map((tile) => {
@@ -409,14 +477,14 @@ class EventService {
       tileResults[tile] = [];
     }
 
-    for (const row of rows as any[]) {
-      const lat = Number(row.location?.latitude ?? row.location?.coordinates?.latitude);
-      const lng = Number(row.location?.longitude ?? row.location?.coordinates?.longitude);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-      const marker = { id: row.id, name: row.name, latitude: lat, longitude: lng };
+    for (const marker of markers) {
       for (const { tile, minLat, minLng, maxLat, maxLng } of tileBboxes) {
-        if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
+        if (
+          marker.latitude >= minLat &&
+          marker.latitude <= maxLat &&
+          marker.longitude >= minLng &&
+          marker.longitude <= maxLng
+        ) {
           if (tileResults[tile].length < EventService.MARKERS_PER_TILE_LIMIT) {
             tileResults[tile].push(marker);
           }
@@ -431,18 +499,30 @@ class EventService {
     };
   }
 
-  async getAll(filters: IEventListFilters = {}, pagination?: Partial<IPaginationParams>) {
+  private async getFlatMarkers(filters: IEventListFilters) {
+    const rows = await this.getMatchingEventMarkers(filters);
+
+    return {
+      mode: 'flat' as const,
+      items: rows,
+    };
+  }
+
+  async getAll(filters: IEventListFilters = {}, pagination?: Partial<IPaginationParams>): Promise<PaginatedResult<IEventSummary>> {
     const where = this.buildWhere(filters);
-    const data = await findAllWithPagination(
+    const data = (await findAllWithPagination(
       Event,
       { where },
       pagination,
-      'id,name,status,type,createdBy,location,timings,createdAt,updatedAt,media',
-    );
-    if (data.items) {
-      data.items = data.items.map((event) => this.toEventSummary(event as IEvent)) as typeof data.items;
-    }
-    return data;
+      'id,name,status,type,createdBy,timings,createdAt,updatedAt,media',
+    )) as unknown as PaginatedResult<IEvent>;
+
+    const hydratedItems = await this.hydrateEventLocations(data.items ?? []);
+
+    return {
+      ...data,
+      items: hydratedItems.map((event) => this.toEventSummary(event as IEvent)),
+    };
   }
 
   async cancel(id: string): Promise<IEvent | null> {
@@ -450,15 +530,22 @@ class EventService {
     if (!row) return null;
     await row.update({ status: EEventStatus.Cancelled } as Partial<IEvent>);
     await this.deleteCache(id);
-    return row.toJSON() as IEvent;
+    return this.getById(id);
   }
 
   async delete(id: string): Promise<IEvent | null> {
+    const existing = await this.getById(id);
+    if (!existing) return null;
+
     const row = await Event.findByPk(id);
     if (!row) return null;
-    await row.destroy();
+
+    await Event.sequelize!.transaction(async (transaction) => {
+      await this.addressService.replaceAddress(EAddressEntityType.Event, id, null, transaction);
+      await row.destroy({ transaction });
+    });
     await this.deleteCache(id);
-    return row.toJSON() as IEvent;
+    return existing;
   }
 
   async getEventUsers(eventId: string, type: 'participants' | 'verifiers', userIds: string[]) {

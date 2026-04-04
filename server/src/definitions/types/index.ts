@@ -25,7 +25,7 @@ export interface IBaseUser extends ITimeStamp {
   name: string;
   email: string;
   gender: string;
-  address: Record<string, any> | null; // JSONB field
+  address: Record<string, any> | null;
   isVerified: boolean;
   password: string | null;
   meta: Record<string, any>;
@@ -78,9 +78,15 @@ export interface IBaseThread extends ITimeStamp {
 
 // Location Interface
 export interface ILocation {
-  address: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
+  venue?: string | null;
+  coordinates?: {
+    latitude?: number;
+    longitude?: number;
+  };
+  [key: string]: any;
 }
 
 // Event Participant Interface
@@ -94,7 +100,7 @@ export interface IEvent extends ITimeStamp {
   id: string;
   name: string;
   description: string;
-  location: ILocation; // JSONB field
+  location: ILocation;
   participants: IParticipant[]; // JSONB field
   verifiers: IVerifier[]; // Array of verifier IDs
   type: EEventType;

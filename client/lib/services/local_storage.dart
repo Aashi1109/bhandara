@@ -1,20 +1,29 @@
 import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_android/shared_preferences_android.dart';
 
 class LocalStorage {
   LocalStorage({this.namespace});
 
   final String? namespace;
-  static SharedPreferences? _prefs;
-  static Completer<SharedPreferences>? _initCompleter;
+  static SharedPreferencesWithCache? _prefs;
+  static Completer<SharedPreferencesWithCache>? _initCompleter;
+  static const SharedPreferencesOptions _preferencesOptions =
+      SharedPreferencesAsyncAndroidOptions(
+        backend: SharedPreferencesAndroidBackendLibrary.SharedPreferences,
+      );
 
   static Future<void> init() async {
     if (_prefs != null) return;
     if (_initCompleter != null) return _initCompleter!.future.then((_) {});
 
-    _initCompleter = Completer<SharedPreferences>();
+    _initCompleter = Completer<SharedPreferencesWithCache>();
     try {
-      final instance = await SharedPreferences.getInstance();
+      final instance = await SharedPreferencesWithCache.create(
+        sharedPreferencesOptions: _preferencesOptions,
+        cacheOptions: const SharedPreferencesWithCacheOptions(),
+      );
       _prefs = instance;
       _initCompleter!.complete(instance);
     } catch (e) {
@@ -24,7 +33,7 @@ class LocalStorage {
     }
   }
 
-  Future<SharedPreferences> get _instance async {
+  Future<SharedPreferencesWithCache> get _instance async {
     if (_prefs != null) return _prefs!;
     await init();
     return _prefs!;
@@ -64,7 +73,7 @@ class LocalStorage {
     if (namespace == null) {
       await prefs.clear();
     } else {
-      final keys = prefs.getKeys();
+      final keys = prefs.keys.toList();
       for (final key in keys) {
         if (key.startsWith('$namespace:')) {
           await prefs.remove(key);

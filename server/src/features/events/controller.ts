@@ -111,12 +111,16 @@ export const getEvents = async (req: ICustomRequest & IRequestPagination, res: R
 
 export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
   const filters = parseEventListFilters(req);
-  const { zoom, tiles } = req.query;
+  const { zoom, tiles, flat } = req.query;
 
   const parsedZoom = typeof zoom === 'string' && zoom.length > 0 ? Number(zoom) : undefined;
   if (parsedZoom !== undefined && (!Number.isFinite(parsedZoom) || parsedZoom < 0)) {
     throw new BadRequestError('Invalid zoom level');
   }
+
+  const flatMarkers =
+    (typeof flat === 'string' && (flat === 'true' || flat === '1')) ||
+    (Array.isArray(flat) && flat.some((value) => value === 'true' || value === '1'));
 
   const parsedTiles =
     typeof tiles === 'string' && tiles.length > 0
@@ -130,7 +134,11 @@ export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
     throw new BadRequestError('Too many tiles requested (max 100)');
   }
 
-  const result = await eventService.getMarkers(filters, { zoom: parsedZoom, tiles: parsedTiles });
+  const result = await eventService.getMarkers(filters, {
+    zoom: parsedZoom,
+    tiles: parsedTiles,
+    flat: flatMarkers,
+  });
   return res.status(200).json({ data: result });
 };
 

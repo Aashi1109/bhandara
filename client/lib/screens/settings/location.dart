@@ -14,12 +14,13 @@ import '../../models/user.dart';
 import '../../providers/user.dart';
 import '../../services/location_permission.dart';
 import '../../services/maps/map_manager.dart';
+import '../../services/maps/map_marker_factory.dart';
 import '../../services/maps/map_models.dart';
 import '../../services/maps/map_provider_type.dart';
 import '../../theme/theme.dart';
-import '../../widgets/button.dart';
 import '../../widgets/header.dart';
 import '../../widgets/map_view.dart';
+import '../../widgets/settings_action_footer.dart';
 import '../../widgets/snackbar.dart';
 
 class LocationSettingsScreen extends ConsumerStatefulWidget {
@@ -68,6 +69,7 @@ class _LocationSettingsScreenState
   LatLng _selectedLocation = _defaultLocation;
   LatLng _cameraTarget = _defaultLocation;
   LatLng _initialLocation = _defaultLocation;
+  BitmapDescriptor? _selectedLocationMarkerIcon;
   String _selectedLabel = 'Not set';
   List<MapSearchSuggestion> _suggestions = const [];
   Timer? _debounce;
@@ -82,6 +84,18 @@ class _LocationSettingsScreenState
   };
 
   bool get _isPickerMode => widget.mode == LocationSelectionMode.picker;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkerIcon();
+  }
+
+  Future<void> _loadMarkerIcon() async {
+    final icon = await MapMarkerFactory.createUserLocationMarker();
+    if (!mounted) return;
+    setState(() => _selectedLocationMarkerIcon = icon);
+  }
 
   @override
   void dispose() {
@@ -417,7 +431,17 @@ class _LocationSettingsScreenState
                                       target: _cameraTarget,
                                       zoom: _currentZoom,
                                     ),
-                                    markers: const <Marker>{},
+                                    markers: {
+                                      if (_selectedLocationMarkerIcon != null)
+                                        Marker(
+                                          markerId: const MarkerId(
+                                            'selected_location',
+                                          ),
+                                          position: _selectedLocation,
+                                          anchor: const Offset(0.5, 1),
+                                          icon: _selectedLocationMarkerIcon!,
+                                        ),
+                                    },
                                     gestureRecognizers: _suggestions.isEmpty
                                         ? _mapGestureRecognizers
                                         : const <
@@ -434,65 +458,6 @@ class _LocationSettingsScreenState
                                     },
                                     onCameraIdle: _handleMapIdle,
                                   ),
-                          ),
-                        ),
-                        IgnorePointer(
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: AppColors.surface,
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.1,
-                                            ),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        LucideIcons.mapPin,
-                                        size: AppIconSizes.defaultSize,
-                                        color: AppColors.surface,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                         ),
                         AnimatedPositioned(
@@ -628,11 +593,12 @@ class _LocationSettingsScreenState
                                         itemBuilder: (context, index) {
                                           final suggestion =
                                               _suggestions[index];
-                                          final distanceLabel =
-                                              _distanceLabel(suggestion);
+                                          final distanceLabel = _distanceLabel(
+                                            suggestion,
+                                          );
                                           final details = <String>[];
-                                          final subtitle =
-                                              suggestion.subtitle?.trim();
+                                          final subtitle = suggestion.subtitle
+                                              ?.trim();
                                           if (subtitle != null &&
                                               subtitle.isNotEmpty) {
                                             details.add(subtitle);
@@ -732,15 +698,10 @@ class _LocationSettingsScreenState
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: AppButton(
-              size: AppButtonSize.xl,
-              fullWidth: true,
-              label: _isPickerMode ? 'Use This Location' : 'Confirm Location',
-              loadable: true,
-              onPressed: _isPickerMode || _isDirty ? _saveLocation : null,
-            ),
+          SettingsActionFooter(
+            label: _isPickerMode ? 'Use This Location' : 'Confirm Location',
+            loadable: true,
+            onPressed: _isPickerMode || _isDirty ? _saveLocation : null,
           ),
         ],
       ),
@@ -748,31 +709,28 @@ class _LocationSettingsScreenState
   }
 
   Widget _mapControl(IconData icon, {required VoidCallback onTap}) {
-    return Material(
-      color: AppColors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Ink(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            size: AppIconSizes.defaultSize,
-            color: AppColors.primary,
-          ),
+    final isPrimary = icon == LucideIcons.locateFixed;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isPrimary ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: isPrimary ? null : Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          size: AppIconSizes.defaultSize,
+          color: isPrimary ? AppColors.surface : AppColors.primary,
         ),
       ),
     );

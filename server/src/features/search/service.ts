@@ -1,8 +1,9 @@
 import { Op, Sequelize, type WhereOptions } from 'sequelize';
 
-import type { EEventStatus, EEventType } from '@/definitions/enums';
+import { EAddressEntityType, type EEventStatus, type EEventType } from '@/definitions/enums';
 import type { IPaginationParams, PaginatedResult } from '@/definitions/types';
 
+import AddressService from '../addresses/service';
 import { Event } from '../events/model';
 import { deriveEventStatus } from '../events/status';
 
@@ -34,6 +35,12 @@ export interface ISearchResult {
 }
 
 class SearchService {
+  private readonly addressService: AddressService;
+
+  constructor() {
+    this.addressService = new AddressService();
+  }
+
   private escapeForLike(value: string): string {
     return value.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
   }
@@ -115,14 +122,14 @@ class SearchService {
       Number.isFinite(filters.location?.longitude) &&
       Number.isFinite(filters.location?.radius)
     ) {
-      const escape = Event.sequelize!.escape.bind(Event.sequelize);
-      const latitude = escape(filters.location!.latitude);
-      const longitude = escape(filters.location!.longitude);
-      const radiusMeters = escape(filters.location!.radius * 1000);
       clauses.push(
-        Sequelize.literal(
-          `(("location"->>'latitude') IS NOT NULL AND ("location"->>'longitude') IS NOT NULL AND ST_DWithin(ST_SetSRID(ST_MakePoint(CAST("location"->>'longitude' AS DOUBLE PRECISION), CAST("location"->>'latitude' AS DOUBLE PRECISION)), 4326)::geography, ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography, ${radiusMeters}))`,
-        ),
+        this.addressService.buildEntityDistanceClause({
+          entityType: EAddressEntityType.Event,
+          entityIdColumn: `"Event"."id"`,
+          latitude: filters.location!.latitude,
+          longitude: filters.location!.longitude,
+          radiusKm: filters.location!.radius,
+        }),
       );
     }
 
@@ -182,6 +189,10 @@ class SearchService {
         ['id', 'DESC'],
       ],
     });
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.Event,
+      rows.map((event) => event.id),
+    );
 
     const results = rows.map((event) => {
       const previewImage =
@@ -189,6 +200,7 @@ class SearchService {
         event.media?.find((item: any) => item.type === 'image')?.url ||
         null;
       const resolvedStatus = event.status === 'cancelled' ? event.status : deriveEventStatus(event.timings);
+      const location = this.addressService.toLocation(addressMap[event.id]);
 
       return {
         id: event.id,
@@ -199,7 +211,7 @@ class SearchService {
         metadata: {
           status: resolvedStatus,
           type: event.type,
-          location: event.location,
+          location,
           timings: event.timings,
           createdAt: event.createdAt.toISOString(),
         },

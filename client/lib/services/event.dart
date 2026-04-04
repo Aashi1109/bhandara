@@ -44,7 +44,7 @@ class EventService extends BaseService {
       );
       return PaginatedResponse<Event>.fromJson(
         response.data['data'] as Map<String, dynamic>,
-            (e) => Event.fromJson(e! as Map<String, dynamic>),
+        (e) => Event.fromJson(e! as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch events');
@@ -122,8 +122,10 @@ class EventService extends BaseService {
     }
   }
 
-  Future<Event> verifyAttendance(String eventId,
-      Map<String, double> coordinates,) async {
+  Future<Event> verifyAttendance(
+    String eventId,
+    Map<String, double> coordinates,
+  ) async {
     try {
       final response = await _dio.post(
         Api.verifyEvent(eventId),
@@ -201,6 +203,41 @@ class EventService extends BaseService {
             .toList();
         return MapEntry(key, markers);
       });
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch event markers');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<EventMarker>> getFlatEventMarkers({
+    String? status,
+    String? type,
+    String? datePreset,
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+    Set<String>? tagIds,
+  }) async {
+    try {
+      final response = await _dio.get(
+        Api.eventMarkers,
+        queryParameters: {
+          'flat': true,
+          'status': status,
+          'type': type,
+          'datePreset': datePreset,
+          'latitude': latitude,
+          'longitude': longitude,
+          'radiusKm': radiusKm,
+          'tagIds': tagIds?.isEmpty == true ? null : tagIds?.join(','),
+        },
+      );
+      final data = response.data['data'] as Map<String, dynamic>;
+      final items = data['items'] as List<dynamic>;
+      return items
+          .map((e) => EventMarker.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throwError(e, 'Failed to fetch event markers');
     } catch (e) {

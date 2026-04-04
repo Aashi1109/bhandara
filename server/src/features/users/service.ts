@@ -1,4 +1,6 @@
+import { EAddressEntityType } from '@/definitions/enums';
 import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from '@/definitions/types';
+import AddressService from '@/features/addresses/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { validateUserCreate, validateUserUpdate } from './validation';
 import { User } from './model';
@@ -25,6 +27,7 @@ import MediaService from '@/features/media/service';
 import type { FindOptions } from 'sequelize';
 
 class UserService {
+  private readonly addressService: AddressService;
   private readonly getCache = getUserCache;
   private readonly setCache = setUserCache;
   private readonly deleteCache = deleteUserCache;
@@ -33,26 +36,59 @@ class UserService {
   private readonly mediaService: MediaService;
 
   constructor() {
+    this.addressService = new AddressService();
     this.tagService = new TagService();
     this.mediaService = new MediaService();
   }
 
-  async _getByIdNoCache(id: string): Promise<IBaseUser | null> {
-    const res = await User.findByPk(id, { raw: true });
-    return res as IBaseUser | null;
+  private async hydrateUsers<T extends Pick<IBaseUser, 'id'> & Partial<IBaseUser>>(users: T[]): Promise<T[]> {
+    if (users.length === 0) {
+      return users;
+    }
+
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.User,
+      users.map((user) => user.id),
+    );
+
+    return users.map((user) => ({
+      ...user,
+      address: this.addressService.toLocation(addressMap[user.id]),
+    }));
   }
 
-  async getAll(options: FindOptions = {}, pagination?: Partial<IPaginationParams>, select?: string) {
-    return findAllWithPagination(User, options, pagination, select);
+  async _getByIdNoCache(id: string): Promise<IBaseUser | null> {
+    const res = (await User.findByPk(id, { raw: true })) as unknown as IBaseUser | null;
+    if (!res) {
+      return null;
+    }
+
+    const [hydrated] = await this.hydrateUsers([res as IBaseUser]);
+    return hydrated;
+  }
+
+  async getAll(
+    options: FindOptions = {},
+    pagination?: Partial<IPaginationParams>,
+    select?: string,
+  ): Promise<PaginatedResult<IBaseUser>> {
+    const result = (await findAllWithPagination(User, options, pagination, select)) as unknown as PaginatedResult<IBaseUser>;
+    result.items = await this.hydrateUsers(result.items as IBaseUser[]);
+    return result;
   }
 
   async create(data: Partial<IBaseUser>): Promise<IBaseUser | null> {
     const res = await validateUserCreate(data, async (d) => {
-      const row = await User.create({
-        ...d,
-        mediaId: d.mediaId as string,
-      } as any);
-      return row.toJSON() as IBaseUser;
+      const { address, ...rest } = d;
+      const row = await User.sequelize!.transaction(async (transaction) => {
+        const created = await User.create({
+          ...rest,
+          mediaId: d.mediaId as string,
+        } as any, { transaction });
+        await this.addressService.replaceAddress(EAddressEntityType.User, created.id, address, transaction);
+        return created;
+      });
+      return (await this._getByIdNoCache(row.id)) as IBaseUser;
     });
     const created = res as IBaseUser;
     if (created) {
@@ -75,7 +111,7 @@ class UserService {
 
       if (!userData) throw new NotFoundError('User not found');
 
-      const { interests, hasOnboarded, username, ...rest } = validData;
+      const { interests, hasOnboarded, username, address, ...rest } = validData;
 
       const newInterests = [...(interests?.added || [])] as string[];
       const deletedInterests = [...(interests?.deleted || [])] as string[];
@@ -108,16 +144,22 @@ class UserService {
         if (!isEmpty(usernameData.items)) throw new BadRequestError('Username already exists');
       }
 
-      const row = await User.findByPk(id);
-      if (!row) throw new NotFoundError('User not found');
-      await row.update({
-        ...rest,
-        meta: newMeta,
-        username,
-        mediaId: rest.mediaId as string,
-      } as Partial<IBaseUser>);
+      await User.sequelize!.transaction(async (transaction) => {
+        const row = await User.findByPk(id, { transaction });
+        if (!row) throw new NotFoundError('User not found');
+        await row.update({
+          ...rest,
+          meta: newMeta,
+          username,
+          mediaId: rest.mediaId as string,
+        } as Partial<IBaseUser>, { transaction });
 
-      const updatedUser = row.toJSON() as IBaseUser;
+        if (address !== undefined) {
+          await this.addressService.replaceAddress(EAddressEntityType.User, id, address, transaction);
+        }
+      });
+
+      const updatedUser = (await this._getByIdNoCache(id)) as IBaseUser;
       if (rest.mediaId) {
         updatedUser.media = (await this.mediaService.getById(rest.mediaId as string)) ?? undefined;
       }
@@ -130,7 +172,7 @@ class UserService {
 
   async getById(id: string): Promise<IBaseUser | null> {
     let _user = await this.getCache(id);
-    if (!_user) _user = (await User.findByPk(id, { raw: true })) as IBaseUser | null;
+    if (!_user) _user = await this._getByIdNoCache(id);
     if (!_user) return null;
     if (_user.mediaId) {
       const media = await this.mediaService.getById(_user.mediaId as string);
@@ -144,9 +186,9 @@ class UserService {
   async getUserByEmail(email: string) {
     const cached = await getUserCacheByEmail(email);
     if (cached) return cached;
-    const data = await findAllWithPagination(User, { where: { email } }, { limit: 1 });
+    const data = (await findAllWithPagination(User, { where: { email } }, { limit: 1 })) as unknown as PaginatedResult<IBaseUser>;
     if (data.items.length === 0) return null;
-    const user = data.items[0];
+    const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
     if (user.mediaId) {
       const media = await this.mediaService.getById(user.mediaId as string);
       user.media = media as IMedia;
@@ -162,19 +204,27 @@ class UserService {
         items: [cached],
         pagination: null,
       } as unknown as PaginatedResult<IBaseUser>;
-    const data = await findAllWithPagination(User, { where: { username } }, { limit: 1 });
+    const data = (await findAllWithPagination(User, { where: { username } }, { limit: 1 })) as unknown as PaginatedResult<IBaseUser>;
     if (!isEmpty(data.items)) {
-      await setUserCacheByUsername(username, data.items[0]);
+      const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
+      data.items = [user] as typeof data.items;
+      await setUserCacheByUsername(username, user);
     }
     return data;
   }
 
   async delete(id: string): Promise<IBaseUser | null> {
+    const existing = await this._getByIdNoCache(id);
+    if (!existing) return null;
+
     const row = await User.findByPk(id);
     if (!row) return null;
-    await row.destroy();
+    await User.sequelize!.transaction(async (transaction) => {
+      await this.addressService.replaceAddress(EAddressEntityType.User, id, null, transaction);
+      await row.destroy({ transaction });
+    });
     await deleteAllUserCache(id);
-    return row.toJSON() as IBaseUser;
+    return existing;
   }
 
   async getUserInterests(id: string) {
