@@ -87,6 +87,7 @@ Address.init(
           ),
         ],
       },
+      { fields: ['entityType'] }  
     ],
   },
 );

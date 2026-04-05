@@ -24,10 +24,13 @@ class LoginFlow extends _$LoginFlow {
     return LoginFlowState();
   }
 
+  void replace(Map<String, dynamic> newData) {
+    state = state.copyWith(data: Map<String, dynamic>.from(newData));
+  }
+
   void update(Map<String, dynamic> newData) {
     state = state.copyWith(
-      data: Map<String, dynamic>.from(state.data)
-        ..addAll(newData),
+      data: Map<String, dynamic>.from(state.data)..addAll(newData),
     );
   }
 

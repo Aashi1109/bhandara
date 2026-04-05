@@ -154,7 +154,9 @@ class _ExploreEventMapState extends State<ExploreEventMap>
       });
     }
 
-    if (safeAreaChanged && widget.selectedEvent != null) {
+    if (safeAreaChanged &&
+        widget.selectedEvent != null &&
+        widget.safeAreaPadding.bottom > oldWidget.safeAreaPadding.bottom) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         unawaited(_focusOnSelectedEvent());
@@ -461,7 +463,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     final controller = _mapController;
     if (controller == null) return;
     final zoom = await controller.getZoomLevel();
-    await _runProgrammaticCameraMove(
+    await _animateCameraAndEmitViewport(
       CameraUpdate.zoomTo((zoom + 1).clamp(2, 20).toDouble()),
     );
   }
@@ -470,7 +472,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     final controller = _mapController;
     if (controller == null) return;
     final zoom = await controller.getZoomLevel();
-    await _runProgrammaticCameraMove(
+    await _animateCameraAndEmitViewport(
       CameraUpdate.zoomTo((zoom - 1).clamp(2, 20).toDouble()),
     );
   }
@@ -482,10 +484,10 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
   Future<void> _focusOnServerCluster(models.EventCluster cluster) async {
     widget.onClusterFocusStart?.call();
-    // Zoom in incrementally (by 2 levels) instead of jumping straight to
-    // tile zoom. This keeps the map in cluster mode so markers refine
-    // progressively rather than vanishing during a cluster→tile transition.
-    final targetZoom = (_mapZoom + 2).clamp(4.0, 20.0);
+    // Always zoom to at least tile mode (clusterZoomThreshold + 1.5) so one
+    // tap on a cluster always reveals individual event markers.
+    final targetZoom =
+        max(_mapZoom + 2, clusterZoomThreshold + 1.5).clamp(4.0, 20.0);
     await _animateCameraAndEmitViewport(
       CameraUpdate.newLatLngZoom(cluster.position, targetZoom),
     );
@@ -533,14 +535,17 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
   Future<void> _focusOnSelectedEvent() async {
     final controller = _mapController;
+    if (controller == null) return;
     final selectedEvent = widget.selectedEvent;
     final lat = selectedEvent?.location.latitude;
     final lng = selectedEvent?.location.longitude;
-    if (controller == null || lat == null || lng == null) {
-      return;
-    }
+    if (lat == null || lng == null) return;
 
-    await _runProgrammaticCameraMove(CameraUpdate.newLatLng(LatLng(lat, lng)));
+    // Use _animateCameraAndEmitViewport so that tile/cluster data is loaded
+    // for the event's position when the camera pans to it.
+    await _animateCameraAndEmitViewport(
+      CameraUpdate.newLatLng(LatLng(lat, lng)),
+    );
   }
 
   Future<void> _runProgrammaticCameraMove(CameraUpdate update) async {

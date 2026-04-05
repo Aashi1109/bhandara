@@ -52,7 +52,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
       if (!mounted) return;
       ref.read(loginFlowProvider.notifier).clear();
-      await context.push(PreferencesScreen.routePath);
+      context.go(PreferencesScreen.routePath);
     } catch (e) {
       if (!mounted) return;
       final message = extractExceptionMessage(e);

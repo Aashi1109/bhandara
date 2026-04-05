@@ -2,15 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:foody_mobile/screens/preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/theme.dart';
 import '../services/secure_storage.dart';
 import '../services/local_storage.dart';
 import '../services/auth.dart';
 import '../providers/user.dart';
+import '../utils/auth_redirect.dart';
 
-import 'explore/explore_screen.dart';
 import 'onboarding.dart';
 import 'auth.dart';
 
@@ -76,12 +75,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           ref.read(userProfileProvider.notifier).setUser(user);
           // Socket session is started by AppSessionCoordinator when user state changes.
           if (!mounted) return;
-
-          if (user.meta?.hasOnboarded ?? false) {
-            context.go(ExploreScreen.routePath);
-          } else {
-            context.go(PreferencesScreen.routePath);
-          }
+          context.go(routeForAuthenticatedUser(user));
         } else {
           ref.read(userProfileProvider.notifier).setUser(null);
           await authService.logout();

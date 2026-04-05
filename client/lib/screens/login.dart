@@ -11,12 +11,12 @@ import '../widgets/input.dart';
 import '../widgets/header.dart';
 import '../providers/auth.dart';
 import '../widgets/snackbar.dart';
+import '../utils/auth_redirect.dart';
 import '../utils/error.dart';
 import '../widgets/password_requirements.dart';
 
 import 'auth.dart';
 import 'profile_setup.dart';
-import 'explore/explore_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.extra});
@@ -61,14 +61,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           unawaited(context.push(ProfileSetupScreen.routePath));
           return;
         } else {
-          // Strictly using login as requested, even for new users
-          await ref
+          final user = await ref
               .read(authProvider.notifier)
               .login(email, _passwordController.text);
 
           if (!mounted) return;
           ref.invalidate(loginFlowProvider);
-          context.go(ExploreScreen.routePath);
+          context.go(routeForAuthenticatedUser(user));
         }
       } catch (e) {
         if (!mounted) return;

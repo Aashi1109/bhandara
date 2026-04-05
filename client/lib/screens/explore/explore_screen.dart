@@ -47,7 +47,7 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen>
     with WidgetsBindingObserver {
-  static const bool _useSimpleMarkerFetch = true;
+  static const bool _useSimpleMarkerFetch = false;
   static const int _eventPageSize = 100;
   static const List<double> _radiusPresets = <double>[
     5,
@@ -266,9 +266,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (!mounted) return;
     if (!_isViewportMode) {
       unawaited(_refreshEventsForCurrentFilters());
-      if (_useSimpleMarkerFetch) {
-        unawaited(_refreshFlatMarkersForCurrentFilters(force: true));
-      }
+      _refreshMarkersForCurrentState();
     }
   }
 
@@ -700,23 +698,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       await Future.wait([
         _refreshEventsForCurrentFilters(force: true),
-        if (_useSimpleMarkerFetch)
-          // Initial marker bootstrap should fetch the full marker set.
-          // Later refreshes can use location-aware params when needed.
-          _refreshFlatMarkersForCurrentFilters(
-            force: true,
-            includeLocationFilter: false,
-          )
-        else
-          // Temporarily bypass viewport/tile marker fetching.
-          // if (location != null)
-          //   _loadClusterMarkers(ExploreViewportQuery(
-          //     center: location,
-          //     radiusKm: _appliedFilters.radiusKm,
-          //     zoom: 10,
-          //   )),
-          Future<void>.value(),
+        Future<void>.value(),
       ]);
+      _refreshMarkersForCurrentState();
     } catch (e) {
       debugPrint('Explore initial load error: $e');
       if (mounted) {
@@ -896,16 +880,9 @@ class _ExploreScreenState extends State<ExploreScreen>
           _syncDetailsPageToSelection();
         }
 
-        if (_useSimpleMarkerFetch) {
-          _markerCacheByFilter.remove(activeCacheKey);
-          unawaited(_refreshFlatMarkersForCurrentFilters(force: true));
-        } else {
-          // Invalidate tile cache on any event change and refetch.
-          _invalidateTileCache();
-          if (_viewportQuery != null) {
-            unawaited(_refreshMarkersForViewport(_viewportQuery!));
-          }
-        }
+        // Invalidate tile cache on any event change and refetch.
+        _invalidateTileCache();
+        _refreshMarkersForCurrentState();
       } catch (e) {
         debugPrint('Explore socket event error: $e');
       }
@@ -927,9 +904,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _appliedFilters = _appliedFilters.copyWith(quickStatus: quickStatus);
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
-    if (_useSimpleMarkerFetch) {
-      unawaited(_refreshFlatMarkersForCurrentFilters(force: true));
-    }
+    _refreshMarkersForCurrentState();
   }
 
   void _toggleDraftTag(String tagId) {
@@ -954,17 +929,10 @@ class _ExploreScreenState extends State<ExploreScreen>
       _isFilterOpen = false;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
-    if (_useSimpleMarkerFetch) {
-      unawaited(_refreshFlatMarkersForCurrentFilters(force: true));
-    }
+    _refreshMarkersForCurrentState();
   }
 
   void _handleViewportChanged(ExploreViewportQuery viewport) {
-    if (_useSimpleMarkerFetch) {
-      // Temporarily ignore viewport-driven marker refetches and keep the
-      // flat marker set loaded from the current filter query.
-      return;
-    }
     _queryMode = ExploreMapQueryMode.viewport;
     _viewportQuery = viewport;
     unawaited(_refreshMarkersForViewport(viewport));
@@ -987,7 +955,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _isViewportCoveredByLastFetch(ExploreViewportQuery viewport) {
     final prevCenter = _lastClusterFetchCenter;
     if (prevCenter == null) return false;
-    if (viewport.zoom.round() != _lastClusterFetchZoom) return false;
+    if (viewport.zoom.floor() != _lastClusterFetchZoom) return false;
 
     // The viewport edge must stay within the fetched zone.
     // Distance from old center to new center + new viewport radius
@@ -1024,7 +992,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         latitude: viewport.center.latitude,
         longitude: viewport.center.longitude,
         radiusKm: fetchRadius,
-        zoom: viewport.zoom.round(),
+        zoom: viewport.zoom.floor(),
         status: _statusQueryForFilters(_appliedFilters),
         type: _appliedFilters.eventType,
         datePreset: _appliedFilters.datePreset,
@@ -1045,7 +1013,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         _serverClusters = clusters;
         _lastClusterFetchCenter = viewport.center;
         _lastClusterFetchRadius = fetchRadius;
-        _lastClusterFetchZoom = viewport.zoom.round();
+        _lastClusterFetchZoom = viewport.zoom.floor();
       });
     } catch (e) {
       debugPrint('[MARKERS] cluster fetch FAILED: $e');
@@ -1090,7 +1058,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final tileData = await eventService.getEventMarkersByTiles(
         tiles: missingTiles,
-        zoom: viewport.zoom.round(),
+        zoom: viewport.zoom.floor(),
         status: _statusQueryForFilters(_appliedFilters),
         type: _appliedFilters.eventType,
         datePreset: _appliedFilters.datePreset,
@@ -1141,7 +1109,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() {
       _isSelectedEventLoading = true;
       _showDetails = true;
-      _selectedEventFocusRequestId++;
     });
 
     eventService
@@ -1151,9 +1118,12 @@ class _ExploreScreenState extends State<ExploreScreen>
             return;
           }
           _markerPreviewCache[markerId] = preview;
+          // Increment focus ID here — now _selectedEvent and the focus request
+          // update together, so _focusOnSelectedEvent fires for the correct event.
           setState(() {
             _selectedEvent = preview;
             _isSelectedEventLoading = false;
+            _selectedEventFocusRequestId++;
           });
         })
         .catchError((_) {
@@ -1165,13 +1135,32 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _invalidateTileCache() {
+    // Only clear cache metadata so new fetches are forced.
+    // Do NOT clear _visibleMarkers or _serverClusters here — they stay
+    // visible until the replacement fetch arrives, preventing a blank flash.
     _tileCache = {};
-    _visibleMarkers = [];
-    _serverClusters = [];
     _markerCacheByFilter.clear();
     _lastClusterFetchCenter = null;
     _lastClusterFetchRadius = 0;
     _lastClusterFetchZoom = 0;
+  }
+
+  /// Refreshes markers for whatever state the screen is currently in:
+  /// - If a viewport query is active (user has panned/zoomed), use it.
+  /// - Otherwise bootstrap from the user's location in cluster mode.
+  void _refreshMarkersForCurrentState() {
+    if (_viewportQuery != null) {
+      unawaited(_refreshMarkersForViewport(_viewportQuery!));
+    } else {
+      final location = _effectiveLocation;
+      if (location != null) {
+        unawaited(_loadClusterMarkers(ExploreViewportQuery(
+          center: location,
+          radiusKm: _appliedFilters.radiusKm,
+          zoom: 10,
+        )));
+      }
+    }
   }
 
   void _handleRecenterRequested() {
@@ -1180,9 +1169,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _viewportQuery = null;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
-    if (_useSimpleMarkerFetch) {
-      unawaited(_refreshFlatMarkersForCurrentFilters(force: true));
-    }
+    _refreshMarkersForCurrentState();
   }
 
   void _resetDrawerFilters() {

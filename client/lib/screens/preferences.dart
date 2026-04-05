@@ -18,6 +18,7 @@ import '../services/maps/map_manager.dart';
 import '../services/maps/map_marker_factory.dart';
 import '../services/maps/map_provider_type.dart';
 
+import 'auth.dart';
 import 'explore/explore_screen.dart';
 
 class PreferencesScreen extends ConsumerStatefulWidget {
@@ -506,7 +507,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
             : () async {
                 final user = ref.read(userProfileProvider).value;
                 if (user == null) {
-                  context.go(ExploreScreen.routePath);
+                  context.go(AuthScreen.routePath);
                   return;
                 }
 

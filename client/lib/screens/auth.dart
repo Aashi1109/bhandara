@@ -15,10 +15,10 @@ import '../widgets/card.dart';
 import '../widgets/header.dart';
 import '../widgets/input.dart';
 import '../widgets/snackbar.dart';
+import '../utils/auth_redirect.dart';
 import '../utils/error.dart';
 
 import 'login.dart';
-import 'explore/explore_screen.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -52,7 +52,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         isSocialLogin = items.first.isSocialLogin;
         user = items.first;
       }
-      ref.read(loginFlowProvider.notifier).update({
+      ref.read(loginFlowProvider.notifier).replace({
         ...?user?.toJson(),
         'email': _emailController.text,
       });
@@ -164,11 +164,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             fullWidth: true,
                             onPressed: () async {
                               try {
-                                await ref
+                                final user = await ref
                                     .read(authProvider.notifier)
                                     .signInWithGoogle();
                                 if (context.mounted) {
-                                  context.go(ExploreScreen.routePath);
+                                  context.go(routeForAuthenticatedUser(user));
                                 }
                               } catch (e) {
                                 if (context.mounted) {

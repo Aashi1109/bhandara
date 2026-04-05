@@ -394,7 +394,6 @@ class EventService {
 
     return rows.map((row) => ({
       id: row.entityId,
-      name: '',
       latitude: row.latitude as number,
       longitude: row.longitude as number,
     }));
@@ -462,7 +461,7 @@ class EventService {
       return { tile, minLat, minLng, maxLat, maxLng };
     });
 
-    const tileResults: Record<string, { id: string; name: string; latitude: number; longitude: number }[]> = {};
+    const tileResults: Record<string, { id: string; name?: string; latitude: number; longitude: number }[]> = {};
     for (const tile of tiles) {
       tileResults[tile] = [];
     }
