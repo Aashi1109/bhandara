@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "CommonJS",
     "esModuleInterop": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "baseUrl": "src",
     "paths": {
@@ -14,6 +15,6 @@
     "experimentalDecorators": true,
     "skipLibCheck": true
   },
-  "include": ["types.d.ts", "src/**/*.ts"],
+  "include": ["types.d.ts", "src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -112,12 +112,12 @@ async function runWorkerShard(payload: SeederWorkerPayload) {
 
       const retryable = Boolean(error?.retryable);
       if (!retryable) {
-        throw new Error(error?.message || `Worker ${payload.workerIndex + 1} failed`);
+        throw new Error(error?.message || `Worker ${payload.workerIndex + 1} failed`, { cause: error });
       }
 
       attempt += 1;
       if (maxRetries > 0 && attempt > maxRetries) {
-        throw new Error(error?.message || `Worker ${payload.workerIndex + 1} exhausted retries`);
+        throw new Error(error?.message || `Worker ${payload.workerIndex + 1} exhausted retries`, { cause: error });
       }
 
       const delayMs = Math.min(baseDelayMs * 2 ** Math.max(0, attempt - 1), maxDelayMs);

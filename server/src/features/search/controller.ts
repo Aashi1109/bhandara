@@ -38,15 +38,29 @@ class SearchController {
       const parsedTypes = this.parseTypes(type);
       const { startDate, endDate } = this.resolveDatePreset(datePreset);
 
-      const parsedLatitude = typeof latitude === 'number' ? latitude : latitude != null ? Number(latitude) : undefined;
+      const parsedLatitude =
+        typeof latitude === 'number'
+          ? latitude
+          : latitude !== null && latitude !== undefined
+            ? Number(latitude)
+            : undefined;
       const parsedLongitude =
-        typeof longitude === 'number' ? longitude : longitude != null ? Number(longitude) : undefined;
-      const parsedRadiusKm = typeof radiusKm === 'number' ? radiusKm : radiusKm != null ? Number(radiusKm) : undefined;
+        typeof longitude === 'number'
+          ? longitude
+          : longitude !== null && longitude !== undefined
+            ? Number(longitude)
+            : undefined;
+      const parsedRadiusKm =
+        typeof radiusKm === 'number'
+          ? radiusKm
+          : radiusKm !== null && radiusKm !== undefined
+            ? Number(radiusKm)
+            : undefined;
 
       if (
-        (parsedLatitude != null && !Number.isFinite(parsedLatitude)) ||
-        (parsedLongitude != null && !Number.isFinite(parsedLongitude)) ||
-        (parsedRadiusKm != null && (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
+        (parsedLatitude !== null && parsedLatitude !== undefined && !Number.isFinite(parsedLatitude)) ||
+        (parsedLongitude !== null && parsedLongitude !== undefined && !Number.isFinite(parsedLongitude)) ||
+        (parsedRadiusKm !== null && parsedRadiusKm !== undefined && (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
       ) {
         return res.status(400).json({
           data: null,
@@ -61,7 +75,12 @@ class SearchController {
         eventStatus: parsedStatuses,
         eventType: parsedTypes,
         location:
-          parsedLatitude != null && parsedLongitude != null && parsedRadiusKm != null
+          parsedLatitude !== null &&
+          parsedLatitude !== undefined &&
+          parsedLongitude !== null &&
+          parsedLongitude !== undefined &&
+          parsedRadiusKm !== null &&
+          parsedRadiusKm !== undefined
             ? {
                 latitude: parsedLatitude,
                 longitude: parsedLongitude,

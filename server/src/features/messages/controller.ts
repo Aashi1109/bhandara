@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import MessageService from "./service";
 import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
-import { cleanQueryObject, isEmpty, pick } from "@/utils";
+import { cleanQueryObject, hasMeaningfulChange, isEmpty, pick } from "@/utils";
 import { NotFoundError, ForbiddenError } from "@/exceptions";
 import { emitSocketEvent } from "@/socket/emitter";
 import { PLATFORM_SOCKET_EVENTS } from "@/constants";
@@ -95,7 +95,7 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
   const messageId = asString(req.params.messageId);
   if (!messageId) throw new NotFoundError("Message not found");
 
-  const existingMessage = await messagesService.getById(messageId);
+  const existingMessage = await messagesService.getById(messageId, true);
   if (!existingMessage) throw new NotFoundError("Message not found");
   if (existingMessage.userId !== req.user.id) {
     throw new ForbiddenError("You can only edit your own messages");
@@ -115,9 +115,13 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
     pick({ ...req.body, isEdited: true }, ["content", "isEdited"]),
     true
   );
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
-    data: message,
-    }, { room: getThreadRoom(existingMessage.threadId) });
+
+  if (hasMeaningfulChange(existingMessage, message)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
+      data: message,
+      }, { room: getThreadRoom(existingMessage.threadId) });
+  }
+
   return res.status(200).json({
     data: message,
     });

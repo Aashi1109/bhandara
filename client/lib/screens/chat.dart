@@ -18,6 +18,7 @@ import '../services/event.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/media_preview.dart';
 import '../widgets/message_reactions.dart';
+import '../widgets/skeleton.dart';
 import '../models/chat.dart';
 import '../services/user.dart';
 import '../models/user.dart';
@@ -228,6 +229,16 @@ class _ChatScreenState extends State<ChatScreen> {
             return;
           }
           _applyReactionEvent(eventName as String, eventData);
+        } else if (eventName == SocketEvents.threadDeleted &&
+            eventData is Map<String, dynamic>) {
+          final threadId = eventData['id'];
+          if (threadId == widget.id) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _goBack();
+              }
+            });
+          }
         } else if (eventName == SocketEvents.threadLocked &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
@@ -567,6 +578,55 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Widget _buildLoadingState() {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 120),
+      children: [
+        const Center(
+          child: AppSkeleton(
+            width: 96,
+            height: 28,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ...List.generate(4, (index) {
+          final isCurrentUser = index.isOdd;
+          return Padding(
+            padding: EdgeInsets.only(top: index == 0 ? 0 : 28),
+            child: Align(
+              alignment: isCurrentUser
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: Column(
+                  crossAxisAlignment: isCurrentUser
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    if (!isCurrentUser) ...[
+                      const AppSkeletonLine(width: 84, height: 12),
+                      const SizedBox(height: 10),
+                    ],
+                    AppSkeleton(
+                      width: isCurrentUser ? 208 : 240,
+                      height: isCurrentUser ? 72 : 88,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    const SizedBox(height: 8),
+                    const AppSkeletonLine(width: 56, height: 10),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
@@ -579,11 +639,7 @@ class _ChatScreenState extends State<ChatScreen> {
               _buildHeader(context),
               Expanded(
                 child: _isLoadingMessages
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? _buildLoadingState()
                     : _messages.isEmpty
                     ? Center(
                         child: Text(

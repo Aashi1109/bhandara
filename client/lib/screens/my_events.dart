@@ -12,6 +12,7 @@ import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/button.dart';
 import '../widgets/event_status_badge.dart';
 import '../widgets/header.dart';
+import '../widgets/skeleton.dart';
 import 'create_event.dart';
 import 'event_detail.dart';
 
@@ -312,6 +313,51 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     return const SizedBox.shrink();
   }
 
+  Widget _buildLoadingState() {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      itemCount: 4,
+      separatorBuilder: (_, index) => const SizedBox(height: 12),
+      itemBuilder: (_, index) {
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSkeletonLine(width: 180, height: 20),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  AppSkeleton(width: 84, height: 24),
+                  SizedBox(width: 10),
+                  Expanded(child: AppSkeletonLine(height: 14)),
+                ],
+              ),
+              SizedBox(height: 12),
+              AppSkeletonLine(width: 160),
+              SizedBox(height: 10),
+              AppSkeletonLine(width: 220),
+              SizedBox(height: 14),
+              Row(
+                children: [
+                  AppSkeletonLine(width: 72),
+                  SizedBox(width: 16),
+                  AppSkeletonLine(width: 96),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -321,9 +367,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           const AppHeader(title: 'Manage My Events'),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
+                ? _buildLoadingState()
                 : AppPullToRefresh(
                     onRefresh: () => _loadEvents(refresh: true),
                     wrapInScrollView: false,

@@ -11,6 +11,7 @@ import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/avatar.dart';
 import '../widgets/header.dart';
 import '../widgets/review_editor_sheet.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/snackbar.dart';
 
 class EventRatingsScreen extends ConsumerStatefulWidget {
@@ -143,6 +144,79 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     return value == 1 ? '1 star' : '$value stars';
   }
 
+  Widget _buildLoadingState() {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.muted.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Row(
+            children: [
+              SizedBox(
+                width: 92,
+                child: Column(
+                  children: [
+                    AppSkeletonLine(width: 56, height: 28),
+                    SizedBox(height: 10),
+                    AppSkeletonLine(width: 68, height: 12),
+                  ],
+                ),
+              ),
+              SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppSkeletonLine(height: 12),
+                    SizedBox(height: 12),
+                    AppSkeletonLine(width: 180, height: 12),
+                    SizedBox(height: 12),
+                    AppSkeletonLine(width: 150, height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const AppSkeletonLine(width: 92, height: 18),
+        const SizedBox(height: 12),
+        ...List.generate(3, (_) => _buildReviewSkeleton()),
+      ],
+    );
+  }
+
+  Widget _buildReviewSkeleton() {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeletonLine(width: 120, height: 14),
+                SizedBox(height: 10),
+                AppSkeletonLine(height: 12),
+                SizedBox(height: 8),
+                AppSkeletonLine(width: 210, height: 12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
@@ -157,9 +231,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
           AppHeader(title: 'Ratings & Reviews', subtitle: widget.eventName),
           Expanded(
             child: _isLoading || summary == null
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
+                ? _buildLoadingState()
                 : AppPullToRefresh(
                     onRefresh: _loadData,
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),

@@ -20,7 +20,7 @@ export const hashPassword = async (password: string): Promise<string> => {
     return hashedPassword;
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to hash password');
+    throw new Error('Failed to hash password', { cause: error });
   }
 };
 
@@ -40,7 +40,7 @@ export const signJWTPayload = async (user: IBaseUser): Promise<string> => {
       expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'],
     });
   } catch (error) {
-    throw new Error('Failed to generate access token');
+    throw new Error('Failed to generate access token', { cause: error });
   }
 };
 
@@ -56,7 +56,7 @@ export const validatePassword = async (originalPassword: string, comparePassword
     return await bcrypt.compare(comparePassword, originalPassword);
   } catch (error) {
     logger.error(`Error validating password: ${error}`);
-    throw new Error('Failed to validate password');
+    throw new Error('Failed to validate password', { cause: error });
   }
 };
 

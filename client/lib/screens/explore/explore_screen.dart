@@ -30,6 +30,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/button.dart';
 import '../../widgets/card.dart';
 import '../../widgets/event_status_badge.dart';
+import '../../widgets/skeleton.dart';
 import 'widgets/explore_event_map.dart';
 import 'widgets/explore_search_bar.dart';
 import '../event_detail.dart';
@@ -1279,10 +1280,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
 
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
+          if (_isLoading) _buildLoadingOverlay(),
 
           Positioned(
             top: 0,
@@ -1422,6 +1420,130 @@ class _ExploreScreenState extends State<ExploreScreen>
           KeyedSubtree(key: _bottomNavKey, child: const AppBottomNav()),
           if (_isFilterOpen) _buildFilterDrawer(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    final shouldShowDetailsSkeleton =
+        _showDetails || _selectedEvent != null || _selectedVisibleEvent != null;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: const Row(
+                          children: [
+                            AppSkeleton(
+                              width: 20,
+                              height: 20,
+                              shape: BoxShape.circle,
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(child: AppSkeletonLine(height: 14)),
+                            SizedBox(width: 12),
+                            AppSkeleton(
+                              width: 36,
+                              height: 36,
+                              shape: BoxShape.circle,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 4,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (_, index) => AppSkeleton(
+                            width: index == 0 ? 92 : 76,
+                            height: 40,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (shouldShowDetailsSkeleton)
+              const Positioned(
+                bottom: 112,
+                left: 20,
+                right: 20,
+                child: AppCard(
+                  padding: AppCardPadding.sm,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppSkeleton(
+                            width: 80,
+                            height: 80,
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppSkeletonLine(width: 150, height: 18),
+                                SizedBox(height: 10),
+                                AppSkeletonLine(width: 110, height: 12),
+                                SizedBox(height: 10),
+                                AppSkeletonLine(width: 132, height: 12),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          AppSkeleton(
+                            width: 32,
+                            height: 32,
+                            shape: BoxShape.circle,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      AppSkeletonLine(height: 12),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          AppSkeletonLine(width: 90, height: 12),
+                          SizedBox(width: 16),
+                          AppSkeletonLine(width: 72, height: 12),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

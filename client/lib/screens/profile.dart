@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants/socket_events.dart';
 import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/header.dart';
@@ -17,9 +20,11 @@ import '../models/save.dart';
 import '../providers/profile_overview.dart';
 import '../providers/user.dart';
 import '../services/save.dart';
+import '../services/socket.dart';
 import '../services/user.dart';
 import '../utils/error.dart';
 import '../widgets/app_pull_to_refresh.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/snackbar.dart';
 import 'profile_badges.dart';
 import 'my_events.dart';
@@ -35,14 +40,163 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
+class _ProfileStatSkeleton extends StatelessWidget {
+  const _ProfileStatSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        AppSkeletonLine(width: 52, height: 20),
+        SizedBox(height: 8),
+        AppSkeletonLine(width: 62, height: 12),
+      ],
+    );
+  }
+}
+
+class _ProfileVerticalDividerSkeleton extends StatelessWidget {
+  const _ProfileVerticalDividerSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 1, height: 48, color: AppColors.border);
+  }
+}
+
+class _ProfileActivitySkeleton extends StatelessWidget {
+  const _ProfileActivitySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Row(
+        children: [
+          AppSkeleton(width: 40, height: 40, shape: BoxShape.circle),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: AppSkeletonLine(width: 120, height: 14)),
+                    SizedBox(width: 12),
+                    AppSkeletonLine(width: 56, height: 10),
+                  ],
+                ),
+                SizedBox(height: 8),
+                AppSkeletonLine(width: 180, height: 12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileBadgeSkeleton extends StatelessWidget {
+  const _ProfileBadgeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final skeletonBase = AppColors.border.withValues(alpha: 0.92);
+    final skeletonHighlight = AppColors.surface.withValues(alpha: 0.98);
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: AppColors.muted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            AppSkeleton(
+              width: 22,
+              height: 22,
+              shape: BoxShape.circle,
+              baseColor: skeletonBase,
+              highlightColor: skeletonHighlight,
+            ),
+            AppSkeletonLine(
+              width: 48,
+              height: 10,
+              baseColor: skeletonBase,
+              highlightColor: skeletonHighlight,
+            ),
+            AppSkeletonLine(
+              width: 36,
+              height: 10,
+              baseColor: skeletonBase,
+              highlightColor: skeletonHighlight,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<User?>? _viewedUserFuture;
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   SavedEntitySummary? _saveSummary;
   String? _saveStateUserId;
   bool _isLoadingSaveState = false;
   bool _isTogglingSave = false;
+  User? _viewedUserOverride;
 
   bool get _isViewingOwnProfile => widget.userId == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _socketSubscription = socketService.messages.listen((event) {
+      if (_isViewingOwnProfile) {
+        return;
+      }
+
+      final eventName = event['event'];
+      if (eventName != SocketEvents.userUpdated) {
+        return;
+      }
+
+      final payload = event['data'];
+      final userMap = payload is Map<String, dynamic>
+          ? payload
+          : payload is Map
+          ? Map<String, dynamic>.from(payload)
+          : null;
+      if (userMap == null) {
+        return;
+      }
+
+      final updatedUserId = userMap['id'] as String?;
+      if (updatedUserId == null || updatedUserId != widget.userId) {
+        return;
+      }
+
+      final updatedUser = User.fromJson(userMap);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _viewedUserOverride = updatedUser;
+        _viewedUserFuture = Future<User?>.value(updatedUser);
+      });
+    });
+  }
 
   void _ensureViewedUser() {
     if (_isViewingOwnProfile || _viewedUserFuture != null) return;
@@ -126,6 +280,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         type: SnackBarType.error,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _socketSubscription?.cancel();
+    super.dispose();
   }
 
   Widget _profileHeaderAction(
@@ -414,6 +574,93 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _buildProfileLoadingScaffold({required bool showSelfActions}) {
+    return Column(
+      children: [
+        AppHeader(
+          title: 'Profile',
+          showBack: !showSelfActions,
+          rightElement: const AppSkeleton(
+            width: 40,
+            height: 40,
+            shape: BoxShape.circle,
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+            children: [
+              const Center(
+                child: AppSkeleton(
+                  width: 96,
+                  height: 96,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Center(child: AppSkeletonLine(width: 148, height: 20)),
+              const SizedBox(height: 10),
+              const Center(child: AppSkeletonLine(width: 72, height: 12)),
+              const SizedBox(height: 8),
+              const Center(child: AppSkeletonLine(width: 168, height: 12)),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.muted,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _ProfileStatSkeleton(),
+                    _ProfileVerticalDividerSkeleton(),
+                    _ProfileStatSkeleton(),
+                    _ProfileVerticalDividerSkeleton(),
+                    _ProfileStatSkeleton(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              const AppSkeletonLine(width: 84, height: 18),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  _ProfileBadgeSkeleton(),
+                  SizedBox(width: 12),
+                  _ProfileBadgeSkeleton(),
+                  SizedBox(width: 12),
+                  _ProfileBadgeSkeleton(),
+                ],
+              ),
+              if (showSelfActions) ...[
+                const SizedBox(height: 32),
+                const AppSkeleton(
+                  height: 52,
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
+                ),
+              ],
+              const SizedBox(height: 32),
+              const AppSkeletonLine(width: 118, height: 18),
+              const SizedBox(height: 16),
+              const _ProfileActivitySkeleton(),
+              const SizedBox(height: 12),
+              const _ProfileActivitySkeleton(),
+              const SizedBox(height: 32),
+              const AppSkeletonLine(width: 132, height: 18),
+              const SizedBox(height: 16),
+              const AppSkeleton(
+                height: 180,
+                borderRadius: BorderRadius.all(Radius.circular(24)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
@@ -427,8 +674,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ? userAsync.whenData((value) => value)
                   : const AsyncValue<User?>.data(null))
               .when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                loading: () => _buildProfileLoadingScaffold(
+                  showSelfActions: _isViewingOwnProfile,
                 ),
                 error: (_, _) => const Center(child: Text('User not found')),
                 data: (currentUser) {
@@ -448,14 +695,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     builder: (context, userSnapshot) {
                       if (userSnapshot.connectionState ==
                           ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
+                        return _buildProfileLoadingScaffold(
+                          showSelfActions: false,
                         );
                       }
 
-                      final user = userSnapshot.data;
+                      final user = _viewedUserOverride ?? userSnapshot.data;
                       if (user == null) {
                         return const Center(child: Text('User not found'));
                       }
@@ -582,28 +827,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: AppColors.muted,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _stat('Events', '${overview?.myEvents.length ?? 0}'),
-                      Container(width: 1, height: 48, color: AppColors.border),
-                      _stat('Impact', '4.8k'),
-                      Container(width: 1, height: 48, color: AppColors.border),
-                      _stat('Rating', '4.9'),
-                    ],
-                  ),
+                  child: overviewAsync.isLoading && overview == null
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _ProfileStatSkeleton(),
+                            _ProfileVerticalDividerSkeleton(),
+                            _ProfileStatSkeleton(),
+                            _ProfileVerticalDividerSkeleton(),
+                            _ProfileStatSkeleton(),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _stat(
+                              'Events',
+                              '${overview?.myEvents.length ?? 0}',
+                            ),
+                            Container(
+                              width: 1,
+                              height: 48,
+                              color: AppColors.border,
+                            ),
+                            _stat('Impact', '4.8k'),
+                            Container(
+                              width: 1,
+                              height: 48,
+                              color: AppColors.border,
+                            ),
+                            _stat('Rating', '4.9'),
+                          ],
+                        ),
                 ),
-                if (overviewAsync.isLoading && overview == null) ...[
-                  const SizedBox(height: 12),
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 32),
 
                 // Badges
@@ -626,9 +882,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: _buildBadgeRow(overview?.achievements ?? const []),
-                ),
+                if (overviewAsync.isLoading && overview == null)
+                  const Row(
+                    children: [
+                      _ProfileBadgeSkeleton(),
+                      SizedBox(width: 12),
+                      _ProfileBadgeSkeleton(),
+                      SizedBox(width: 12),
+                      _ProfileBadgeSkeleton(),
+                    ],
+                  )
+                else
+                  Row(
+                    children: _buildBadgeRow(
+                      overview?.achievements ?? const [],
+                    ),
+                  ),
                 const SizedBox(height: 32),
 
                 if (showSelfActions) ...[
@@ -666,7 +935,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ..._buildRecentActivity(overview?.recentActivity ?? const []),
+                if (overviewAsync.isLoading && overview == null) ...const [
+                  _ProfileActivitySkeleton(),
+                  SizedBox(height: 12),
+                  _ProfileActivitySkeleton(),
+                ] else
+                  ..._buildRecentActivity(overview?.recentActivity ?? const []),
                 const SizedBox(height: 32),
 
                 // Impact

@@ -104,7 +104,7 @@ Event _event({required String id, EventStats? stats}) {
     startTime: startTime,
     endTime: startTime.add(const Duration(hours: 2)),
     createdBy: 'user_1',
-    location: Location(
+    location: const Location(
       address: 'Nagpur',
       latitude: 21.1458,
       longitude: 79.0882,

@@ -6,8 +6,8 @@ import type { NextFunction, Request, Response } from 'express';
  * @returns Promise with a catch statement
  */
 const asyncHandler =
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (fn: (req: any, res: Response, next: NextFunction) => void) => (req: Request, res: Response, next: NextFunction) => {
+  (fn: (req: any, res: Response, next: NextFunction) => unknown) =>
+  (req: Request, res: Response, next: NextFunction) => {
     return Promise.resolve(fn(req, res, next)).catch(next);
   };
 

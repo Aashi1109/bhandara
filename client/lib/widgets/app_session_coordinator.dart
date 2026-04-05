@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/socket_events.dart';
 import '../models/user.dart';
 import '../providers/user.dart';
 import '../services/api.dart';
@@ -20,6 +21,7 @@ class AppSessionCoordinator extends ConsumerStatefulWidget {
 
 class _AppSessionCoordinatorState extends ConsumerState<AppSessionCoordinator> {
   ProviderSubscription<AsyncValue<User?>>? _userSubscription;
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
 
   @override
   void initState() {
@@ -47,11 +49,37 @@ class _AppSessionCoordinatorState extends ConsumerState<AppSessionCoordinator> {
       },
       fireImmediately: true,
     );
+
+    _socketSubscription = socketService.messages.listen((event) {
+      final eventName = event['event'];
+      if (eventName != SocketEvents.userUpdated) {
+        return;
+      }
+
+      final payload = event['data'];
+      final userMap = payload is Map<String, dynamic>
+          ? payload
+          : payload is Map
+          ? Map<String, dynamic>.from(payload)
+          : null;
+      if (userMap == null) {
+        return;
+      }
+
+      final currentUser = ref.read(userProfileProvider).value;
+      final updatedUserId = userMap['id'] as String?;
+      if (currentUser == null || updatedUserId == null || currentUser.id != updatedUserId) {
+        return;
+      }
+
+      ref.read(userProfileProvider.notifier).setUser(User.fromJson(userMap));
+    });
   }
 
   @override
   void dispose() {
     apiService.onUnauthorized = null;
+    _socketSubscription?.cancel();
     _userSubscription?.close();
     super.dispose();
   }

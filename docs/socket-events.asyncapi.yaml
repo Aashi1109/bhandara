@@ -163,31 +163,33 @@ operations:
     channel:
       $ref: '#/channels/platform'
     title: Update message
-    summary: Reserved socket event name for message updates.
-    description: |
-      The server has a socket handler placeholder for this event, but the logic
-      is not implemented. Current message updates flow through REST.
+    summary: Client updates an existing message.
     messages:
       - $ref: '#/channels/platform/messages/messageUpdatedRequest'
     x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/messageAck'
       error:
         $ref: '#/channels/platform/messages/errorAck'
-    x-status: partial
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/messageUpdatedBroadcast'
+    x-status: implemented
   receiveMessageDeleted:
     action: receive
     channel:
       $ref: '#/channels/platform'
     title: Delete message
-    summary: Reserved socket event name for message deletion.
-    description: |
-      The server has a socket handler stub for this event, but current message
-      deletion flows through REST.
+    summary: Client deletes an existing message.
     messages:
       - $ref: '#/channels/platform/messages/messageDeletedRequest'
     x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/messageDeletedBroadcast'
       error:
         $ref: '#/channels/platform/messages/errorAck'
-    x-status: partial
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/messageDeletedBroadcast'
+    x-status: implemented
   receiveReactionCreated:
     action: receive
     channel:
@@ -393,6 +395,14 @@ operations:
     messages:
       - $ref: '#/channels/platform/messages/exploreBroadcast'
     x-status: implemented
+  sendUserUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: User updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/userUpdatedBroadcast'
+    x-status: implemented
 components:
   messages:
     joinRoomRequest:
@@ -540,6 +550,11 @@ components:
       title: Explore broadcast
       payload:
         $ref: '#/components/schemas/ExploreEnvelope'
+    userUpdatedBroadcast:
+      name: user:updated
+      title: User updated broadcast
+      payload:
+        $ref: '#/components/schemas/UserEnvelope'
   schemas:
     JoinLeaveRoomRequest:
       type: object
@@ -567,7 +582,8 @@ components:
             - 'null'
     MessageUpdatedRequest:
       type: object
-      description: Reserved request shape. Current socket handler is not implemented.
+      required:
+        - id
       properties:
         id:
           type: string
@@ -575,9 +591,10 @@ components:
           $ref: '#/components/schemas/MessageContent'
     MessageDeletedRequest:
       type: object
-      description: Reserved request shape. Current socket handler is not implemented.
+      required:
+        - id
       properties:
-        conversation:
+        id:
           type: string
     ThreadCreatedRequest:
       type: object
@@ -784,6 +801,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ExploreSection'
+    UserEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
     EntityDeletedEnvelope:
       type: object
       required:
@@ -815,6 +839,14 @@ components:
                 type: string
           additionalProperties: false
     Event:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+      additionalProperties: true
+    User:
       type: object
       required:
         - id

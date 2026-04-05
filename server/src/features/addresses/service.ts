@@ -1,4 +1,4 @@
-import { EAddressEntityType } from '@/definitions/enums';
+import type { EAddressEntityType } from '@/definitions/enums';
 import type { ILocation } from '@/definitions/types';
 import { getUUIDv7 } from '@/helpers';
 import { Op, Sequelize, type Transaction } from 'sequelize';

@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+
 /** Stringify JSON without additional options. */
 export const jnstringify = (payload: any) => JSON.stringify(payload);
 /** Parse a JSON string returning the typed value. */
@@ -74,4 +76,43 @@ export const cleanQueryObject = (query: Record<string, any>) => {
     }
   });
   return cleanedQuery;
+};
+
+const normalizeComparableValue = (value: any): any => {
+  if (value === null || value === undefined) return value;
+
+  if (typeof value?.toJSON === 'function') {
+    return normalizeComparableValue(value.toJSON());
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeComparableValue(item));
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value).reduce<Record<string, any>>((acc, [key, currentValue]) => {
+      if (key === 'updatedAt' || key === 'isEdited') {
+        return acc;
+      }
+
+      acc[key] = normalizeComparableValue(currentValue);
+      return acc;
+    }, {});
+  }
+
+  return value;
+};
+
+/**
+ * Compare two payloads while ignoring automatic timestamp churn such as updatedAt.
+ */
+export const hasMeaningfulChange = (previousValue: any, nextValue: any) => {
+  return !isDeepStrictEqual(
+    normalizeComparableValue(previousValue),
+    normalizeComparableValue(nextValue),
+  );
 };

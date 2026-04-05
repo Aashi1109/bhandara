@@ -152,7 +152,7 @@ void main() {
       startTime: DateTime(2026, 4, 1, 10),
       endTime: DateTime(2026, 4, 1, 12),
       createdBy: testUser.id,
-      location: Location(
+      location: const Location(
         address: 'Initial address',
         latitude: 21.1458,
         longitude: 79.0882,

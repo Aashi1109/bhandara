@@ -10,6 +10,7 @@ import '../../theme/theme.dart';
 import '../../widgets/header.dart';
 import '../../widgets/input.dart';
 import '../../widgets/settings_action_footer.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/snackbar.dart';
 import '../settings.dart';
 
@@ -81,6 +82,43 @@ class _CuisineInterestsScreenState
     return source.toUpperCase();
   }
 
+  Widget _buildLoadingState() {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 8),
+      itemCount: 6,
+      separatorBuilder: (_, index) => const SizedBox(height: 12),
+      itemBuilder: (_, index) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Row(
+            children: [
+              AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppSkeletonLine(width: 120, height: 14),
+                    SizedBox(height: 8),
+                    AppSkeletonLine(width: 90, height: 12),
+                  ],
+                ),
+              ),
+              SizedBox(width: 16),
+              AppSkeleton(width: 24, height: 24, shape: BoxShape.circle),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _hydrateFromUser();
@@ -124,11 +162,7 @@ class _CuisineInterestsScreenState
                   const SizedBox(height: 24),
                   Expanded(
                     child: tagsAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      ),
+                      loading: _buildLoadingState,
                       error: (error, _) => Center(
                         child: Text(
                           error.toString(),

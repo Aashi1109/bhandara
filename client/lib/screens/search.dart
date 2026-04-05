@@ -19,6 +19,7 @@ import '../utils/event_status.dart';
 import 'explore/utils/explore_filters.dart';
 import '../widgets/button.dart';
 import '../widgets/event_search_result_tile.dart';
+import '../widgets/skeleton.dart';
 import 'explore/widgets/explore_search_bar.dart';
 import 'event_detail.dart';
 import 'explore/explore_screen.dart';
@@ -418,9 +419,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _buildLandingBody() {
     if (_isLoadingLanding) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return _buildLoadingState(showSections: true);
     }
 
     if (_landingErrorMessage != null) {
@@ -465,9 +464,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     if (_isSearching && _searchResults.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return _buildLoadingState(showSections: false);
     }
 
     if (_searchErrorMessage != null && _searchResults.isEmpty) {
@@ -602,6 +599,71 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState({required bool showSections}) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      children: [
+        if (showSections) ...[
+          const AppSkeletonLine(width: 140, height: 18),
+          const SizedBox(height: 12),
+          ...List.generate(2, (_) => _buildSearchSkeletonTile()),
+          const SizedBox(height: 24),
+          const AppSkeletonLine(width: 136, height: 18),
+          const SizedBox(height: 12),
+        ],
+        ...List.generate(
+          showSections ? 3 : 5,
+          (_) => _buildSearchSkeletonTile(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchSkeletonTile() {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              AppSkeleton(width: 48, height: 48, shape: BoxShape.circle),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        AppSkeleton(width: 76, height: 24),
+                        SizedBox(width: 10),
+                        Expanded(child: AppSkeletonLine(height: 16)),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: AppSkeletonLine(width: 120)),
+                        SizedBox(width: 12),
+                        AppSkeletonLine(width: 72),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

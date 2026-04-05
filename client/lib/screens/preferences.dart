@@ -9,6 +9,7 @@ import '../theme/theme.dart';
 import '../widgets/button.dart';
 import '../widgets/header.dart';
 import '../widgets/map_view.dart';
+import '../widgets/skeleton.dart';
 import '../providers/tag.dart';
 import '../providers/user.dart';
 import '../models/event.dart';
@@ -171,6 +172,21 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     }
   }
 
+  Widget _buildTagLoadingState() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: List.generate(
+        8,
+        (index) => AppSkeleton(
+          width: index.isEven ? 112 : 88,
+          height: 40,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _hydrateFromUser();
@@ -240,13 +256,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                         }).toList(),
                       );
                     },
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
-                        ),
-                      ),
-                    ),
+                    loading: _buildTagLoadingState,
                     error: (err, stack) => Center(
                       child: Text(
                         'Failed to load categories: ${err.toString()}',

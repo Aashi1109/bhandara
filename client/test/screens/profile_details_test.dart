@@ -10,6 +10,7 @@ import 'package:foody_mobile/providers/user.dart';
 import 'package:foody_mobile/screens/settings/profile_details.dart';
 import 'package:foody_mobile/theme/theme.dart';
 import 'package:foody_mobile/widgets/button.dart';
+import 'package:foody_mobile/widgets/skeleton.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -116,6 +117,26 @@ void main() {
 
     expect(profile.updateProfileCalls, 0);
   });
+
+  testWidgets('shows profile skeletons while user data is loading', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider.overrideWith(() => _LoadingUserProfile()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.theme,
+          home: const ProfileDetailsScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.byType(AppSkeleton), findsWidgets);
+  });
 }
 
 Future<void> _pumpProfileDetails(
@@ -180,6 +201,11 @@ class _TestUserProfile extends UserProfile {
   }
 }
 
+class _LoadingUserProfile extends UserProfile {
+  @override
+  FutureOr<User?> build() => Completer<User?>().future;
+}
+
 class _TestHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -206,7 +232,8 @@ class _TestHttpRequest implements HttpClientRequest {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _TestHttpResponse extends Stream<List<int>> implements HttpClientResponse {
+class _TestHttpResponse extends Stream<List<int>>
+    implements HttpClientResponse {
   @override
   int get statusCode => HttpStatus.ok;
 

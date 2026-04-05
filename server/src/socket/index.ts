@@ -18,7 +18,7 @@ import {
   buildExploreSections,
 } from '@/features';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@/exceptions';
-import { isEmpty } from '@/utils';
+import { hasMeaningfulChange, isEmpty } from '@/utils';
 import { getDistanceInMeters } from '@/helpers';
 import { setPlatformNamespace, emitSocketEvent } from './emitter';
 import { EAllowedReactionTables } from '@/features/reactions/constants';
@@ -111,7 +111,46 @@ export function initializeSocket(server: http.Server) {
 
     socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, async (request, cb) => {
       try {
-        // TODO: implement message update handling
+        const { id, content } = request || {};
+
+        if (typeof id !== 'string' || id.trim().length === 0) {
+          throw new BadRequestError('Message id is required');
+        }
+
+        const existingMessage = await messageService.getById(id, true);
+        if (!existingMessage) {
+          throw new NotFoundError('Message not found');
+        }
+
+        if (existingMessage.userId !== socketUserId) {
+          throw new ForbiddenError('You can only edit your own messages');
+        }
+
+        const lockStatus = await threadService.isThreadChainLocked(existingMessage.threadId);
+        if (lockStatus.isLocked) {
+          throw new ForbiddenError('Cannot edit messages in a locked thread or its children');
+        }
+
+        const updatedMessage = await messageService.update(
+          id,
+          {
+            content,
+            isEdited: true,
+          },
+          true,
+        );
+
+        if (hasMeaningfulChange(existingMessage, updatedMessage)) {
+          emitSocketEvent(
+            PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED,
+            {
+              data: updatedMessage,
+            },
+            { room: getThreadRoom(existingMessage.threadId) },
+          );
+        }
+
+        cb?.({ data: updatedMessage });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
         logger.error(`Error updating message`, error);
@@ -120,10 +159,44 @@ export function initializeSocket(server: http.Server) {
     });
 
     socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, async (request, cb) => {
-      logger.debug(`User ${socketUserId} chat window opened`);
-      const { conversation: conversationId } = request || {};
+      try {
+        const { id } = request || {};
 
-      if (!conversationId) return cb?.({ error: 'Conversation id is required' });
+        if (typeof id !== 'string' || id.trim().length === 0) {
+          throw new BadRequestError('Message id is required');
+        }
+
+        const existingMessage = await messageService.getById(id);
+        if (!existingMessage) {
+          throw new NotFoundError('Message not found');
+        }
+
+        if (existingMessage.userId !== socketUserId) {
+          throw new ForbiddenError('You can only delete your own messages');
+        }
+
+        const lockStatus = await threadService.isThreadChainLocked(existingMessage.threadId);
+        if (lockStatus.isLocked) {
+          throw new ForbiddenError('Cannot delete messages in a locked thread or its children');
+        }
+
+        await messageService.delete(id);
+
+        const payload = { id, threadId: existingMessage.threadId };
+        emitSocketEvent(
+          PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED,
+          {
+            data: payload,
+          },
+          { room: getThreadRoom(existingMessage.threadId) },
+        );
+
+        cb?.({ data: payload });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+        logger.error(`Error deleting message`, error);
+        cb?.({ error: errorMessage });
+      }
     });
 
     socket.on(PLATFORM_SOCKET_EVENTS.JOIN_ROOM, async (request, cb) => {
@@ -302,6 +375,7 @@ export function initializeSocket(server: http.Server) {
           emoji: reaction,
         });
 
+        const shouldEmitReactionUpdate = hasMeaningfulChange(previousReaction, updatedReaction);
         updatedReaction.user = getSafeUser(socket.request.user);
 
         const threadId =
@@ -311,19 +385,21 @@ export function initializeSocket(server: http.Server) {
               ? String(contentId)
               : undefined;
 
-        emitSocketEvent(
-          PLATFORM_SOCKET_EVENTS.REACTION_UPDATED,
-          {
-            data: {
-              id: contentId,
-              contentPath,
-              reaction: updatedReaction,
-              parentId,
-              threadId,
+        if (shouldEmitReactionUpdate) {
+          emitSocketEvent(
+            PLATFORM_SOCKET_EVENTS.REACTION_UPDATED,
+            {
+              data: {
+                id: contentId,
+                contentPath,
+                reaction: updatedReaction,
+                parentId,
+                threadId,
+              },
             },
-          },
-          threadId ? { room: getThreadRoom(threadId) } : undefined,
-        );
+            threadId ? { room: getThreadRoom(threadId) } : undefined,
+          );
+        }
 
         cb?.({ data: true });
       } catch (error) {

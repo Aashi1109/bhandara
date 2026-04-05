@@ -176,4 +176,45 @@ describe("messages controller", () => {
     });
     expect(messageDeleteMock).not.toHaveBeenCalled();
   });
+
+  it("does not emit message:updated when only updatedAt changes", async () => {
+    messageGetByIdMock.mockResolvedValue({
+      content: { text: "same text" },
+      id: "message-1",
+      threadId: "thread-1",
+      updatedAt: "2026-04-05T10:00:00.000Z",
+      userId: "author-1",
+    });
+    messageUpdateMock.mockResolvedValue({
+      content: { text: "same text" },
+      id: "message-1",
+      isEdited: true,
+      threadId: "thread-1",
+      updatedAt: "2026-04-05T10:05:00.000Z",
+      userId: "author-1",
+    });
+
+    const { updateMessage } = await import("@/features/messages/controller");
+    const req = {
+      body: { content: { text: "same text" } },
+      params: { messageId: "message-1" },
+      user: { id: "author-1" },
+    } as unknown as Request;
+    const res = {
+      json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+
+    await updateMessage(req as any, res);
+
+    expect(messageUpdateMock).toHaveBeenCalledWith(
+      "message-1",
+      {
+        content: { text: "same text" },
+        isEdited: true,
+      },
+      true,
+    );
+    expect(emitSocketEventMock).not.toHaveBeenCalled();
+  });
 });

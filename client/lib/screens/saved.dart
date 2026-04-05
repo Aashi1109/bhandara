@@ -18,6 +18,7 @@ import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/card.dart';
 import '../widgets/event_status_badge.dart';
+import '../widgets/skeleton.dart';
 import 'explore/widgets/explore_search_bar.dart';
 
 class SavedScreen extends StatefulWidget {
@@ -236,6 +237,54 @@ class _SavedScreenState extends State<SavedScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      itemCount: 5,
+      separatorBuilder: (_, index) => const SizedBox(height: 16),
+      itemBuilder: (_, index) {
+        return const AppCard(
+          padding: AppCardPadding.none,
+          borderRadius: 24,
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              children: [
+                AppSkeleton(
+                  width: 96,
+                  height: 96,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          AppSkeleton(width: 72, height: 24),
+                          SizedBox(width: 8),
+                          Expanded(child: AppSkeletonLine(height: 18)),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      AppSkeletonLine(width: 170),
+                      SizedBox(height: 10),
+                      AppSkeletonLine(width: 140),
+                      SizedBox(height: 20),
+                      AppSkeletonLine(width: 110, height: 10),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -596,11 +645,7 @@ class _SavedScreenState extends State<SavedScreen> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? _buildLoadingState()
                     : _errorMessage != null
                     ? _buildErrorState()
                     : _hasSearched || _results.isNotEmpty

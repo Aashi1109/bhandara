@@ -1,15 +1,39 @@
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getAllMock, getMarkersMock } = vi.hoisted(() => ({
+const {
+  activityCreateMock,
+  emitSocketEventMock,
+  getAllMock,
+  getByIdMock,
+  getEventDataMock,
+  getMarkersMock,
+  updateMock,
+  joinLeaveEventMock,
+  trackActivityMock,
+  verifyEventMock,
+} = vi.hoisted(() => ({
+  activityCreateMock: vi.fn(),
+  emitSocketEventMock: vi.fn(),
   getAllMock: vi.fn(),
+  getByIdMock: vi.fn(),
+  getEventDataMock: vi.fn(),
   getMarkersMock: vi.fn(),
+  updateMock: vi.fn(),
+  joinLeaveEventMock: vi.fn(),
+  trackActivityMock: vi.fn(),
+  verifyEventMock: vi.fn(),
 }));
 
 vi.mock('@/features/events/service', () => ({
   default: class {
     getAll = getAllMock;
+    getById = getByIdMock;
+    getEventData = getEventDataMock;
     getMarkers = getMarkersMock;
+    update = updateMock;
+    joinLeaveEvent = joinLeaveEventMock;
+    verifyEvent = verifyEventMock;
   },
 }));
 
@@ -18,21 +42,37 @@ vi.mock('@/features/tags/service', () => ({
 }));
 
 vi.mock('@/features/activity/service', () => ({
-  default: class {},
+  default: class {
+    create = activityCreateMock;
+  },
 }));
 
 vi.mock('@/features/achievements/service', () => ({
-  default: class {},
+  default: class {
+    trackActivity = trackActivityMock;
+  },
 }));
 
 vi.mock('@/features/engagement/service', () => ({
   default: class {},
 }));
 
+vi.mock('@/socket/emitter', () => ({
+  emitSocketEvent: emitSocketEventMock,
+}));
+
 describe('events controller', () => {
   beforeEach(() => {
+    activityCreateMock.mockReset();
+    emitSocketEventMock.mockReset();
     getAllMock.mockReset();
+    getByIdMock.mockReset();
+    getEventDataMock.mockReset();
     getMarkersMock.mockReset();
+    updateMock.mockReset();
+    joinLeaveEventMock.mockReset();
+    trackActivityMock.mockReset();
+    verifyEventMock.mockReset();
     vi.useRealTimers();
   });
 
@@ -146,5 +186,117 @@ describe('events controller', () => {
         items: [{ id: 'event-1', name: 'Community Dinner', latitude: 18.52, longitude: 73.85 }],
       },
     });
+  });
+
+  it('emits event:updated after join/leave mutations', async () => {
+    const previousEvent = {
+      id: 'event-1',
+      participants: [],
+    };
+    const updatedEvent = {
+      id: 'event-1',
+      participants: [{ status: 'confirmed', user: 'user-1' }],
+    };
+    getByIdMock.mockResolvedValue({ createdBy: 'owner-1', id: 'event-1' });
+    joinLeaveEventMock.mockResolvedValue('Successfully joined the event');
+    getEventDataMock
+      .mockResolvedValueOnce(previousEvent)
+      .mockResolvedValueOnce(updatedEvent);
+
+    const { eventJoinLeaveHandler } = await import('@/features/events/controller');
+    const status = vi.fn().mockReturnThis();
+    const json = vi.fn();
+    const req = {
+      params: { action: 'join', eventId: 'event-1' },
+      user: { id: 'user-1' },
+    } as unknown as Request;
+    const res = { json, status } as unknown as Response;
+
+    await eventJoinLeaveHandler(req as any, res);
+
+    expect(joinLeaveEventMock).toHaveBeenCalledWith('user-1', 'event-1', 'join');
+    expect(emitSocketEventMock).toHaveBeenCalledWith('event:updated', {
+      data: updatedEvent,
+    });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith({ data: updatedEvent });
+  });
+
+  it('emits event:updated after event verification', async () => {
+    const previousEvent = {
+      id: 'event-1',
+      verifiers: [],
+    };
+    const updatedEvent = {
+      id: 'event-1',
+      verifiers: [{ user: 'user-1' }],
+    };
+    verifyEventMock.mockResolvedValue(true);
+    getEventDataMock
+      .mockResolvedValueOnce(previousEvent)
+      .mockResolvedValueOnce(updatedEvent);
+
+    const { verifyEvent } = await import('@/features/events/controller');
+    const status = vi.fn().mockReturnThis();
+    const json = vi.fn();
+    const req = {
+      body: { currentCoordinates: { latitude: 18.52, longitude: 73.85 } },
+      params: { eventId: 'event-1' },
+      user: { id: 'user-1' },
+    } as unknown as Request;
+    const res = { json, status } as unknown as Response;
+
+    await verifyEvent(req as any, res);
+
+    expect(verifyEventMock).toHaveBeenCalledWith('user-1', 'event-1', {
+      latitude: 18.52,
+      longitude: 73.85,
+    });
+    expect(emitSocketEventMock).toHaveBeenCalledWith('event:updated', {
+      data: updatedEvent,
+    });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith({ data: updatedEvent });
+  });
+
+  it('does not emit event:updated when updateEvent makes no meaningful change', async () => {
+    const existingEvent = {
+      createdBy: 'owner-1',
+      id: 'event-1',
+    };
+    const hydratedEvent = {
+      id: 'event-1',
+      name: 'Community Dinner',
+      updatedAt: '2026-04-05T10:00:00.000Z',
+    };
+    const updatedEvent = {
+      id: 'event-1',
+      name: 'Community Dinner',
+      updatedAt: '2026-04-05T10:05:00.000Z',
+    };
+
+    getByIdMock.mockResolvedValue(existingEvent);
+    getEventDataMock.mockResolvedValue(hydratedEvent);
+    updateMock.mockResolvedValue(updatedEvent);
+
+    const { updateEvent } = await import('@/features/events/controller');
+    const req = {
+      body: { name: 'Community Dinner' },
+      params: { eventId: 'event-1' },
+      user: { id: 'owner-1' },
+    } as unknown as Request;
+    const res = {
+      json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+
+    await updateEvent(req as any, res);
+
+    expect(updateMock).toHaveBeenCalledWith({
+      data: { name: 'Community Dinner' },
+      existing: existingEvent,
+      populate: true,
+    });
+    expect(emitSocketEventMock).not.toHaveBeenCalled();
   });
 });

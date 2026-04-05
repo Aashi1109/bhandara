@@ -2,7 +2,7 @@ import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
 import type { Response } from 'express';
 import EventService, { type IEventListFilters } from './service';
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/exceptions';
-import { isEmpty } from '@/utils';
+import { hasMeaningfulChange, isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
@@ -185,17 +185,23 @@ export const createEvent = async (req: ICustomRequest, res: Response) => {
 };
 
 export const updateEvent = async (req: ICustomRequest, res: Response) => {
-  const event = await eventService.getById(req.params.eventId as string);
+  const eventId = req.params.eventId as string;
+  const event = await eventService.getById(eventId);
   if (!event) throw new NotFoundError('Event not found');
   if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only update your own events');
+  const existingEventData = await eventService.getEventData(eventId);
   const updatedEvent = await eventService.update({
     existing: event,
     data: req.body,
     populate: true,
   });
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
-    data: { ...updatedEvent, id: req.params.eventId },
-  });
+
+  if (hasMeaningfulChange(existingEventData, updatedEvent)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
+      data: { ...updatedEvent, id: eventId },
+    });
+  }
+
   return res.status(200).json({ data: updatedEvent });
 };
 
@@ -231,7 +237,9 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
   const eventId = req.params.eventId as string;
   const action = req.params.action as 'join' | 'leave';
   const eventData = await eventService.getById(eventId);
-  const result = await eventService.joinLeaveEvent(req.user.id, eventId, action);
+  const previousEvent = await eventService.getEventData(eventId);
+  await eventService.joinLeaveEvent(req.user.id, eventId, action);
+  const updatedEvent = await eventService.getEventData(eventId);
 
   const activityType = action === 'join' ? EActivityType.EventJoined : EActivityType.EventLeft;
 
@@ -251,7 +259,11 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
     achievementService.trackActivity(req.user.id, activityType),
   ]);
 
-  return res.status(200).json({ data: result });
+  if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: updatedEvent });
+  }
+
+  return res.status(200).json({ data: updatedEvent });
 };
 
 export const verifyEvent = async (req: ICustomRequest, res: Response) => {
@@ -259,7 +271,9 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
 
   if (isEmpty(currentCoordinates)) throw new BadRequestError('Current coordinates are required');
 
-  const event = await eventService.verifyEvent(req.user.id, req.params.eventId as string, currentCoordinates);
+  const previousEvent = await eventService.getEventData(req.params.eventId as string);
+  await eventService.verifyEvent(req.user.id, req.params.eventId as string, currentCoordinates);
+  const updatedEvent = await eventService.getEventData(req.params.eventId as string);
 
   await Promise.all([
     activityService.create({
@@ -275,7 +289,11 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
     achievementService.trackActivity(req.user.id, EActivityType.EventVerified),
   ]);
 
-  return res.status(200).json({ data: event });
+  if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: updatedEvent });
+  }
+
+  return res.status(200).json({ data: updatedEvent });
 };
 
 export const disassociateMediaFromEvent = async (req: ICustomRequest, res: Response) => {

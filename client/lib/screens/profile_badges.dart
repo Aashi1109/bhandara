@@ -7,6 +7,7 @@ import '../providers/user.dart';
 import '../services/user.dart';
 import '../theme/theme.dart';
 import '../widgets/header.dart';
+import '../widgets/skeleton.dart';
 
 class ProfileBadgesScreen extends ConsumerWidget {
   const ProfileBadgesScreen({super.key});
@@ -24,9 +25,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
           const AppHeader(title: 'Badges'),
           Expanded(
             child: userAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
+              loading: () => _buildLoadingState(),
               error: (_, _) =>
                   const Center(child: Text('Unable to load badges')),
               data: (user) {
@@ -38,11 +37,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
                   future: userService.getUserAchievements(user.id),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      );
+                      return _buildLoadingState();
                     }
 
                     final badges = snapshot.data ?? const <Achievement>[];
@@ -134,5 +129,42 @@ class ProfileBadgesScreen extends ConsumerWidget {
       default:
         return LucideIcons.award;
     }
+  }
+
+  Widget _buildLoadingState() {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      itemBuilder: (_, index) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Row(
+            children: [
+              AppSkeleton(width: 52, height: 52, shape: BoxShape.circle),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppSkeletonLine(width: 140, height: 16),
+                    SizedBox(height: 10),
+                    AppSkeletonLine(height: 12),
+                    SizedBox(height: 8),
+                    AppSkeletonLine(width: 180, height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemCount: 5,
+    );
   }
 }

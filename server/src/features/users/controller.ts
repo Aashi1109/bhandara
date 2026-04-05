@@ -2,10 +2,12 @@ import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/definition
 import { bulkSetUserCache, getPublicUser, getSafeUser } from './helpers';
 import UserService from './service';
 import type { Request, Response } from 'express';
-import { isEmpty, omit } from '@/utils';
+import { hasMeaningfulChange, isEmpty, omit } from '@/utils';
 import { NotFoundError } from '@/exceptions';
 import { Op } from 'sequelize';
 import EntityEngagementService from '@/features/engagement/service';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS } from '@/constants';
 
 const userService = new UserService();
 const entityEngagementService = new EntityEngagementService();
@@ -66,9 +68,16 @@ export const deleteUser = async (req: ICustomRequest, res: Response) => {
 
 export const updateUser = async (req: ICustomRequest, res: Response) => {
   const { id } = req.params;
+  const existingUser = await userService.getById(id as string);
   const updateBody = omit(req.body, ['password', 'email']);
   const data = await userService.update(id as string, updateBody);
-  return res.status(200).json({ data: getSafeUser(data) });
+  const safeUser = getSafeUser(data);
+
+  if (hasMeaningfulChange(existingUser ? getSafeUser(existingUser) : null, safeUser)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.USER_UPDATED, { data: safeUser });
+  }
+
+  return res.status(200).json({ data: safeUser });
 };
 
 export const getUserByQuery = async (req: Request, res: Response) => {

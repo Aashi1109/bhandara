@@ -54,7 +54,7 @@ void main() {
         startTime: now.subtract(const Duration(hours: 1)),
         endTime: now.add(const Duration(hours: 1)),
         createdBy: 'user-1',
-        location: Location(
+        location: const Location(
           address: 'Nearby',
           latitude: 21.1458,
           longitude: 79.0882,
@@ -69,7 +69,7 @@ void main() {
         startTime: now.subtract(const Duration(hours: 1)),
         endTime: now.add(const Duration(hours: 1)),
         createdBy: 'user-1',
-        location: Location(
+        location: const Location(
           address: 'Far',
           latitude: 21.4458,
           longitude: 79.3882,
@@ -84,7 +84,7 @@ void main() {
         startTime: now.add(const Duration(hours: 2)),
         endTime: now.add(const Duration(hours: 4)),
         createdBy: 'user-1',
-        location: Location(
+        location: const Location(
           address: 'Nearby Upcoming',
           latitude: 21.146,
           longitude: 79.0884,

@@ -2,7 +2,7 @@ import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
 import type { Response } from 'express';
 import ThreadsService from './service';
 import { NotFoundError } from '@/exceptions';
-import { isEmpty } from '@/utils';
+import { hasMeaningfulChange, isEmpty } from '@/utils';
 
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
@@ -77,10 +77,16 @@ export const getThread = async (req: ICustomRequest, res: Response) => {
 export const updateThread = async (req: ICustomRequest, res: Response) => {
   const threadId = asString(req.params.threadId);
   if (!threadId) throw new NotFoundError('Thread not found');
+  const existingThread = await threadsService.getById(threadId);
+  if (isEmpty(existingThread)) throw new NotFoundError('Thread not found');
   const thread = await threadsService.update(threadId, req.body, true);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UPDATED, {
-    data: { id: threadId, ...req.body },
-  });
+
+  if (hasMeaningfulChange(existingThread, thread)) {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UPDATED, {
+      data: { id: threadId, ...req.body },
+    });
+  }
+
   return res.status(200).json({ data: thread });
 };
 

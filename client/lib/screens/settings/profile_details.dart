@@ -8,6 +8,7 @@ import '../../widgets/header.dart';
 import '../../widgets/button.dart';
 import '../../widgets/input.dart';
 import '../../widgets/settings_action_footer.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/textarea.dart';
 import '../../models/user.dart';
 import '../../providers/user.dart';
@@ -104,6 +105,46 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     }
   }
 
+  Widget _buildLoadingState() {
+    return const SingleChildScrollView(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        children: [
+          SizedBox(height: 16),
+          Center(
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                AppSkeleton(width: 96, height: 96, shape: BoxShape.circle),
+                AppSkeleton(width: 32, height: 32, shape: BoxShape.circle),
+              ],
+            ),
+          ),
+          SizedBox(height: 32),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppSkeletonLine(width: 96, height: 12),
+          ),
+          SizedBox(height: 12),
+          AppSkeleton(
+            height: 56,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+          SizedBox(height: 24),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppSkeletonLine(width: 84, height: 12),
+          ),
+          SizedBox(height: 12),
+          AppSkeleton(
+            height: 152,
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
@@ -122,9 +163,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           ),
           Expanded(
             child: userAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
+              loading: _buildLoadingState,
               error: (err, stack) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

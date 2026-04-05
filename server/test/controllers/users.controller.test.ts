@@ -2,12 +2,14 @@ import type { Request, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  emitSocketEventMock,
   getByIdMock,
   getUserByEmailMock,
   getUserByUsernameMock,
   trackViewMock,
   updateMock,
 } = vi.hoisted(() => ({
+  emitSocketEventMock: vi.fn(),
   getByIdMock: vi.fn(),
   getUserByEmailMock: vi.fn(),
   getUserByUsernameMock: vi.fn(),
@@ -32,8 +34,13 @@ vi.mock("@/features/engagement/service", () => ({
   },
 }));
 
+vi.mock("@/socket/emitter", () => ({
+  emitSocketEvent: emitSocketEventMock,
+}));
+
 describe("users controller", () => {
   beforeEach(() => {
+    emitSocketEventMock.mockReset();
     getByIdMock.mockReset();
     getUserByEmailMock.mockReset();
     getUserByUsernameMock.mockReset();
@@ -126,6 +133,13 @@ describe("users controller", () => {
   });
 
   it("strips email and password from updateUser payloads", async () => {
+    getByIdMock.mockResolvedValue({
+      email: "unchanged@example.com",
+      id: "user-3",
+      meta: { auth: { provider: "email" } },
+      name: "Original User",
+      username: "updated-user",
+    });
     updateMock.mockResolvedValue({
       email: "unchanged@example.com",
       id: "user-3",
@@ -150,6 +164,16 @@ describe("users controller", () => {
     await updateUser(req as any, res);
 
     expect(updateMock).toHaveBeenCalledWith("user-3", { name: "Updated User" });
+    expect(emitSocketEventMock).toHaveBeenCalledWith("user:updated", {
+      data: {
+        email: "unchanged@example.com",
+        id: "user-3",
+        isSocialLogin: false,
+        meta: { auth: { provider: "email" } },
+        name: "Updated User",
+        username: "updated-user",
+      },
+    });
     expect(json).toHaveBeenCalledWith({
       data: {
         email: "unchanged@example.com",
@@ -160,5 +184,38 @@ describe("users controller", () => {
         username: "updated-user",
       },
     });
+  });
+
+  it("does not emit user:updated when only updatedAt changes", async () => {
+    getByIdMock.mockResolvedValue({
+      email: "unchanged@example.com",
+      id: "user-3",
+      meta: { auth: { provider: "email" } },
+      name: "Updated User",
+      updatedAt: "2026-04-05T10:00:00.000Z",
+      username: "updated-user",
+    });
+    updateMock.mockResolvedValue({
+      email: "unchanged@example.com",
+      id: "user-3",
+      meta: { auth: { provider: "email" } },
+      name: "Updated User",
+      updatedAt: "2026-04-05T10:05:00.000Z",
+      username: "updated-user",
+    });
+
+    const { updateUser } = await import("@/features/users/controller");
+    const req = {
+      body: { name: "Updated User" },
+      params: { id: "user-3" },
+    } as unknown as Request;
+    const res = {
+      json: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+
+    await updateUser(req as any, res);
+
+    expect(emitSocketEventMock).not.toHaveBeenCalled();
   });
 });

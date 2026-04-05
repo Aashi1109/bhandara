@@ -10,6 +10,7 @@ import '../theme/theme.dart';
 import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/header.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/skeleton.dart';
 import 'event_detail.dart';
 import 'thread.dart';
 import 'profile_badges.dart';
@@ -428,6 +429,65 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     );
   }
 
+  Widget _buildLoadingState() {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: const AppSkeletonLine(width: 88, height: 12),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const AppSkeletonLine(width: 52, height: 12),
+        const SizedBox(height: 12),
+        ...List.generate(4, (_) => _buildUpdateSkeletonCard()),
+      ],
+    );
+  }
+
+  Widget _buildUpdateSkeletonCard() {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppSkeletonLine(width: 160, height: 16),
+                    SizedBox(height: 10),
+                    AppSkeletonLine(height: 12),
+                    SizedBox(height: 8),
+                    AppSkeletonLine(width: 96, height: 10),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
@@ -457,11 +517,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? _buildLoadingState()
                     : AppPullToRefresh(
                         onRefresh: () => _loadUpdates(refresh: true),
                         wrapInScrollView: false,

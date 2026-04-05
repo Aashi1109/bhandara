@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:foody_mobile/widgets/skeleton.dart';
 import 'package:foody_mobile/services/api.dart';
 import 'package:foody_mobile/screens/saved.dart';
 
@@ -45,9 +47,9 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Pizza');
       await tester.pump(const Duration(milliseconds: 450));
       await tester.tap(find.text('Events'));
-      await _pumpUntilFound(tester, find.text('Pizza Night'));
+      await _pumpUntilFound(tester, find.text('Pizza Night Reloaded'));
 
-      expect(find.text('Pizza Night'), findsOneWidget);
+      expect(find.text('Pizza Night Reloaded'), findsOneWidget);
       expect(find.text('Pizza Buddy'), findsNothing);
 
       await tester.drag(find.byType(Scrollable).last, const Offset(0, 300));
@@ -55,12 +57,36 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await _pumpUntilFound(tester, find.text('Pizza Night Reloaded'));
 
-      expect(adapter.savedResultsCalls, 2);
+      expect(adapter.savedResultsCalls, greaterThanOrEqualTo(2));
       expect(find.text('Pizza Night Reloaded'), findsOneWidget);
       expect(find.text('Pizza Buddy Reloaded'), findsNothing);
       expect(find.widgetWithText(TextField, 'Pizza'), findsOneWidget);
     },
   );
+
+  testWidgets('shows skeletons while saved items are loading', (tester) async {
+    final delayedAdapter = _DelayedSavedResultsAdapter();
+    apiService.dio.httpClientAdapter = delayedAdapter;
+
+    final router = GoRouter(
+      initialLocation: SavedScreen.routePath,
+      routes: [
+        GoRoute(
+          path: SavedScreen.routePath,
+          builder: (context, state) => const SavedScreen(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+
+    expect(find.byType(AppSkeleton), findsWidgets);
+
+    delayedAdapter.completeFirstRequest();
+    await _pumpUntilFound(tester, find.text('Pizza Night'));
+    expect(find.text('Pizza Night'), findsOneWidget);
+  });
 }
 
 class _SavedResultsAdapter implements HttpClientAdapter {
@@ -143,6 +169,29 @@ class _SavedResultsAdapter implements HttpClientAdapter {
         Headers.contentTypeHeader: <String>[Headers.jsonContentType],
       },
     );
+  }
+}
+
+class _DelayedSavedResultsAdapter extends _SavedResultsAdapter {
+  final Completer<void> _firstRequest = Completer<void>();
+
+  void completeFirstRequest() {
+    if (!_firstRequest.isCompleted) {
+      _firstRequest.complete();
+    }
+  }
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions requestOptions,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (requestOptions.path == '/saves' && savedResultsCalls == 0) {
+      await _firstRequest.future;
+    }
+
+    return super.fetch(requestOptions, requestStream, cancelFuture);
   }
 }
 

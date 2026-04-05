@@ -23,6 +23,7 @@ import 'chat.dart';
 import 'explore/explore_screen.dart';
 import '../widgets/media_preview.dart';
 import '../widgets/message_reactions.dart';
+import '../widgets/skeleton.dart';
 
 class ThreadScreen extends StatefulWidget {
   const ThreadScreen({
@@ -427,6 +428,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
+      if (eventName == SocketEvents.threadDeleted) {
+        if (eventData['id'] == _threadId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _goBack();
+            }
+          });
+        }
+        return;
+      }
+
       if (eventName == SocketEvents.threadLocked) {
         if (eventData['id'] == _threadId) {
           setState(() {
@@ -597,6 +609,71 @@ class _ThreadScreenState extends State<ThreadScreen> {
     }
   }
 
+  Widget _buildLoadingState() {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppSkeleton(width: 40, height: 40, shape: BoxShape.circle),
+                  SizedBox(width: 12),
+                  Expanded(child: AppSkeletonLine(width: 108, height: 14)),
+                ],
+              ),
+              SizedBox(height: 14),
+              AppSkeleton(
+                height: 88,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const AppSkeletonLine(width: 72, height: 12),
+        const SizedBox(height: 16),
+        ...List.generate(
+          3,
+          (_) => const Padding(
+            padding: EdgeInsets.only(bottom: 24),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeleton(width: 40, height: 40, shape: BoxShape.circle),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSkeletonLine(width: 92, height: 14),
+                      SizedBox(height: 10),
+                      AppSkeleton(
+                        height: 72,
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      ),
+                      SizedBox(height: 8),
+                      AppSkeletonLine(width: 64, height: 10),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -624,11 +701,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? _buildLoadingState()
                     : SingleChildScrollView(
                         controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),

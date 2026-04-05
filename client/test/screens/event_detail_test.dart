@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:foody_mobile/models/event.dart';
 import 'package:foody_mobile/screens/event_detail.dart';
 import 'package:foody_mobile/services/api.dart';
+import 'package:foody_mobile/widgets/skeleton.dart';
 
 void main() {
   late HttpClientAdapter originalAdapter;
@@ -42,7 +43,7 @@ void main() {
       startTime: DateTime(2026, 3, 20, 19),
       endTime: DateTime(2026, 3, 20, 22),
       createdBy: 'host-1',
-      location: Location(address: 'Main Square'),
+      location: const Location(address: 'Main Square'),
       media: [
         Media(id: 'media-1', url: 'https://example.com/1.jpg', type: 'image'),
         Media(id: 'media-2', url: 'https://example.com/2.jpg', type: 'image'),
@@ -131,7 +132,7 @@ void main() {
       startTime: DateTime(2026, 3, 20, 19),
       endTime: DateTime(2026, 3, 20, 22),
       createdBy: 'host-1',
-      location: Location(address: 'Main Square'),
+      location: const Location(address: 'Main Square'),
       media: [
         Media(id: 'media-1', url: 'https://example.com/1.jpg', type: 'image'),
       ],
@@ -168,6 +169,27 @@ void main() {
 
     expect(find.text('Verified Host'), findsOneWidget);
     expect(find.bySemanticsLabel('Minimize hero header'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shows event detail skeletons while remote data is loading', (
+    tester,
+  ) async {
+    final blockingAdapter = _BlockingHttpClientAdapter();
+    apiService.dio.httpClientAdapter = blockingAdapter;
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: EventDetailScreen(id: 'event-1')),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(AppSkeleton), findsWidgets);
+
+    blockingAdapter.release();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(tester.takeException(), isNull);
   });
 }
@@ -254,6 +276,26 @@ class _FakeHttpClientAdapter implements HttpClientAdapter {
         Headers.contentTypeHeader: <String>[Headers.jsonContentType],
       },
     );
+  }
+}
+
+class _BlockingHttpClientAdapter extends _FakeHttpClientAdapter {
+  final Completer<void> _gate = Completer<void>();
+
+  void release() {
+    if (!_gate.isCompleted) {
+      _gate.complete();
+    }
+  }
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions requestOptions,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    await _gate.future;
+    return super.fetch(requestOptions, requestStream, cancelFuture);
   }
 }
 

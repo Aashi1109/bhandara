@@ -26,6 +26,7 @@ import '../utils/error.dart';
 import '../widgets/avatar.dart';
 import '../widgets/button.dart';
 import '../widgets/review_editor_sheet.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/snackbar.dart';
 import 'chat.dart';
 import 'create_event.dart';
@@ -226,10 +227,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
       if (!mounted) return;
       setState(() {
-        _event = event;
-        _hasJoined = !_hasJoined;
+        _event = _event?.merge(event) ?? event;
+        _heroMediaIndex = _clampMediaIndexFor(_event);
         _isJoining = false;
       });
+      _checkIfJoined();
     } catch (e) {
       if (!mounted) return;
       AppSnackBar.show(
@@ -269,20 +271,57 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     _socketSubscription = socketService.messages.listen((event) {
       if (!mounted) return;
       final eventName = event['event'];
-      if (eventName != SocketEvents.eventUpdated) {
+      if (eventName == SocketEvents.eventUpdated) {
+        final updatedEvent = _parseSocketEventUpdate(event['data']);
+        if (updatedEvent == null || updatedEvent.id != widget.id) {
+          return;
+        }
+
+        setState(() {
+          _event = _event?.merge(updatedEvent) ?? updatedEvent;
+          _heroMediaIndex = _clampMediaIndexFor(_event);
+        });
+        _checkIfJoined();
         return;
       }
 
-      final updatedEvent = _parseSocketEventUpdate(event['data']);
-      if (updatedEvent == null || updatedEvent.id != widget.id) {
-        return;
-      }
+      if (eventName == SocketEvents.threadCreated) {
+        final payload = event['data'];
+        final threadMap = payload is Map<String, dynamic>
+            ? payload
+            : payload is Map
+            ? Map<String, dynamic>.from(payload)
+            : null;
+        if (threadMap == null) {
+          return;
+        }
 
-      setState(() {
-        _event = _event?.merge(updatedEvent) ?? updatedEvent;
-        _heroMediaIndex = _clampMediaIndexFor(_event);
-      });
-      _checkIfJoined();
+        final thread = Thread.fromJson(threadMap);
+        if (thread.eventId != widget.id || _event == null) {
+          return;
+        }
+
+        final currentStats = _event!.stats;
+        if (currentStats == null) {
+          return;
+        }
+
+        setState(() {
+          _event = _event!.copyWith(
+            stats: EventStats(
+              reactionCount: currentStats.reactionCount,
+              threadCount: currentStats.threadCount + 1,
+              participantCount: currentStats.participantCount,
+              verifierCount: currentStats.verifierCount,
+              mediaCount: currentStats.mediaCount,
+              tagCount: currentStats.tagCount,
+              viewCount: currentStats.viewCount,
+              ratingCount: currentStats.ratingCount,
+              ratingAverage: currentStats.ratingAverage,
+            ),
+          );
+        });
+      }
     });
   }
 
@@ -681,17 +720,119 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return actions;
   }
 
+  Widget _buildLoadingState() {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(
+              height: 420,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const AppSkeleton(),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.3),
+                          AppColors.transparent,
+                          AppColors.surface,
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                  const SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          AppSkeleton(
+                            width: 40,
+                            height: 40,
+                            shape: BoxShape.circle,
+                          ),
+                          Row(
+                            children: [
+                              AppSkeleton(
+                                width: 40,
+                                height: 40,
+                                shape: BoxShape.circle,
+                              ),
+                              SizedBox(width: 12),
+                              AppSkeleton(
+                                width: 40,
+                                height: 40,
+                                shape: BoxShape.circle,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppSkeletonLine(width: 220, height: 28),
+                  const SizedBox(height: 14),
+                  const AppSkeletonLine(width: 172, height: 14),
+                  const SizedBox(height: 20),
+                  const Row(
+                    children: [
+                      Expanded(child: AppSkeleton(height: 84)),
+                      SizedBox(width: 12),
+                      Expanded(child: AppSkeleton(height: 84)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const AppSkeleton(
+                    height: 120,
+                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                  ),
+                  const SizedBox(height: 24),
+                  const AppSkeletonLine(width: 140, height: 18),
+                  const SizedBox(height: 16),
+                  ...List.generate(
+                    3,
+                    (_) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: AppSkeleton(
+                        height: 68,
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(userProfileProvider);
     final typography = context.appTypography;
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
+      return _buildLoadingState();
     }
 
     if (_event == null) {
