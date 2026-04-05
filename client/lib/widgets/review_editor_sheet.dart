@@ -112,10 +112,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
             const SizedBox(height: 20),
             Text(
               _isEditing ? 'Edit Review' : 'Add Review',
-              style: typography.titleLG.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
+              style: typography.titleLG,
             ),
             const SizedBox(height: 8),
             Text(
@@ -148,10 +145,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: typography.bodySM.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.error,
-                ),
+                style: typography.bodyMDSemi.copyWith(color: AppColors.error),
               ),
             ],
             const SizedBox(height: 20),

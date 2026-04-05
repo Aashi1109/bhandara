@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,7 @@ import 'utils/explore_viewport.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/button.dart';
 import '../../widgets/card.dart';
+import '../../widgets/event_status_badge.dart';
 import 'widgets/explore_event_map.dart';
 import 'widgets/explore_search_bar.dart';
 import '../event_detail.dart';
@@ -1488,26 +1490,18 @@ class _ExploreScreenState extends State<ExploreScreen>
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _statusColor(status),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${formatEventStatusLabel(status).toUpperCase()} · Free Entry',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.appTypography.bodySM.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.mutedForeground,
-                            ),
+                        EventStatusBadge(status: status),
+                        Text(
+                          'Free Entry',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.appTypography.bodySMStrong.copyWith(
+                            color: AppColors.mutedForeground,
                           ),
                         ),
                       ],
@@ -1526,8 +1520,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             _getRelativeTime(event.startTime, event.endTime),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: context.appTypography.bodyMDSemi.copyWith(
-                              fontWeight: FontWeight.w700,
+                            style: context.appTypography.bodyMDStrong.copyWith(
                               color: AppColors.primary,
                             ),
                           ),
@@ -1674,8 +1667,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           const SizedBox(width: 8),
           Text(
             filter.name,
-            style: context.appTypography.bodySM.copyWith(
-              fontWeight: FontWeight.w700,
+            style: context.appTypography.bodySMStrong.copyWith(
               color: isSelected ? AppColors.surface : AppColors.primary,
             ),
           ),
@@ -1691,6 +1683,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     VoidCallback? onTap,
   }) {
     final hasAction = ctaLabel != null && onTap != null;
+    final borderRadius = BorderRadius.circular(12);
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
@@ -1704,10 +1697,8 @@ class _ExploreScreenState extends State<ExploreScreen>
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: context.appTypography.bodySM.copyWith(
-                  fontWeight: FontWeight.w600,
+                style: context.appTypography.bodySMSemi.copyWith(
                   color: AppColors.primary,
-                  height: 1.35,
                 ),
                 children: [
                   TextSpan(text: message),
@@ -1716,8 +1707,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     TextSpan(
                       text: ctaLabel,
                       recognizer: TapGestureRecognizer()..onTap = onTap,
-                      style: context.appTypography.bodySM.copyWith(
-                        fontWeight: FontWeight.w800,
+                      style: context.appTypography.bodySMExtraBold.copyWith(
                         decoration: TextDecoration.underline,
                       ),
                     ),
@@ -1729,19 +1719,41 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
     );
 
-    return Material(
-      color: AppColors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.warning.withValues(alpha: 0.7)),
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Material(
+          color: AppColors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: borderRadius,
+            child: Ink(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.surface.withValues(alpha: 0.42),
+                    AppColors.warning.withValues(alpha: 0.08),
+                  ],
+                ),
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.35),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.06),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: content,
+            ),
           ),
-          child: content,
         ),
       ),
     );
@@ -1770,19 +1782,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     return '${diff.inMinutes} mins remaining';
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case EventStatusValue.ongoing:
-        return AppColors.success;
-      case EventStatusValue.upcoming:
-        return AppColors.warning;
-      case EventStatusValue.completed:
-      case EventStatusValue.cancelled:
-      default:
-        return AppColors.mutedForeground;
-    }
-  }
-
   Widget _tag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1790,10 +1789,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         color: AppColors.muted,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        text,
-        style: context.appTypography.labelSM.copyWith(letterSpacing: 1.5),
-      ),
+      child: Text(text, style: context.appTypography.labelSM),
     );
   }
 
@@ -1808,8 +1804,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             text,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
-            style: context.appTypography.bodySM.copyWith(
-              fontWeight: FontWeight.w700,
+            style: context.appTypography.bodySMStrong.copyWith(
               color: AppColors.mutedForeground,
             ),
           ),
@@ -1888,9 +1883,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         const SizedBox(height: 16),
                         Text(
                           '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
-                          style: context.appTypography.bodyMD.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: context.appTypography.bodyMDStrong,
                         ),
                         Slider(
                           value: _draftFilters.radiusKm.clamp(1, 500),
@@ -2048,8 +2041,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
       child: Text(
         text,
-        style: context.appTypography.bodyMD.copyWith(
-          fontWeight: FontWeight.w700,
+        style: context.appTypography.bodyMDStrong.copyWith(
           color: selected ? AppColors.surface : AppColors.primary,
         ),
       ),

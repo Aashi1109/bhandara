@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/login_flow.dart';
@@ -56,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ref.read(loginFlowProvider.notifier).update({
             'password': _passwordController.text,
           });
-          context.push(ProfileSetupScreen.routePath);
+          unawaited(context.push(ProfileSetupScreen.routePath));
           return;
         } else {
           // Strictly using login as requested, even for new users
@@ -177,7 +179,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       initial,
                                       style: typography.labelSM.copyWith(
                                         color: AppColors.surface,
-                                        fontWeight: FontWeight.w900,
                                       ),
                                     ),
                                   ),
@@ -269,11 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: () {},
                           child: Text(
                             'FORGOT PASSWORD?',
-                            style: typography.overline.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
-                            ),
+                            style: typography.captionSM,
                           ),
                         ),
                       ],

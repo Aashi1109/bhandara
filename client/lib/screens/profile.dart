@@ -293,8 +293,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     Text(
                       'Profile Photo',
-                      style: typography.titleLG.copyWith(
-                        fontWeight: FontWeight.w800,
+                      style: typography.titleLGStrong.copyWith(
                         color: AppColors.primary,
                       ),
                     ),
@@ -396,8 +395,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: typography.titleXS.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: typography.titleXSStrong.copyWith(
                     color: isDestructive ? AppColors.error : AppColors.primary,
                   ),
                 ),
@@ -555,9 +553,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 16),
                 Text(
                   user.name ?? 'Anonymous',
-                  style: typography.heading3.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: typography.heading3Strong,
                 ),
                 const SizedBox(height: 6),
                 Text('PROFILE', style: typography.overline),
@@ -621,8 +617,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             context.push(ProfileBadgesScreen.routePath),
                         child: Text(
                           'View All',
-                          style: typography.bodySM.copyWith(
-                            fontWeight: FontWeight.w700,
+                          style: typography.bodySMStrong.copyWith(
                             color: AppColors.primary,
                             decoration: TextDecoration.underline,
                           ),
@@ -662,8 +657,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         onTap: () => context.push(UpdatesScreen.routePath),
                         child: Text(
                           'View All',
-                          style: typography.bodySM.copyWith(
-                            fontWeight: FontWeight.w700,
+                          style: typography.bodySMStrong.copyWith(
                             color: AppColors.primary,
                             decoration: TextDecoration.underline,
                           ),
@@ -747,10 +741,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Column(
       spacing: 4,
       children: [
-        Text(
-          value,
-          style: typography.heading3.copyWith(fontWeight: FontWeight.w800),
-        ),
+        Text(value, style: typography.heading3),
         Text(label.toUpperCase(), style: typography.overline),
       ],
     );
@@ -770,11 +761,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           spacing: 8,
           children: [
             Icon(icon, size: AppIconSizes.l, color: AppColors.primary),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: typography.labelSM.copyWith(height: 1.3),
-            ),
+            Text(label, textAlign: TextAlign.center, style: typography.labelSM),
           ],
         ),
       ),
@@ -797,7 +784,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               'No badges unlocked yet.',
               textAlign: TextAlign.center,
               style: context.appTypography.bodySM.copyWith(
-                fontWeight: FontWeight.w700,
                 color: AppColors.mutedForeground,
               ),
             ),

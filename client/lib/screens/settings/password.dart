@@ -73,7 +73,6 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       Text(
                         'Update Security',
                         style: typography.titleLG.copyWith(
-                          fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
                       ),
@@ -84,7 +83,6 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                           'Please enter your current password to create a new one.',
                           textAlign: TextAlign.center,
                           style: typography.bodyMD.copyWith(
-                            fontWeight: FontWeight.w500,
                             color: AppColors.mutedForeground,
                           ),
                         ),
@@ -206,8 +204,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
         ),
         Text(
           label,
-          style: typography.bodySM.copyWith(
-            fontWeight: FontWeight.w700,
+          style: typography.bodySMStrong.copyWith(
             color: met
                 ? AppColors.primary
                 : AppColors.mutedForeground.withValues(alpha: 0.4),

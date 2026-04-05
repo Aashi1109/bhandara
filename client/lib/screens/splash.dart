@@ -139,24 +139,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         RichText(
                           text: TextSpan(
                             style: typography.displayXL,
-                            children: [
-                              const TextSpan(text: 'Foody'),
-                              TextSpan(
-                                text: '.',
-                                style: typography.displayXL.copyWith(
-                                  fontStyle: FontStyle.normal,
-                                ),
-                              ),
+                            children: const [
+                              TextSpan(text: 'Foody'),
+                              TextSpan(text: '.'),
                             ],
                           ),
                         ),
                         Text(
                           'FIND YOUR NEXT MEAL',
-                          style: typography.overline.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 8,
-                          ),
+                          style: typography.captionSM,
                         ),
                       ],
                     ),

@@ -69,7 +69,6 @@ class ExploreSearchBar extends StatelessWidget {
                       decoration: InputDecoration(
                         hintText: placeholder,
                         hintStyle: typography.bodyMD.copyWith(
-                          fontWeight: FontWeight.w500,
                           color: AppColors.mutedForeground.withValues(
                             alpha: 0.5,
                           ),
@@ -78,7 +77,6 @@ class ExploreSearchBar extends StatelessWidget {
                         isCollapsed: true,
                       ),
                       style: typography.bodyMD.copyWith(
-                        fontWeight: FontWeight.w500,
                         color: AppColors.primary,
                       ),
                     ),

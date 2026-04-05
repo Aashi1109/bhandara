@@ -203,8 +203,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                   Text(
                     "Let's set up your preferences",
                     style: context.appTypography.titleXL.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
                       color: AppColors.primary,
                     ),
                   ),
@@ -289,8 +287,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
               onTap: _useCurrentLocation,
               child: Text(
                 'Use Current Location',
-                style: context.appTypography.bodySM.copyWith(
-                  fontWeight: FontWeight.w700,
+                style: context.appTypography.bodySMStrong.copyWith(
                   color: AppColors.primary,
                   decoration: TextDecoration.underline,
                 ),
@@ -352,8 +349,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                           Expanded(
                             child: Text(
                               'CURRENT SELECTION',
-                              style: context.appTypography.labelSM.copyWith(
-                                letterSpacing: 2,
+                              style: context.appTypography.overline.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
                             ),
@@ -406,7 +402,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           child: Text(
             'We use this to show you events nearby. You can always change this in your profile settings later.',
             style: context.appTypography.bodyXS.copyWith(
-              fontSize: 10,
               color: AppColors.mutedForeground,
             ),
           ),
@@ -468,10 +463,15 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
             child: Text(
               label,
               softWrap: true,
-              style: context.appTypography.labelMD.copyWith(
-                fontSize: isPrimary ? 14 : 12,
-                color: isPrimary ? AppColors.surface : AppColors.primary,
-              ),
+              style:
+                  (isPrimary
+                          ? context.appTypography.labelMD
+                          : context.appTypography.bodySM)
+                      .copyWith(
+                        color: isPrimary
+                            ? AppColors.surface
+                            : AppColors.primary,
+                      ),
             ),
           ),
         ],
@@ -711,10 +711,15 @@ class TagChip extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     tag.name + (count != null ? ' ($count)' : ''),
-                    style: context.appTypography.labelMD.copyWith(
-                      fontSize: isSmall ? 12 : 14,
-                      color: isSelected ? AppColors.surface : AppColors.primary,
-                    ),
+                    style:
+                        (isSmall
+                                ? context.appTypography.bodySM
+                                : context.appTypography.labelMD)
+                            .copyWith(
+                              color: isSelected
+                                  ? AppColors.surface
+                                  : AppColors.primary,
+                            ),
                   ),
                   if (isSelected) ...[
                     const SizedBox(width: 6),
@@ -759,9 +764,11 @@ class TagChip extends StatelessWidget {
     if (_isEmoji(tag.icon!)) {
       return Text(
         tag.icon!,
-        style: context.appTypography.bodyMD.copyWith(
-          fontSize: isSmall ? 14 : 16,
-        ),
+        style:
+            (isSmall
+                    ? context.appTypography.bodyMD
+                    : context.appTypography.bodyLG)
+                .copyWith(),
       );
     }
 

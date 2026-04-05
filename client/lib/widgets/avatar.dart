@@ -64,18 +64,18 @@ class Avatar extends StatelessWidget {
   }
 
   Widget _fallback(BuildContext context) {
+    final typography = context.appTypography;
+    final style = switch (textSize) {
+      >= 18 => typography.titleMD,
+      >= 16 => typography.titleSM,
+      >= 14 => typography.bodyMDSemi,
+      _ => typography.bodyBase,
+    };
+
     return Container(
       color: backgroundColor,
       alignment: Alignment.center,
-      child: Text(
-        _initial,
-        style: context.appTypography.titleSM.copyWith(
-          fontSize: textSize,
-          fontWeight: FontWeight.w800,
-          color: textColor,
-          height: 1,
-        ),
-      ),
+      child: Text(_initial, style: style.copyWith(color: textColor)),
     );
   }
 }

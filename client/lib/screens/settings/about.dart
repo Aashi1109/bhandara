@@ -30,28 +30,13 @@ class AboutAppScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Zentry',
-                      style: typography.heading3.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                    Text('Zentry', style: typography.heading3),
                     const SizedBox(height: 8),
-                    Text(
-                      'Version 2.4.0',
-                      style: typography.captionMD.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
+                    Text('Version 2.4.0', style: typography.captionMD),
                     const SizedBox(height: 20),
                     Text(
                       'Zentry helps people discover food events, join conversations around them, and track what matters after the event is live.',
-                      style: typography.bodyMD.copyWith(
-                        height: 1.6,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: typography.bodyMD,
                     ),
                   ],
                 ),

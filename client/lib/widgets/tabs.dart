@@ -73,7 +73,6 @@ class AppTabs<T> extends StatelessWidget {
                     Text(
                       item.label,
                       style: typography.labelMD.copyWith(
-                        fontWeight: FontWeight.w700,
                         color: isSelected
                             ? AppColors.surface
                             : AppColors.mutedForeground,

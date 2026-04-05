@@ -32,8 +32,7 @@ class EventAttendeesScreen extends StatelessWidget {
                 ? Center(
                     child: Text(
                       'No attendees yet.',
-                      style: typography.bodyMD.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: typography.bodyMDSemi.copyWith(
                         color: AppColors.mutedForeground,
                       ),
                     ),

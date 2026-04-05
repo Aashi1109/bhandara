@@ -180,17 +180,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       const SizedBox(height: 32),
                       Text(
                         'Upload Photo',
-                        style: typography.heading3.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
+                        style: typography.heading3Heavy.copyWith(
                           color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Personalize your profile',
-                        style: typography.bodyMD.copyWith(
-                          fontWeight: FontWeight.w600,
+                        style: typography.bodyMDSemi.copyWith(
                           color: AppColors.mutedForeground,
                         ),
                       ),
@@ -205,9 +202,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Text(
                               'FULL NAME',
-                              style: typography.overline.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2,
+                              style: typography.overlineStrong.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
                             ),
@@ -229,9 +224,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Text(
                               'GENDER',
-                              style: typography.overline.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2,
+                              style: typography.overlineStrong.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
                             ),

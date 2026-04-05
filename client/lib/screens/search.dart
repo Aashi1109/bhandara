@@ -71,6 +71,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String? _searchNextCursor;
   String? _landingErrorMessage;
   String? _searchErrorMessage;
+  int _landingRequestVersion = 0;
 
   @override
   void initState() {
@@ -98,7 +99,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   UserAddress? get _currentUserAddress =>
-      ref.watch(userProfileProvider).value?.address;
+      ref.read(userProfileProvider).value?.address;
 
   void _onScroll() {
     if (!_scrollController.hasClients ||
@@ -151,7 +152,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _loadLandingData({bool showLoading = true}) async {
-    if (showLoading) {
+    final requestVersion = ++_landingRequestVersion;
+    final shouldShowLoader =
+        showLoading ||
+        (_historyItems.isEmpty &&
+            _recentItems.isEmpty &&
+            _landingErrorMessage == null);
+
+    if (shouldShowLoader) {
       setState(() {
         _isLoadingLanding = true;
         _landingErrorMessage = null;
@@ -177,7 +185,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
 
       final values = await Future.wait([historyFuture, recentFuture]);
-      if (!mounted) return;
+      if (!mounted || requestVersion != _landingRequestVersion) return;
 
       final history = values[0] as List<SearchEventItem>;
       final recentResponse = values[1] as dynamic;
@@ -193,7 +201,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       });
     } catch (e) {
       debugPrint(e.toString());
-      if (!mounted) return;
+      if (!mounted || requestVersion != _landingRequestVersion) return;
       setState(() {
         _isLoadingLanding = false;
         _landingErrorMessage = 'Unable to load recent events right now.';
@@ -532,8 +540,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       children: [
         Text(
           title,
-          style: context.appTypography.heading3.copyWith(
-            fontWeight: FontWeight.w700,
+          style: context.appTypography.heading3Strong.copyWith(
             color: AppColors.primary,
           ),
         ),
@@ -741,8 +748,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   const SizedBox(height: 16),
                   Text(
                     '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
-                    style: context.appTypography.bodyMD.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: context.appTypography.bodyMDStrong.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -899,8 +905,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
       ),
       child: Text(
         text,
-        style: context.appTypography.bodyMD.copyWith(
-          fontWeight: FontWeight.w700,
+        style: context.appTypography.bodyMDStrong.copyWith(
           color: selected ? AppColors.surface : AppColors.primary,
         ),
       ),

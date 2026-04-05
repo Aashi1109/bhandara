@@ -4,6 +4,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../models/search_event_item.dart';
 import '../theme/theme.dart';
+import '../utils/event_status.dart';
+import 'event_status_badge.dart';
 
 class EventSearchResultTile extends StatelessWidget {
   const EventSearchResultTile({
@@ -22,6 +24,12 @@ class EventSearchResultTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
+    final resolvedStatus = deriveEventStatus(
+      startTime: item.startTime,
+      endTime: item.endTime,
+      currentStatus: item.status,
+    );
+
     return Material(
       color: AppColors.surface,
       child: InkWell(
@@ -43,14 +51,20 @@ class EventSearchResultTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: typography.titleSM.copyWith(
-                        color: AppColors.primary,
-                        height: 1.2,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        EventStatusBadge(status: resolvedStatus),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: typography.titleSM,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -60,10 +74,7 @@ class EventSearchResultTile extends StatelessWidget {
                             distanceLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: typography.bodySM.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.mutedForeground,
-                            ),
+                            style: typography.bodyMDSemi,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -71,10 +82,7 @@ class EventSearchResultTile extends StatelessWidget {
                           createdAgoLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: typography.bodySM.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.mutedForeground,
-                          ),
+                          style: typography.bodyMDSemi,
                         ),
                       ],
                     ),

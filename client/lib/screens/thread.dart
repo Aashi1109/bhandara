@@ -351,8 +351,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
       }
 
       final eventName = event['event'] as String?;
-      final eventData = event['data'];
-      if (eventName == null || eventData is! Map<String, dynamic>) {
+      final rawEventData = event['data'];
+      final eventData = _extractSocketPayload(rawEventData);
+      if (eventName == null || eventData == null) {
         return;
       }
 
@@ -482,6 +483,27 @@ class _ThreadScreenState extends State<ThreadScreen> {
         ),
       );
     });
+  }
+
+  Map<String, dynamic>? _extractSocketPayload(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      final nested = payload['data'];
+      if (nested is Map<String, dynamic>) {
+        return nested;
+      }
+      return payload;
+    }
+
+    if (payload is Map) {
+      final castPayload = Map<String, dynamic>.from(payload);
+      final nested = castPayload['data'];
+      if (nested is Map) {
+        return Map<String, dynamic>.from(nested);
+      }
+      return castPayload;
+    }
+
+    return null;
   }
 
   Future<void> _toggleMessageReaction(Message message, String emoji) async {
@@ -726,18 +748,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
               children: [
                 Text(
                   reply.type?.toUpperCase() ?? 'SYSTEM',
-                  style: typography.overline.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
+                  style: typography.overlineEmphasis,
                 ),
                 if (reply.content.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     reply.content,
                     textAlign: TextAlign.center,
-                    style: typography.bodyBase.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: typography.bodyBaseSemi.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -779,10 +797,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             alignment: Alignment.center,
             child: Text(
               initials,
-              style: typography.bodySM.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
+              style: typography.bodySMStrong.copyWith(color: AppColors.primary),
             ),
           ),
         Expanded(
@@ -846,10 +861,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       reply.content.isEmpty && attachmentCount > 0
                           ? 'Media attachment'
                           : reply.content,
-                      style: typography.bodyMD.copyWith(
-                        fontWeight: FontWeight.w500,
-                        height: 1.5,
-                      ),
+                      style: typography.bodyMD,
                     ),
                   ),
                 ),
@@ -863,7 +875,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 Text(
                   '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
                   style: typography.captionSM.copyWith(
-                    fontWeight: FontWeight.w700,
                     color: AppColors.mutedForeground,
                   ),
                 ),
@@ -916,8 +927,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   ],
                   Text(
                     'In thread',
-                    style: typography.labelSM.copyWith(
-                      fontWeight: FontWeight.w800,
+                    style: typography.labelSMStrong.copyWith(
                       color: AppColors.mutedForeground,
                     ),
                   ),
@@ -967,10 +977,7 @@ class _OriginalMessageCard extends StatelessWidget {
             child: Text(
               message?.content ?? '',
               textAlign: TextAlign.center,
-              style: typography.bodyMD.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
+              style: typography.bodyMDSemi.copyWith(color: AppColors.primary),
             ),
           ),
         ),
@@ -1014,10 +1021,7 @@ class _OriginalMessageCard extends StatelessWidget {
                 child: Text(
                   message?.content ?? '',
                   textAlign: TextAlign.left,
-                  style: typography.bodyMD.copyWith(
-                    fontWeight: FontWeight.w500,
-                    height: 1.5,
-                  ),
+                  style: typography.bodyMD,
                 ),
               ),
               if (message != null && message!.reactions.isNotEmpty) ...[

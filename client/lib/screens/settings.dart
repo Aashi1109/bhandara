@@ -140,7 +140,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Text(
                                   user?.name ?? user?.email ?? 'User',
                                   style: context.appTypography.titleLG.copyWith(
-                                    fontWeight: FontWeight.w700,
                                     color: AppColors.primary,
                                   ),
                                 ),
@@ -148,7 +147,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Text(
                                   user?.email ?? '',
                                   style: context.appTypography.bodyMD.copyWith(
-                                    fontWeight: FontWeight.w500,
                                     color: AppColors.mutedForeground,
                                   ),
                                 ),
@@ -392,8 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: typography.labelSM.copyWith(
-                      fontWeight: FontWeight.w500,
+                    style: typography.labelSMRegular.copyWith(
                       color: AppColors.mutedForeground,
                     ),
                   ),
@@ -453,8 +450,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 Text(
                   subtitle,
-                  style: typography.labelSM.copyWith(
-                    fontWeight: FontWeight.w500,
+                  style: typography.labelSMRegular.copyWith(
                     color: AppColors.mutedForeground,
                   ),
                 ),

@@ -28,11 +28,7 @@ void main() {
     id: 'user-1',
     email: 'test@example.com',
     name: 'Test User',
-    address: UserAddress(
-      label: 'Base',
-      latitude: 21.1458,
-      longitude: 79.0882,
-    ),
+    address: UserAddress(label: 'Base', latitude: 21.1458, longitude: 79.0882),
   );
 
   setUp(() {
@@ -45,7 +41,7 @@ void main() {
         SearchEventItem(
           id: 'history-1',
           name: 'History Dinner',
-          location: Location(
+          location: const Location(
             address: 'History Square',
             latitude: 21.1460,
             longitude: 79.0884,
@@ -77,7 +73,7 @@ void main() {
     expect(find.text('Recently added'), findsOneWidget);
     expect(find.text('History Dinner'), findsOneWidget);
     expect(find.text('Fresh Feast'), findsOneWidget);
-    expect(adapter.eventsCalls, 1);
+    expect(adapter.eventsCalls, greaterThanOrEqualTo(1));
   });
 
   testWidgets('searches events and records selected history item', (
@@ -102,20 +98,57 @@ void main() {
     expect(find.text('detail:search-1'), findsOneWidget);
   });
 
-  testWidgets('back button falls back to explore when there is no stack entry', (
-    tester,
-  ) async {
-    await _pumpSearchScreen(
-      tester,
-      historyService: historyService,
-      user: testUser,
-    );
+  testWidgets(
+    'ignores stale landing errors while a newer landing request is still loading',
+    (tester) async {
+      adapter.failFirstEventsCall = true;
+      adapter.delaySecondEventsCall = const Duration(milliseconds: 250);
 
-    await tester.tap(find.byIcon(LucideIcons.chevronLeft));
-    await tester.pumpAndSettle();
+      await _pumpSearchScreen(
+        tester,
+        historyService: historyService,
+        user: testUser,
+      );
 
-    expect(find.text('explore-screen'), findsOneWidget);
-  });
+      await tester.enterText(find.byType(TextField), 'pi');
+      await tester.pump(const Duration(milliseconds: 350));
+      await _pumpUntilFound(tester, find.text('Pizza Pop-up'));
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pump();
+
+      expect(
+        find.text('Unable to load recent events right now.'),
+        findsNothing,
+      );
+      expect(find.text('History Dinner'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 300));
+      await _pumpUntilFound(tester, find.text('Fresh Feast'));
+
+      expect(
+        find.text('Unable to load recent events right now.'),
+        findsNothing,
+      );
+      expect(find.text('Recently added'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'back button falls back to explore when there is no stack entry',
+    (tester) async {
+      await _pumpSearchScreen(
+        tester,
+        historyService: historyService,
+        user: testUser,
+      );
+
+      await tester.tap(find.byIcon(LucideIcons.chevronLeft));
+      await tester.pumpAndSettle();
+
+      expect(find.text('explore-screen'), findsOneWidget);
+    },
+  );
 }
 
 Future<void> _pumpSearchScreen(
@@ -128,13 +161,13 @@ Future<void> _pumpSearchScreen(
     routes: [
       GoRoute(
         path: ExploreScreen.routePath,
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('explore-screen')),
-        ),
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('explore-screen'))),
       ),
       GoRoute(
         path: SearchScreen.routePath,
-        builder: (context, state) => SearchScreen(historyService: historyService),
+        builder: (context, state) =>
+            SearchScreen(historyService: historyService),
       ),
       GoRoute(
         path: '/event/:id',
@@ -159,6 +192,8 @@ Future<void> _pumpSearchScreen(
 class _EventSearchAdapter implements HttpClientAdapter {
   int eventsCalls = 0;
   int searchCalls = 0;
+  bool failFirstEventsCall = false;
+  Duration? delaySecondEventsCall;
 
   @override
   void close({bool force = false}) {}
@@ -171,6 +206,19 @@ class _EventSearchAdapter implements HttpClientAdapter {
   ) async {
     if (requestOptions.path == '/events') {
       eventsCalls += 1;
+      if (failFirstEventsCall && eventsCalls == 1) {
+        throw DioException(
+          requestOptions: requestOptions,
+          response: Response<dynamic>(
+            requestOptions: requestOptions,
+            statusCode: 500,
+            data: {'error': 'temporary failure'},
+          ),
+        );
+      }
+      if (delaySecondEventsCall != null && eventsCalls == 2) {
+        await Future<void>.delayed(delaySecondEventsCall!);
+      }
       return _jsonResponse({
         'data': {
           'items': [

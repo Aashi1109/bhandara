@@ -212,7 +212,6 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                           Text(
                             'Tap to change photo',
                             style: typography.bodyMD.copyWith(
-                              fontWeight: FontWeight.w500,
                               color: AppColors.mutedForeground,
                             ),
                           ),

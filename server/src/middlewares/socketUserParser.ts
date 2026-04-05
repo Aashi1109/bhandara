@@ -36,8 +36,12 @@ const socketUserParser = async (socket: any, next: any) => {
     socket.request.session = customReq?.session;
 
     next(error);
-  } catch (error: any) {
-    next(error?.message || new UnauthorizedError(`Forbidden: Insufficient permissions`));
+  } catch (error: unknown) {
+    next(
+      error instanceof Error
+        ? error
+        : new UnauthorizedError(`Forbidden: Insufficient permissions`),
+    );
   }
 };
 

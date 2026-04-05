@@ -67,7 +67,7 @@ export function initializeSocket(server: http.Server) {
     logger.info(`Connected ${socket.id}`);
     const socketUserId = socket.request.user.id;
 
-    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, _, cb) => {
       try {
         const messageData = {
           ...(request || {}),

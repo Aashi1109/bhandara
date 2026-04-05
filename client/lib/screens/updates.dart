@@ -289,14 +289,15 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                       Expanded(
                         child: Text(
                           content.title,
-                          style: typography.labelMD.copyWith(
-                            fontWeight: update.isUnread
-                                ? FontWeight.w700
-                                : FontWeight.w600,
-                            color: update.isUnread
-                                ? AppColors.primary
-                                : AppColors.mutedForeground,
-                          ),
+                          style:
+                              (update.isUnread
+                                      ? typography.labelMD
+                                      : typography.labelMDSemi)
+                                  .copyWith(
+                                    color: update.isUnread
+                                        ? AppColors.primary
+                                        : AppColors.mutedForeground,
+                                  ),
                         ),
                       ),
                       if (update.isUnread)
@@ -314,16 +315,13 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                   Text(
                     content.body,
                     style: typography.bodyBase.copyWith(
-                      fontWeight: FontWeight.w500,
                       color: AppColors.mutedForeground,
-                      height: 1.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _timeAgo(update.createdAt),
                     style: typography.captionSM.copyWith(
-                      fontWeight: FontWeight.w700,
                       color: AppColors.mutedForeground,
                     ),
                   ),
@@ -366,14 +364,13 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 unreadCount > 0
                     ? '$unreadCount UNREAD'
                     : 'You are all caught up.',
-                style: context.appTypography.labelSM.copyWith(
-                  fontSize: unreadCount > 0 ? 10 : 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: unreadCount > 0 ? 2 : 0,
-                  color: unreadCount > 0
-                      ? AppColors.surface
-                      : AppColors.mutedForeground,
-                ),
+                style: unreadCount > 0
+                    ? context.appTypography.labelSM.copyWith(
+                        color: AppColors.surface,
+                      )
+                    : context.appTypography.bodySM.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
               ),
             ),
           ),
@@ -422,7 +419,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               child: Text(
                 'You are all caught up.',
                 style: context.appTypography.bodySM.copyWith(
-                  fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -451,7 +447,6 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                   child: Text(
                     _isMarkingAll ? 'Marking...' : 'Mark all as read',
                     style: typography.bodySM.copyWith(
-                      fontWeight: FontWeight.w700,
                       color: _updates.isEmpty || _isMarkingAll
                           ? AppColors.mutedForeground
                           : AppColors.primary,

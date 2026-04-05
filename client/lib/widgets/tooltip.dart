@@ -144,73 +144,65 @@ class _AnimatedTooltipState extends State<AnimatedTooltip>
     final Size size = renderBox.size;
 
     return OverlayEntry(
-      builder: (context) =>
-          Positioned(
-            width: _TooltipDefaults.width,
-            child: CompositedTransformFollower(
-              link: _layerLink,
-              showWhenUnlinked: false,
-              offset: widget.position == TooltipPosition.top
-                  ? Offset(
-                -(_TooltipDefaults.width / 2) + size.width / 2,
-                _TooltipDefaults.verticalOffsetTop,
-              )
-                  : Offset(
-                -(_TooltipDefaults.width / 2) + size.width / 2,
-                size.height + _TooltipDefaults.verticalOffsetBottom,
-              ),
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                alignment: widget.position == TooltipPosition.top
-                    ? Alignment.bottomCenter
-                    : Alignment.topCenter,
-                child: FadeTransition(
-                  opacity: _opacityAnimation,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Center(
-                      child: Container(
-                        padding: _TooltipDefaults.tooltipPadding,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(
-                            _TooltipDefaults.borderRadius,
-                          ),
-                          border: Border.all(
-                            color: AppColors.surface.withValues(alpha: 0.2),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+      builder: (context) => Positioned(
+        width: _TooltipDefaults.width,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: widget.position == TooltipPosition.top
+              ? Offset(
+                  -(_TooltipDefaults.width / 2) + size.width / 2,
+                  _TooltipDefaults.verticalOffsetTop,
+                )
+              : Offset(
+                  -(_TooltipDefaults.width / 2) + size.width / 2,
+                  size.height + _TooltipDefaults.verticalOffsetBottom,
+                ),
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            alignment: widget.position == TooltipPosition.top
+                ? Alignment.bottomCenter
+                : Alignment.topCenter,
+            child: FadeTransition(
+              opacity: _opacityAnimation,
+              child: Material(
+                color: Colors.transparent,
+                child: Center(
+                  child: Container(
+                    padding: _TooltipDefaults.tooltipPadding,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(
+                        _TooltipDefaults.borderRadius,
+                      ),
+                      border: Border.all(
+                        color: AppColors.surface.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            _TooltipDefaults.borderRadius,
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(
+                        _TooltipDefaults.borderRadius,
+                      ),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          padding: _TooltipDefaults.messagePadding,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.8),
                           ),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                            child: Container(
-                              padding: _TooltipDefaults.messagePadding,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.8),
-                              ),
-                              child: Text(
-                                widget.message,
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                  color: AppColors.surface,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
+                          child: Text(
+                            widget.message,
+                            style: context.appTypography.bodySM.copyWith(
+                              color: AppColors.surface,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -220,6 +212,8 @@ class _AnimatedTooltipState extends State<AnimatedTooltip>
               ),
             ),
           ),
+        ),
+      ),
     );
   }
 

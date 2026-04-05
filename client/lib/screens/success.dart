@@ -93,9 +93,6 @@ class SuccessScreen extends StatelessWidget {
                     Text(
                       'Event Live!',
                       style: typography.heading1.copyWith(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
                         color: AppColors.primary,
                       ),
                     ),
@@ -103,8 +100,6 @@ class SuccessScreen extends StatelessWidget {
                     Text(
                       'Your contribution is now visible on the map.',
                       style: typography.bodyLG.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
                         color: AppColors.mutedForeground,
                       ),
                     ),
@@ -153,9 +148,7 @@ class SuccessScreen extends StatelessWidget {
                                           ),
                                           child: Text(
                                             _categoryLabel,
-                                            style: typography.labelXS.copyWith(
-                                              fontWeight: FontWeight.w900,
-                                              letterSpacing: 2,
+                                            style: typography.overline.copyWith(
                                               color: AppColors.surface,
                                             ),
                                           ),
@@ -164,7 +157,6 @@ class SuccessScreen extends StatelessWidget {
                                         Text(
                                           'Just now',
                                           style: typography.labelSM.copyWith(
-                                            fontWeight: FontWeight.w700,
                                             color: AppColors.mutedForeground,
                                           ),
                                         ),
@@ -174,8 +166,6 @@ class SuccessScreen extends StatelessWidget {
                                     Text(
                                       _title,
                                       style: typography.titleMD.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.2,
                                         color: AppColors.primary,
                                       ),
                                     ),
@@ -194,7 +184,6 @@ class SuccessScreen extends StatelessWidget {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: typography.bodySM.copyWith(
-                                              fontWeight: FontWeight.w700,
                                               color: AppColors.mutedForeground,
                                             ),
                                           ),
@@ -227,8 +216,7 @@ class SuccessScreen extends StatelessWidget {
                                     const SizedBox(width: 8),
                                     Text(
                                       _timeRange,
-                                      style: typography.bodySM.copyWith(
-                                        fontWeight: FontWeight.w700,
+                                      style: typography.bodySMStrong.copyWith(
                                         color: AppColors.primary,
                                       ),
                                     ),
@@ -250,10 +238,11 @@ class SuccessScreen extends StatelessWidget {
                                       child: Center(
                                         child: Text(
                                           _participantLabel,
-                                          style: typography.labelXS.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            color: AppColors.mutedForeground,
-                                          ),
+                                          style: typography.labelXSStrong
+                                              .copyWith(
+                                                color:
+                                                    AppColors.mutedForeground,
+                                              ),
                                         ),
                                       ),
                                     ),

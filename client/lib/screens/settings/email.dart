@@ -72,20 +72,11 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Text(
-                      'Email Address',
-                      style: typography.heading3.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
+                    Text('Email Address', style: typography.heading3),
                     const SizedBox(height: 8),
                     Text(
                       'Current: ${user?.email ?? ''}',
-                      style: typography.bodyMD.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: typography.bodyMD,
                     ),
                     const SizedBox(height: 48),
                     AppInput(

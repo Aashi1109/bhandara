@@ -521,10 +521,10 @@ class _LocationSettingsScreenState
                                                   : _selectedLabel,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
-                                              style: typography.bodySM.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.primary,
-                                              ),
+                                              style: typography.bodySMStrong
+                                                  .copyWith(
+                                                    color: AppColors.primary,
+                                                  ),
                                             ),
                                           ),
                                         ],
@@ -646,9 +646,6 @@ class _LocationSettingsScreenState
                                                         details.join(' • '),
                                                         style: typography.bodySM
                                                             .copyWith(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
                                                               color: AppColors
                                                                   .mutedForeground,
                                                             ),
@@ -780,16 +777,12 @@ class _LocationSettingsScreenState
                 decoration: InputDecoration(
                   hintText: 'Search address or area',
                   hintStyle: typography.bodyMD.copyWith(
-                    fontWeight: FontWeight.w500,
                     color: AppColors.mutedForeground.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   isCollapsed: true,
                 ),
-                style: typography.bodyMD.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
-                ),
+                style: typography.bodyMD.copyWith(color: AppColors.primary),
               ),
             ),
           ],

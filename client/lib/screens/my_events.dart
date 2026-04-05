@@ -7,8 +7,10 @@ import '../models/event.dart';
 import '../services/event.dart';
 import '../services/user.dart';
 import '../theme/theme.dart';
+import '../utils/event_status.dart';
 import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/button.dart';
+import '../widgets/event_status_badge.dart';
 import '../widgets/header.dart';
 import 'create_event.dart';
 import 'event_detail.dart';
@@ -136,6 +138,8 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
   Widget _buildEventCard(Event event) {
     final typography = context.appTypography;
+    final resolvedStatus = resolveEventStatus(event);
+    final statusColor = _statusHighlightColor(resolvedStatus);
     return GestureDetector(
       onTap: () => context.push(
         EventDetailScreen.routePath.replaceAll(':id', event.id),
@@ -156,10 +160,24 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
               style: typography.titleSM.copyWith(color: AppColors.primary),
             ),
             const SizedBox(height: 8),
+            Row(
+              children: [
+                EventStatusBadge(status: resolvedStatus),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _timingStatusText(event, resolvedStatus),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: typography.bodyMDSemi.copyWith(color: statusColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
               DateFormat('EEE, d MMM • h:mm a').format(event.startTime),
               style: typography.bodySM.copyWith(
-                fontWeight: FontWeight.w700,
                 color: AppColors.mutedForeground,
               ),
             ),
@@ -194,6 +212,46 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
+  String _timingStatusText(Event event, String status) {
+    if (status == EventStatusValue.cancelled) {
+      return 'Cancelled';
+    }
+
+    final now = DateTime.now();
+    if (status == EventStatusValue.completed) {
+      return 'Ended';
+    }
+
+    if (status == EventStatusValue.upcoming) {
+      final diff = event.startTime.difference(now);
+      if (diff.inHours > 0) {
+        return 'Starts in ${diff.inHours}h ${diff.inMinutes % 60}m';
+      }
+      final minutes = diff.inMinutes < 1 ? 1 : diff.inMinutes;
+      return 'Starts in $minutes min';
+    }
+
+    final diff = event.endTime.difference(now);
+    if (diff.inHours > 0) {
+      return '${diff.inHours}h ${diff.inMinutes % 60}m remaining';
+    }
+    final minutes = diff.inMinutes < 1 ? 1 : diff.inMinutes;
+    return '$minutes min remaining';
+  }
+
+  Color _statusHighlightColor(String status) {
+    switch (status) {
+      case EventStatusValue.ongoing:
+        return AppColors.success;
+      case EventStatusValue.upcoming:
+        return AppColors.warning;
+      case EventStatusValue.completed:
+      case EventStatusValue.cancelled:
+      default:
+        return AppColors.mutedForeground;
+    }
+  }
+
   Widget _buildEmptyState() {
     final typography = context.appTypography;
     return Column(
@@ -208,11 +266,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         Text(
           'You have not created any events yet.',
           textAlign: TextAlign.center,
-          style: typography.bodyLG.copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primary,
-          ),
+          style: typography.bodyLGSemi,
         ),
         const SizedBox(height: 20),
         AppButton(
@@ -247,8 +301,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         child: Center(
           child: Text(
             'You are all caught up.',
-            style: context.appTypography.bodySM.copyWith(
-              fontWeight: FontWeight.w600,
+            style: context.appTypography.bodySMSemi.copyWith(
               color: AppColors.mutedForeground,
             ),
           ),
@@ -316,7 +369,6 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           text,
           overflow: TextOverflow.ellipsis,
           style: context.appTypography.bodySM.copyWith(
-            fontWeight: FontWeight.w700,
             color: AppColors.mutedForeground,
           ),
         ),

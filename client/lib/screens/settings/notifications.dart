@@ -209,8 +209,6 @@ class _NotificationsSettingsScreenState
                 Text(
                   description,
                   style: typography.labelSM.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
                     color: AppColors.mutedForeground,
                   ),
                 ),

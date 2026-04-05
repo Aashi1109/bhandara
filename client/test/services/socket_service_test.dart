@@ -39,37 +39,77 @@ void main() {
       },
     );
 
-    test('forwards socket namespace messages to the raw stream', () async {
-      final socket = FakeWebSocket();
-      final service = SocketService(
-        tokenReader: () async => 'session-token',
-        connector: (uri) async {
-          unawaited(
-            Future<void>.delayed(const Duration(milliseconds: 1), () {
-              socket.add(TextDataReceived('0{"sid":"abc"}'));
-              socket.add(TextDataReceived('40/platform'));
-              socket.add(
-                TextDataReceived(
-                  '42/platform,["messageCreated",{"id":"message-1"}]',
-                ),
-              );
-            }),
-          );
-          return socket;
-        },
-      );
+    test(
+      'forwards flat socket namespace messages to the event stream',
+      () async {
+        final socket = FakeWebSocket();
+        final service = SocketService(
+          tokenReader: () async => 'session-token',
+          connector: (uri) async {
+            unawaited(
+              Future<void>.delayed(const Duration(milliseconds: 1), () {
+                socket.add(TextDataReceived('0{"sid":"abc"}'));
+                socket.add(TextDataReceived('40/platform'));
+                socket.add(
+                  TextDataReceived(
+                    '42/platform,["messageCreated",{"id":"message-1"}]',
+                  ),
+                );
+              }),
+            );
+            return socket;
+          },
+        );
 
-      final eventFuture = service.messages.first;
-      await service.startAuthenticatedSession();
+        final eventFuture = service.messages.first;
+        await service.startAuthenticatedSession();
 
-      expect(await eventFuture, {
-        'event': 'messageCreated',
-        'data': {'id': 'message-1'},
-      });
+        final event = await eventFuture;
+        expect(event['event'], 'messageCreated');
+        expect(event['data'], {'id': 'message-1'});
+        expect(event['raw'], {'id': 'message-1'});
 
-      await service.endAuthenticatedSession();
-      service.dispose();
-    });
+        await service.endAuthenticatedSession();
+        service.dispose();
+      },
+    );
+
+    test(
+      'unwraps the standard server data envelope before listeners parse models',
+      () async {
+        final socket = FakeWebSocket();
+        final service = SocketService(
+          tokenReader: () async => 'session-token',
+          connector: (uri) async {
+            unawaited(
+              Future<void>.delayed(const Duration(milliseconds: 1), () {
+                socket.add(TextDataReceived('0{"sid":"abc"}'));
+                socket.add(TextDataReceived('40/platform'));
+                socket.add(
+                  TextDataReceived(
+                    '42/platform,["event:updated",{"data":{"id":"event-1","name":"Street Lunch"}}]',
+                  ),
+                );
+              }),
+            );
+            return socket;
+          },
+        );
+
+        final eventFuture = service.messages.first;
+        await service.startAuthenticatedSession();
+
+        final event = await eventFuture;
+        expect(event['event'], 'event:updated');
+        expect(event['data'], {'id': 'event-1', 'name': 'Street Lunch'});
+        expect(event['raw'], {
+          'data': {'id': 'event-1', 'name': 'Street Lunch'},
+        });
+
+        await service.endAuthenticatedSession();
+        service.dispose();
+      },
+    );
 
     test(
       'ends the authenticated session and blocks emits while disconnected',

@@ -142,10 +142,7 @@ class AttachmentPill extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 120),
               child: Text(
                 file.name,
-                style: typography.bodySM.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+                style: typography.bodySM.copyWith(color: AppColors.primary),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

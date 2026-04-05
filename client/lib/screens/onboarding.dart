@@ -60,13 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.all(24),
                 child: GestureDetector(
                   onTap: _finish,
-                  child: Text(
-                    'Skip',
-                    style: typography.bodyMD.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.mutedForeground,
-                    ),
-                  ),
+                  child: Text('Skip', style: typography.bodyMDSemi),
                 ),
               ),
             ),
@@ -147,24 +141,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         const SizedBox(height: 40),
-        Text(
-          slide.title,
-          style: typography.titleXL.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
-          ),
-        ),
+        Text(slide.title, style: typography.titleXL),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: Text(
             slide.description,
             textAlign: TextAlign.center,
-            style: typography.bodyLG.copyWith(
-              fontSize: 16,
-              color: AppColors.mutedForeground,
-              height: 1.5,
-            ),
+            style: typography.bodyLG,
           ),
         ),
       ],

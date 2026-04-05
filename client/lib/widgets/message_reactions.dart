@@ -306,14 +306,13 @@ class MessageReactionSummaryRow extends StatelessWidget {
                       child: Text(
                         '${summary.count}',
                         key: ValueKey('${summary.emoji}_${summary.count}'),
-                        style: typography.bodyXS.copyWith(
-                          fontWeight: isSelected
-                              ? FontWeight.w800
-                              : FontWeight.w700,
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.mutedForeground,
-                        ),
+                        style: isSelected
+                            ? typography.captionSMStrong.copyWith(
+                                color: AppColors.primary,
+                              )
+                            : typography.captionSM.copyWith(
+                                color: AppColors.mutedForeground,
+                              ),
                       ),
                     ),
                   ],
@@ -576,8 +575,7 @@ Future<void> showMessageReactionDetailsSheet({
                         children: [
                           Text(
                             'Reactions',
-                            style: typography.titleMD.copyWith(
-                              fontWeight: FontWeight.w800,
+                            style: typography.titleMDStrong.copyWith(
                               color: AppColors.primary,
                             ),
                           ),
@@ -727,12 +725,13 @@ class _ReactionFilterChip extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '$count',
-              style: typography.bodySM.copyWith(
-                fontWeight: FontWeight.w800,
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.mutedForeground,
-              ),
+              style: isSelected
+                  ? typography.bodySMExtraBold.copyWith(
+                      color: AppColors.primary,
+                    )
+                  : typography.bodySMStrong.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
             ),
           ],
         ),

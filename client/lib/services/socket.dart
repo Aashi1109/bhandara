@@ -182,9 +182,14 @@ class SocketService {
       final List<dynamic> eventData = jsonDecode(jsonPart);
       final String eventName = eventData[0];
       final dynamic body = eventData[1];
+      final normalizedBody = _normalizeEventPayload(body);
 
       if (!_messageController.isClosed) {
-        _messageController.add({'event': eventName, 'data': body});
+        _messageController.add({
+          'event': eventName,
+          'data': normalizedBody,
+          'raw': body,
+        });
       }
 
       if (ackId != null) {
@@ -193,6 +198,33 @@ class SocketService {
     } catch (e) {
       print('Error processing event: $e');
     }
+  }
+
+  dynamic _normalizeEventPayload(dynamic body) {
+    dynamic current = body;
+
+    while (current is Map && _isStandardSocketEnvelope(current)) {
+      current = current['data'];
+    }
+
+    if (current is Map<String, dynamic>) {
+      return current;
+    }
+
+    if (current is Map) {
+      return Map<String, dynamic>.from(current);
+    }
+
+    return current;
+  }
+
+  bool _isStandardSocketEnvelope(Map<dynamic, dynamic> payload) {
+    if (!payload.containsKey('data')) {
+      return false;
+    }
+
+    final allowedKeys = {'data', 'error', 'stack'};
+    return payload.keys.every((key) => allowedKeys.contains(key));
   }
 
   void _processAck(String ackData) {

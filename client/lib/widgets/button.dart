@@ -79,6 +79,19 @@ class _AppButtonState extends State<AppButton> {
     }
   }
 
+  TextStyle _labelStyle(AppTypography typography) {
+    switch (widget.size) {
+      case AppButtonSize.sm:
+        return typography.bodySM;
+      case AppButtonSize.md:
+        return typography.labelMD;
+      case AppButtonSize.lg:
+        return typography.labelLG;
+      case AppButtonSize.xl:
+        return typography.titleMD;
+    }
+  }
+
   double get _iconSize {
     switch (widget.size) {
       case AppButtonSize.sm:
@@ -219,10 +232,9 @@ class _AppButtonState extends State<AppButton> {
                         widget.label!,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
-                        style: typography.labelMD.copyWith(
-                          fontSize: _fontSize,
-                          color: foregroundColor,
-                        ),
+                        style: _labelStyle(
+                          typography,
+                        ).copyWith(color: foregroundColor),
                       ),
                     ),
                   if (widget.iconRight != null && !isLoading) ...[

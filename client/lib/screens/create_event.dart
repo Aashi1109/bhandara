@@ -316,10 +316,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       ),
       title: Text(
         title,
-        style: context.appTypography.titleXS.copyWith(
-          fontWeight: FontWeight.w700,
-          color: AppColors.primary,
-        ),
+        style: context.appTypography.titleXS.copyWith(color: AppColors.primary),
       ),
       onTap: onTap,
     );
@@ -601,7 +598,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   title: Text(
                     tag.name,
                     style: context.appTypography.titleXS.copyWith(
-                      fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
                   ),
@@ -1240,8 +1236,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   const SizedBox(width: 6),
                   Text(
                     'Use Current',
-                    style: context.appTypography.bodyXS.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: context.appTypography.labelSM.copyWith(
                       color: AppColors.primary,
                       decoration: TextDecoration.underline,
                       decorationColor: AppColors.primary,
@@ -1408,8 +1403,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                         (categories.isEmpty
                             ? 'Loading categories...'
                             : 'Select Category'),
-                    style: context.appTypography.bodyMD.copyWith(
-                      fontWeight: FontWeight.w700,
+                    style: context.appTypography.labelMD.copyWith(
                       color: _selectedCategory != null
                           ? AppColors.primary
                           : AppColors.mutedForeground,
@@ -1515,7 +1509,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       Text(
                         _timeFormat.format(value),
                         style: context.appTypography.bodySM.copyWith(
-                          fontWeight: FontWeight.w600,
                           color: AppColors.mutedForeground,
                         ),
                       ),

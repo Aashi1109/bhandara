@@ -17,6 +17,7 @@ import '../utils/event_status.dart';
 import '../widgets/app_pull_to_refresh.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/card.dart';
+import '../widgets/event_status_badge.dart';
 import 'explore/widgets/explore_search_bar.dart';
 
 class SavedScreen extends StatefulWidget {
@@ -303,13 +304,7 @@ class _SavedScreenState extends State<SavedScreen> {
                         foreground: AppColors.primary,
                       ),
                       if (resolvedStatus != null)
-                        _buildBadge(
-                          label: formatEventStatusLabel(
-                            resolvedStatus,
-                          ).toUpperCase(),
-                          background: _statusBackground(resolvedStatus),
-                          foreground: _statusForeground(resolvedStatus),
-                        ),
+                        EventStatusBadge(status: resolvedStatus),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -319,17 +314,13 @@ class _SavedScreenState extends State<SavedScreen> {
                         : result.title,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        (isMessage
-                                ? context.appTypography.titleXS
-                                : context.appTypography.titleSM)
-                            .copyWith(
-                              fontWeight: isMessage
-                                  ? FontWeight.w500
-                                  : FontWeight.w700,
-                              height: 1.25,
-                              color: AppColors.primary,
-                            ),
+                    style: isMessage
+                        ? context.appTypography.titleXSRegular.copyWith(
+                            color: AppColors.primary,
+                          )
+                        : context.appTypography.titleSM.copyWith(
+                            color: AppColors.primary,
+                          ),
                   ),
                   if (!isMessage && secondaryText != null) ...[
                     const SizedBox(height: 4),
@@ -373,39 +364,9 @@ class _SavedScreenState extends State<SavedScreen> {
       ),
       child: Text(
         label,
-        style: context.appTypography.labelXS.copyWith(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
-          color: foreground,
-        ),
+        style: context.appTypography.labelXSStrong.copyWith(color: foreground),
       ),
     );
-  }
-
-  Color _statusBackground(String status) {
-    switch (status) {
-      case EventStatusValue.ongoing:
-        return AppColors.success.withValues(alpha: 0.14);
-      case EventStatusValue.completed:
-      case EventStatusValue.cancelled:
-        return AppColors.muted;
-      case EventStatusValue.upcoming:
-      default:
-        return AppColors.warning.withValues(alpha: 0.14);
-    }
-  }
-
-  Color _statusForeground(String status) {
-    switch (status) {
-      case EventStatusValue.ongoing:
-        return AppColors.success;
-      case EventStatusValue.upcoming:
-        return AppColors.warning;
-      case EventStatusValue.completed:
-      case EventStatusValue.cancelled:
-      default:
-        return AppColors.mutedForeground;
-    }
   }
 
   Widget _placeholderImage(SearchResult result) {
@@ -566,8 +527,7 @@ class _SavedScreenState extends State<SavedScreen> {
       ),
       child: Text(
         text,
-        style: context.appTypography.bodySM.copyWith(
-          fontWeight: FontWeight.w700,
+        style: context.appTypography.bodySMStrong.copyWith(
           color: selected
               ? AppColors.surface
               : AppColors.primary.withValues(alpha: 0.6),
@@ -599,8 +559,7 @@ class _SavedScreenState extends State<SavedScreen> {
                     Center(
                       child: Text(
                         'Saved',
-                        style: context.appTypography.heading3.copyWith(
-                          fontWeight: FontWeight.w700,
+                        style: context.appTypography.heading3Strong.copyWith(
                           color: AppColors.primary,
                         ),
                       ),

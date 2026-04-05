@@ -283,7 +283,6 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                     Text(
                       widget.items[_currentIndex].name.toUpperCase(),
                       style: typography.overline.copyWith(
-                        fontWeight: FontWeight.w900,
                         color: AppColors.primary,
                       ),
                     ),
@@ -544,7 +543,6 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
               Text(
                 subtitle,
                 style: typography.bodySM.copyWith(
-                  fontWeight: FontWeight.w600,
                   color: AppColors.mutedForeground,
                 ),
               ),
@@ -854,8 +852,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                     const SizedBox(width: 12),
                     Text(
                       _formatDuration(_position),
-                      style: typography.bodySM.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: typography.bodySMStrong.copyWith(
                         color: Colors.white,
                       ),
                     ),
@@ -885,8 +882,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                     const SizedBox(width: 12),
                     Text(
                       _formatDuration(_duration),
-                      style: typography.bodySM.copyWith(
-                        fontWeight: FontWeight.w700,
+                      style: typography.bodySMStrong.copyWith(
                         color: Colors.white,
                       ),
                     ),
@@ -904,8 +900,7 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
                         ),
                         child: Text(
                           '${_playbackSpeed.toStringAsFixed(_playbackSpeed.truncateToDouble() == _playbackSpeed ? 0 : 2)}x',
-                          style: typography.bodySM.copyWith(
-                            fontWeight: FontWeight.w800,
+                          style: typography.bodySMExtraBold.copyWith(
                             color: Colors.white,
                           ),
                         ),

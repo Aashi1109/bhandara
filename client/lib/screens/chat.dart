@@ -727,7 +727,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: typography.overline.copyWith(letterSpacing: 1.5),
+                        style: typography.overline,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -822,10 +822,7 @@ class _ChatScreenState extends State<ChatScreen> {
           color: AppColors.muted,
           borderRadius: BorderRadius.circular(50),
         ),
-        child: Text(
-          text.toUpperCase(),
-          style: typography.overline.copyWith(letterSpacing: 1.5),
-        ),
+        child: Text(text.toUpperCase(), style: typography.overline),
       ),
     );
   }
@@ -1023,9 +1020,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: Text(
                   'Replying to $replyingTo',
-                  style: typography.bodyXS.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: typography.bodyXS,
                 ),
               ),
               GestureDetector(
@@ -1123,10 +1118,7 @@ class _ChatScreenState extends State<ChatScreen> {
           onTap: () => _openThread(threadMessage),
           child: Text(
             'Start thread',
-            style: typography.labelSM.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.primary,
-            ),
+            style: typography.labelSMStrong.copyWith(color: AppColors.primary),
           ),
         ),
       if (threadMessage != null && !isCurrentUser)
@@ -1141,8 +1133,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 }),
           child: Text(
             _replyingToMessageId == threadMessage.id ? 'Cancel reply' : 'Reply',
-            style: typography.labelSM.copyWith(
-              fontWeight: FontWeight.w800,
+            style: typography.labelSMStrong.copyWith(
               color: _isThreadLocked
                   ? AppColors.mutedForeground
                   : AppColors.primary,
@@ -1175,18 +1166,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   badge ?? name,
                   textAlign: TextAlign.center,
-                  style: typography.overline.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
+                  style: typography.overlineEmphasis,
                 ),
                 if (text.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     text,
                     textAlign: TextAlign.center,
-                    style: typography.bodyBase.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: typography.bodyBaseSemi.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -1293,7 +1280,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (attachmentCount > 0)
           Text(
             '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
-            style: typography.bodyXS.copyWith(fontWeight: FontWeight.w700),
+            style: typography.labelSM,
           ),
         Wrap(
           alignment: isCurrentUser ? WrapAlignment.end : WrapAlignment.start,
@@ -1347,13 +1334,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'THREAD',
-                style: typography.overline.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                ),
-              ),
+              Text('THREAD', style: typography.overlineStrong),
               const Icon(
                 LucideIcons.externalLink,
                 size: AppIconSizes.xs,
@@ -1376,9 +1357,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(
                 child: Text(
                   '$replyCount repl${replyCount == 1 ? 'y' : 'ies'}',
-                  style: typography.bodySM.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: typography.bodySMStrong,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1389,10 +1368,7 @@ class _ChatScreenState extends State<ChatScreen> {
             previewText,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: typography.bodyBase.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            ),
+            style: typography.bodyBaseSemi.copyWith(color: AppColors.primary),
           ),
         ],
       ),
@@ -1452,8 +1428,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 left: 16,
                 child: Text(
                   caption,
-                  style: typography.bodyMD.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: typography.bodyMDStrong.copyWith(
                     color: AppColors.surface,
                   ),
                 ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:foody_mobile/models/user.dart';
 import 'package:foody_mobile/services/user.dart';
@@ -57,12 +59,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) {
         if (isUserExists) {
           if (!isSocialLogin) {
-            context.push(LoginScreen.routePath);
+            unawaited(context.push(LoginScreen.routePath));
           } else {
             AppSnackBar.warning(context, 'Please login using social login');
           }
         } else {
-          context.push(LoginScreen.routePath);
+          unawaited(context.push(LoginScreen.routePath));
         }
       }
     } catch (e) {
@@ -292,7 +294,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             TextSpan(
                               text: 'Terms',
                               style: typography.bodySM.copyWith(
-                                fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                                 decoration: TextDecoration.underline,
                               ),
@@ -301,7 +302,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             TextSpan(
                               text: 'Privacy Policy',
                               style: typography.bodySM.copyWith(
-                                fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                                 decoration: TextDecoration.underline,
                               ),

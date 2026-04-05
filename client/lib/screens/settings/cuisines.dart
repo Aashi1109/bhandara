@@ -107,10 +107,7 @@ class _CuisineInterestsScreenState
                     child: Text(
                       'Select the types of cuisine you\'re interested in to get personalized event recommendations.',
                       textAlign: TextAlign.center,
-                      style: typography.bodyMD.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedForeground,
-                      ),
+                      style: typography.bodyMD,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -211,18 +208,12 @@ class _CuisineInterestsScreenState
                                         children: [
                                           Text(
                                             tag.name,
-                                            style: typography.labelMD.copyWith(
-                                              color: AppColors.primary,
-                                            ),
+                                            style: typography.labelMD,
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             _descriptionForTag(tag),
-                                            style: typography.labelSM.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 1.2,
-                                              color: AppColors.mutedForeground,
-                                            ),
+                                            style: typography.captionSM,
                                           ),
                                         ],
                                       ),

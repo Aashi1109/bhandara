@@ -117,9 +117,7 @@ class AppBottomNav extends StatelessWidget {
                     Text(
                       item.label,
                       style: typography.bodySM.copyWith(
-                        fontWeight: FontWeight.w700,
                         color: AppColors.primary,
-                        height: 1.2,
                       ),
                     ),
                   ],
