@@ -83,7 +83,7 @@ export const createMessage = async (req: ICustomRequest, res: Response) => {
     }).map((activity) => activityService.create(activity)),
     achievementService.trackActivity(req.user.id, EActivityType.MessageCreated),
   ]);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE, {
     data: message,
     }, { room: getThreadRoom(threadId) });
   return res.status(200).json({
@@ -117,7 +117,7 @@ export const updateMessage = async (req: ICustomRequest, res: Response) => {
   );
 
   if (hasMeaningfulChange(existingMessage, message)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATE, {
       data: message,
       }, { room: getThreadRoom(existingMessage.threadId) });
   }
@@ -147,7 +147,7 @@ export const deleteMessage = async (req: ICustomRequest, res: Response) => {
   }
 
   const message = await messagesService.delete(messageId);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETE, {
     data: { id: messageId, threadId: existingMessage.threadId },
     }, { room: getThreadRoom(existingMessage.threadId) });
   return res.status(200).json({

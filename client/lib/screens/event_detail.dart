@@ -271,7 +271,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     _socketSubscription = socketService.messages.listen((event) {
       if (!mounted) return;
       final eventName = event['event'];
-      if (eventName == SocketEvents.eventUpdated) {
+      if (eventName == SocketEvents.eventUpdate) {
         final updatedEvent = _parseSocketEventUpdate(event['data']);
         if (updatedEvent == null || updatedEvent.id != widget.id) {
           return;
@@ -285,7 +285,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.threadCreated) {
+      if (eventName == SocketEvents.threadCreate) {
         final payload = event['data'];
         final threadMap = payload is Map<String, dynamic>
             ? payload

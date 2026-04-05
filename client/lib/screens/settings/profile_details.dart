@@ -9,6 +9,7 @@ import '../../widgets/button.dart';
 import '../../widgets/input.dart';
 import '../../widgets/settings_action_footer.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/tabs.dart';
 import '../../widgets/textarea.dart';
 import '../../models/user.dart';
 import '../../providers/user.dart';
@@ -26,24 +27,49 @@ class ProfileDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
+  static const List<AppTabItem<String>> _genderItems = [
+    AppTabItem(label: 'Male', value: 'male', icon: '♂'),
+    AppTabItem(label: 'Female', value: 'female', icon: '♀'),
+    AppTabItem(label: 'Other', value: 'other', icon: '⋯'),
+  ];
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   bool _didHydrate = false;
   String _initialName = '';
   String _initialBio = '';
+  String _gender = 'other';
+  String _initialGender = 'other';
 
   String get _currentName => _nameController.text.trim();
   String get _currentBio => _bioController.text.trim();
+  String get _currentGender => _gender;
   bool get _isDirty =>
-      _currentName != _initialName || _currentBio != _initialBio;
+      _currentName != _initialName ||
+      _currentBio != _initialBio ||
+      _currentGender != _initialGender;
+
+  String _normalizeGender(String? value) {
+    switch (value?.trim().toLowerCase()) {
+      case 'male':
+      case 'female':
+      case 'other':
+        return value!.trim().toLowerCase();
+      default:
+        return 'other';
+    }
+  }
 
   void _hydrate(User? user) {
     if (_didHydrate || user == null) return;
 
+    final gender = _normalizeGender(user.gender);
     _nameController.text = user.name ?? '';
     _bioController.text = user.bio ?? '';
+    _gender = gender;
     _initialName = (user.name ?? '').trim();
     _initialBio = (user.bio ?? '').trim();
+    _initialGender = gender;
     _didHydrate = true;
   }
 
@@ -61,16 +87,19 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     FocusScope.of(context).unfocus();
     final name = _currentName;
     final bio = _currentBio;
+    final gender = _currentGender;
 
     try {
       await ref
           .read(userProfileProvider.notifier)
-          .updateProfile(name: name, bio: bio);
+          .updateProfile(name: name, bio: bio, gender: gender);
 
       if (mounted) {
         setState(() {
           _initialName = name;
           _initialBio = bio;
+          _initialGender = gender;
+          _gender = gender;
           _nameController.text = name;
           _bioController.text = bio;
         });
@@ -129,6 +158,16 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
           AppSkeleton(
             height: 56,
             borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+          SizedBox(height: 24),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppSkeletonLine(width: 72, height: 12),
+          ),
+          SizedBox(height: 12),
+          AppSkeleton(
+            height: 56,
+            borderRadius: BorderRadius.all(Radius.circular(28)),
           ),
           SizedBox(height: 24),
           Align(
@@ -264,6 +303,22 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       controller: _nameController,
                       onChanged: (_) => setState(() {}),
                       borderRadius: 16,
+                    ),
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Gender',
+                        style: typography.labelMD.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AppTabs<String>(
+                      currentValue: _gender,
+                      onChanged: (value) => setState(() => _gender = value),
+                      items: _genderItems,
                     ),
                     const SizedBox(height: 24),
                     AppTextArea(

@@ -37,7 +37,7 @@ export const createThread = async (req: ICustomRequest, res: Response) => {
     const event = await eventService.getById((thread as any).eventId);
     (thread as any).event = event;
   }
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, { data: thread });
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, { data: thread });
   return res.status(201).json({ data: thread });
 };
 
@@ -82,7 +82,7 @@ export const updateThread = async (req: ICustomRequest, res: Response) => {
   const thread = await threadsService.update(threadId, req.body, true);
 
   if (hasMeaningfulChange(existingThread, thread)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UPDATED, {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UPDATE, {
       data: { id: threadId, ...req.body },
     });
   }
@@ -94,7 +94,7 @@ export const deleteThread = async (req: ICustomRequest, res: Response) => {
   const threadId = asString(req.params.threadId);
   if (!threadId) throw new NotFoundError('Thread not found');
   const thread = await threadsService.delete(threadId);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_DELETED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_DELETE, {
     data: { id: threadId },
   });
   return res.status(200).json({ data: thread });
@@ -107,7 +107,7 @@ export const lockThread = async (req: ICustomRequest, res: Response) => {
 
   const thread = await threadsService.lockThread(threadId, userId);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_LOCKED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_LOCK, {
     data: {
       id: threadId,
       lockHistory: thread.lockHistory,
@@ -127,7 +127,7 @@ export const unlockThread = async (req: ICustomRequest, res: Response) => {
 
   const thread = await threadsService.unlockThread(threadId, userId);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UNLOCKED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UNLOCK, {
     data: {
       id: threadId,
       lockHistory: thread.lockHistory,

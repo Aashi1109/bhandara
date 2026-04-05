@@ -189,7 +189,7 @@ describe('socket message mutation handlers', () => {
       userId: 'user-1',
     });
 
-    const handler = await getRegisteredSocketHandler('message:updated');
+    const handler = await getRegisteredSocketHandler('message:update');
     const ack = vi.fn();
 
     await handler({ content: { text: 'edited' }, id: 'message-1' }, ack);
@@ -203,7 +203,7 @@ describe('socket message mutation handlers', () => {
       true,
     );
     expect(emitSocketEventMock).toHaveBeenCalledWith(
-      'message:updated',
+      'message:update',
       {
         data: {
           content: { text: 'edited' },
@@ -233,7 +233,7 @@ describe('socket message mutation handlers', () => {
       userId: 'author-1',
     });
 
-    const handler = await getRegisteredSocketHandler('message:updated');
+    const handler = await getRegisteredSocketHandler('message:update');
     const ack = vi.fn();
 
     await handler({ content: { text: 'edited' }, id: 'message-1' }, ack);
@@ -245,7 +245,7 @@ describe('socket message mutation handlers', () => {
     });
   });
 
-  it('does not emit message:updated when the socket edit only changes updatedAt', async () => {
+  it('does not emit message:update when the socket edit only changes updatedAt', async () => {
     messageGetByIdMock.mockResolvedValue({
       content: { text: 'same text' },
       id: 'message-1',
@@ -263,7 +263,7 @@ describe('socket message mutation handlers', () => {
       userId: 'user-1',
     });
 
-    const handler = await getRegisteredSocketHandler('message:updated');
+    const handler = await getRegisteredSocketHandler('message:update');
     const ack = vi.fn();
 
     await handler({ content: { text: 'same text' }, id: 'message-1' }, ack);
@@ -292,14 +292,14 @@ describe('socket message mutation handlers', () => {
       id: 'message-1',
     });
 
-    const handler = await getRegisteredSocketHandler('message:deleted');
+    const handler = await getRegisteredSocketHandler('message:delete');
     const ack = vi.fn();
 
     await handler({ id: 'message-1' }, ack);
 
     expect(messageDeleteMock).toHaveBeenCalledWith('message-1');
     expect(emitSocketEventMock).toHaveBeenCalledWith(
-      'message:deleted',
+      'message:delete',
       {
         data: { id: 'message-1', threadId: 'thread-1' },
       },

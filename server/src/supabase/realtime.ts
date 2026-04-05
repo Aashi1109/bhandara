@@ -29,7 +29,7 @@ export function initializeMediaRealtime() {
           });
           for (const e of events) {
             const ev = await eventService.getEventData((e as any).id);
-            emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: ev });
+            emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: ev });
           }
         } catch (err) {
           logger.error('Realtime handler error', err);

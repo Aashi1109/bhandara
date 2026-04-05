@@ -84,28 +84,28 @@ export const PLATFORM_SOCKET_EVENTS = {
   LEAVE_ROOM: "leave:room",
 
   // EVENTs
-  EVENT_CREATED: "event:created",
-  EVENT_UPDATED: "event:updated",
-  EVENT_DELETED: "event:deleted",
+  EVENT_CREATE: "event:create",
+  EVENT_UPDATE: "event:update",
+  EVENT_DELETE: "event:delete",
 
   // THREADs
-  THREAD_CREATED: "thread:created",
-  THREAD_UPDATED: "thread:updated",
-  THREAD_DELETED: "thread:deleted",
-  THREAD_LOCKED: "thread:locked",
-  THREAD_UNLOCKED: "thread:unlocked",
+  THREAD_CREATE: "thread:create",
+  THREAD_UPDATE: "thread:update",
+  THREAD_DELETE: "thread:delete",
+  THREAD_LOCK: "thread:lock",
+  THREAD_UNLOCK: "thread:unlock",
 
   // MESSAGEs
-  MESSAGE_CREATED: "message:created",
-  MESSAGE_UPDATED: "message:updated",
-  MESSAGE_DELETED: "message:deleted",
+  MESSAGE_CREATE: "message:create",
+  MESSAGE_UPDATE: "message:update",
+  MESSAGE_DELETE: "message:delete",
 
   // REACTIONs
-  REACTION_CREATED: "reaction:created",
-  REACTION_UPDATED: "reaction:updated",
-  REACTION_DELETED: "reaction:deleted",
+  REACTION_CREATE: "reaction:create",
+  REACTION_UPDATE: "reaction:update",
+  REACTION_DELETE: "reaction:delete",
 
   // USERs
-  USER_UPDATED: "user:updated",
+  USER_UPDATE: "user:update",
   EXPLORE: "explore",
 };

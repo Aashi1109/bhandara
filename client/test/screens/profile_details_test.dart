@@ -27,6 +27,7 @@ void main() {
     id: 'user-1',
     email: 'test@example.com',
     name: 'Ashish',
+    gender: 'male',
     bio: 'Food explorer',
   );
 
@@ -95,6 +96,32 @@ void main() {
     expect(profile.updateProfileCalls, 1);
     expect(profile.updates.single['name'], 'Ashish');
     expect(profile.updates.single['bio'], 'Writes dinner notes');
+    expect(_updateButton(tester).onPressed, isNull);
+  });
+
+  testWidgets('editing gender alone enables save and calls update once', (
+    tester,
+  ) async {
+    final profile = _TestUserProfile(baseUser);
+
+    await _pumpProfileDetails(tester, profile);
+
+    await tester.tap(find.text('Female'));
+    await tester.pump();
+
+    expect(_updateButton(tester).onPressed, isNotNull);
+
+    await tester.tap(find.text('Update Profile'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
+    expect(profile.updateProfileCalls, 1);
+    expect(profile.updates.single['name'], 'Ashish');
+    expect(profile.updates.single['bio'], 'Food explorer');
+    expect(profile.updates.single['gender'], 'female');
     expect(_updateButton(tester).onPressed, isNull);
   });
 
@@ -177,10 +204,16 @@ class _TestUserProfile extends UserProfile {
   Future<void> updateProfile({
     String? name,
     String? bio,
+    String? gender,
     String? mediaId,
   }) async {
     updateProfileCalls += 1;
-    updates.add({'name': name, 'bio': bio, 'mediaId': mediaId});
+    updates.add({
+      'name': name,
+      'bio': bio,
+      'gender': gender,
+      'mediaId': mediaId,
+    });
 
     state = const AsyncLoading();
     await Future<void>.delayed(Duration.zero);
@@ -190,6 +223,7 @@ class _TestUserProfile extends UserProfile {
       email: _user.email,
       name: name ?? _user.name,
       username: _user.username,
+      gender: gender ?? _user.gender,
       avatarUrl: _user.avatarUrl,
       bio: bio ?? _user.bio,
       createdAt: _user.createdAt,

@@ -161,7 +161,7 @@ class ChatService extends BaseService {
           : trimmedContent;
 
       final ack = await socketService.emit(
-        SocketEvents.messageCreated,
+        SocketEvents.messageCreate,
         _compactMap({
           'threadId': threadId,
           'content': messageContent,

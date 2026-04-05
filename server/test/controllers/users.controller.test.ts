@@ -164,7 +164,7 @@ describe("users controller", () => {
     await updateUser(req as any, res);
 
     expect(updateMock).toHaveBeenCalledWith("user-3", { name: "Updated User" });
-    expect(emitSocketEventMock).toHaveBeenCalledWith("user:updated", {
+    expect(emitSocketEventMock).toHaveBeenCalledWith("user:update", {
       data: {
         email: "unchanged@example.com",
         id: "user-3",
@@ -186,7 +186,7 @@ describe("users controller", () => {
     });
   });
 
-  it("does not emit user:updated when only updatedAt changes", async () => {
+  it("does not emit user:update when only updatedAt changes", async () => {
     getByIdMock.mockResolvedValue({
       email: "unchanged@example.com",
       id: "user-3",

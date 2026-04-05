@@ -180,7 +180,7 @@ export const createEvent = async (req: ICustomRequest, res: Response) => {
     }),
     achievementService.trackActivity(req.user.id, EActivityType.EventCreated),
   ]);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATED, { data: event });
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, { data: event });
   return res.status(201).json({ data: event });
 };
 
@@ -197,7 +197,7 @@ export const updateEvent = async (req: ICustomRequest, res: Response) => {
   });
 
   if (hasMeaningfulChange(existingEventData, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, {
       data: { ...updatedEvent, id: eventId },
     });
   }
@@ -212,7 +212,7 @@ export const deleteEvent = async (req: ICustomRequest, res: Response) => {
 
   await eventService.delete(req.params.eventId as string);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_DELETED, {
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_DELETE, {
     data: { id: req.params.eventId },
   });
 
@@ -260,7 +260,7 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
   ]);
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: updatedEvent });
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: updatedEvent });
   }
 
   return res.status(200).json({ data: updatedEvent });
@@ -290,7 +290,7 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
   ]);
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, { data: updatedEvent });
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: updatedEvent });
   }
 
   return res.status(200).json({ data: updatedEvent });

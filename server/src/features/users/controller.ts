@@ -74,7 +74,7 @@ export const updateUser = async (req: ICustomRequest, res: Response) => {
   const safeUser = getSafeUser(data);
 
   if (hasMeaningfulChange(existingUser ? getSafeUser(existingUser) : null, safeUser)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.USER_UPDATED, { data: safeUser });
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.USER_UPDATE, { data: safeUser });
   }
 
   return res.status(200).json({ data: safeUser });

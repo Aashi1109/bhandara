@@ -110,8 +110,8 @@ class MessageReactionUtils {
   }) {
     final next = List<MessageReaction>.from(reactions);
     switch (eventName) {
-      case SocketEvents.reactionCreated:
-      case SocketEvents.reactionUpdated:
+      case SocketEvents.reactionCreate:
+      case SocketEvents.reactionUpdate:
         final sameIdIndex = next.indexWhere((item) => item.id == reaction.id);
         final sameUserIndex = next.indexWhere(
           (item) => item.userId == reaction.userId,
@@ -124,7 +124,7 @@ class MessageReactionUtils {
           next.add(reaction);
         }
         return next;
-      case SocketEvents.reactionDeleted:
+      case SocketEvents.reactionDelete:
         next.removeWhere((item) => item.id == reaction.id);
         return next;
       default:
@@ -176,10 +176,10 @@ class MessageReactionUtils {
       previous: List<MessageReaction>.from(reactions),
       optimistic: optimistic,
       eventName: isRemoving
-          ? SocketEvents.reactionDeleted
+          ? SocketEvents.reactionDelete
           : existing != null
-          ? SocketEvents.reactionUpdated
-          : SocketEvents.reactionCreated,
+          ? SocketEvents.reactionUpdate
+          : SocketEvents.reactionCreate,
     );
   }
 

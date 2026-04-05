@@ -167,7 +167,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       final eventName = event['event'];
-      if (eventName != SocketEvents.userUpdated) {
+      if (eventName != SocketEvents.userUpdate) {
         return;
       }
 

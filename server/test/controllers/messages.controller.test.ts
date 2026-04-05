@@ -177,7 +177,7 @@ describe("messages controller", () => {
     expect(messageDeleteMock).not.toHaveBeenCalled();
   });
 
-  it("does not emit message:updated when only updatedAt changes", async () => {
+  it("does not emit message:update when only updatedAt changes", async () => {
     messageGetByIdMock.mockResolvedValue({
       content: { text: "same text" },
       id: "message-1",

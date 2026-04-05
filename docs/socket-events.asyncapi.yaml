@@ -416,37 +416,37 @@ components:
       payload:
         $ref: '#/components/schemas/JoinLeaveRoomRequest'
     messageCreatedRequest:
-      name: message:created
+      name: message:create
       title: Message create request
       payload:
         $ref: '#/components/schemas/MessageCreatedRequest'
     messageUpdatedRequest:
-      name: message:updated
+      name: message:update
       title: Message update request
       payload:
         $ref: '#/components/schemas/MessageUpdatedRequest'
     messageDeletedRequest:
-      name: message:deleted
+      name: message:delete
       title: Message delete request
       payload:
         $ref: '#/components/schemas/MessageDeletedRequest'
     reactionCreatedRequest:
-      name: reaction:created
+      name: reaction:create
       title: Reaction create request
       payload:
         $ref: '#/components/schemas/ReactionMutationRequest'
     reactionUpdatedRequest:
-      name: reaction:updated
+      name: reaction:update
       title: Reaction update request
       payload:
         $ref: '#/components/schemas/ReactionMutationRequest'
     reactionDeletedRequest:
-      name: reaction:deleted
+      name: reaction:delete
       title: Reaction delete request
       payload:
         $ref: '#/components/schemas/ReactionDeleteRequest'
     threadCreatedRequest:
-      name: thread:created
+      name: thread:create
       title: Thread create request
       payload:
         $ref: '#/components/schemas/ThreadCreatedRequest'
@@ -476,72 +476,72 @@ components:
       payload:
         $ref: '#/components/schemas/ErrorAck'
     eventCreatedBroadcast:
-      name: event:created
+      name: event:create
       title: Event created broadcast
       payload:
         $ref: '#/components/schemas/EventEnvelope'
     eventUpdatedBroadcast:
-      name: event:updated
+      name: event:update
       title: Event updated broadcast
       payload:
         $ref: '#/components/schemas/EventEnvelope'
     eventDeletedBroadcast:
-      name: event:deleted
+      name: event:delete
       title: Event deleted broadcast
       payload:
         $ref: '#/components/schemas/EntityDeletedEnvelope'
     threadCreatedBroadcast:
-      name: thread:created
+      name: thread:create
       title: Thread created broadcast
       payload:
         $ref: '#/components/schemas/ThreadEnvelope'
     threadUpdatedBroadcast:
-      name: thread:updated
+      name: thread:update
       title: Thread updated broadcast
       payload:
         $ref: '#/components/schemas/ThreadPatchedEnvelope'
     threadDeletedBroadcast:
-      name: thread:deleted
+      name: thread:delete
       title: Thread deleted broadcast
       payload:
         $ref: '#/components/schemas/EntityDeletedEnvelope'
     threadLockedBroadcast:
-      name: thread:locked
+      name: thread:lock
       title: Thread locked broadcast
       payload:
         $ref: '#/components/schemas/ThreadLockEnvelope'
     threadUnlockedBroadcast:
-      name: thread:unlocked
+      name: thread:unlock
       title: Thread unlocked broadcast
       payload:
         $ref: '#/components/schemas/ThreadUnlockEnvelope'
     messageCreatedBroadcast:
-      name: message:created
+      name: message:create
       title: Message created broadcast
       payload:
         $ref: '#/components/schemas/MessageEnvelope'
     messageUpdatedBroadcast:
-      name: message:updated
+      name: message:update
       title: Message updated broadcast
       payload:
         $ref: '#/components/schemas/MessageEnvelope'
     messageDeletedBroadcast:
-      name: message:deleted
+      name: message:delete
       title: Message deleted broadcast
       payload:
         $ref: '#/components/schemas/MessageDeletedEnvelope'
     reactionCreatedBroadcast:
-      name: reaction:created
+      name: reaction:create
       title: Reaction created broadcast
       payload:
         $ref: '#/components/schemas/ReactionEnvelope'
     reactionUpdatedBroadcast:
-      name: reaction:updated
+      name: reaction:update
       title: Reaction updated broadcast
       payload:
         $ref: '#/components/schemas/ReactionEnvelope'
     reactionDeletedBroadcast:
-      name: reaction:deleted
+      name: reaction:delete
       title: Reaction deleted broadcast
       payload:
         $ref: '#/components/schemas/ReactionEnvelope'
@@ -551,7 +551,7 @@ components:
       payload:
         $ref: '#/components/schemas/ExploreEnvelope'
     userUpdatedBroadcast:
-      name: user:updated
+      name: user:update
       title: User updated broadcast
       payload:
         $ref: '#/components/schemas/UserEnvelope'

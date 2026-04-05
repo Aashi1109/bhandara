@@ -188,7 +188,7 @@ describe('events controller', () => {
     });
   });
 
-  it('emits event:updated after join/leave mutations', async () => {
+  it('emits event:update after join/leave mutations', async () => {
     const previousEvent = {
       id: 'event-1',
       participants: [],
@@ -215,14 +215,14 @@ describe('events controller', () => {
     await eventJoinLeaveHandler(req as any, res);
 
     expect(joinLeaveEventMock).toHaveBeenCalledWith('user-1', 'event-1', 'join');
-    expect(emitSocketEventMock).toHaveBeenCalledWith('event:updated', {
+    expect(emitSocketEventMock).toHaveBeenCalledWith('event:update', {
       data: updatedEvent,
     });
     expect(status).toHaveBeenCalledWith(200);
     expect(json).toHaveBeenCalledWith({ data: updatedEvent });
   });
 
-  it('emits event:updated after event verification', async () => {
+  it('emits event:update after event verification', async () => {
     const previousEvent = {
       id: 'event-1',
       verifiers: [],
@@ -252,14 +252,14 @@ describe('events controller', () => {
       latitude: 18.52,
       longitude: 73.85,
     });
-    expect(emitSocketEventMock).toHaveBeenCalledWith('event:updated', {
+    expect(emitSocketEventMock).toHaveBeenCalledWith('event:update', {
       data: updatedEvent,
     });
     expect(status).toHaveBeenCalledWith(200);
     expect(json).toHaveBeenCalledWith({ data: updatedEvent });
   });
 
-  it('does not emit event:updated when updateEvent makes no meaningful change', async () => {
+  it('does not emit event:update when updateEvent makes no meaningful change', async () => {
     const existingEvent = {
       createdBy: 'owner-1',
       id: 'event-1',

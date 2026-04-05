@@ -808,9 +808,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       final eventData = event['data'];
 
       // Only handle event-related socket messages on this screen.
-      if (eventName != SocketEvents.eventCreated &&
-          eventName != SocketEvents.eventUpdated &&
-          eventName != SocketEvents.eventDeleted) {
+      if (eventName != SocketEvents.eventCreate &&
+          eventName != SocketEvents.eventUpdate &&
+          eventName != SocketEvents.eventDelete) {
         return;
       }
 
@@ -829,13 +829,13 @@ class _ExploreScreenState extends State<ExploreScreen>
         );
 
         setState(() {
-          if (eventName == SocketEvents.eventCreated) {
+          if (eventName == SocketEvents.eventCreate) {
             final newEvent = Event.fromJson(eventData);
             if (_eventMatchesActiveFilters(newEvent) &&
                 !_events.any((e) => e.id == newEvent.id)) {
               _events = [..._events, newEvent];
             }
-          } else if (eventName == SocketEvents.eventUpdated) {
+          } else if (eventName == SocketEvents.eventUpdate) {
             final updatedEvent = Event.fromJson(eventData);
             final index = _events.indexWhere((e) => e.id == updatedEvent.id);
             final matches = _eventMatchesActiveFilters(updatedEvent);
@@ -860,7 +860,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             } else if (matches) {
               _events = [..._events, updatedEvent];
             }
-          } else if (eventName == SocketEvents.eventDeleted) {
+          } else if (eventName == SocketEvents.eventDelete) {
             final eventId = eventData['id'];
             _events = _events.where((e) => e.id != eventId).toList();
             if (_selectedEvent?.id == eventId) {

@@ -67,7 +67,7 @@ export function initializeSocket(server: http.Server) {
     logger.info(`Connected ${socket.id}`);
     const socketUserId = socket.request.user.id;
 
-    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, async (request, _, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE, async (request, _, cb) => {
       try {
         const messageData = {
           ...(request || {}),
@@ -92,7 +92,7 @@ export function initializeSocket(server: http.Server) {
           achievementService.trackActivity(socketUserId, EActivityType.MessageCreated),
         ]);
         emitSocketEvent(
-          PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED,
+          PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE,
           {
             data: message,
           },
@@ -109,7 +109,7 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATE, async (request, cb) => {
       try {
         const { id, content } = request || {};
 
@@ -142,7 +142,7 @@ export function initializeSocket(server: http.Server) {
 
         if (hasMeaningfulChange(existingMessage, updatedMessage)) {
           emitSocketEvent(
-            PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED,
+            PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATE,
             {
               data: updatedMessage,
             },
@@ -158,7 +158,7 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETE, async (request, cb) => {
       try {
         const { id } = request || {};
 
@@ -184,7 +184,7 @@ export function initializeSocket(server: http.Server) {
 
         const payload = { id, threadId: existingMessage.threadId };
         emitSocketEvent(
-          PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED,
+          PLATFORM_SOCKET_EVENTS.MESSAGE_DELETE,
           {
             data: payload,
           },
@@ -236,7 +236,7 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_CREATED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_CREATE, async (request, cb) => {
       try {
         const { contentId, contentPath, reaction, parentId } = request;
 
@@ -300,7 +300,7 @@ export function initializeSocket(server: http.Server) {
         await achievementService.trackActivity(socketUserId, EActivityType.ReactionCreated);
 
         emitSocketEvent(
-          PLATFORM_SOCKET_EVENTS.REACTION_CREATED,
+          PLATFORM_SOCKET_EVENTS.REACTION_CREATE,
           {
             data: {
               id: contentId,
@@ -323,7 +323,7 @@ export function initializeSocket(server: http.Server) {
         });
       }
     });
-    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_UPDATED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_UPDATE, async (request, cb) => {
       try {
         const { contentId, contentPath, reaction, parentId } = request;
 
@@ -387,7 +387,7 @@ export function initializeSocket(server: http.Server) {
 
         if (shouldEmitReactionUpdate) {
           emitSocketEvent(
-            PLATFORM_SOCKET_EVENTS.REACTION_UPDATED,
+            PLATFORM_SOCKET_EVENTS.REACTION_UPDATE,
             {
               data: {
                 id: contentId,
@@ -411,7 +411,7 @@ export function initializeSocket(server: http.Server) {
         });
       }
     });
-    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_DELETED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.REACTION_DELETE, async (request, cb) => {
       try {
         const { contentId, contentPath, id, reaction, parentId } = request;
 
@@ -469,7 +469,7 @@ export function initializeSocket(server: http.Server) {
               : undefined;
 
         emitSocketEvent(
-          PLATFORM_SOCKET_EVENTS.REACTION_DELETED,
+          PLATFORM_SOCKET_EVENTS.REACTION_DELETE,
           {
             data: {
               id: contentId,
@@ -548,7 +548,7 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, async (request, cb) => {
+    socket.on(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, async (request, cb) => {
       try {
         const { eventId, ...messageData } = request || {};
 
@@ -573,7 +573,7 @@ export function initializeSocket(server: http.Server) {
         newThread.messages = [message];
         newThread.creator = socket.request.user;
 
-        emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATED, {
+        emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, {
           data: { ...newThread, event: eventResponse },
         });
         cb({ data: true });

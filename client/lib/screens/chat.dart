@@ -156,7 +156,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final eventData = event['data'];
 
       setState(() {
-        if (eventName == SocketEvents.messageCreated &&
+        if (eventName == SocketEvents.messageCreate &&
             eventData is Map<String, dynamic>) {
           final message = Message.fromJson(eventData);
           if (message.threadId != widget.id) {
@@ -193,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
               }
             }
           }
-        } else if (eventName == SocketEvents.messageUpdated &&
+        } else if (eventName == SocketEvents.messageUpdate &&
             eventData is Map<String, dynamic>) {
           final updatedMsg = Message.fromJson(eventData);
           if (updatedMsg.threadId != widget.id) {
@@ -207,7 +207,7 @@ class _ChatScreenState extends State<ChatScreen> {
           } else {
             _replaceReply(updatedMsg.parentId!, updatedMsg);
           }
-        } else if (eventName == SocketEvents.messageDeleted &&
+        } else if (eventName == SocketEvents.messageDelete &&
             eventData is Map<String, dynamic>) {
           if (eventData['threadId'] != widget.id) {
             return;
@@ -221,15 +221,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   .toList(),
             );
           }
-        } else if (eventName == SocketEvents.reactionCreated ||
-            eventName == SocketEvents.reactionUpdated ||
-            eventName == SocketEvents.reactionDeleted) {
+        } else if (eventName == SocketEvents.reactionCreate ||
+            eventName == SocketEvents.reactionUpdate ||
+            eventName == SocketEvents.reactionDelete) {
           if (eventData is! Map<String, dynamic> ||
               eventData['threadId'] != widget.id) {
             return;
           }
           _applyReactionEvent(eventName as String, eventData);
-        } else if (eventName == SocketEvents.threadDeleted &&
+        } else if (eventName == SocketEvents.threadDelete &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
           if (threadId == widget.id) {
@@ -239,13 +239,13 @@ class _ChatScreenState extends State<ChatScreen> {
               }
             });
           }
-        } else if (eventName == SocketEvents.threadLocked &&
+        } else if (eventName == SocketEvents.threadLock &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
           if (threadId == widget.id) {
             _isThreadLocked = true;
           }
-        } else if (eventName == SocketEvents.threadUnlocked &&
+        } else if (eventName == SocketEvents.threadUnlock &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
           if (threadId == widget.id) {

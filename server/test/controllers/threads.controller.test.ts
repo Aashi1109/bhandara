@@ -47,7 +47,7 @@ describe('threads controller', () => {
     updateMock.mockReset();
   });
 
-  it('does not emit thread:updated when only updatedAt changes', async () => {
+  it('does not emit thread:update when only updatedAt changes', async () => {
     getByIdMock.mockResolvedValue({
       id: 'thread-1',
       title: 'General',

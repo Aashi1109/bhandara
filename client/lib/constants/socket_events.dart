@@ -4,27 +4,27 @@ class SocketEvents {
   static const String leaveRoom = 'leave:room';
 
   // EVENTs
-  static const String eventCreated = 'event:created';
-  static const String eventUpdated = 'event:updated';
-  static const String eventDeleted = 'event:deleted';
+  static const String eventCreate = 'event:create';
+  static const String eventUpdate = 'event:update';
+  static const String eventDelete = 'event:delete';
 
   // THREADs
-  static const String threadCreated = 'thread:created';
-  static const String threadUpdated = 'thread:updated';
-  static const String threadDeleted = 'thread:deleted';
-  static const String threadLocked = 'thread:locked';
-  static const String threadUnlocked = 'thread:unlocked';
+  static const String threadCreate = 'thread:create';
+  static const String threadUpdate = 'thread:update';
+  static const String threadDelete = 'thread:delete';
+  static const String threadLock = 'thread:lock';
+  static const String threadUnlock = 'thread:unlock';
 
   // MESSAGEs
-  static const String messageCreated = 'message:created';
-  static const String messageUpdated = 'message:updated';
-  static const String messageDeleted = 'message:deleted';
+  static const String messageCreate = 'message:create';
+  static const String messageUpdate = 'message:update';
+  static const String messageDelete = 'message:delete';
 
   // REACTIONs
-  static const String reactionCreated = 'reaction:created';
-  static const String reactionUpdated = 'reaction:updated';
-  static const String reactionDeleted = 'reaction:deleted';
+  static const String reactionCreate = 'reaction:create';
+  static const String reactionUpdate = 'reaction:update';
+  static const String reactionDelete = 'reaction:delete';
 
-  static const String userUpdated = 'user:updated';
+  static const String userUpdate = 'user:update';
   static const String explore = 'explore';
 }

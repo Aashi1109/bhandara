@@ -20,11 +20,13 @@ class UserProfile extends _$UserProfile {
   Future<void> updateProfile({
     String? name,
     String? bio,
+    String? gender,
     String? mediaId,
   }) async {
     await updateUserData({
       'name': name,
       'bio': bio,
+      'gender': gender,
       'mediaId': mediaId,
     }..removeWhere((k, v) => v == null));
   }

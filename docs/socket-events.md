@@ -68,35 +68,35 @@ Server broadcasts emitted through `emitSocketEvent(...)` generally use:
 | --- | --- | --- | --- | --- |
 | `join:room` | implemented | `{ "room": "thread:<threadId>" }` | `{ "data": true }` or `{ "error": string }` | Validates thread rooms before joining. |
 | `leave:room` | implemented | `{ "room": "thread:<threadId>" }` | `{ "data": true }` or `{ "error": string }` | Leaves a previously joined room. |
-| `message:created` | implemented | `{ "threadId": string, "content": string \| { "text"?: string, "media"?: string[] }, "parentId"?: string }` | `{ "data": Message }` or `{ "error": string }` | Broadcasts `message:created` to the thread room after success. |
-| `reaction:created` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Broadcasts `reaction:created`. |
-| `reaction:updated` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Broadcasts `reaction:updated`. |
-| `reaction:deleted` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string, "id"?: string }` | `{ "data": true }` or `{ "error": string }` | The server identifies the prior user reaction before deleting it. |
-| `thread:created` | implemented | `{ "eventId": string, "content": string \| object, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Creates a thread and its first message, then broadcasts `thread:created`. |
+| `message:create` | implemented | `{ "threadId": string, "content": string \| { "text"?: string, "media"?: string[] }, "parentId"?: string }` | `{ "data": Message }` or `{ "error": string }` | Broadcasts `message:create` to the thread room after success. |
+| `reaction:create` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Broadcasts `reaction:create`. |
+| `reaction:update` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Broadcasts `reaction:update`. |
+| `reaction:delete` | implemented | `{ "contentId": string, "contentPath": "messages" \| "events" \| "threads", "reaction": string, "parentId"?: string, "id"?: string }` | `{ "data": true }` or `{ "error": string }` | The server identifies the prior user reaction before deleting it. |
+| `thread:create` | implemented | `{ "eventId": string, "content": string \| object, "parentId"?: string }` | `{ "data": true }` or `{ "error": string }` | Creates a thread and its first message, then broadcasts `thread:create`. |
 | `explore` | implemented | `{ "filter": { "location": { "latitude": number, "longitude": number } } }` | `{ "data": true }` or `{ "error": string }` | Streams one or more `explore` broadcasts while scanning nearby events. |
-| `message:updated` | implemented | `{ "id": string, "content": string \| { "text"?: string, "media"?: string[] } }` | `{ "data": Message }` or `{ "error": string }` | Applies the same author and lock checks as the REST update flow, then broadcasts `message:updated`. |
-| `message:deleted` | implemented | `{ "id": string }` | `{ "data": { "id": string, "threadId": string } }` or `{ "error": string }` | Applies the same author and lock checks as the REST delete flow, then broadcasts `message:deleted`. |
+| `message:update` | implemented | `{ "id": string, "content": string \| { "text"?: string, "media"?: string[] } }` | `{ "data": Message }` or `{ "error": string }` | Applies the same author and lock checks as the REST update flow, then broadcasts `message:update`. |
+| `message:delete` | implemented | `{ "id": string }` | `{ "data": { "id": string, "threadId": string } }` or `{ "error": string }` | Applies the same author and lock checks as the REST delete flow, then broadcasts `message:delete`. |
 
 ## Server -> Client broadcasts
 
 | Event | Status | Payload | Scope | Notes |
 | --- | --- | --- | --- | --- |
-| `event:created` | implemented | `{ "data": Event }` | namespace-wide | Emitted from REST event creation. |
-| `event:updated` | implemented | `{ "data": Event }` | namespace-wide | Emitted from REST updates, join/leave, verify-attendance, and Supabase media realtime updates. |
-| `event:deleted` | implemented | `{ "data": { "id": string } }` | namespace-wide | Emitted from REST delete. |
-| `thread:created` | implemented | `{ "data": Thread }` or `{ "data": { ...Thread, "event": Event } }` | namespace-wide | Can be emitted by REST or by the socket thread-create flow. |
-| `thread:updated` | implemented | `{ "data": { "id": string, ...patch } }` | namespace-wide | Emitted from REST thread update. |
-| `thread:deleted` | implemented | `{ "data": { "id": string } }` | namespace-wide | Emitted from REST thread delete. |
-| `thread:locked` | implemented | `{ "data": { "id": string, "lockHistory": any, "lockedBy": string } }` | `thread:{threadId}` room | Used by chat/thread screens to disable posting. |
-| `thread:unlocked` | implemented | `{ "data": { "id": string, "lockHistory": any, "unlockedBy": string } }` | `thread:{threadId}` room | Used by chat/thread screens to re-enable posting. |
-| `message:created` | implemented | `{ "data": Message }` | `thread:{threadId}` room | Emitted by REST message creation and by socket message creation. |
-| `message:updated` | implemented | `{ "data": Message }` | `thread:{threadId}` room | Emitted by both REST and socket update flows. |
-| `message:deleted` | implemented | `{ "data": { "id": string, "threadId": string } }` | `thread:{threadId}` room | Emitted by both REST and socket delete flows. |
-| `reaction:created` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
-| `reaction:updated` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
-| `reaction:deleted` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
+| `event:create` | implemented | `{ "data": Event }` | namespace-wide | Emitted from REST event creation. |
+| `event:update` | implemented | `{ "data": Event }` | namespace-wide | Emitted from REST updates, join/leave, verify-attendance, and Supabase media realtime updates. |
+| `event:delete` | implemented | `{ "data": { "id": string } }` | namespace-wide | Emitted from REST delete. |
+| `thread:create` | implemented | `{ "data": Thread }` or `{ "data": { ...Thread, "event": Event } }` | namespace-wide | Can be emitted by REST or by the socket thread-create flow. |
+| `thread:update` | implemented | `{ "data": { "id": string, ...patch } }` | namespace-wide | Emitted from REST thread update. |
+| `thread:delete` | implemented | `{ "data": { "id": string } }` | namespace-wide | Emitted from REST thread delete. |
+| `thread:lock` | implemented | `{ "data": { "id": string, "lockHistory": any, "lockedBy": string } }` | `thread:{threadId}` room | Used by chat/thread screens to disable posting. |
+| `thread:unlock` | implemented | `{ "data": { "id": string, "lockHistory": any, "unlockedBy": string } }` | `thread:{threadId}` room | Used by chat/thread screens to re-enable posting. |
+| `message:create` | implemented | `{ "data": Message }` | `thread:{threadId}` room | Emitted by REST message creation and by socket message creation. |
+| `message:update` | implemented | `{ "data": Message }` | `thread:{threadId}` room | Emitted by both REST and socket update flows. |
+| `message:delete` | implemented | `{ "data": { "id": string, "threadId": string } }` | `thread:{threadId}` room | Emitted by both REST and socket delete flows. |
+| `reaction:create` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
+| `reaction:update` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
+| `reaction:delete` | implemented | `{ "data": { "id": string, "contentPath": string, "reaction": Reaction, "parentId"?: string, "threadId"?: string } }` | thread room when applicable, otherwise namespace-wide | Used by chat/thread reaction UIs. |
 | `explore` | implemented | `{ "data": ExploreSection }` | namespace-wide | Sent repeatedly during an explore request. |
-| `user:updated` | implemented | `{ "data": SafeUser }` | namespace-wide | Emitted from REST user profile updates. |
+| `user:update` | implemented | `{ "data": SafeUser }` | namespace-wide | Emitted from REST user profile updates. |
 
 ## Current client usage
 
@@ -104,37 +104,37 @@ The mobile client currently sends these socket events directly:
 
 - `join:room`
 - `leave:room`
-- `message:created`
-- `reaction:created`
-- `reaction:updated`
-- `reaction:deleted`
+- `message:create`
+- `reaction:create`
+- `reaction:update`
+- `reaction:delete`
 
 The mobile client currently listens for these broadcasts:
 
-- `event:created`
-- `event:updated`
-- `event:deleted`
-- `message:created`
-- `message:updated`
-- `message:deleted`
-- `reaction:created`
-- `reaction:updated`
-- `reaction:deleted`
-- `thread:locked`
-- `thread:unlocked`
+- `event:create`
+- `event:update`
+- `event:delete`
+- `message:create`
+- `message:update`
+- `message:delete`
+- `reaction:create`
+- `reaction:update`
+- `reaction:delete`
+- `thread:lock`
+- `thread:unlock`
 
 No current client subscription was found for:
 
-- `thread:created`
-- `thread:updated`
-- `thread:deleted`
+- `thread:create`
+- `thread:update`
+- `thread:delete`
 - `explore`
-- `user:updated`
+- `user:update`
 
 ## Important implementation notes
 
-- `message:updated` and `message:deleted` now work through both socket handlers and REST controllers, and both paths emit the same room-scoped broadcast event names.
-- `event:updated` is emitted not only for explicit event edits, but also after join/leave and verify-attendance mutations when the underlying event state changes.
+- `message:update` and `message:delete` now work through both socket handlers and REST controllers, and both paths emit the same room-scoped broadcast event names.
+- `event:update` is emitted not only for explicit event edits, but also after join/leave and verify-attendance mutations when the underlying event state changes.
 - Some broadcasts are namespace-wide and some are room-scoped. Chat-style listeners should join the relevant `thread:{threadId}` room before relying on thread-specific updates.
 - Event payload shapes are not yet enforced from a shared schema package. This file is a source-of-truth snapshot, not a generated spec.
 

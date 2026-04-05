@@ -126,6 +126,7 @@ class User {
     required this.email,
     this.name,
     this.username,
+    this.gender,
     this.avatarUrl,
     this.bio,
     this.createdAt,
@@ -162,6 +163,7 @@ class User {
       email: json['email'] as String? ?? '',
       name: json['name'] as String?,
       username: json['username'] as String?,
+      gender: json['gender'] as String?,
       avatarUrl: avatarUrl,
       bio: json['bio'] as String?,
       createdAt: json['createdAt'] != null
@@ -179,6 +181,7 @@ class User {
   final String email;
   final String? name;
   final String? username;
+  final String? gender;
   final String? avatarUrl;
   final String? bio;
   final DateTime? createdAt;
@@ -192,6 +195,7 @@ class User {
       'email': email,
       'name': name,
       'username': username,
+      'gender': gender,
       'avatarUrl': avatarUrl,
       'bio': bio,
       'createdAt': createdAt?.toIso8601String(),

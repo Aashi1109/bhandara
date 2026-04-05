@@ -52,7 +52,7 @@ void main() {
                 socket.add(TextDataReceived('40/platform'));
                 socket.add(
                   TextDataReceived(
-                    '42/platform,["messageCreated",{"id":"message-1"}]',
+                    '42/platform,["message:create",{"id":"message-1"}]',
                   ),
                 );
               }),
@@ -65,7 +65,7 @@ void main() {
         await service.startAuthenticatedSession();
 
         final event = await eventFuture;
-        expect(event['event'], 'messageCreated');
+        expect(event['event'], 'message:create');
         expect(event['data'], {'id': 'message-1'});
         expect(event['raw'], {'id': 'message-1'});
 
@@ -87,7 +87,7 @@ void main() {
                 socket.add(TextDataReceived('40/platform'));
                 socket.add(
                   TextDataReceived(
-                    '42/platform,["event:updated",{"data":{"id":"event-1","name":"Street Lunch"}}]',
+                    '42/platform,["event:update",{"data":{"id":"event-1","name":"Street Lunch"}}]',
                   ),
                 );
               }),
@@ -100,7 +100,7 @@ void main() {
         await service.startAuthenticatedSession();
 
         final event = await eventFuture;
-        expect(event['event'], 'event:updated');
+        expect(event['event'], 'event:update');
         expect(event['data'], {'id': 'event-1', 'name': 'Street Lunch'});
         expect(event['raw'], {
           'data': {'id': 'event-1', 'name': 'Street Lunch'},
@@ -134,7 +134,7 @@ void main() {
         expect(service.isSessionActive, isFalse);
         expect(service.isConnected, isFalse);
         await expectLater(
-          service.emit('reactionCreated', {'id': '1'}),
+          service.emit('reaction:create', {'id': '1'}),
           throwsA(isA<StateError>()),
         );
 

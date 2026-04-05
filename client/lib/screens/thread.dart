@@ -358,7 +358,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.messageCreated) {
+      if (eventName == SocketEvents.messageCreate) {
         final message = Message.fromJson(eventData);
         if (message.threadId != _threadId) {
           return;
@@ -381,7 +381,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.messageUpdated) {
+      if (eventName == SocketEvents.messageUpdate) {
         final message = Message.fromJson(eventData);
         if (message.threadId != _threadId) {
           return;
@@ -401,7 +401,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.messageDeleted) {
+      if (eventName == SocketEvents.messageDelete) {
         final messageId = eventData['id'] as String?;
         if (eventData['threadId'] != _threadId) {
           return;
@@ -418,9 +418,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.reactionCreated ||
-          eventName == SocketEvents.reactionUpdated ||
-          eventName == SocketEvents.reactionDeleted) {
+      if (eventName == SocketEvents.reactionCreate ||
+          eventName == SocketEvents.reactionUpdate ||
+          eventName == SocketEvents.reactionDelete) {
         if (eventData['threadId'] != _threadId) {
           return;
         }
@@ -428,7 +428,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.threadDeleted) {
+      if (eventName == SocketEvents.threadDelete) {
         if (eventData['id'] == _threadId) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -439,7 +439,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.threadLocked) {
+      if (eventName == SocketEvents.threadLock) {
         if (eventData['id'] == _threadId) {
           setState(() {
             _isThreadLocked = true;
@@ -448,7 +448,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         return;
       }
 
-      if (eventName == SocketEvents.threadUnlocked) {
+      if (eventName == SocketEvents.threadUnlock) {
         if (eventData['id'] == _threadId) {
           setState(() {
             _isThreadLocked = false;
