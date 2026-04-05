@@ -40,6 +40,12 @@ class AppButton extends StatefulWidget {
 class _AppButtonState extends State<AppButton> {
   bool _internalLoading = false;
 
+  bool get _isIconOnly =>
+      widget.child == null &&
+      widget.label == null &&
+      widget.icon != null &&
+      widget.iconRight == null;
+
   double get _height {
     switch (widget.size) {
       case AppButtonSize.sm:
@@ -64,6 +70,14 @@ class _AppButtonState extends State<AppButton> {
       case AppButtonSize.xl:
         return 40;
     }
+  }
+
+  double get _resolvedHorizontalPadding {
+    if (_isIconOnly) {
+      return (_height - _iconSize) / 2;
+    }
+
+    return _horizontalPadding;
   }
 
   double get _fontSize {
@@ -204,55 +218,65 @@ class _AppButtonState extends State<AppButton> {
 
     final hasContent =
         widget.label != null || widget.icon != null || widget.iconRight != null;
-    final showBeside = isLoading && hasContent;
+    final showBeside = isLoading && hasContent && !_isIconOnly;
     final showOnlyLoading = isLoading && !hasContent;
 
     final content = showOnlyLoading
         ? loadingIndicator
         : widget.child ??
-              Row(
-                mainAxisSize: widget.fullWidth
-                    ? MainAxisSize.max
-                    : MainAxisSize.min,
-                mainAxisAlignment: widget.mainAxisAlignment,
-                children: [
-                  if (widget.icon != null && !isLoading) ...[
-                    IconTheme(
-                      data: IconThemeData(
-                        color: foregroundColor,
-                        size: _iconSize,
-                      ),
-                      child: widget.icon!,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (widget.label != null)
-                    Flexible(
-                      child: Text(
-                        widget.label!,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                        style: _labelStyle(
-                          typography,
-                        ).copyWith(color: foregroundColor),
-                      ),
-                    ),
-                  if (widget.iconRight != null && !isLoading) ...[
-                    const SizedBox(width: 8),
-                    IconTheme(
-                      data: IconThemeData(
-                        color: foregroundColor,
-                        size: _iconSize,
-                      ),
-                      child: widget.iconRight!,
-                    ),
-                  ],
-                  if (showBeside) ...[
-                    const SizedBox(width: 8),
-                    loadingIndicator,
-                  ],
-                ],
-              );
+              (_isIconOnly
+                  ? isLoading
+                        ? loadingIndicator
+                        : IconTheme(
+                            data: IconThemeData(
+                              color: foregroundColor,
+                              size: _iconSize,
+                            ),
+                            child: widget.icon!,
+                          )
+                  : Row(
+                      mainAxisSize: widget.fullWidth
+                          ? MainAxisSize.max
+                          : MainAxisSize.min,
+                      mainAxisAlignment: widget.mainAxisAlignment,
+                      children: [
+                        if (widget.icon != null && !isLoading) ...[
+                          IconTheme(
+                            data: IconThemeData(
+                              color: foregroundColor,
+                              size: _iconSize,
+                            ),
+                            child: widget.icon!,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (widget.label != null)
+                          Flexible(
+                            child: Text(
+                              widget.label!,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: _labelStyle(
+                                typography,
+                              ).copyWith(color: foregroundColor),
+                            ),
+                          ),
+                        if (widget.iconRight != null && !isLoading) ...[
+                          const SizedBox(width: 8),
+                          IconTheme(
+                            data: IconThemeData(
+                              color: foregroundColor,
+                              size: _iconSize,
+                            ),
+                            child: widget.iconRight!,
+                          ),
+                        ],
+                        if (showBeside) ...[
+                          const SizedBox(width: 8),
+                          loadingIndicator,
+                        ],
+                      ],
+                    ));
 
     return GestureDetector(
       onTap: isLoading || widget.onPressed == null
@@ -273,7 +297,7 @@ class _AppButtonState extends State<AppButton> {
       child: Container(
         height: _height,
         width: widget.fullWidth ? double.infinity : null,
-        padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
+        padding: EdgeInsets.symmetric(horizontal: _resolvedHorizontalPadding),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(_borderRadius),

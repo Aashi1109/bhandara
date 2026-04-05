@@ -10,7 +10,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.theme,
-        home: const Scaffold(body: Center(child: AppButton(label: 'Save'))),
+        home: const Scaffold(
+          body: Center(child: AppButton(label: 'Save')),
+        ),
       ),
     );
 
@@ -23,7 +25,9 @@ void main() {
     expect(label.style?.color, AppColors.mutedForeground);
   });
 
-  testWidgets('enabled button invokes callback once when tapped', (tester) async {
+  testWidgets('enabled button invokes callback once when tapped', (
+    tester,
+  ) async {
     var taps = 0;
 
     await tester.pumpWidget(
@@ -47,4 +51,41 @@ void main() {
 
     expect(taps, 1);
   });
+
+  testWidgets(
+    'icon-only button uses compact padding so the icon stays visible',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.theme,
+          home: const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 64,
+                child: AppButton(
+                  size: AppButtonSize.lg,
+                  icon: Icon(Icons.chat_bubble_outline),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final container = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(GestureDetector),
+          matching: find.byType(Container),
+        ),
+      );
+
+      expect(find.byIcon(Icons.chat_bubble_outline), findsOneWidget);
+      expect(
+        container.padding,
+        const EdgeInsets.symmetric(
+          horizontal: (56 - AppIconSizes.defaultSize) / 2,
+        ),
+      );
+    },
+  );
 }
