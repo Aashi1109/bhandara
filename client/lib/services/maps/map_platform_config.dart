@@ -10,7 +10,7 @@ Future<void> configureGoogleMapsPlatform({
       mapsImplementation ?? GoogleMapsFlutterPlatform.instance;
 
   if (implementation is GoogleMapsFlutterAndroid) {
-    implementation.useAndroidViewSurface = false;
+    implementation.useAndroidViewSurface = true;
     if (!initializeRenderer) {
       return;
     }

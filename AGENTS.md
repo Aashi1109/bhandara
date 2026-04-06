@@ -24,6 +24,7 @@ When working in a subdirectory, apply the root guidance first, then the nearest 
 - Organize code by feature or scope of responsibility, not by creating files mechanically. Prefer keeping related logic together when it serves one feature, and only split files when the boundary is meaningful.
 - Default to delegating substantive work to subagents instead of implementing directly in one pass. For each delegated task, define the exact scope, file or responsibility boundary, expected behavior, non-goals, required output format, and verification expectations before execution.
 - Treat complex or long-running tasks as delegated-by-default. Unless there is a strong reason to keep work local, hand them off to subagents first and use the main agent for coordination, integration, and verification.
+- Git pre-commit checks live in `.githooks/pre-commit` and dispatch to `scripts/pre-commit-checks.sh` for repo-local lint/test enforcement.
 
 ## Current Project Patterns
 

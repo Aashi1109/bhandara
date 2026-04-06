@@ -61,3 +61,4 @@ client/android/
 client/ios/
 
 .idea
+.claude/worktrees

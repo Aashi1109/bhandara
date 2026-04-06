@@ -6,8 +6,7 @@ class SecureStorage {
   final String? namespace;
   final _storage = const FlutterSecureStorage();
 
-  AndroidOptions get _androidOptions =>
-      const AndroidOptions(encryptedSharedPreferences: true);
+  AndroidOptions get _androidOptions => AndroidOptions.defaultOptions;
 
   String _buildKey(String key) => namespace != null ? '$namespace:$key' : key;
 

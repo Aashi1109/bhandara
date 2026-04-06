@@ -30,3 +30,16 @@ npm start
 ```
 
 See each directory for more details.
+
+## Pre-commit checks
+
+This repo uses a committed Git hook at `.githooks/pre-commit` to run lint and test checks before each commit:
+
+- `client/` changes run `flutter analyze` and `flutter test`
+- `server/` changes run `pnpm lint` and `pnpm test`
+
+Activate the hook in a clone with:
+
+```bash
+git config core.hooksPath .githooks
+```

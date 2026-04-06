@@ -50,9 +50,18 @@ void main() {
       initialSelectedAttachmentIndex: 1,
     );
 
-    expect(find.byKey(const ValueKey('create_event_hero_preview')), findsOneWidget);
-    expect(find.byKey(const ValueKey('create_event_attachment_0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('create_event_attachment_1')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('create_event_hero_preview')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('create_event_attachment_0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('create_event_attachment_1')),
+      findsOneWidget,
+    );
     expect(find.text('clip-two.mp4'), findsWidgets);
 
     await tester.tap(
@@ -113,7 +122,10 @@ void main() {
       tester.getTopLeft(aboutLabel).dy,
       greaterThan(tester.getTopLeft(titleField).dy),
     );
-    expect(find.byKey(const ValueKey('create_event_hero_preview')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('create_event_hero_preview')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('create_event_current_location_action')),
       findsOneWidget,
@@ -142,6 +154,9 @@ void main() {
   ) async {
     String? updatedId;
     Map<String, dynamic>? updatedPayload;
+    final now = DateTime.now();
+    final futureStart = now.add(const Duration(days: 2));
+    final futureEnd = futureStart.add(const Duration(hours: 2));
 
     final initialEvent = Event(
       id: 'event-1',
@@ -149,8 +164,8 @@ void main() {
       description: 'Original description',
       status: 'draft',
       type: 'custom',
-      startTime: DateTime(2026, 4, 1, 10),
-      endTime: DateTime(2026, 4, 1, 12),
+      startTime: futureStart,
+      endTime: futureEnd,
       createdBy: testUser.id,
       location: const Location(
         address: 'Initial address',
@@ -236,9 +251,9 @@ Future<void> _pumpCreateScreen(
     ProviderScope(
       overrides: [
         userProfileProvider.overrideWith(() => _TestUserProfile(user)),
-        tagsProvider(rootOnly: true).overrideWith(
-          (_) async => [Tag(id: 'tag-1', name: 'Community')],
-        ),
+        tagsProvider(
+          rootOnly: true,
+        ).overrideWith((_) async => [Tag(id: 'tag-1', name: 'Community')]),
       ],
       child: MaterialApp(
         home: CreateEventScreen(
