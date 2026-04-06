@@ -1,6 +1,6 @@
 {
-    "name": "foody_mobile",
-    "short_name": "foody_mobile",
+    "name": "foody",
+    "short_name": "foody",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

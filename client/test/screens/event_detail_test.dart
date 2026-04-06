@@ -125,7 +125,7 @@ void main() {
 
     final event = Event(
       id: 'event-1',
-      name: 'Zentry - Deckow Community Supper With A Very Long Title',
+      name: 'Foody - Deckow Community Supper With A Very Long Title',
       description: 'A neighborhood meal with a verified host badge.',
       status: 'upcoming',
       type: 'PUBLIC',

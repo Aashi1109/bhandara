@@ -30,12 +30,12 @@ class AboutAppScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Zentry', style: typography.heading3),
+                    Text('Foody', style: typography.heading3),
                     const SizedBox(height: 8),
                     Text('Version 2.4.0', style: typography.captionMD),
                     const SizedBox(height: 20),
                     Text(
-                      'Zentry helps people discover food events, join conversations around them, and track what matters after the event is live.',
+                      'Foody helps people discover food events, join conversations around them, and track what matters after the event is live.',
                       style: typography.bodyMD,
                     ),
                   ],
