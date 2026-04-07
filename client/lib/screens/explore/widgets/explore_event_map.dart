@@ -541,9 +541,10 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     final lng = selectedEvent?.location.longitude;
     if (lat == null || lng == null) return;
 
-    // Use _animateCameraAndEmitViewport so that tile/cluster data is loaded
-    // for the event's position when the camera pans to it.
-    await _animateCameraAndEmitViewport(
+    // Pan to the selected event WITHOUT emitting a viewport change.
+    // The event data is already loaded — a refetch would replace markers
+    // and potentially remove the very marker the user just selected.
+    await _runProgrammaticCameraMove(
       CameraUpdate.newLatLng(LatLng(lat, lng)),
     );
   }

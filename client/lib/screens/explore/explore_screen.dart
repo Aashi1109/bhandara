@@ -1047,7 +1047,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (missingTiles.isEmpty) {
       setState(() {
         _isClusterMode = false;
-        _visibleMarkers = _collectMarkersFromTiles(neededTiles);
+        _visibleMarkers = _collectMarkersFromTiles(_tileCache.keys.toSet());
       });
       return;
     }
@@ -1074,7 +1074,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       setState(() {
         _isClusterMode = false;
         _tileCache = nextCache;
-        _visibleMarkers = _collectMarkersFromTiles(neededTiles);
+        _visibleMarkers = _collectMarkersFromTiles(nextCache.keys.toSet());
       });
     } catch (_) {
       // Tile fetch failed — keep existing state.
@@ -1097,6 +1097,15 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _selectMarkerById(String markerId) {
+    // Already selected — just ensure details card is visible, don't re-trigger
+    // the focus cycle which would cause unnecessary viewport changes.
+    if (_selectedEvent?.id == markerId) {
+      if (!_showDetails) {
+        setState(() => _showDetails = true);
+      }
+      return;
+    }
+
     // Check if we already have a preview cached
     final cached = _markerPreviewCache[markerId];
     if (cached != null) {
