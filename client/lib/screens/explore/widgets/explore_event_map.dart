@@ -46,6 +46,7 @@ class ExploreEventMap extends StatefulWidget {
     this.onViewportChanged,
     this.onRecenterRequested,
     this.useServerClusters = false,
+    this.pinnedMarker,
   });
 
   final MapManager manager;
@@ -64,6 +65,7 @@ class ExploreEventMap extends StatefulWidget {
   final ValueChanged<ExploreViewportQuery>? onViewportChanged;
   final VoidCallback? onRecenterRequested;
   final bool useServerClusters;
+  final EventMarker? pinnedMarker;
 
   @override
   State<ExploreEventMap> createState() => _ExploreEventMapState();
@@ -128,7 +130,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     final modeChanged = oldWidget.useServerClusters != widget.useServerClusters;
     final selectionChanged =
         oldWidget.selectedEvent?.id != widget.selectedEvent?.id ||
-        oldWidget.selectedMarkerId != widget.selectedMarkerId;
+        oldWidget.selectedMarkerId != widget.selectedMarkerId ||
+        oldWidget.pinnedMarker?.id != widget.pinnedMarker?.id;
 
     if (eventsChanged ||
         markersChanged ||
@@ -286,22 +289,63 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     final markers = <Marker>{};
 
     for (final cluster in widget.serverClusters) {
-      markers.add(
-        Marker(
-          markerId: MarkerId(
-            'scluster_${cluster.latitude}_${cluster.longitude}_${cluster.count}',
+      if (cluster.count == 1) {
+        // Single event — render as individual pin, not a cluster bubble
+        final icon = _eventMarkerIcon;
+        if (icon != null) {
+          markers.add(
+            Marker(
+              markerId: MarkerId(
+                'scluster_${cluster.latitude}_${cluster.longitude}_1',
+              ),
+              position: cluster.position,
+              icon: icon,
+              zIndexInt: 2,
+              infoWindow: InfoWindow(
+                title: 'Event at ${cluster.latitude.toStringAsFixed(4)}, ${cluster.longitude.toStringAsFixed(4)}',
+              ),
+              onTap: () => _focusOnServerCluster(cluster),
+            ),
+          );
+        }
+      } else {
+        markers.add(
+          Marker(
+            markerId: MarkerId(
+              'scluster_${cluster.latitude}_${cluster.longitude}_${cluster.count}',
+            ),
+            position: cluster.position,
+            anchor: const Offset(0.5, 0.5),
+            zIndexInt: 2,
+            icon: _resolveClusterMarker(cluster.count),
+            onTap: () => _focusOnServerCluster(cluster),
           ),
-          position: cluster.position,
-          anchor: const Offset(0.5, 0.5),
-          zIndexInt: 2,
-          icon: _resolveClusterMarker(cluster.count),
-          onTap: () => _focusOnServerCluster(cluster),
-        ),
-      );
+        );
+      }
     }
 
+    _addPinnedMarker(markers);
     _addUserLocationMarker(markers);
     return markers;
+  }
+
+  void _addPinnedMarker(Set<Marker> markers) {
+    final pinned = widget.pinnedMarker;
+    if (pinned == null) return;
+    // Skip if the same id is already in the set (built from the normal path).
+    if (markers.any((m) => m.markerId.value == pinned.id)) return;
+    final icon = _selectedEventMarkerIcon ?? _eventMarkerIcon;
+    if (icon == null) return;
+    markers.add(
+      Marker(
+        markerId: MarkerId(pinned.id),
+        position: pinned.position,
+        icon: icon,
+        zIndexInt: 4,
+        infoWindow: InfoWindow(title: pinned.name),
+        onTap: () => widget.onMarkerSelected?.call(pinned.id),
+      ),
+    );
   }
 
   Set<Marker> _buildMarkersFromClusters(List<EventMarkerMapCluster> clusters) {
@@ -339,6 +383,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         ),
       );
     }
+    _addPinnedMarker(markers);
     _addUserLocationMarker(markers);
     return markers;
   }
@@ -484,10 +529,10 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
   Future<void> _focusOnServerCluster(models.EventCluster cluster) async {
     widget.onClusterFocusStart?.call();
-    // Always zoom to at least tile mode (clusterZoomThreshold + 1.5) so one
-    // tap on a cluster always reveals individual event markers.
-    final targetZoom =
-        max(_mapZoom + 2, clusterZoomThreshold + 1.5).clamp(4.0, 20.0);
+    // One tap on any server cluster jumps directly into tile mode — never
+    // a +2 escalator that can land on yet another server cluster and force
+    // the user to tap again (which was nuking the accumulator mid-flight).
+    const targetZoom = clusterZoomThreshold + 1.5;
     await _animateCameraAndEmitViewport(
       CameraUpdate.newLatLngZoom(cluster.position, targetZoom),
     );
@@ -495,8 +540,42 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
   Future<void> _focusOnMarkerCluster(EventMarkerMapCluster cluster) async {
     widget.onClusterFocusStart?.call();
+    // If the cluster holds only a handful of points, fit tight bounds around
+    // its members so one tap always reveals the individual markers instead
+    // of the +2 escalator loop that could re-cluster at the next zoom.
+    if (cluster.count <= 6 && cluster.markers.isNotEmpty) {
+      final positions = cluster.markers.map((m) => m.position).toList();
+      double minLat = positions.first.latitude;
+      double maxLat = positions.first.latitude;
+      double minLng = positions.first.longitude;
+      double maxLng = positions.first.longitude;
+      for (final p in positions.skip(1)) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+      if ((maxLat - minLat).abs() < 1e-5) {
+        minLat -= 0.001;
+        maxLat += 0.001;
+      }
+      if ((maxLng - minLng).abs() < 1e-5) {
+        minLng -= 0.001;
+        maxLng += 0.001;
+      }
+      await _animateCameraAndEmitViewport(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          96,
+        ),
+      );
+      return;
+    }
     await _animateCameraAndEmitViewport(
-      CameraUpdate.newLatLngZoom(cluster.center, (_mapZoom + 2).clamp(4, 20)),
+      CameraUpdate.newLatLngZoom(cluster.center, (_mapZoom + 3).clamp(4, 20)),
     );
   }
 
@@ -738,8 +817,14 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                           );
                         },
                         onCameraMoveStarted: _handleCameraMoveStarted,
-                        onCameraMove: (position) =>
-                            _pendingZoom = position.zoom,
+                        onCameraMove: (position) {
+                          _pendingZoom = position.zoom;
+                          // Keep _mapZoom live so client-side clustering
+                          // never runs against a stale zoom during animation.
+                          if ((position.zoom - _mapZoom).abs() >= 0.25) {
+                            _mapZoom = position.zoom;
+                          }
+                        },
                         onCameraIdle: _handleCameraIdle,
                       );
                     },
