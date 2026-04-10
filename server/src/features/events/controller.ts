@@ -114,8 +114,8 @@ export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
   const { zoom, tiles, flat } = req.query;
 
   const parsedZoom = typeof zoom === 'string' && zoom.length > 0 ? Number(zoom) : undefined;
-  if (parsedZoom !== undefined && (!Number.isFinite(parsedZoom) || parsedZoom < 0)) {
-    throw new BadRequestError('Invalid zoom level');
+  if (parsedZoom !== undefined && (!Number.isFinite(parsedZoom) || parsedZoom < 0 || parsedZoom > 22)) {
+    throw new BadRequestError('Invalid zoom level (must be 0–22)');
   }
 
   const flatMarkers =
@@ -132,6 +132,10 @@ export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
 
   if (parsedTiles && parsedTiles.length > 100) {
     throw new BadRequestError('Too many tiles requested (max 100)');
+  }
+
+  if (flatMarkers && (!Number.isFinite(filters.radiusKm) || (filters.radiusKm ?? 0) <= 0)) {
+    throw new BadRequestError('radiusKm is required for flat marker requests');
   }
 
   const result = await eventService.getMarkers(filters, {

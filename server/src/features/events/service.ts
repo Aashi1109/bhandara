@@ -4,13 +4,21 @@ import { EAddressEntityType, EEventParticipantStatus, EEventStatus, type EEventT
 import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/definitions/types';
 import ThreadsService from '../threads/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
-import { Op, Sequelize, type WhereOptions } from 'sequelize';
+import { Op, QueryTypes, Sequelize, type WhereOptions } from 'sequelize';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
 import UserService from '../users/service';
 import ReactionService from '../reactions/service';
 import { validateEventCreate, validateEventUpdate } from './validation';
-import { getEventCache, getEventUsersCache, setEventCache, setEventUsersCache, deleteEventCache } from './helpers';
+import {
+  getEventCache,
+  getEventUsersCache,
+  setEventCache,
+  setEventUsersCache,
+  deleteEventCache,
+  getMarkerCache,
+  setMarkerCache,
+} from './helpers';
 import { isEmpty } from '@/utils';
 import { BadRequestError, NotFoundError } from '@/exceptions';
 import { getDistanceInMeters } from '@/helpers';
@@ -188,6 +196,37 @@ class EventService {
     return { [Op.and]: clauses };
   }
 
+  private buildEventOnlyWhere(filters: IEventListFilters): WhereOptions {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const clauses: any[] = [];
+
+    if (filters.types?.length) {
+      clauses.push({ type: { [Op.in]: filters.types } });
+    }
+
+    if (filters.statuses?.length) {
+      const statusClauses = filters.statuses.map((status) => this.buildDerivedStatusClause(status)).filter(Boolean);
+      if (statusClauses.length) {
+        clauses.push({ [Op.or]: statusClauses });
+      }
+    }
+
+    if (filters.tagIds?.length) {
+      const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
+      clauses.push(Sequelize.literal(`(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`));
+    }
+
+    if (filters.startDate && filters.endDate) {
+      clauses.push(
+        Sequelize.literal(
+          `(${this.jsonTimestampExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.jsonTimestampExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+        ),
+      );
+    }
+
+    return clauses.length ? { [Op.and]: clauses } : {};
+  }
+
   private async populateEvent(event: IEvent, populate?: boolean | string[]): Promise<IEvent> {
     const promises: Record<string, Promise<any>> = {};
     let fields: string[] = [];
@@ -362,14 +401,33 @@ class EventService {
     if (zoom <= 6) return 2.0;
     if (zoom <= 8) return 0.5;
     if (zoom <= 10) return 0.1;
+    if (zoom <= 11) return 0.075;
     return 0.05;
   }
 
   private async getMatchingEventMarkers(filters: IEventListFilters) {
+    const eventWhere = this.buildEventOnlyWhere(filters);
+    const hasEventFilters = Object.keys(eventWhere).length > 0;
+
+    let allowedIds: string[] | null = null;
+    if (hasEventFilters) {
+      const eventRows = await Event.findAll({
+        where: eventWhere,
+        attributes: ['id'],
+        raw: true,
+      });
+      allowedIds = (eventRows as unknown as { id: string }[]).map((e) => e.id);
+      if (allowedIds.length === 0) return [];
+    }
+
     const whereClauses: any[] = [
       { entityType: EAddressEntityType.Event },
-      Sequelize.literal(`"latitude" IS NOT NULL AND "longitude" IS NOT NULL`),
+      Sequelize.literal('"latitude" IS NOT NULL AND "longitude" IS NOT NULL'),
     ];
+
+    if (allowedIds) {
+      whereClauses.push({ entityId: { [Op.in]: allowedIds } });
+    }
 
     if (
       Number.isFinite(filters.latitude) &&
@@ -401,50 +459,88 @@ class EventService {
 
   async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[]; flat?: boolean } = {}) {
     const { zoom = 0, tiles, flat = false } = options;
+    const mode = flat ? 'flat' : zoom < EventService.CLUSTER_ZOOM_THRESHOLD ? 'clusters' : 'tiles';
+
+    const cached = await getMarkerCache(mode, filters, { zoom, tiles });
+    if (cached) return cached;
+
+    let result: Awaited<
+      ReturnType<typeof this.getFlatMarkers | typeof this.getClusterMarkers | typeof this.getTileMarkers>
+    >;
+
     if (flat) {
-      return this.getFlatMarkers(filters);
+      result = await this.getFlatMarkers(filters);
+    } else if (zoom < EventService.CLUSTER_ZOOM_THRESHOLD) {
+      result = await this.getClusterMarkers(filters, zoom);
+    } else {
+      result = await this.getTileMarkers(filters, tiles);
     }
 
-    const isClusterMode = zoom < EventService.CLUSTER_ZOOM_THRESHOLD;
-
-    if (isClusterMode) {
-      return this.getClusterMarkers(filters, zoom);
-    }
-
-    return this.getTileMarkers(filters, tiles);
+    await setMarkerCache(mode, filters, { zoom, tiles }, result);
+    return result;
   }
 
   private async getClusterMarkers(filters: IEventListFilters, zoom: number) {
-    const markers = await this.getMatchingEventMarkers(filters);
     const gridSize = EventService.gridSizeFromZoom(zoom);
-    const clusters = new Map<string, { latitude: number; longitude: number; count: number }>();
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
 
-    for (const marker of markers) {
-      const snappedLatitude = Math.round(marker.latitude / gridSize) * gridSize;
-      const snappedLongitude = Math.round(marker.longitude / gridSize) * gridSize;
-      const key = `${snappedLatitude.toFixed(6)}:${snappedLongitude.toFixed(6)}`;
-      const existing = clusters.get(key);
+    // Step 1: resolve event-level filters (status, type, tags, dates) to IDs
+    const eventWhere = this.buildEventOnlyWhere(filters);
+    const hasEventFilters = Object.keys(eventWhere).length > 0;
+    let idFilter = '';
 
-      if (!existing) {
-        clusters.set(key, {
-          latitude: marker.latitude,
-          longitude: marker.longitude,
-          count: 1,
-        });
-        continue;
-      }
-
-      const nextCount = existing.count + 1;
-      existing.latitude = (existing.latitude * existing.count + marker.latitude) / nextCount;
-      existing.longitude = (existing.longitude * existing.count + marker.longitude) / nextCount;
-      existing.count = nextCount;
+    if (hasEventFilters) {
+      const eventRows = await Event.findAll({ where: eventWhere, attributes: ['id'], raw: true });
+      const ids = (eventRows as unknown as { id: string }[]).map((e) => e.id);
+      if (ids.length === 0) return { mode: 'clusters' as const, items: [] };
+      const idList = ids.map((id) => escape(id)).join(', ');
+      idFilter = `AND a."entityId" IN (${idList})`;
     }
+
+    // Step 2: optional geo filter
+    let geoFilter = '';
+    if (
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0
+    ) {
+      geoFilter = `AND ST_DWithin(
+      ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326)::geography,
+      ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography,
+      ${escape(filters.radiusKm! * 1000)}
+    )`;
+    }
+
+    // Step 3: cluster entirely in the database
+    const sql = `
+    SELECT
+      COUNT(*)::int AS count,
+      AVG(a.latitude)  AS latitude,
+      AVG(a.longitude) AS longitude
+    FROM "Addresses" a
+    WHERE a."entityType" = 'event'
+      AND a.latitude  IS NOT NULL
+      AND a.longitude IS NOT NULL
+      ${idFilter}
+      ${geoFilter}
+    GROUP BY
+      ROUND(a.latitude  / ${escape(gridSize)}::numeric)::int,
+      ROUND(a.longitude / ${escape(gridSize)}::numeric)::int
+    ORDER BY count DESC
+  `;
+
+    const clusters = await Event.sequelize!.query<{ count: number; latitude: string; longitude: string }>(sql, {
+      type: QueryTypes.SELECT,
+    });
 
     return {
       mode: 'clusters' as const,
-      items: Array.from(clusters.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, EventService.MAX_CLUSTERS),
+      items: clusters.map((c) => ({
+        count: c.count,
+        latitude: parseFloat(c.latitude),
+        longitude: parseFloat(c.longitude),
+      })),
     };
   }
 
@@ -453,39 +549,79 @@ class EventService {
       return { mode: 'tiles' as const, items: {} };
     }
 
-    const markers = await this.getMatchingEventMarkers(filters);
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
 
-    // Distribute rows into tile buckets
+    // Step 1: resolve event-level filters to IDs
+    const eventWhere = this.buildEventOnlyWhere(filters);
+    const hasEventFilters = Object.keys(eventWhere).length > 0;
+    let idFilter = '';
+
+    if (hasEventFilters) {
+      const eventRows = await Event.findAll({ where: eventWhere, attributes: ['id'], raw: true });
+      const ids = (eventRows as unknown as { id: string }[]).map((e) => e.id);
+      if (ids.length === 0) {
+        const emptyResult: Record<string, { id: string; latitude: number; longitude: number }[]> = {};
+        for (const tile of tiles) emptyResult[tile] = [];
+        return { mode: 'tiles' as const, items: emptyResult };
+      }
+      const idList = ids.map((id) => escape(id)).join(', ');
+      idFilter = `AND a."entityId" IN (${idList})`;
+    }
+
+    // Step 2: decode geohash tiles to bboxes
     const tileBboxes = tiles.map((tile) => {
       const [minLat, minLng, maxLat, maxLng] = ngeohash.decode_bbox(tile);
       return { tile, minLat, minLng, maxLat, maxLng };
     });
 
-    const tileResults: Record<string, { id: string; name?: string; latitude: number; longitude: number }[]> = {};
-    for (const tile of tiles) {
-      tileResults[tile] = [];
+    // Step 3: build SQL VALUES clause for tile bounds
+    const tileValues = tileBboxes
+      .map(
+        ({ tile, minLat, minLng, maxLat, maxLng }) =>
+          `(${escape(tile)}, ${escape(minLat)}, ${escape(minLng)}, ${escape(maxLat)}, ${escape(maxLng)})`,
+      )
+      .join(', ');
+
+    const sql = `
+    WITH tile_bounds(tile, min_lat, min_lng, max_lat, max_lng) AS (
+      VALUES ${tileValues}
+    ),
+    ranked AS (
+      SELECT
+        t.tile,
+        a."entityId" AS id,
+        a.latitude,
+        a.longitude,
+        ROW_NUMBER() OVER (PARTITION BY t.tile ORDER BY a."entityId") AS rn
+      FROM "Addresses" a
+      JOIN tile_bounds t ON (
+        a.latitude  BETWEEN t.min_lat AND t.max_lat AND
+        a.longitude BETWEEN t.min_lng AND t.max_lng
+      )
+      WHERE a."entityType" = 'event'
+        AND a.latitude  IS NOT NULL
+        AND a.longitude IS NOT NULL
+        ${idFilter}
+    )
+    SELECT tile, id, latitude, longitude
+    FROM ranked
+    WHERE rn <= ${EventService.MARKERS_PER_TILE_LIMIT}
+  `;
+
+    const rows = await Event.sequelize!.query<{
+      tile: string;
+      id: string;
+      latitude: number;
+      longitude: number;
+    }>(sql, { type: QueryTypes.SELECT });
+
+    const tileResults: Record<string, { id: string; latitude: number; longitude: number }[]> = {};
+    for (const tile of tiles) tileResults[tile] = [];
+    for (const row of rows) {
+      tileResults[row.tile]?.push({ id: row.id, latitude: row.latitude, longitude: row.longitude });
     }
 
-    for (const marker of markers) {
-      for (const { tile, minLat, minLng, maxLat, maxLng } of tileBboxes) {
-        if (
-          marker.latitude >= minLat &&
-          marker.latitude <= maxLat &&
-          marker.longitude >= minLng &&
-          marker.longitude <= maxLng
-        ) {
-          if (tileResults[tile].length < EventService.MARKERS_PER_TILE_LIMIT) {
-            tileResults[tile].push(marker);
-          }
-          break;
-        }
-      }
-    }
-
-    return {
-      mode: 'tiles' as const,
-      items: tileResults,
-    };
+    return { mode: 'tiles' as const, items: tileResults };
   }
 
   private async getFlatMarkers(filters: IEventListFilters) {

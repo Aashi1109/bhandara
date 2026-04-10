@@ -6,6 +6,7 @@ import {
   validateParams,
   paginationParser,
   validateRequest,
+  rateLimit,
 } from '@/middlewares';
 
 import {
@@ -89,7 +90,13 @@ router
   .get([paginationParser], asyncHandler(getEvents))
   .post(validateRequest('EVENT_CREATE', eventSchema), asyncHandler(createEvent));
 
-router.get('/markers', asyncHandler(getEventMarkers));
+const markersRateLimit = rateLimit({
+  keyPrefix: 'markers',
+  limit: 100,
+  windowSeconds: 60,
+});
+
+router.get('/markers', markersRateLimit, asyncHandler(getEventMarkers));
 
 router
   .route('/:eventId')
