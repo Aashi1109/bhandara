@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../config.dart';
 import '../services/maps/map_manager.dart';
+import '../services/maps/google_maps_web_loader.dart';
 import '../theme/theme.dart';
 
 /// Shared map widget for consistent map usage across screens.
@@ -97,8 +99,54 @@ class AppMapView extends StatefulWidget {
 }
 
 class _AppMapViewState extends State<AppMapView> {
+  late final Future<void> _webMapsLoader = kIsWeb
+      ? ensureGoogleMapsWebSdkLoaded(AppConfig.googleMapsApiKey)
+      : Future<void>.value();
+
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return FutureBuilder<void>(
+        future: _webMapsLoader,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return ColoredBox(
+              color: AppColors.muted,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Map unavailable on web.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const ColoredBox(
+              color: AppColors.muted,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.2),
+                ),
+              ),
+            );
+          }
+
+          return _buildGoogleMap();
+        },
+      );
+    }
+
+    return _buildGoogleMap();
+  }
+
+  Widget _buildGoogleMap() {
     return ColoredBox(
       color: AppColors.muted,
       child: GoogleMap(
@@ -117,6 +165,13 @@ class _AppMapViewState extends State<AppMapView> {
         onCameraMove: widget.onCameraMove,
         onCameraIdle: widget.onCameraIdle,
         onMapCreated: (controller) {
+          if (kIsWeb) {
+            final style = widget.mapStyle ?? widget.manager.nativeMapStyle;
+            if (style.isNotEmpty) {
+              // ignore: deprecated_member_use
+              controller.setMapStyle(style);
+            }
+          }
           widget.onMapReady?.call(controller);
         },
       ),

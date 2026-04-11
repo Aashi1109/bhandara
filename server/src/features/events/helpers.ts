@@ -18,6 +18,12 @@ export const setEventCache = (eventId: string, event: IEvent) => eventCache.setI
 /** Remove all cached entries for an event. */
 export const deleteEventCache = (eventId: string) => eventCache.deleteItem(`${eventId}*`);
 
+/** Fetch a lightweight event preview from cache. */
+export const getEventPreviewCache = (eventId: string) => eventCache.getItem<IEvent>(`${eventId}:preview`);
+
+/** Store a lightweight event preview in cache. */
+export const setEventPreviewCache = (eventId: string, event: IEvent) => eventCache.setItem(`${eventId}:preview`, event);
+
 /** Retrieve cached users for an event. */
 export const getEventUsersCache = (key: string) => eventCache.getItem<Record<string, IBaseUser>>(key);
 

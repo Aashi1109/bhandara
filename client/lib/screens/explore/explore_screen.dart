@@ -767,6 +767,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted || requestVersion != _selectedEventRequestVersion) return;
 
       final merged = event.merge(preview);
+      debugPrint('Merged event: $merged');
       setState(() {
         _selectedEvent = merged;
         _isSelectedEventLoading = false;
@@ -986,23 +987,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     return false;
   }
 
-  List<EventMarker> _collectMarkersFromFetchRegions([ExploreViewportQuery? viewport]) {
+  List<EventMarker> _collectMarkersFromFetchRegions() {
     final seen = <String>{};
     final out = <EventMarker>[];
     for (final region in _markerFetchRegions) {
       for (final marker in region.markers) {
-        if (!seen.add(marker.id)) continue;
-        if (viewport != null) {
-          final dist = distanceInMetersBetween(
-            viewport.center.latitude,
-            viewport.center.longitude,
-            marker.latitude,
-            marker.longitude,
-          ) / 1000.0;
-          // 1.5x padding so markers near the viewport edge aren't cut off
-          if (dist > viewport.radiusKm * 1.5) continue;
+        if (seen.add(marker.id)) {
+          out.add(marker);
         }
-        out.add(marker);
       }
     }
     return out;
@@ -1014,7 +1006,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     // Cache hit — re-render from the cached union instantly, no network.
     if (_isViewportCoveredByFetchRegions(viewport)) {
       debugPrint('[MARKERS] flat fetch skipped — viewport covered by cache');
-      final merged = _collectMarkersFromFetchRegions(viewport);
+      final merged = _collectMarkersFromFetchRegions();
       if (!mounted) return;
       setState(() {
         _isClusterMode = false;
@@ -1057,14 +1049,11 @@ class _ExploreScreenState extends State<ExploreScreen>
         debugPrint(
           '[MARKERS] flat response merged (stale version=$requestVersion current=$_markerRequestVersion)',
         );
-        // Still update the display — stale data enriches the cache and the
-        // merged set (filtered to viewport) may have more markers than before.
-        final merged = _collectMarkersFromFetchRegions(viewport);
-        if (mounted) setState(() => _visibleMarkers = merged);
+        // Data is in _markerFetchRegions — the current request will use it.
         return;
       }
 
-      final merged = _collectMarkersFromFetchRegions(viewport);
+      final merged = _collectMarkersFromFetchRegions();
       debugPrint(
         '[MARKERS] flat response applied: ${markers.length} new, ${merged.length} total across ${_markerFetchRegions.length} regions',
       );
@@ -1561,48 +1550,62 @@ class _ExploreScreenState extends State<ExploreScreen>
                 key: _detailsCardKey,
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
-                child: Stack(
-                  children: [
-                    IgnorePointer(
-                      child: Opacity(
-                        opacity: 0,
-                        child: _buildEventDetailsCard(
-                          context,
-                          detailSizingEvent!,
-                          status: resolveEventStatus(detailSizingEvent),
-                          isSelected: true,
-                          showSwipeIndicator: _visibleEvents.length > 1,
-                          indicatorCurrentIndex: _selectedEventPageIndex,
-                          indicatorItemCount: _visibleEvents.length,
-                        ),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: PageView.builder(
-                        controller: _detailsPageController,
-                        onPageChanged: _handleDetailsPageChanged,
-                        itemCount: _visibleEvents.length,
-                        itemBuilder: (context, index) {
-                          final event = _visibleEvents[index];
-                          final selectedEvent = event.id == _selectedEvent?.id
-                              ? (_selectedVisibleEvent ?? event)
-                              : event;
-                          final status = resolveEventStatus(selectedEvent);
+                child: selectedVisibleEvent == null
+                    // Event not in visible list (marker tap for out-of-list event):
+                    // show the preview directly — do NOT go through PageView which
+                    // would fall back to _visibleEvents[0] and show the wrong event.
+                    ? _buildEventDetailsCard(
+                        context,
+                        resolvedSelectedEvent,
+                        status: resolveEventStatus(resolvedSelectedEvent),
+                        isSelected: true,
+                        showSwipeIndicator: false,
+                        indicatorCurrentIndex: 0,
+                        indicatorItemCount: 1,
+                      )
+                    : Stack(
+                        children: [
+                          IgnorePointer(
+                            child: Opacity(
+                              opacity: 0,
+                              child: _buildEventDetailsCard(
+                                context,
+                                detailSizingEvent!,
+                                status: resolveEventStatus(detailSizingEvent),
+                                isSelected: true,
+                                showSwipeIndicator: _visibleEvents.length > 1,
+                                indicatorCurrentIndex: _selectedEventPageIndex,
+                                indicatorItemCount: _visibleEvents.length,
+                              ),
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: PageView.builder(
+                              controller: _detailsPageController,
+                              onPageChanged: _handleDetailsPageChanged,
+                              itemCount: _visibleEvents.length,
+                              itemBuilder: (context, index) {
+                                final event = _visibleEvents[index];
+                                final selectedEvent =
+                                    event.id == _selectedEvent?.id
+                                    ? (selectedVisibleEvent ?? event)
+                                    : event;
+                                final status = resolveEventStatus(selectedEvent);
 
-                          return _buildEventDetailsCard(
-                            context,
-                            selectedEvent,
-                            status: status,
-                            isSelected: event.id == _selectedEvent?.id,
-                            showSwipeIndicator: _visibleEvents.length > 1,
-                            indicatorCurrentIndex: _selectedEventPageIndex,
-                            indicatorItemCount: _visibleEvents.length,
-                          );
-                        },
+                                return _buildEventDetailsCard(
+                                  context,
+                                  selectedEvent,
+                                  status: status,
+                                  isSelected: event.id == _selectedEvent?.id,
+                                  showSwipeIndicator: _visibleEvents.length > 1,
+                                  indicatorCurrentIndex: _selectedEventPageIndex,
+                                  indicatorItemCount: _visibleEvents.length,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
 

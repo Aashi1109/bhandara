@@ -12,6 +12,29 @@ import type { Request, Response } from 'express';
 const authService = new AuthService();
 const userService = new UserService();
 
+const getSessionCookieOptions = (req: Request) => {
+  const originHeader = req.headers?.origin;
+  const hostHeader = req.headers?.host;
+  const originHost = (() => {
+    if (typeof originHeader != 'string') return null;
+    try {
+      return new URL(originHeader).host.toLowerCase();
+    } catch (_) {
+      return null;
+    }
+  })();
+  const requestHost = typeof hostHeader == 'string' ? hostHeader.toLowerCase() : null;
+  const isCrossOrigin = originHost != null && requestHost != null && originHost != requestHost;
+
+  return {
+    httpOnly: true,
+    maxAge: config.sessionCookie.maxAge,
+    path: '/',
+    sameSite: isCrossOrigin ? 'none' : 'lax',
+    secure: isCrossOrigin,
+  } as const;
+};
+
 /**
  * Logins the user by creating a new access token
  * @param req Request object containing the request
@@ -58,9 +81,7 @@ const login = async (req: Request, res: Response) => {
     existingUser,
   });
 
-  res.cookie(config.sessionCookie.keyName, sessionId, {
-    maxAge: config.sessionCookie.maxAge,
-  });
+  res.cookie(config.sessionCookie.keyName, sessionId, getSessionCookieOptions(req));
 
   return res.status(200).json({
     data: { session: { id: sessionId }, user },
@@ -69,7 +90,7 @@ const login = async (req: Request, res: Response) => {
 
 const logOut = async (req: ICustomRequest, res: Response) => {
   await deleteUserSessionCache(req.user.id, req.cookies[config.sessionCookie.keyName]);
-  res.clearCookie(config.sessionCookie.keyName);
+  res.clearCookie(config.sessionCookie.keyName, getSessionCookieOptions(req));
   return res.status(200).json({ data: 'Logout successful' });
 };
 
@@ -106,9 +127,7 @@ const googleCallback = async (req: Request, res: Response) => {
     sessionData: exchangeCodeResponse,
   });
 
-  res.cookie(config.sessionCookie.keyName, sessionId, {
-    maxAge: config.sessionCookie.maxAge,
-  });
+  res.cookie(config.sessionCookie.keyName, sessionId, getSessionCookieOptions(req));
 
   return res.json({
     data: {
@@ -175,9 +194,7 @@ export const signInWithIdToken = async (req: Request, res: Response) => {
     sessionData: signInResponse,
   });
 
-  res.cookie(config.sessionCookie.keyName, sessionId, {
-    maxAge: config.sessionCookie.maxAge,
-  });
+  res.cookie(config.sessionCookie.keyName, sessionId, getSessionCookieOptions(req));
 
   return res.status(200).json({ data: { session: { id: sessionId }, user } });
 };
@@ -212,9 +229,7 @@ export const signUp = async (req: Request, res: Response) => {
     sessionData: signUpData,
   });
 
-  res.cookie(config.sessionCookie.keyName, sessionId, {
-    maxAge: config.sessionCookie.maxAge,
-  });
+  res.cookie(config.sessionCookie.keyName, sessionId, getSessionCookieOptions(req));
 
   return res.status(200).json({
     data: { session: { id: sessionId }, user },

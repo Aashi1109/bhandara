@@ -21,6 +21,18 @@ const withRedisDb = (baseConfig: RedisConnectionConfig, db: number): RedisConnec
 });
 
 const redisBaseConnection = getRedisBaseConnectionConfig();
+const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const configuredCorsOrigins = process.env.CORS_ORIGIN?.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const defaultCorsOrigins = [
+  'https://editor.swagger.io',
+  'https://brave-wren-big.ngrok-free.app',
+];
+const corsOrigins = [
+  localhostOriginPattern,
+  ...(configuredCorsOrigins || defaultCorsOrigins),
+];
 const redisConnections = {
   [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),
   [REDIS_CONNECTION_NAMES.Cache]: withRedisDb(redisBaseConnection, 5),
@@ -52,11 +64,7 @@ const config: AppConfig = {
     fileSizeLimit: process.env.EXPRESS_FILE_SIZE_LIMIT || '20mb',
   },
   corsOptions: {
-    origin: process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:8081',
-      'https://editor.swagger.io',
-      'https://brave-wren-big.ngrok-free.app',
-    ],
+    origin: corsOrigins,
     optionsSuccessStatus: 200,
     credentials: true,
   },

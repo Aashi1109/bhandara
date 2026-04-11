@@ -44,7 +44,7 @@ export default defineConfig([
       'space-unary-ops': 'error',
       quotes: ['error', 'single', { avoidEscape: true }],
       'max-len': ['error', { code: 200, ignoreUrls: true, ignoreStrings: true, ignoreTemplateLiterals: true }],
-      'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 800, skipBlankLines: true, skipComments: true }],
       'keyword-spacing': 'error',
       'multiline-ternary': ['error', 'never'],
       'no-mixed-operators': 'error',

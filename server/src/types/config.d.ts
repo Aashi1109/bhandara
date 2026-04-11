@@ -46,7 +46,7 @@ export interface AppConfig {
     fileSizeLimit: string;
   };
   corsOptions: {
-    origin: string[];
+    origin: Array<string | RegExp>;
     optionsSuccessStatus: number;
     credentials: boolean;
   };

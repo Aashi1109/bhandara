@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 
 /// Centralized app configuration.
 /// All compile-time environment variables are read here.
@@ -23,12 +23,7 @@ class AppConfig {
   );
 
   static String get apiHost {
-    final host = _apiHost.isNotEmpty ? _apiHost : 'localhost';
-    if (Platform.isAndroid &&
-        (host == 'localhost' || host == '127.0.0.1')) {
-      return '10.0.2.2';
-    }
-    return host;
+    return resolveApiHost();
   }
 
   static int? get apiPort {
@@ -38,12 +33,7 @@ class AppConfig {
 
   static Uri get apiUri {
     final port = apiPort;
-    return Uri(
-      scheme: apiScheme,
-      host: apiHost,
-      port: port,
-      path: '/api',
-    );
+    return Uri(scheme: apiScheme, host: apiHost, port: port, path: '/api');
   }
 
   static String get apiBaseUrl => apiUri.toString();
@@ -69,8 +59,36 @@ class AppConfig {
 
   // ── Platform header for server ───────────────────────
   static String get clientPlatform {
-    if (Platform.isAndroid) return 'android';
-    if (Platform.isIOS) return 'ios';
+    return resolveClientPlatform();
+  }
+
+  static String resolveApiHost({
+    String configuredHost = _apiHost,
+    bool isWeb = kIsWeb,
+    TargetPlatform? platform,
+  }) {
+    final resolvedPlatform = platform ?? defaultTargetPlatform;
+    final host = configuredHost.isNotEmpty ? configuredHost : 'localhost';
+    final shouldUseAndroidEmulatorLoopback =
+        !isWeb &&
+        resolvedPlatform == TargetPlatform.android &&
+        (host == 'localhost' || host == '127.0.0.1');
+
+    if (shouldUseAndroidEmulatorLoopback) {
+      return '10.0.2.2';
+    }
+
+    return host;
+  }
+
+  static String resolveClientPlatform({
+    bool isWeb = kIsWeb,
+    TargetPlatform? platform,
+  }) {
+    final resolvedPlatform = platform ?? defaultTargetPlatform;
+    if (isWeb) return 'web';
+    if (resolvedPlatform == TargetPlatform.android) return 'android';
+    if (resolvedPlatform == TargetPlatform.iOS) return 'ios';
     return 'web';
   }
 }

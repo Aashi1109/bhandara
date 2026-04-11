@@ -12,8 +12,10 @@ import ReactionService from '../reactions/service';
 import { validateEventCreate, validateEventUpdate } from './validation';
 import {
   getEventCache,
+  getEventPreviewCache,
   getEventUsersCache,
   setEventCache,
+  setEventPreviewCache,
   setEventUsersCache,
   deleteEventCache,
   getMarkerCache,
@@ -302,6 +304,9 @@ class EventService {
   }
 
   async getEventPreview(id: string) {
+    const cached = await getEventPreviewCache(id);
+    if (cached) return this.withResolvedStatus(cached as IEvent);
+
     const event = (await Event.findByPk(id, {
       raw: true,
       attributes: ['id', 'name', 'status', 'type', 'createdBy', 'timings', 'media', 'tags'],
@@ -314,7 +319,9 @@ class EventService {
     const preview = await this.populateEvent(hydratedEvent, ['media', 'tags']);
     await this.entityStatsService.hydrateEvent(preview);
 
-    return this.withResolvedStatus(preview);
+    const result = this.withResolvedStatus(preview);
+    await setEventPreviewCache(id, result as IEvent);
+    return result;
   }
 
   async createEvent(body: Partial<IEvent>) {

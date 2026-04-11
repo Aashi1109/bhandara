@@ -8,6 +8,7 @@ import '../screens/auth.dart';
 import '../screens/login.dart';
 import '../screens/onboarding.dart';
 import '../screens/splash.dart';
+import 'dio_platform_adapter.dart';
 import 'secure_storage.dart';
 
 class ApiService {
@@ -25,18 +26,22 @@ class ApiService {
       ),
     );
 
+    configureDioForPlatform(_dio);
+
     // Auth Interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _storage.read(_tokenKey);
-          if (token != null) {
+          if (!kIsWeb && token != null) {
             options.headers['Cookie'] = 'bh_session=$token';
           }
           return handler.next(options);
         },
         onError: (error, handler) async {
-          debugPrint('=== DIO ERROR: ${error.requestOptions.path} status=${error.response?.statusCode} msg=${error.message} ===');
+          debugPrint(
+            '=== DIO ERROR: ${error.requestOptions.path} status=${error.response?.statusCode} msg=${error.message} ===',
+          );
           if (await _shouldRedirectToLogin(error)) {
             await _handleUnauthorized();
           }
@@ -123,7 +128,9 @@ class ApiService {
           location == LoginScreen.routePath ||
           location == OnboardingScreen.routePath;
 
-      debugPrint('=== UNAUTHORIZED: location=$location redirecting=${!isAlreadyInPublicAuthFlow} ===');
+      debugPrint(
+        '=== UNAUTHORIZED: location=$location redirecting=${!isAlreadyInPublicAuthFlow} ===',
+      );
       if (!isAlreadyInPublicAuthFlow) {
         router.go(AuthScreen.routePath);
       }
