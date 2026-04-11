@@ -1,3 +1,154 @@
+class UserSettingsNotifications {
+  UserSettingsNotifications({
+    this.events = true,
+    this.chat = true,
+    this.replies = false,
+    this.reminders = true,
+  });
+
+  factory UserSettingsNotifications.fromJson(Map<String, dynamic> json) {
+    return UserSettingsNotifications(
+      events: json['events'] as bool? ?? true,
+      chat: json['chat'] as bool? ?? true,
+      replies: json['replies'] as bool? ?? false,
+      reminders: json['reminders'] as bool? ?? true,
+    );
+  }
+
+  final bool events;
+  final bool chat;
+  final bool replies;
+  final bool reminders;
+
+  Map<String, dynamic> toJson() => {
+        'events': events,
+        'chat': chat,
+        'replies': replies,
+        'reminders': reminders,
+      };
+
+  UserSettingsNotifications copyWith({
+    bool? events,
+    bool? chat,
+    bool? replies,
+    bool? reminders,
+  }) {
+    return UserSettingsNotifications(
+      events: events ?? this.events,
+      chat: chat ?? this.chat,
+      replies: replies ?? this.replies,
+      reminders: reminders ?? this.reminders,
+    );
+  }
+}
+
+class UserSettingsPrivacy {
+  UserSettingsPrivacy({this.shareLocation = true});
+
+  factory UserSettingsPrivacy.fromJson(Map<String, dynamic> json) {
+    return UserSettingsPrivacy(
+      shareLocation: json['shareLocation'] as bool? ?? true,
+    );
+  }
+
+  final bool shareLocation;
+
+  Map<String, dynamic> toJson() => {'shareLocation': shareLocation};
+
+  UserSettingsPrivacy copyWith({bool? shareLocation}) {
+    return UserSettingsPrivacy(
+      shareLocation: shareLocation ?? this.shareLocation,
+    );
+  }
+}
+
+class UserSettingsOnboarding {
+  UserSettingsOnboarding({this.hasOnboarded = false});
+
+  factory UserSettingsOnboarding.fromJson(Map<String, dynamic> json) {
+    return UserSettingsOnboarding(
+      hasOnboarded: json['hasOnboarded'] as bool? ?? false,
+    );
+  }
+
+  final bool hasOnboarded;
+
+  Map<String, dynamic> toJson() => {'hasOnboarded': hasOnboarded};
+
+  UserSettingsOnboarding copyWith({bool? hasOnboarded}) {
+    return UserSettingsOnboarding(
+      hasOnboarded: hasOnboarded ?? this.hasOnboarded,
+    );
+  }
+}
+
+class UserSettings {
+  UserSettings({
+    required this.notifications,
+    required this.privacy,
+    required this.onboarding,
+    required this.interests,
+  });
+
+  factory UserSettings.fromJson(Map<String, dynamic> json) {
+    return UserSettings(
+      notifications: json['notifications'] is Map
+          ? UserSettingsNotifications.fromJson(
+              (json['notifications'] as Map).cast<String, dynamic>(),
+            )
+          : UserSettingsNotifications(),
+      privacy: json['privacy'] is Map
+          ? UserSettingsPrivacy.fromJson(
+              (json['privacy'] as Map).cast<String, dynamic>(),
+            )
+          : UserSettingsPrivacy(),
+      onboarding: json['onboarding'] is Map
+          ? UserSettingsOnboarding.fromJson(
+              (json['onboarding'] as Map).cast<String, dynamic>(),
+            )
+          : UserSettingsOnboarding(),
+      interests: (json['interests'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
+    );
+  }
+
+  static UserSettings defaults() {
+    return UserSettings(
+      notifications: UserSettingsNotifications(),
+      privacy: UserSettingsPrivacy(),
+      onboarding: UserSettingsOnboarding(),
+      interests: const [],
+    );
+  }
+
+  final UserSettingsNotifications notifications;
+  final UserSettingsPrivacy privacy;
+  final UserSettingsOnboarding onboarding;
+  final List<String> interests;
+
+  Map<String, dynamic> toJson() => {
+        'notifications': notifications.toJson(),
+        'privacy': privacy.toJson(),
+        'onboarding': onboarding.toJson(),
+        'interests': interests,
+      };
+
+  UserSettings copyWith({
+    UserSettingsNotifications? notifications,
+    UserSettingsPrivacy? privacy,
+    UserSettingsOnboarding? onboarding,
+    List<String>? interests,
+  }) {
+    return UserSettings(
+      notifications: notifications ?? this.notifications,
+      privacy: privacy ?? this.privacy,
+      onboarding: onboarding ?? this.onboarding,
+      interests: interests ?? this.interests,
+    );
+  }
+}
+
 class UserAuthMeta {
   UserAuthMeta({required this.provider});
 

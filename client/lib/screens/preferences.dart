@@ -12,6 +12,7 @@ import '../widgets/map_view.dart';
 import '../widgets/skeleton.dart';
 import '../providers/tag.dart';
 import '../providers/user.dart';
+import '../providers/user_settings.dart';
 import '../models/event.dart';
 import '../services/location_permission.dart';
 import '../services/maps/map_manager.dart';
@@ -60,8 +61,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     final user = ref.read(userProfileProvider).value;
     if (_didHydrateFromProfile || user == null) return;
 
-    final interestIds = user.meta?.interests ?? const <String>[];
-    _selected.addAll(interestIds);
+    final interests = ref.read(userSettingsProvider).value?.interests ?? const <String>[];
+    _selected.addAll(interests);
 
     if (user.address != null) {
       _selectedLocation = LatLng(
@@ -513,23 +514,24 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
 
                 setState(() => _isSaving = true);
                 try {
-                  final previous = user.meta?.interests.toSet() ?? <String>{};
-                  final current = _selected.toSet();
-
-                  await ref.read(userProfileProvider.notifier).updateUserData({
-                    'interests': {
-                      'added': current.difference(previous).toList(),
-                      'deleted': previous.difference(current).toList(),
-                    },
-                    'hasOnboarded': true,
-                    'address': {
-                      'address': _locationLabel,
-                      'coordinates': {
-                        'latitude': _selectedLocation.latitude,
-                        'longitude': _selectedLocation.longitude,
+                  await Future.wait([
+                    ref.read(userSettingsProvider.notifier).updateSettings(
+                      user.id,
+                      {
+                        'interests': _selected.toList(),
+                        'onboarding': {'hasOnboarded': true},
                       },
-                    },
-                  });
+                    ),
+                    ref.read(userProfileProvider.notifier).updateUserData({
+                      'address': {
+                        'address': _locationLabel,
+                        'coordinates': {
+                          'latitude': _selectedLocation.latitude,
+                          'longitude': _selectedLocation.longitude,
+                        },
+                      },
+                    }),
+                  ]);
 
                   if (!mounted) return;
                   context.go(ExploreScreen.routePath);

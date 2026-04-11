@@ -8,6 +8,7 @@ import '../widgets/button.dart';
 import '../services/user.dart';
 import '../providers/auth.dart';
 import '../providers/user.dart';
+import '../providers/user_settings.dart';
 import 'profile.dart';
 import 'settings/profile_details.dart';
 import 'settings/email.dart';
@@ -39,8 +40,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (user == null) return;
 
     setState(() => _locationSharing = value);
-    await ref.read(userProfileProvider.notifier).updateUserData({
-      'meta': {...?user.meta?.toJson(), 'shareLocation': value},
+    await ref.read(userSettingsProvider.notifier).updateSettings(user.id, {
+      'privacy': {'shareLocation': value},
     });
   }
 
@@ -48,8 +49,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
     final user = userAsync.value;
-    if (!_didSyncLocationSharing && user?.meta?.shareLocation != null) {
-      _locationSharing = user!.meta!.shareLocation!;
+    final settingsPrivacy = ref.watch(userSettingsProvider).value?.privacy;
+    if (!_didSyncLocationSharing && settingsPrivacy != null) {
+      _locationSharing = settingsPrivacy.shareLocation;
       _didSyncLocationSharing = true;
     }
 

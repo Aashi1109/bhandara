@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../models/user.dart';
 import '../../providers/user.dart';
+import '../../providers/user_settings.dart';
 import '../../theme/theme.dart';
 import '../../widgets/header.dart';
 import '../../widgets/settings_action_footer.dart';
@@ -32,19 +33,17 @@ class _NotificationsSettingsScreenState
 
   void _hydrate(User? user) {
     if (_didHydrate || user == null) return;
-    final prefs = user.meta?.notificationPreferences;
-    if (prefs != null) {
-      _events = prefs.events;
-      _chat = prefs.chat;
-      _replies = prefs.replies;
-      _reminders = prefs.reminders;
-      _initialPreferences = prefs;
-    } else {
+    final notifications = ref.read(userSettingsProvider).value?.notifications;
+    if (notifications != null) {
+      _events = notifications.events;
+      _chat = notifications.chat;
+      _replies = notifications.replies;
+      _reminders = notifications.reminders;
       _initialPreferences = NotificationPreferences(
-        events: _events,
-        chat: _chat,
-        replies: _replies,
-        reminders: _reminders,
+        events: notifications.events,
+        chat: notifications.chat,
+        replies: notifications.replies,
+        reminders: notifications.reminders,
       );
     }
     _didHydrate = true;
@@ -127,15 +126,11 @@ class _NotificationsSettingsScreenState
             onPressed: user == null || !_isDirty
                 ? null
                 : () async {
-                    await ref.read(userProfileProvider.notifier).updateUserData(
-                      {
-                        'meta': {
-                          ...?user.meta?.toJson(),
-                          'notificationPreferences': _currentPreferences
-                              .toJson(),
-                        },
-                      },
-                    );
+                    await ref
+                        .read(userSettingsProvider.notifier)
+                        .updateSettings(user.id, {
+                      'notifications': _currentPreferences.toJson(),
+                    });
                     if (!mounted) return;
                     setState(() {
                       _initialPreferences = _currentPreferences;

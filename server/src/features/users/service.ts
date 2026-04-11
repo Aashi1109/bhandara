@@ -4,12 +4,12 @@ import AddressService from '@/features/addresses/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { validateUserCreate, validateUserUpdate } from './validation';
 import { User } from './model';
+import UserSettingsService from './settings.service';
 import {
   bulkGetUserCache,
   bulkSetUserCache,
   deleteAllUserCache,
   deleteUserCache,
-  deleteUserInterestsCache,
   getSafeUser,
   getUserCache,
   getUserCacheByEmail,
@@ -34,11 +34,13 @@ class UserService {
 
   private readonly tagService: TagService;
   private readonly mediaService: MediaService;
+  private readonly settingsService: UserSettingsService;
 
   constructor() {
     this.addressService = new AddressService();
     this.tagService = new TagService();
     this.mediaService = new MediaService();
+    this.settingsService = new UserSettingsService();
   }
 
   private async hydrateUsers<T extends Pick<IBaseUser, 'id'> & Partial<IBaseUser>>(users: T[]): Promise<T[]> {
@@ -72,7 +74,12 @@ class UserService {
     pagination?: Partial<IPaginationParams>,
     select?: string,
   ): Promise<PaginatedResult<IBaseUser>> {
-    const result = (await findAllWithPagination(User, options, pagination, select)) as unknown as PaginatedResult<IBaseUser>;
+    const result = (await findAllWithPagination(
+      User,
+      options,
+      pagination,
+      select,
+    )) as unknown as PaginatedResult<IBaseUser>;
     result.items = await this.hydrateUsers(result.items as IBaseUser[]);
     return result;
   }
@@ -81,11 +88,17 @@ class UserService {
     const res = await validateUserCreate(data, async (d) => {
       const { address, ...rest } = d;
       const row = await User.sequelize!.transaction(async (transaction) => {
-        const created = await User.create({
-          ...rest,
-          mediaId: d.mediaId as string,
-        } as any, { transaction });
-        await this.addressService.replaceAddress(EAddressEntityType.User, created.id, address, transaction);
+        const created = await User.create(
+          {
+            ...rest,
+            mediaId: d.mediaId as string,
+          } as any,
+          { transaction },
+        );
+        await Promise.all([
+          this.addressService.replaceAddress(EAddressEntityType.User, created.id, address, transaction),
+          this.settingsService.updateSettings(created.id, {}, transaction),
+        ]);
         return created;
       });
       return (await this._getByIdNoCache(row.id)) as IBaseUser;
@@ -97,46 +110,15 @@ class UserService {
     return res;
   }
 
-  async update(
-    id: string,
-    data: Partial<
-      IBaseUser & {
-        interests: { added: string[]; deleted: string[] };
-        hasOnboarded: boolean;
-      }
-    >,
-  ) {
+  async update(id: string, data: Partial<IBaseUser>) {
     const updated = await validateUserUpdate(data, async (validData) => {
       const userData = await this._getByIdNoCache(id);
 
       if (!userData) throw new NotFoundError('User not found');
 
-      const { interests, hasOnboarded, username, address, ...rest } = validData;
+      const { username, address, ...rest } = validData;
 
-      const newInterests = [...(interests?.added || [])] as string[];
-      const deletedInterests = [...(interests?.deleted || [])] as string[];
-
-      const newInterestsSet = new Set(newInterests);
-      const deletedInterestsSet = new Set(deletedInterests);
-
-      const previousInterests = new Set([...(userData.meta?.interests || [])]);
-
-      deletedInterestsSet.forEach((interest) => {
-        newInterestsSet.delete(interest);
-        previousInterests.delete(interest);
-      });
-
-      const newMeta = {
-        ...userData.meta,
-        hasOnboarded: hasOnboarded ?? userData.meta?.hasOnboarded,
-        interests: [...Array.from(newInterestsSet), ...Array.from(previousInterests)],
-      };
-
-      const hasInterestsChanged = newInterests.length > 0 || deletedInterests.length > 0;
-
-      if (hasInterestsChanged) {
-        await deleteUserInterestsCache(id);
-      }
+      const newMeta = { ...userData.meta };
 
       const isUsernameChanged = username && username !== userData.username;
       if (isUsernameChanged) {
@@ -147,12 +129,15 @@ class UserService {
       await User.sequelize!.transaction(async (transaction) => {
         const row = await User.findByPk(id, { transaction });
         if (!row) throw new NotFoundError('User not found');
-        await row.update({
-          ...rest,
-          meta: newMeta,
-          username,
-          mediaId: rest.mediaId as string,
-        } as Partial<IBaseUser>, { transaction });
+        await row.update(
+          {
+            ...rest,
+            meta: newMeta,
+            username,
+            mediaId: rest.mediaId as string,
+          } as Partial<IBaseUser>,
+          { transaction },
+        );
 
         if (address !== undefined) {
           await this.addressService.replaceAddress(EAddressEntityType.User, id, address, transaction);
@@ -186,7 +171,11 @@ class UserService {
   async getUserByEmail(email: string) {
     const cached = await getUserCacheByEmail(email);
     if (cached) return cached;
-    const data = (await findAllWithPagination(User, { where: { email } }, { limit: 1 })) as unknown as PaginatedResult<IBaseUser>;
+    const data = (await findAllWithPagination(
+      User,
+      { where: { email } },
+      { limit: 1 },
+    )) as unknown as PaginatedResult<IBaseUser>;
     if (data.items.length === 0) return null;
     const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
     if (user.mediaId) {
@@ -204,7 +193,11 @@ class UserService {
         items: [cached],
         pagination: null,
       } as unknown as PaginatedResult<IBaseUser>;
-    const data = (await findAllWithPagination(User, { where: { username } }, { limit: 1 })) as unknown as PaginatedResult<IBaseUser>;
+    const data = (await findAllWithPagination(
+      User,
+      { where: { username } },
+      { limit: 1 },
+    )) as unknown as PaginatedResult<IBaseUser>;
     if (!isEmpty(data.items)) {
       const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
       data.items = [user] as typeof data.items;
@@ -230,10 +223,9 @@ class UserService {
   async getUserInterests(id: string) {
     const cached = await getUserInterestsCache(id);
     if (cached) return cached;
-    const user = await this.getById(id);
-    if (!user) throw new NotFoundError('User not found');
 
-    const { interests } = user.meta;
+    const settings = await this.settingsService.ensureExists(id);
+    const interests = settings.interests;
 
     if (isEmpty(interests)) return [];
 

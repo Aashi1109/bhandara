@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,6 +76,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   static const String _defaultEventStatus = 'draft';
   static const String _defaultLocationLabel = 'Location unavailable';
   static const String _defaultPrimaryTag = 'Food';
+  static const double _mobileLocationMapHeight = 176;
+  static const double _webLocationMapHeight = 240;
 
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   Event? _event;
@@ -623,7 +626,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     await _loadEngagement(silent: true);
   }
 
-  String _staticMapUrl() {
+  static double _zoomForMapWidth(double width) {
+    if (width >= 1200) return 11.0;
+    if (width >= 900) return 12.0;
+    if (width >= 600) return 13.0;
+    return 14.0;
+  }
+
+  String _staticMapUrl({double zoom = 14}) {
     final lat = _event?.location.latitude;
     final lng = _event?.location.longitude;
     if (lat == null || lng == null) {
@@ -635,11 +645,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       longitude: lng,
       width: 1200,
       height: 800,
-      zoom: 14,
+      zoom: zoom,
       showMarker: true,
       fallbackUrl: 'https://picsum.photos/seed/event-location/1200/600',
     );
   }
+
+  double get _locationMapHeight =>
+      kIsWeb ? _webLocationMapHeight : _mobileLocationMapHeight;
 
   void _openAttendees() {
     if (_participantUsers.isEmpty) return;
@@ -1080,16 +1093,21 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        ClipRRect(
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final mapZoom = _zoomForMapWidth(
+                              constraints.maxWidth,
+                            );
+                            return ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: SizedBox(
-                            height: 176,
+                            height: _locationMapHeight,
                             width: double.infinity,
                             child: Stack(
                               children: [
                                 Positioned.fill(
                                   child: CachedNetworkImage(
-                                    imageUrl: _staticMapUrl(),
+                                    imageUrl: _staticMapUrl(zoom: mapZoom),
                                     fit: BoxFit.cover,
                                     placeholder: (_, _) =>
                                         Container(color: AppColors.muted),
@@ -1125,6 +1143,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               ],
                             ),
                           ),
+                        );
+                          },
                         ),
                         const SizedBox(height: 40),
                         Row(

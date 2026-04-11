@@ -58,6 +58,7 @@ dependencies:
   video_player: ^2.9.5
   google_maps_flutter_android: ^2.19.5
   google_maps_flutter_platform_interface: ^2.15.0
+  pointer_interceptor: ^0.10.1+2
 
 dev_dependencies:
   flutter_test:

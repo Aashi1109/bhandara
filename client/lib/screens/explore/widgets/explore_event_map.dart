@@ -47,6 +47,7 @@ class ExploreEventMap extends StatefulWidget {
     this.onRecenterRequested,
     this.useServerClusters = false,
     this.pinnedMarker,
+    this.initialZoom,
   });
 
   final MapManager manager;
@@ -66,6 +67,7 @@ class ExploreEventMap extends StatefulWidget {
   final VoidCallback? onRecenterRequested;
   final bool useServerClusters;
   final EventMarker? pinnedMarker;
+  final double? initialZoom;
 
   @override
   State<ExploreEventMap> createState() => _ExploreEventMapState();
@@ -73,7 +75,18 @@ class ExploreEventMap extends StatefulWidget {
 
 class _ExploreEventMapState extends State<ExploreEventMap>
     with SingleTickerProviderStateMixin {
-  static const double _initialZoom = 11;
+  static double _zoomForWidth(double width) {
+    if (width >= 1400) return 8.5;
+    if (width >= 1100) return 10;
+    if (width >= 800) return 12;
+    if (width >= 600) return 14;
+    return 16;
+  }
+
+  double get _initialZoom =>
+      widget.initialZoom ??
+      _zoomForWidth(MediaQuery.sizeOf(context).width);
+
   static const double _userPulseMinRadius = 30;
   static const double _userPulseMaxRadius = 120;
   static const double _fitBoundsInset = 72;
@@ -96,8 +109,12 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   Timer? _viewportDebounce;
   ExploreViewportQuery? _lastEmittedViewport;
   Size _mapSize = Size.zero;
-  double _mapZoom = _initialZoom;
-  double _pendingZoom = _initialZoom;
+  double _mapZoom = 11.0;
+  double _pendingZoom = 11.0;
+  bool _zoomInitialized = false;
+  // True after the first onCameraIdle fires — until then, camera events fired
+  // by the web Maps API during map init (e.g. spurious zoom=22) are ignored.
+  bool _mapSettled = false;
   bool _isProgrammaticCameraMove = false;
   bool _didUserMoveCamera = false;
 
@@ -116,6 +133,18 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     _loadMarkerIcons();
     _rebuildMapMarkers();
     _rebuildUserLocationPulse();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_zoomInitialized) {
+      _zoomInitialized = true;
+      debugPrint('Initial zoom: $_initialZoom');
+      final zoom = _initialZoom;
+      _mapZoom = zoom;
+      _pendingZoom = zoom;
+    }
   }
 
   @override
@@ -467,7 +496,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
     if (points.length == 1) {
       await _runProgrammaticCameraMove(
-        CameraUpdate.newLatLngZoom(points.first, 12.5),
+        CameraUpdate.newLatLngZoom(points.first, _initialZoom),
       );
       return;
     }
@@ -491,6 +520,20 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     if (minLng == maxLng) {
       minLng -= 0.01;
       maxLng += 0.01;
+    }
+
+    // If content is tightly clustered (< ~11 km span), newLatLngBounds would
+    // produce extreme zoom levels (up to 22). Fall back to initialZoom instead.
+    final latSpan = maxLat - minLat;
+    final lngSpan = maxLng - minLng;
+    if (latSpan < 0.1 && lngSpan < 0.1) {
+      await _runProgrammaticCameraMove(
+        CameraUpdate.newLatLngZoom(
+          LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
+          _initialZoom,
+        ),
+      );
+      return;
     }
 
     await _runProgrammaticCameraMove(
@@ -606,6 +649,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     _viewportDebounce?.cancel();
 
     // Sync zoom — _handleCameraIdle was suppressed so _mapZoom is stale.
+    debugPrint('[MAP] zoom animated: ${_mapZoom.toStringAsFixed(2)} → ${_pendingZoom.toStringAsFixed(2)}');
     _mapZoom = _pendingZoom;
 
     // Force emit viewport change so the parent loads data for the new position.
@@ -658,8 +702,19 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     // The animation owner will sync zoom and emit viewport itself.
     if (_suppressIdleCount > 0) return;
 
+    // First idle: map has settled at its initialCameraPosition. Mark as ready
+    // and sync _pendingZoom to _mapZoom to discard any spurious pre-settle
+    // camera events (e.g. web Maps API firing zoom=22 during init).
+    if (!_mapSettled) {
+      _mapSettled = true;
+      _pendingZoom = _mapZoom;
+      debugPrint('[MAP] settled at zoom ${_mapZoom.toStringAsFixed(2)}');
+      return;
+    }
+
     final nextZoom = _pendingZoom;
     if ((nextZoom - _mapZoom).abs() >= 0.05) {
+      debugPrint('[MAP] zoom idle: ${_mapZoom.toStringAsFixed(2)} → ${nextZoom.toStringAsFixed(2)}');
       setState(() {
         _mapZoom = nextZoom;
       });
@@ -818,10 +873,16 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                         },
                         onCameraMoveStarted: _handleCameraMoveStarted,
                         onCameraMove: (position) {
+                          // Ignore events until the map has fired its first
+                          // onCameraIdle — the web Maps API fires spurious
+                          // zoom=22 events during initialisation before the
+                          // initialCameraPosition zoom is applied.
+                          if (!_mapSettled) return;
                           _pendingZoom = position.zoom;
                           // Keep _mapZoom live so client-side clustering
                           // never runs against a stale zoom during animation.
                           if ((position.zoom - _mapZoom).abs() >= 0.25) {
+                            debugPrint('[MAP] zoom move: ${_mapZoom.toStringAsFixed(2)} → ${position.zoom.toStringAsFixed(2)}');
                             _mapZoom = position.zoom;
                           }
                         },

@@ -96,9 +96,17 @@ class RedisCache {
   async invalidateCache(pattern: string): Promise<void> {
     try {
       const fullPattern = `${this.cacheNamespace}:${pattern}`;
-      const matchingKeys = await this.redisClient.keys(fullPattern);
-      if (matchingKeys.length > 0) {
-        await this.redisClient.del(...matchingKeys);
+      const keys: string[] = [];
+      let cursor = '0';
+
+      do {
+        const [nextCursor, batch] = await this.redisClient.scan(cursor, 'MATCH', fullPattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
+      if (keys.length > 0) {
+        await this.redisClient.del(...keys);
       }
     } catch (error) {
       console.error('Redis cache invalidation failed:', error);

@@ -33,7 +33,7 @@ final class UserProfileProvider
   UserProfile create() => UserProfile();
 }
 
-String _$userProfileHash() => r'f1ad5e257f5f0e55f143baf5374c3fa1f17a26f0';
+String _$userProfileHash() => r'ed43dfe09c71b5265d3522acc53396e67527f247';
 
 abstract class _$UserProfile extends $AsyncNotifier<User?> {
   FutureOr<User?> build();

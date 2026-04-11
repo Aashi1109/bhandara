@@ -1,4 +1,4 @@
-import { asyncHandler, paginationParser, rateLimit, sessionParser, userParser, validateRequest } from '@/middlewares';
+import { asyncHandler, paginationParser, rateLimit, sessionParser, userParser } from '@/middlewares';
 import { Router } from 'express';
 import {
   getAllUser,
@@ -7,8 +7,10 @@ import {
   updateUser,
   getUserByQuery,
   getUserInterests,
+  getUserSettings,
+  updateUserSettings,
 } from '@/features/users/controller';
-import { updateSchema } from '@/features/users/validation';
+import { validateUserUpdate, validateUserSettings } from '@/features/users/validation';
 import { getMyUpdates, getUserActivity, markAllUpdatesAsRead, markUpdateAsRead } from '@/features/activity/controller';
 import { getUserAchievementProgress, getUserAchievements } from '@/features/achievements/controller';
 
@@ -97,6 +99,9 @@ router.get('/:id/activity', paginationParser, asyncHandler(getUserActivity));
 router.get('/:id/achievements', asyncHandler(getUserAchievements));
 router.get('/:id/achievements/progress', asyncHandler(getUserAchievementProgress));
 
+router.get('/:id/settings', asyncHandler(getUserSettings));
+router.patch('/:id/settings', validateUserSettings, asyncHandler(updateUserSettings));
+
 router
   .route('/:id')
   /**
@@ -170,7 +175,7 @@ router
    *                 error:
    *                   nullable: true
    */
-  .patch(validateRequest('USER_UPDATE', updateSchema), asyncHandler(updateUser));
+  .patch(validateUserUpdate, asyncHandler(updateUser));
 
 /**
  * @openapi

@@ -84,6 +84,33 @@ class UserService extends BaseService {
     }
   }
 
+  Future<UserSettings?> getSettings(String userId) async {
+    try {
+      final response = await _dio.get(Api.userSettings(userId));
+      final json = response.data['data'] as Map<String, dynamic>;
+      return UserSettings.fromJson(json);
+    } on DioException catch (e) {
+      throwError(e, 'Failed to fetch user settings');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<UserSettings> updateSettings(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dio.patch(Api.userSettings(userId), data: data);
+      final json = response.data['data'] as Map<String, dynamic>;
+      return UserSettings.fromJson(json);
+    } on DioException catch (e) {
+      throwError(e, 'Failed to update user settings');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<Achievement>> getUserAchievements(String userId) async {
     try {
       final response = await _dio.get(Api.userAchievements(userId));

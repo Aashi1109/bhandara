@@ -18,6 +18,8 @@ class Api {
 
   static const String getUserByQuery = '/users/query';
 
+  static String userSettings(String userId) => '/users/$userId/settings';
+
   static String userInterests(String userId) => '/users/$userId/interests';
   static String userActivity(String userId) => '/users/$userId/activity';
   static String userAchievements(String userId) =>

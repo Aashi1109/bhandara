@@ -1,6 +1,7 @@
 import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/definitions/types';
 import { bulkSetUserCache, getPublicUser, getSafeUser } from './helpers';
 import UserService from './service';
+import UserSettingsService from './settings.service';
 import type { Request, Response } from 'express';
 import { hasMeaningfulChange, isEmpty, omit } from '@/utils';
 import { NotFoundError } from '@/exceptions';
@@ -10,6 +11,7 @@ import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
 
 const userService = new UserService();
+const userSettingsService = new UserSettingsService();
 const entityEngagementService = new EntityEngagementService();
 
 const getViewerIp = (req: ICustomRequest) => {
@@ -109,4 +111,28 @@ export const getUserInterests = async (req: ICustomRequest, res: Response) => {
   const { id } = req.params;
   const data = await userService.getUserInterests(id as string);
   return res.status(200).json({ data });
+};
+
+export const getUserSettings = async (req: ICustomRequest, res: Response) => {
+  const { id } = req.params;
+  const user = await userService.getById(id as string);
+  if (isEmpty(user)) throw new NotFoundError('User not found');
+
+  const settings = await userSettingsService.ensureExists(id as string);
+  return res.status(200).json({ data: settings });
+};
+
+export const updateUserSettings = async (req: ICustomRequest, res: Response) => {
+  const { id } = req.params;
+  const user = await userService.getById(id as string);
+  if (isEmpty(user)) throw new NotFoundError('User not found');
+
+  const { notifications, privacy, onboarding, interests } = req.body;
+  const settings = await userSettingsService.updateSettings(id as string, {
+    notifications,
+    privacy,
+    onboarding,
+    interests,
+  });
+  return res.status(200).json({ data: settings });
 };

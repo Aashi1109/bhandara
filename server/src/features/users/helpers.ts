@@ -32,20 +32,23 @@ export const deleteUserCache = async (userId: string) => {
 };
 
 export const deleteAllUserCache = async (userId: string, user?: IBaseUser) => {
+  // Read sessions before wiping the hash
   const sessionMap = await userCache.getHKeys(`${userId}:sessions`);
   const sessionIds = Object.keys(sessionMap);
 
-  const pipeline = userCache.getPipeline();
-  pipeline.del(`${userCacheNamespace}:${userId}`);
-  pipeline.del(`${userCacheNamespace}:${userId}:sessions`);
-  pipeline.del(`${userCacheNamespace}:${userId}:interests`);
+  // Wipe everything under this userId in one pattern match (userId, userId:sessions, userId:interests, userId:settings, etc.)
+  await userCache.invalidateCache(`${userId}*`);
 
+  // Email and username keys are stored independently — delete them explicitly
+  const pipeline = userCache.getPipeline();
   if (user?.email) pipeline.del(`${userCacheNamespace}:${user.email}`);
   if (user?.username) pipeline.del(`${userCacheNamespace}:${user.username}`);
 
+  // Delete individual session entries from the sessions cache
   sessionIds.forEach((sessionId) => {
     pipeline.del(`${sessionCacheNamespace}:${sessionId}`);
   });
+
   return pipeline.exec();
 };
 
@@ -184,6 +187,14 @@ export const setUserInterestsCache = (userId: string, interests: ITag[]) => {
 
 export const deleteUserInterestsCache = (userId: string) => {
   return userCache.deleteItem(`${userId}:interests`);
+};
+
+export const getUserSettingsCache = <T>(userId: string) => {
+  return userCache.getItem<T>(`${userId}:settings`);
+};
+
+export const setUserSettingsCache = <T>(userId: string, settings: T) => {
+  return userCache.setItem(`${userId}:settings`, settings, userCacheTTL);
 };
 
 export const bulkSetUserCache = async (users: IBaseUser[]): Promise<'OK'> => {

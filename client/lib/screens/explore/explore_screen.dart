@@ -3,12 +3,14 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import '../../constants/socket_events.dart';
 import '../../models/event.dart';
@@ -25,6 +27,7 @@ import 'models/event_cluster.dart';
 import 'models/event_marker.dart';
 import 'utils/explore_event_cards.dart';
 import 'utils/explore_filters.dart';
+import 'utils/explore_time_labels.dart';
 import 'utils/explore_viewport.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/button.dart';
@@ -973,7 +976,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   /// inside the padded fetch radius).
   bool _isViewportCoveredByFetchRegions(ExploreViewportQuery viewport) {
     for (final region in _markerFetchRegions) {
-      final drift = distanceInMetersBetween(
+      final drift =
+          distanceInMetersBetween(
             region.center.latitude,
             region.center.longitude,
             viewport.center.latitude,
@@ -1075,7 +1079,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     final regions = _fetchedClusterRegionsByZoom[zoomFloor];
     if (regions == null || regions.isEmpty) return false;
     for (final region in regions) {
-      final drift = distanceInMetersBetween(
+      final drift =
+          distanceInMetersBetween(
             region.center.latitude,
             region.center.longitude,
             viewport.center.latitude,
@@ -1546,66 +1551,11 @@ class _ExploreScreenState extends State<ExploreScreen>
               bottom: 112,
               left: 20,
               right: 20,
-              child: AnimatedSize(
-                key: _detailsCardKey,
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                child: selectedVisibleEvent == null
-                    // Event not in visible list (marker tap for out-of-list event):
-                    // show the preview directly — do NOT go through PageView which
-                    // would fall back to _visibleEvents[0] and show the wrong event.
-                    ? _buildEventDetailsCard(
-                        context,
-                        resolvedSelectedEvent,
-                        status: resolveEventStatus(resolvedSelectedEvent),
-                        isSelected: true,
-                        showSwipeIndicator: false,
-                        indicatorCurrentIndex: 0,
-                        indicatorItemCount: 1,
-                      )
-                    : Stack(
-                        children: [
-                          IgnorePointer(
-                            child: Opacity(
-                              opacity: 0,
-                              child: _buildEventDetailsCard(
-                                context,
-                                detailSizingEvent!,
-                                status: resolveEventStatus(detailSizingEvent),
-                                isSelected: true,
-                                showSwipeIndicator: _visibleEvents.length > 1,
-                                indicatorCurrentIndex: _selectedEventPageIndex,
-                                indicatorItemCount: _visibleEvents.length,
-                              ),
-                            ),
-                          ),
-                          Positioned.fill(
-                            child: PageView.builder(
-                              controller: _detailsPageController,
-                              onPageChanged: _handleDetailsPageChanged,
-                              itemCount: _visibleEvents.length,
-                              itemBuilder: (context, index) {
-                                final event = _visibleEvents[index];
-                                final selectedEvent =
-                                    event.id == _selectedEvent?.id
-                                    ? (selectedVisibleEvent ?? event)
-                                    : event;
-                                final status = resolveEventStatus(selectedEvent);
-
-                                return _buildEventDetailsCard(
-                                  context,
-                                  selectedEvent,
-                                  status: status,
-                                  isSelected: event.id == _selectedEvent?.id,
-                                  showSwipeIndicator: _visibleEvents.length > 1,
-                                  indicatorCurrentIndex: _selectedEventPageIndex,
-                                  indicatorItemCount: _visibleEvents.length,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+              child: _buildDetailsCardOverlay(
+                context: context,
+                resolvedSelectedEvent: resolvedSelectedEvent,
+                selectedVisibleEvent: selectedVisibleEvent,
+                detailSizingEvent: detailSizingEvent,
               ),
             ),
 
@@ -1738,6 +1688,91 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildDetailsCardOverlay({
+    required BuildContext context,
+    required Event resolvedSelectedEvent,
+    required Event? selectedVisibleEvent,
+    required Event? detailSizingEvent,
+  }) {
+    final content = AnimatedSize(
+      key: _detailsCardKey,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      child: selectedVisibleEvent == null
+          ? _buildEventDetailsCard(
+              context,
+              resolvedSelectedEvent,
+              status: resolveEventStatus(resolvedSelectedEvent),
+              isSelected: true,
+              showSwipeIndicator: false,
+              indicatorCurrentIndex: 0,
+              indicatorItemCount: 1,
+            )
+          : Stack(
+              children: [
+                IgnorePointer(
+                  child: Opacity(
+                    opacity: 0,
+                    child: _buildEventDetailsCard(
+                      context,
+                      detailSizingEvent!,
+                      status: resolveEventStatus(detailSizingEvent),
+                      isSelected: true,
+                      showSwipeIndicator: _visibleEvents.length > 1,
+                      indicatorCurrentIndex: _selectedEventPageIndex,
+                      indicatorItemCount: _visibleEvents.length,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: ScrollConfiguration(
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      dragDevices: <PointerDeviceKind>{
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.stylus,
+                        PointerDeviceKind.invertedStylus,
+                        PointerDeviceKind.unknown,
+                      },
+                    ),
+                    child: PageView.builder(
+                      controller: _detailsPageController,
+                      onPageChanged: _handleDetailsPageChanged,
+                      itemCount: _visibleEvents.length,
+                      itemBuilder: (context, index) {
+                        final event = _visibleEvents[index];
+                        final selectedEvent = event.id == _selectedEvent?.id
+                            ? selectedVisibleEvent
+                            : event;
+                        final status = resolveEventStatus(selectedEvent);
+
+                        return _buildEventDetailsCard(
+                          context,
+                          selectedEvent,
+                          status: status,
+                          isSelected: event.id == _selectedEvent?.id,
+                          showSwipeIndicator: _visibleEvents.length > 1,
+                          indicatorCurrentIndex: _selectedEventPageIndex,
+                          indicatorItemCount: _visibleEvents.length,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+
+    final needsPointerInterceptor =
+        kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
+    if (!needsPointerInterceptor) {
+      return content;
+    }
+
+    return PointerInterceptor(child: content);
   }
 
   Widget _buildEventDetailsCard(
@@ -2077,26 +2112,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   String _getRelativeTime(DateTime startTime, DateTime endTime) {
-    final now = DateTime.now();
-    final status = deriveEventStatus(startTime: startTime, endTime: endTime);
-
-    if (status == EventStatusValue.completed) {
-      return 'Ended';
-    }
-
-    if (status == EventStatusValue.upcoming) {
-      final diff = startTime.difference(now);
-      if (diff.inHours > 0) {
-        return 'Starts in ${diff.inHours}h ${diff.inMinutes % 60}m';
-      }
-      return 'Starts in ${diff.inMinutes} mins';
-    }
-
-    final diff = endTime.difference(now);
-    if (diff.inHours > 0) {
-      return '${diff.inHours}h ${diff.inMinutes % 60}m remaining';
-    }
-    return '${diff.inMinutes} mins remaining';
+    return formatExploreRelativeTime(startTime, endTime);
   }
 
   Widget _tag(String text) {

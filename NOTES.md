@@ -1,1 +1,1 @@
-email: seed.damon.satterfield.xtqv@zentry.dev
+email: seed.damon.satterfield.xtqv@bhandara.dev

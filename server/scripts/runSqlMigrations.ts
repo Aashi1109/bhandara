@@ -3,6 +3,12 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 import { disconnect, getDBConnection } from '../src/connections/db';
+import type { Sequelize, Transaction } from 'sequelize';
+
+export interface MigrationContext {
+  sequelize: Sequelize;
+  transaction: Transaction;
+}
 
 dotenv.config();
 
@@ -58,7 +64,7 @@ async function findMigrationFolder(rootDirectory: string, folderName: string) {
 async function getSortedMigrationFiles(directory: string) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
   return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
+    .filter((entry) => entry.isFile() && /\.(sql|ts|js)$/.test(entry.name))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 }
@@ -77,12 +83,19 @@ async function main() {
   await sequelize.authenticate();
 
   try {
-    for (const fileName of migrationFiles) {
-      const filePath = path.join(migrationDirectory, fileName);
-      const sql = await fs.readFile(filePath, 'utf8');
-      console.log(`Running migration ${folderName}/${fileName}`);
-      await sequelize.query(sql);
-    }
+    await sequelize.transaction(async (transaction) => {
+      for (const fileName of migrationFiles) {
+        const filePath = path.join(migrationDirectory, fileName);
+        console.log(`Running migration ${folderName}/${fileName}`);
+        if (fileName.endsWith('.sql')) {
+          const sql = await fs.readFile(filePath, 'utf8');
+          await sequelize.query(sql, { transaction });
+        } else {
+          const mod = await import(filePath);
+          await mod.default({ sequelize, transaction });
+        }
+      }
+    });
   } finally {
     await disconnect();
   }

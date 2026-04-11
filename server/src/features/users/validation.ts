@@ -1,5 +1,6 @@
 import { validateSchema } from '@/helpers';
 import { USER_TABLE_NAME } from './constants';
+import { USER_SETTINGS_TABLE_NAME } from './settings.model';
 const createSchema = {
   type: 'object',
   properties: {
@@ -106,29 +107,6 @@ const updateSchema = {
       type: 'boolean',
       errorMessage: 'isVerified must be a boolean value',
     },
-    interests: {
-      type: ['object', 'null'],
-      properties: {
-        added: {
-          type: 'array',
-          errorMessage: 'Added interests must be an array',
-          items: {
-            type: 'string',
-            errorMessage: 'Interest must be a string',
-            uniqueItems: true,
-          },
-        },
-        deleted: {
-          type: 'array',
-          items: {
-            type: 'string',
-            errorMessage: 'Interest must be a string',
-            uniqueItems: true,
-          },
-          errorMessage: 'Deleted interests must be an array',
-        },
-      },
-    },
     profilePic: {
       type: ['object', 'null'],
       errorMessage: 'Profile picture must be an object or null',
@@ -141,14 +119,6 @@ const updateSchema = {
       type: ['string', 'null'],
       maxLength: 280,
       errorMessage: 'Bio must be a string or null',
-    },
-    meta: {
-      type: ['object', 'null'],
-      errorMessage: 'Meta must be an object or null',
-    },
-    hasOnboarded: {
-      type: ['boolean', 'null'],
-      errorMessage: 'Has onboarded must be a boolean value',
     },
     gender: {
       type: ['string', 'null'],
@@ -167,7 +137,51 @@ const updateSchema = {
   },
 };
 
+const settingsUpdateSchema = {
+  type: 'object',
+  properties: {
+    notifications: {
+      type: 'object',
+      properties: {
+        events: { type: 'boolean', errorMessage: 'events must be a boolean' },
+        chat: { type: 'boolean', errorMessage: 'chat must be a boolean' },
+        replies: { type: 'boolean', errorMessage: 'replies must be a boolean' },
+        reminders: { type: 'boolean', errorMessage: 'reminders must be a boolean' },
+      },
+      additionalProperties: false,
+      errorMessage: 'notifications must be an object',
+    },
+    privacy: {
+      type: 'object',
+      properties: {
+        shareLocation: { type: 'boolean', errorMessage: 'shareLocation must be a boolean' },
+      },
+      additionalProperties: false,
+      errorMessage: 'privacy must be an object',
+    },
+    onboarding: {
+      type: 'object',
+      properties: {
+        hasOnboarded: { type: 'boolean', errorMessage: 'hasOnboarded must be a boolean' },
+      },
+      additionalProperties: false,
+      errorMessage: 'onboarding must be an object',
+    },
+    interests: {
+      type: 'array',
+      items: { type: 'string', errorMessage: 'Each interest must be a string' },
+      uniqueItems: true,
+      errorMessage: 'interests must be an array of strings',
+    },
+  },
+  additionalProperties: false,
+  errorMessage: {
+    type: 'Settings data must be an object',
+  },
+};
+
 const validateUserCreate = validateSchema(`${USER_TABLE_NAME}_CREATE`, createSchema);
 const validateUserUpdate = validateSchema(`${USER_TABLE_NAME}_UPDATE`, updateSchema);
+const validateUserSettings = validateSchema(`${USER_SETTINGS_TABLE_NAME}_CREATE`, settingsUpdateSchema);
 
-export { validateUserCreate, validateUserUpdate, createSchema, updateSchema };
+export { validateUserCreate, validateUserUpdate, createSchema, updateSchema, validateUserSettings, settingsUpdateSchema };
