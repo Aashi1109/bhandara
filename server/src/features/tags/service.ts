@@ -47,7 +47,7 @@ class TagService {
 
   async getRootTags() {
     const [results] = await Tag.sequelize!.query(
-      `SELECT t.*, COUNT(c.id) > 0 AS "hasChildren" FROM "Tags" t
+      `SELECT t.id, t.name, t.value, t.description, t.icon, t.color, t."parentId", COUNT(c.id) > 0 AS "hasChildren" FROM "Tags" t
        LEFT JOIN "Tags" c ON c."parentId" = t."id"
        WHERE t."parentId" IS NULL
        GROUP BY t."id";`,
@@ -65,7 +65,12 @@ class TagService {
 
     if (!tagIds.length) return [];
 
-    const data = await findAllWithPagination(Tag, { where: { id: tagIds } }, { limit: tagIds.length });
+    const data = await findAllWithPagination(
+      Tag,
+      { where: { id: tagIds } },
+      { limit: tagIds.length },
+      'id,name,value,description,icon,color,parentId',
+    );
 
     const { items } = data;
     if (cacheKey && items) {
@@ -138,7 +143,12 @@ class TagService {
   async getSubTags(tagId: string, limit?: number) {
     const cached = await getSubTagsCache(tagId);
     if (cached) return cached;
-    const res = await findAllWithPagination(Tag, { where: { parentId: tagId } }, limit ? { limit } : {});
+    const res = await findAllWithPagination(
+      Tag,
+      { where: { parentId: tagId } },
+      limit ? { limit } : {},
+      'id,name,value,description,icon,color,parentId',
+    );
     if (res.items) await setSubTagsCache(tagId, res.items as ITag[]);
     return res;
   }

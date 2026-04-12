@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/event.dart';
-import 'package:foody_mobile/utils/event_status.dart';
-import 'package:foody_mobile/screens/explore/utils/explore_filters.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
+import 'package:foody_mobile/features/events/utils/event_status.dart';
+import 'package:foody_mobile/features/explore/utils/explore_filters.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() {

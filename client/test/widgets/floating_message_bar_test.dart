@@ -1,7 +1,7 @@
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/widgets/floating_message_bar.dart';
+import 'package:foody_mobile/shared/widgets/floating_message_bar.dart';
 
 void main() {
   Future<void> pumpFloatingMessageBar(WidgetTester tester) async {

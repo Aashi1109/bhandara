@@ -6,9 +6,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:foody_mobile/widgets/skeleton.dart';
-import 'package:foody_mobile/services/api.dart';
-import 'package:foody_mobile/screens/saved.dart';
+import 'package:foody_mobile/shared/widgets/skeleton.dart';
+import 'package:foody_mobile/shared/services/api.dart';
+import 'package:foody_mobile/features/saved/screens/saved.dart';
 
 void main() {
   late HttpClientAdapter originalAdapter;

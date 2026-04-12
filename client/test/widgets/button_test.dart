@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/button.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/button.dart';
 
 void main() {
   testWidgets('disabled button has no tap handler and muted label color', (

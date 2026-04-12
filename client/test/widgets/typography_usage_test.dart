@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/button.dart';
-import 'package:foody_mobile/widgets/input.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/button.dart';
+import 'package:foody_mobile/shared/widgets/input.dart';
 
 void main() {
   Future<void> pumpTestApp(WidgetTester tester, Widget child) async {

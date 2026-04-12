@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/screens/explore/explore_screen.dart';
-import 'package:foody_mobile/screens/preferences.dart';
-import 'package:foody_mobile/utils/auth_redirect.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/features/explore/screens/explore_screen.dart';
+import 'package:foody_mobile/features/onboarding/screens/preferences.dart';
+import 'package:foody_mobile/shared/utils/auth_redirect.dart';
 
 void main() {
   group('routeForAuthenticatedUser', () {

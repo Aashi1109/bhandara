@@ -4,13 +4,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'services/maps/map_platform_config.dart';
-import 'theme/theme.dart';
-import 'router.dart';
-import 'services/local_storage.dart';
-import 'services/location_permission.dart';
-import 'widgets/app_dialog.dart';
-import 'widgets/app_session_coordinator.dart';
+import './shared/services/maps/map_platform_config.dart';
+import './shared/theme/theme.dart';
+import './router.dart';
+import './shared/services/local_storage.dart';
+import './shared/services/location_permission.dart';
+import './shared/widgets/app_dialog.dart';
+import './shared/widgets/app_session_coordinator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

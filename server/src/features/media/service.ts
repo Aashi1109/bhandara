@@ -430,4 +430,26 @@ class MediaService {
   }
 }
 
+export function toMediaPublic(media: IMedia): {
+  id: string;
+  type: string;
+  url: string;
+  publicUrl: string | undefined;
+  publicUrlExpiresAt: Date | number | undefined;
+  thumbnail: string | null | undefined;
+  caption: string | null | undefined;
+  name: string;
+} {
+  return {
+    id: media.id,
+    type: media.type,
+    url: media.url,
+    publicUrl: media.publicUrl,
+    publicUrlExpiresAt: media.publicUrlExpiresAt,
+    thumbnail: media.thumbnail,
+    caption: media.caption,
+    name: media.name,
+  };
+}
+
 export default MediaService;

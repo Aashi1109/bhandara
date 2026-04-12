@@ -42,10 +42,26 @@ export interface IEventListFilters {
   endDate?: Date;
 }
 
-type IEventSummary = Pick<
+export type IEventSummary = Pick<
   IEvent,
   'id' | 'name' | 'status' | 'type' | 'createdBy' | 'location' | 'timings' | 'createdAt' | 'updatedAt' | 'media'
 >;
+
+export function toEventSummary(event: IEvent): IEventSummary {
+  const status = event.status === EEventStatus.Cancelled ? event.status : deriveEventStatus(event.timings);
+  return {
+    id: event.id,
+    name: event.name,
+    status,
+    type: event.type,
+    createdBy: event.createdBy,
+    location: event.location,
+    timings: event.timings,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
+    media: event.media,
+  };
+}
 
 class EventService {
   private readonly addressService: AddressService;

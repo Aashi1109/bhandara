@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:foody_mobile/models/profile_overview.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/providers/profile_overview.dart';
-import 'package:foody_mobile/providers/user.dart';
-import 'package:foody_mobile/screens/profile.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/skeleton.dart';
+import 'package:foody_mobile/features/profile/models/profile_overview.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/features/profile/providers/profile_overview.dart';
+import 'package:foody_mobile/shared/providers/user.dart';
+import 'package:foody_mobile/features/profile/screens/profile.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/skeleton.dart';
 
 void main() {
   testWidgets(

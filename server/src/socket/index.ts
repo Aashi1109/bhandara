@@ -8,7 +8,6 @@ import { PLATFORM_SOCKET_EVENTS } from '@/constants';
 import type http from 'http';
 import {
   EventService,
-  getSafeUser,
   MessageService,
   ReactionService,
   ThreadService,
@@ -17,6 +16,7 @@ import {
   deleteExploreCursor,
   buildExploreSections,
 } from '@/features';
+import { toUserMini } from '@/features/users/service';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@/exceptions';
 import { hasMeaningfulChange, isEmpty } from '@/utils';
 import { getDistanceInMeters } from '@/helpers';
@@ -288,7 +288,7 @@ export function initializeSocket(server: http.Server) {
 
         const newReaction = await reactionService.create(creationData);
 
-        newReaction.user = getSafeUser(socket.request.user);
+        newReaction.user = toUserMini(socket.request.user) as unknown as IBaseUser;
 
         const threadId =
           contentPath === EAllowedReactionTables.Message
@@ -376,7 +376,7 @@ export function initializeSocket(server: http.Server) {
         });
 
         const shouldEmitReactionUpdate = hasMeaningfulChange(previousReaction, updatedReaction);
-        updatedReaction.user = getSafeUser(socket.request.user);
+        updatedReaction.user = toUserMini(socket.request.user) as unknown as IBaseUser;
 
         const threadId =
           contentPath === EAllowedReactionTables.Message
@@ -574,7 +574,7 @@ export function initializeSocket(server: http.Server) {
         newThread.creator = socket.request.user;
 
         emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, {
-          data: { ...newThread, event: eventResponse },
+          data: { ...newThread, event: { id: eventResponse!.id, name: eventResponse!.name } },
         });
         cb({ data: true });
       } catch (error) {

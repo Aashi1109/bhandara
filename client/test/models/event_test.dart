@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/event.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
 
 void main() {
   group('Event', () {

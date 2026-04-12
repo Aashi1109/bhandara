@@ -68,11 +68,14 @@ class ActivityService {
 
     const users = await this.userService.getUserProfiles([...actorIds, ...recipientIds], toUserMini);
 
-    const populatedItems = (data.items || []).map((item) => ({
-      ...item,
-      actor: users[item.actorId] || null,
-      recipient: item.recipientId ? users[item.recipientId] || null : null,
-    }));
+    const populatedItems = (data.items || []).map((item) => {
+      const { actorId, recipientId, ...rest } = item;
+      return {
+        ...rest,
+        actor: users[actorId] || null,
+        recipient: recipientId ? users[recipientId] || null : null,
+      };
+    });
 
     const result = {
       items: populatedItems,
@@ -109,10 +112,13 @@ class ActivityService {
     const actorIds = Array.from(new Set((data.items || []).map((item) => item.actorId)));
     const users = await this.userService.getUserProfiles(actorIds, toUserMini);
 
-    const populatedItems = (data.items || []).map((item) => ({
-      ...item,
-      actor: users[item.actorId] || null,
-    }));
+    const populatedItems = (data.items || []).map((item) => {
+      const { actorId, recipientId, ...rest } = item;
+      return {
+        ...rest,
+        actor: users[actorId] || null,
+      };
+    });
 
     const result = {
       items: populatedItems,

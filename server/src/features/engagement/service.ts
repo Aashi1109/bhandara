@@ -432,11 +432,14 @@ class EntityEngagementService {
     })) as Array<Pick<typeof User.prototype, 'id' | 'name' | 'profilePic'>>;
     const usersById = Object.fromEntries(users.map((user) => [user.id, user]));
 
-    return rows.map((row) => ({
-      ...row,
-      review: row.review ?? null,
-      user: usersById[row.userId] ?? null,
-    }));
+    return rows.map((row) => {
+      const { entityType: _, entityId: __, userId, ...rest } = row;
+      return {
+        ...rest,
+        review: rest.review ?? null,
+        user: usersById[userId] ?? null,
+      };
+    });
   }
 }
 

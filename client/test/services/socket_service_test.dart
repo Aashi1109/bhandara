@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/services/socket.dart';
+import 'package:foody_mobile/shared/services/socket.dart';
 import 'package:web_socket/web_socket.dart';
 
 void main() {

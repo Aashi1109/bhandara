@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/skeleton.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/skeleton.dart';
 
 void main() {
   testWidgets('renders rectangular and circular skeleton variants', (

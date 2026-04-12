@@ -7,14 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:foody_mobile/models/event.dart';
-import 'package:foody_mobile/models/search_event_item.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/providers/user.dart';
-import 'package:foody_mobile/screens/explore/explore_screen.dart';
-import 'package:foody_mobile/screens/search.dart';
-import 'package:foody_mobile/services/api.dart';
-import 'package:foody_mobile/services/search_history.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
+import 'package:foody_mobile/features/events/models/search_event_item.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/shared/providers/user.dart';
+import 'package:foody_mobile/features/explore/screens/explore_screen.dart';
+import 'package:foody_mobile/features/search/screens/search.dart';
+import 'package:foody_mobile/shared/services/api.dart';
+import 'package:foody_mobile/features/search/services/search_history.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 void main() {

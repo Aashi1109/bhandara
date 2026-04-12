@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/screens/explore/explore_screen.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/bottom_nav.dart';
+import 'package:foody_mobile/features/explore/screens/explore_screen.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/bottom_nav.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {

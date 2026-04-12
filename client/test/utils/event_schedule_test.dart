@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/utils/event_schedule.dart';
+import 'package:foody_mobile/features/events/utils/event_schedule.dart';
 
 void main() {
   test('normalizeEventEndDateTime keeps end after start', () {

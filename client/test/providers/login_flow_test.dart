@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:foody_mobile/providers/login_flow.dart';
+import 'package:foody_mobile/shared/providers/login_flow.dart';
 
 void main() {
   group('LoginFlow', () {

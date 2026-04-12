@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/theme/theme.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
 
 void main() {
   testWidgets('AppTypography extension is available from the app theme', (

@@ -1,0 +1,49 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../models/achievement.dart';
+import '../../../shared/models/api_response.dart';
+import '../../events/models/event.dart';
+import '../models/profile_overview.dart';
+import '../models/update.dart';
+import '../../events/services/activity.dart';
+import '../../events/services/event.dart';
+import '../services/user.dart';
+
+part 'profile_overview.g.dart';
+
+@riverpod
+Future<ProfileOverview> profileOverview(Ref ref, {required String userId}) async {
+  final currentUser = await userService.getCurrentUser();
+  final isOwnProfile = currentUser?.id == userId;
+  final results = await Future.wait([
+    eventService.getEvents(createdBy: userId, limit: 50),
+    userService.getUserAchievements(userId),
+    activityService.getUserActivity(
+      userId,
+      includePrivate: isOwnProfile,
+      limit: 3,
+    ),
+  ]);
+
+  final allEvents = results[0] as PaginatedResponse<Event>;
+  final achievements = results[1] as List<Achievement>;
+  final activity = results[2] as PaginatedResponse<AppUpdate>;
+
+  final myEvents =
+      await Future.wait(
+          allEvents.items.map((event) async {
+            try {
+              return await eventService.getEventPreview(event.id);
+            } catch (_) {
+              return event;
+            }
+          }),
+        )
+        ..sort((a, b) => b.startTime.compareTo(a.startTime));
+
+  return ProfileOverview(
+    myEvents: myEvents,
+    achievements: achievements,
+    recentActivity: activity.items,
+  );
+}

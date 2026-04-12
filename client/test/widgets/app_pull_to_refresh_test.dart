@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/widgets/app_pull_to_refresh.dart';
+import 'package:foody_mobile/shared/widgets/app_pull_to_refresh.dart';
 
 void main() {
   testWidgets('triggers refresh for short content', (tester) async {

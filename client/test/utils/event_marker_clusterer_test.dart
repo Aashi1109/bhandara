@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/screens/explore/models/event_marker.dart';
-import 'package:foody_mobile/screens/explore/utils/event_marker_clusterer.dart';
+import 'package:foody_mobile/features/explore/models/event_marker.dart';
+import 'package:foody_mobile/features/explore/utils/event_marker_clusterer.dart';
 
 void main() {
   const clusterer = EventMarkerClusterer();

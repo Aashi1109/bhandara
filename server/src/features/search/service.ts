@@ -173,6 +173,19 @@ class SearchService {
     const safeQuery = this.escapeForLike(query);
     const count = await Event.count({ where });
     const rows = await Event.findAll({
+      attributes: [
+        'id',
+        'name',
+        'type',
+        'status',
+        'timings',
+        'location',
+        'media',
+        'tags',
+        'description',
+        'createdAt',
+        'updatedAt',
+      ],
       where,
       limit,
       order: [
@@ -206,7 +219,10 @@ class SearchService {
         id: event.id,
         type: 'event' as const,
         title: event.name,
-        description: event.description,
+        description:
+          event.description && event.description.length > 200
+            ? `${event.description.slice(0, 200)}...`
+            : event.description,
         imageUrl: previewImage ?? undefined,
         metadata: {
           status: resolvedStatus,

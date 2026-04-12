@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/chat_attachment.dart';
-import 'package:foody_mobile/models/event.dart';
-import 'package:foody_mobile/providers/tag.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/providers/user.dart';
-import 'package:foody_mobile/screens/create_event.dart';
+import 'package:foody_mobile/features/chat/models/chat_attachment.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
+import 'package:foody_mobile/shared/providers/tag.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/shared/providers/user.dart';
+import 'package:foody_mobile/features/events/screens/create_event.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

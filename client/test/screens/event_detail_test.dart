@@ -7,10 +7,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/event.dart';
-import 'package:foody_mobile/screens/event_detail.dart';
-import 'package:foody_mobile/services/api.dart';
-import 'package:foody_mobile/widgets/skeleton.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
+import 'package:foody_mobile/features/events/screens/event_detail.dart';
+import 'package:foody_mobile/shared/services/api.dart';
+import 'package:foody_mobile/shared/widgets/skeleton.dart';
 
 void main() {
   late HttpClientAdapter originalAdapter;

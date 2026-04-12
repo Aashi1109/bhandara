@@ -50,7 +50,17 @@ class SavedEntityService {
       case 'message':
         return this.messageService.getById(entityId);
       case 'user':
-        return this.userService.getById(entityId).then((user) => (user ? getSafeUser(user) : null));
+        return this.userService.getById(entityId).then((user) => {
+          if (!user) {
+            return null;
+          }
+          const safe = getSafeUser(user);
+          return {
+            id: safe.id,
+            name: safe.name,
+            avatarUrl: safe.media?.publicUrl ?? safe.media?.url ?? safe.profilePic ?? null,
+          } as unknown as IBaseUser;
+        });
       default:
         return null;
     }
@@ -113,6 +123,7 @@ class SavedEntityService {
     const rows = (await SavedEntity.findAll({
       where,
       raw: true,
+      limit: 200,
       order: [
         [sortBy, sortOrder.toUpperCase()],
         ['id', sortOrder.toUpperCase()],

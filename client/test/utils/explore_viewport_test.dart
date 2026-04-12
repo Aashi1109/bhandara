@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/screens/explore/utils/explore_viewport.dart';
+import 'package:foody_mobile/features/explore/utils/explore_viewport.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:dart_geohash/dart_geohash.dart';
 

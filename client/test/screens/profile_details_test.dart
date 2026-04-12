@@ -5,12 +5,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/providers/user.dart';
-import 'package:foody_mobile/screens/settings/profile_details.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/button.dart';
-import 'package:foody_mobile/widgets/skeleton.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/shared/providers/user.dart';
+import 'package:foody_mobile/features/settings/screens/profile_details.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/shared/widgets/button.dart';
+import 'package:foody_mobile/shared/widgets/skeleton.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

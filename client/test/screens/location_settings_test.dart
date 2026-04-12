@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/location_picker.dart';
-import 'package:foody_mobile/models/user.dart';
-import 'package:foody_mobile/providers/user.dart';
-import 'package:foody_mobile/screens/settings/location.dart';
-import 'package:foody_mobile/widgets/button.dart';
+import 'package:foody_mobile/shared/models/location_picker.dart';
+import 'package:foody_mobile/features/profile/models/user.dart';
+import 'package:foody_mobile/shared/providers/user.dart';
+import 'package:foody_mobile/features/settings/screens/location.dart';
+import 'package:foody_mobile/shared/widgets/button.dart';
 
 void main() {
   testWidgets('picker mode returns selected location without profile save', (

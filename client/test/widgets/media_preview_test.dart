@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/chat.dart';
-import 'package:foody_mobile/widgets/media_preview.dart';
+import 'package:foody_mobile/features/chat/models/chat.dart';
+import 'package:foody_mobile/features/events/widgets/media_preview.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

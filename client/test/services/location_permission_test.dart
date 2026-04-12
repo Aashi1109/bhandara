@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/services/location_permission.dart';
+import 'package:foody_mobile/shared/services/location_permission.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {

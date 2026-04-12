@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/event.dart';
-import 'package:foody_mobile/models/search_event_item.dart';
-import 'package:foody_mobile/theme/theme.dart';
-import 'package:foody_mobile/widgets/event_search_result_tile.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
+import 'package:foody_mobile/features/events/models/search_event_item.dart';
+import 'package:foody_mobile/shared/theme/theme.dart';
+import 'package:foody_mobile/features/events/widgets/event_search_result_tile.dart';
 
 void main() {
   testWidgets('shows the current event status as a badge', (tester) async {

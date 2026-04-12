@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/chat.dart';
-import 'package:foody_mobile/models/event.dart';
+import 'package:foody_mobile/features/chat/models/chat.dart';
+import 'package:foody_mobile/features/events/models/event.dart';
 
 void main() {
   group('Socket payload contracts', () {

@@ -1,6 +1,6 @@
 import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
 import type { Response } from 'express';
-import EventService, { type IEventListFilters } from './service';
+import EventService, { toEventSummary, type IEventListFilters } from './service';
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/exceptions';
 import { hasMeaningfulChange, isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
@@ -184,7 +184,7 @@ export const createEvent = async (req: ICustomRequest, res: Response) => {
     }),
     achievementService.trackActivity(req.user.id, EActivityType.EventCreated),
   ]);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, { data: event });
+  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, { data: toEventSummary(event) });
   return res.status(201).json({ data: event });
 };
 
@@ -202,7 +202,7 @@ export const updateEvent = async (req: ICustomRequest, res: Response) => {
 
   if (hasMeaningfulChange(existingEventData, updatedEvent)) {
     emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, {
-      data: { ...updatedEvent, id: eventId },
+      data: toEventSummary({ ...updatedEvent, id: eventId }),
     });
   }
 
@@ -264,7 +264,7 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
   ]);
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: updatedEvent });
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: toEventSummary(updatedEvent) });
   }
 
   return res.status(200).json({ data: updatedEvent });
@@ -294,7 +294,7 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
   ]);
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: updatedEvent });
+    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: toEventSummary(updatedEvent) });
   }
 
   return res.status(200).json({ data: updatedEvent });

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:foody_mobile/models/chat.dart';
+import 'package:foody_mobile/features/chat/models/chat.dart';
 
 void main() {
   Message buildMessage({
