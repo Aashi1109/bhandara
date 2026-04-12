@@ -36,6 +36,7 @@ import '../../widgets/event_status_badge.dart';
 import '../../widgets/skeleton.dart';
 import 'widgets/explore_event_map.dart';
 import 'widgets/explore_search_bar.dart';
+import '../../utils/maps.dart';
 import '../event_detail.dart';
 import '../search.dart';
 
@@ -925,6 +926,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     _invalidateTileCache();
     setState(() {
       _appliedFilters = _appliedFilters.copyWith(quickStatus: quickStatus);
+      // Clear markers immediately on tab switch — old markers belong to a
+      // different filter set and should not linger while the new fetch runs.
+      _visibleMarkers = [];
+      _pinnedSelectedMarker = null;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
     _refreshMarkersForCurrentState();
@@ -950,6 +955,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         tagIds: {..._draftFilters.tagIds},
       );
       _isFilterOpen = false;
+      // Clear markers immediately so stale markers from the previous filter
+      // set don't remain visible while the new fetch is in flight.
+      _visibleMarkers = [];
+      _pinnedSelectedMarker = null;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
     _refreshMarkersForCurrentState();
@@ -1038,6 +1047,15 @@ class _ExploreScreenState extends State<ExploreScreen>
       );
       if (!mounted) return;
 
+      // Drop stale responses — they were fetched with different filters (e.g.
+      // from a previous tab) and must not pollute the current region cache.
+      if (requestVersion != _markerRequestVersion) {
+        debugPrint(
+          '[MARKERS] flat response discarded (stale version=$requestVersion current=$_markerRequestVersion)',
+        );
+        return;
+      }
+
       _markerFetchRegions.add(
         _MarkerFetchRegion(
           center: viewport.center,
@@ -1047,14 +1065,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       );
       if (_markerFetchRegions.length > _maxMarkerFetchRegions) {
         _markerFetchRegions.removeAt(0);
-      }
-
-      if (requestVersion != _markerRequestVersion) {
-        debugPrint(
-          '[MARKERS] flat response merged (stale version=$requestVersion current=$_markerRequestVersion)',
-        );
-        // Data is in _markerFetchRegions — the current request will use it.
-        return;
       }
 
       final merged = _collectMarkersFromFetchRegions();
@@ -1766,12 +1776,10 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
     );
 
-    final needsPointerInterceptor =
-        kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
-    if (!needsPointerInterceptor) {
-      return content;
-    }
-
+    // Google Maps is a platform view on all platforms — it intercepts pointer
+    // events before Flutter can see them. PointerInterceptor re-routes those
+    // events back through the Flutter hit-test, which is required for the
+    // PageView swipe gesture to work.
     return PointerInterceptor(child: content);
   }
 

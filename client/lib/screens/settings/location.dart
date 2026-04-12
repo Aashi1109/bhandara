@@ -77,6 +77,7 @@ class _LocationSettingsScreenState
   bool _didHydrate = false;
   bool _isResolvingDraggedLocation = false;
   bool _isSearchOpen = false;
+  bool _isDraggingMarker = false;
 
   Set<Factory<OneSequenceGestureRecognizer>> get _mapGestureRecognizers => {
     Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
@@ -168,6 +169,30 @@ class _LocationSettingsScreenState
         _cameraTarget = target;
       });
     }
+  }
+
+  Future<void> _resolveLocationLabel(
+    LatLng target, {
+    bool syncSearchField = true,
+  }) async {
+    final address = await _mapManager.getAddressFromCoordinates(
+      latitude: target.latitude,
+      longitude: target.longitude,
+    );
+    if (!mounted) return;
+
+    final label =
+        address?.formattedAddress ??
+        '${target.latitude.toStringAsFixed(4)}, ${target.longitude.toStringAsFixed(4)}';
+
+    setState(() {
+      _selectedLocation = target;
+      _cameraTarget = target;
+      _selectedLabel = label;
+      if (syncSearchField) {
+        _searchController.text = label;
+      }
+    });
   }
 
   Future<void> _useCurrentLocation() async {
@@ -284,26 +309,35 @@ class _LocationSettingsScreenState
   }
 
   Future<void> _handleMapIdle() async {
-    if (_isResolvingDraggedLocation || widget.useStaticMapPlaceholder) return;
+    if (_isResolvingDraggedLocation ||
+        _isDraggingMarker ||
+        widget.useStaticMapPlaceholder) {
+      return;
+    }
 
     _isResolvingDraggedLocation = true;
     try {
-      final target = _cameraTarget;
-      final address = await _mapManager.getAddressFromCoordinates(
-        latitude: target.latitude,
-        longitude: target.longitude,
-      );
-      if (!mounted) return;
-      setState(() {
-        _selectedLocation = target;
-        _selectedLabel =
-            address?.formattedAddress ??
-            '${target.latitude.toStringAsFixed(4)}, ${target.longitude.toStringAsFixed(4)}';
-        _searchController.text = _selectedLabel;
-      });
+      await _resolveLocationLabel(_cameraTarget);
     } finally {
       _isResolvingDraggedLocation = false;
     }
+  }
+
+  Future<void> _handleMarkerDragEnd(LatLng target) async {
+    setState(() {
+      _isDraggingMarker = false;
+      _selectedLocation = target;
+      _cameraTarget = target;
+    });
+    await _resolveLocationLabel(target);
+  }
+
+  Future<void> _handleMapTap(LatLng target) async {
+    setState(() {
+      _selectedLocation = target;
+      _cameraTarget = target;
+    });
+    await _resolveLocationLabel(target);
   }
 
   Future<void> _saveLocation() async {
@@ -441,6 +475,15 @@ class _LocationSettingsScreenState
                                           position: _selectedLocation,
                                           anchor: const Offset(0.5, 1),
                                           icon: _selectedLocationMarkerIcon!,
+                                          draggable: true,
+                                          onDragStart: (_) {
+                                            setState(() {
+                                              _isDraggingMarker = true;
+                                            });
+                                          },
+                                          onDragEnd: (target) {
+                                            _handleMarkerDragEnd(target);
+                                          },
                                         ),
                                     },
                                     gestureRecognizers: _suggestions.isEmpty
@@ -457,6 +500,7 @@ class _LocationSettingsScreenState
                                       _currentZoom = position.zoom;
                                       _cameraTarget = position.target;
                                     },
+                                    onTap: _handleMapTap,
                                     onCameraIdle: _handleMapIdle,
                                   ),
                           ),

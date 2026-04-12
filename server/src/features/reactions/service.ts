@@ -3,7 +3,7 @@ import { findAllWithPagination } from '@/utils/dbUtils';
 import { Reaction } from './model';
 import { validateReactionCreate, validateReactionUpdate } from './validation';
 
-import UserService from '@/features/users/service';
+import UserService, { toUserMini } from '@/features/users/service';
 import { isEmpty } from '@/utils';
 import { NotFoundError } from '@/exceptions';
 import logger from '@/logger';
@@ -96,6 +96,7 @@ class ReactionService {
         data: reactions,
         searchKey: 'userId',
         populateKey: 'user',
+        transformerFunction: toUserMini,
       });
     }
     return reactions;

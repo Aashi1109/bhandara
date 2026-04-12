@@ -129,10 +129,16 @@ final router = GoRouter(
       builder: (context, state) {
         final extra = _extraAsMap(state.extra);
         return ChatScreen(
-          id: state.pathParameters['id']!,
+          id: state.pathParameters['id'],
           eventId: extra?['eventId'] as String?,
         );
       },
+    ),
+    GoRoute(
+      path: '/event/:id/discussion',
+      builder: (context, state) => ChatScreen(
+        eventId: state.pathParameters['id'],
+      ),
     ),
     GoRoute(
       path: ThreadScreen.routePath,

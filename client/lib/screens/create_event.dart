@@ -36,7 +36,7 @@ import 'explore/explore_screen.dart';
 import 'settings/location.dart';
 import 'success.dart';
 
-enum _MediaSourceAction { galleryImage, cameraImage, galleryVideo }
+enum _MediaSourceAction { gallery, cameraImage }
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   const CreateEventScreen({
@@ -44,6 +44,7 @@ class CreateEventScreen extends ConsumerStatefulWidget {
     this.initialEvent,
     this.pickImage,
     this.pickVideo,
+    this.pickMultipleMedia,
     this.uploadFile,
     this.createEventRequest,
     this.updateEventRequest,
@@ -62,6 +63,7 @@ class CreateEventScreen extends ConsumerStatefulWidget {
   final Event? initialEvent;
   final Future<XFile?> Function(ImageSource source)? pickImage;
   final Future<XFile?> Function()? pickVideo;
+  final Future<List<XFile>> Function(int limit)? pickMultipleMedia;
   final Future<String?> Function(XFile file)? uploadFile;
   final Future<void> Function(Map<String, dynamic> data)? createEventRequest;
   final Future<Event?> Function(String eventId, Map<String, dynamic> data)?
@@ -146,12 +148,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     return fileService.pickImage(source: source);
   }
 
-  Future<XFile?> _pickVideoFile() {
-    final picker = widget.pickVideo;
+  Future<List<XFile>> _pickMultipleMediaFiles(int limit) {
+    final picker = widget.pickMultipleMedia;
     if (picker != null) {
-      return picker();
+      return picker(limit);
     }
-    return fileService.pickVideo();
+    return fileService.pickMultipleMedia(limit: limit);
   }
 
   @override
@@ -260,22 +262,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               ),
               const SizedBox(height: 20),
               _mediaActionTile(
-                icon: LucideIcons.image,
-                title: 'Pick Image from Gallery',
+                icon: LucideIcons.galleryHorizontal,
+                title: 'Pick from Gallery (up to ${CreateEventScreen.maxAttachments})',
                 onTap: () =>
-                    Navigator.pop(context, _MediaSourceAction.galleryImage),
+                    Navigator.pop(context, _MediaSourceAction.gallery),
               ),
               _mediaActionTile(
                 icon: LucideIcons.camera,
                 title: 'Take Photo',
                 onTap: () =>
                     Navigator.pop(context, _MediaSourceAction.cameraImage),
-              ),
-              _mediaActionTile(
-                icon: LucideIcons.video,
-                title: 'Upload Video (Max 10MB)',
-                onTap: () =>
-                    Navigator.pop(context, _MediaSourceAction.galleryVideo),
               ),
             ],
           ),
@@ -284,14 +280,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
 
     switch (action) {
-      case _MediaSourceAction.galleryImage:
-        await _addImage(ImageSource.gallery);
+      case _MediaSourceAction.gallery:
+        await _addFromGallery();
         break;
       case _MediaSourceAction.cameraImage:
         await _addImage(ImageSource.camera);
-        break;
-      case _MediaSourceAction.galleryVideo:
-        await _addVideo();
         break;
       case null:
         break;
@@ -328,10 +321,25 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     await _queueAttachment(file, isVideo: false);
   }
 
-  Future<void> _addVideo() async {
-    final file = await _pickVideoFile();
-    if (file == null) return;
-    await _queueAttachment(file, isVideo: true);
+  Future<void> _addFromGallery() async {
+    final remaining =
+        CreateEventScreen.maxAttachments - _attachments.length;
+    if (remaining <= 0) return;
+
+    final files = await _pickMultipleMediaFiles(remaining);
+    if (files.isEmpty) return;
+
+    // Upload all picked files concurrently.
+    await Future.wait(
+      files.map((file) {
+        final isVideo = file.mimeType?.startsWith('video/') == true ||
+            file.name.toLowerCase().endsWith('.mp4') ||
+            file.name.toLowerCase().endsWith('.mov') ||
+            file.name.toLowerCase().endsWith('.avi') ||
+            file.name.toLowerCase().endsWith('.mkv');
+        return _queueAttachment(file, isVideo: isVideo);
+      }),
+    );
   }
 
   Future<void> _queueAttachment(XFile file, {required bool isVideo}) async {

@@ -33,6 +33,7 @@
     "format:check": "prettier --check \"src/**/*.ts\""
   },
   "dependencies": {
+    "@hyperdx/node-opentelemetry": "^0.10.3",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.72.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.214.0",
@@ -70,7 +71,6 @@
     "ngeohash": "^0.6.3",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",
-    "prom-client": "^15.1.3",
     "sequelize": "^6.37.8",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",

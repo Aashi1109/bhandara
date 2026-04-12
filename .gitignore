@@ -62,3 +62,6 @@ client/ios/
 
 .idea
 .claude/worktrees
+
+# Infra
+infra/data

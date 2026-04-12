@@ -9,30 +9,12 @@ import { errorHandler, morganLogger, requestContextMiddleware } from '@/middlewa
 import appRoutes from '@/routes';
 import { NotFoundError } from '@/exceptions';
 import { swaggerSpec } from '@/docs/swagger';
-import { httpRequestCounter, register, responseTimeHistogram } from '@/config/prometheus.config';
 
 import * as Sentry from '@sentry/node';
+import * as HyperDX from '@hyperdx/node-opentelemetry';
 
 const createServer = () => {
   const app = express();
-
-  app.use((req, res, next) => {
-    const end = responseTimeHistogram.startTimer();
-    res.on('finish', () => {
-      // Record metrics
-      httpRequestCounter.inc({
-        method: req.method,
-        route: req.route ? req.route.path : req.path,
-        status: res.statusCode,
-      });
-      end({
-        method: req.method,
-        route: req.route ? req.route.path : req.path,
-        status: res.statusCode,
-      });
-    });
-    next();
-  });
 
   // cors setup to allow requests from the frontend only for now
   app.use(helmet());
@@ -73,16 +55,12 @@ const createServer = () => {
     });
   });
 
-  app.get('/metrics', async (_, res) => {
-    res.setHeader('Content-Type', register.contentType);
-    res.send(await register.metrics());
-  });
-
   app.use(requestContextMiddleware);
 
   app.use('/api', appRoutes);
 
   Sentry.setupExpressErrorHandler(app);
+  HyperDX.setupExpressErrorHandler(app);
 
   app.use((req, res, next) => {
     next(new NotFoundError(`path not found: ${req.originalUrl}`));

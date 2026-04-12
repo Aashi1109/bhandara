@@ -16,7 +16,7 @@ export const getEventCache = (eventId: string) => eventCache.getItem<IEvent>(`${
 export const setEventCache = (eventId: string, event: IEvent) => eventCache.setItem(`${eventId}`, event);
 
 /** Remove all cached entries for an event. */
-export const deleteEventCache = (eventId: string) => eventCache.deleteItem(`${eventId}*`);
+export const deleteEventCache = (eventId: string) => eventCache.invalidateCache(`${eventId}*`);
 
 /** Fetch a lightweight event preview from cache. */
 export const getEventPreviewCache = (eventId: string) => eventCache.getItem<IEvent>(`${eventId}:preview`);

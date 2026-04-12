@@ -26,6 +26,21 @@ import TagService from '@/features/tags/service';
 import MediaService from '@/features/media/service';
 import type { FindOptions } from 'sequelize';
 
+export interface IUserMini {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export const toUserMini = (user: IBaseUser): IUserMini => {
+  const media = user.media as IMedia | undefined;
+  return {
+    id: user.id,
+    name: user.name,
+    avatarUrl: media?.publicUrl ?? media?.url ?? null,
+  };
+};
+
 class UserService {
   private readonly addressService: AddressService;
   private readonly getCache = getUserCache;
@@ -220,6 +235,24 @@ class UserService {
     return existing;
   }
 
+  async getUserMini(id: string): Promise<IUserMini | null> {
+    const row = (await User.findByPk(id, {
+      attributes: ['id', 'name', 'mediaId'],
+      raw: true,
+    })) as unknown as Pick<IBaseUser, 'id' | 'name' | 'mediaId'> | null;
+    if (!row) return null;
+
+    let avatarUrl: string | null = null;
+    if (row.mediaId) {
+      const media = await this.mediaService.getById(row.mediaId as string);
+      if (media) {
+        avatarUrl = media.publicUrl ?? media.url ?? null;
+      }
+    }
+
+    return { id: row.id, name: row.name, avatarUrl };
+  }
+
   async getUserInterests(id: string) {
     const cached = await getUserInterestsCache(id);
     if (cached) return cached;
@@ -263,14 +296,14 @@ class UserService {
 
     const safeUsers = fetchedUsers.reduce(
       (acc, user) => {
-        acc[user.id] = getSafeUser(
-          transformerFunction
-            ? (transformerFunction({
-                ...user,
-                media: mediaData[user.mediaId as string],
-              }) as IBaseUser)
-            : user,
-        );
+        if (transformerFunction) {
+          acc[user.id] = transformerFunction({
+            ...user,
+            media: mediaData[user.mediaId as string],
+          }) as IBaseUser;
+        } else {
+          acc[user.id] = getSafeUser(user);
+        }
 
         return acc;
       },

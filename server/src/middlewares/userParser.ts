@@ -1,6 +1,7 @@
 import type { ICustomRequest } from '@/definitions/types';
 import { NotFoundError } from '@/exceptions';
 import type { NextFunction, Response } from 'express';
+import * as HyperDX from '@hyperdx/node-opentelemetry';
 import asyncHandler from './asyncHandler';
 
 import { getSafeUser, getUserCache, MediaService, setUserCache, UserService } from '@/features';
@@ -20,6 +21,7 @@ const userParser = async (req: ICustomRequest, res: Response, next: NextFunction
   }
 
   (req as ICustomRequest).user = getSafeUser(user!);
+  HyperDX.setTraceAttributes({ userId: req.session.user.id });
   return next();
 };
 

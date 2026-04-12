@@ -7,7 +7,7 @@ import { findAllWithPagination } from '@/utils/dbUtils';
 import { Op, QueryTypes, Sequelize, type WhereOptions } from 'sequelize';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
-import UserService from '../users/service';
+import UserService, { toUserMini } from '../users/service';
 import ReactionService from '../reactions/service';
 import { validateEventCreate, validateEventUpdate } from './validation';
 import {
@@ -247,18 +247,20 @@ class EventService {
           promises.media = this.mediaService.getEventMedia(event);
           break;
         case 'creator':
-          promises.creator = this.userService.getById(event.createdBy);
+          promises.creator = this.userService.getUserMini(event.createdBy);
           break;
         case 'participants':
           promises.participants = this.userService.getAndPopulateUserProfiles({
             data: event.participants,
             searchKey: 'user',
+            transformerFunction: toUserMini,
           });
           break;
         case 'verifiers':
           promises.verifiers = this.userService.getAndPopulateUserProfiles({
             data: event.verifiers,
             searchKey: 'user',
+            transformerFunction: toUserMini,
           });
           break;
         case 'reactions':
@@ -379,9 +381,9 @@ class EventService {
           await this.addressService.replaceAddress(EAddressEntityType.Event, existing.id, location, transaction);
         }
       });
+      await this.deleteCache(existing.id);
       return (await this.getById(existing.id)) as IEvent;
     });
-    await this.deleteCache(existing.id);
     let eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     const shouldSyncDerivedStats =
       !!eventData && ('participants' in data || 'verifiers' in data || 'media' in data || 'tags' in data);
@@ -688,11 +690,7 @@ class EventService {
     const cached = await getEventUsersCache(key);
     if (cached) return { users: cached, type, eventId };
 
-    const { items } = await this.userService.getAll(
-      { where: { id: userIds } },
-      { limit: 1000 },
-      'id,name,email,deletedAt',
-    );
+    const { items } = await this.userService.getAll({ where: { id: userIds } }, { limit: 1000 }, 'id,name');
     const userMap = items?.reduce(
       (acc, user) => {
         acc[user.id] = user;

@@ -27,7 +27,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize {
-    return Size.fromHeight(_hasSubtitle ? 84 : 64);
+    return Size.fromHeight(_hasSubtitle ? 92 : 72);
   }
 
   @override
@@ -35,10 +35,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     final typography = context.appTypography;
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8,
-        left: 24,
-        right: 24,
-        bottom: _hasSubtitle ? 12 : 16,
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        bottom: _hasSubtitle ? 14 : 12,
       ),
       decoration: BoxDecoration(
         color: backgroundColor ?? AppColors.surface.withValues(alpha: 0.9),
@@ -61,13 +61,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                         color: AppColors.surface,
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: const Icon(
                         LucideIcons.arrowLeft,
@@ -78,19 +71,31 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   )
                 : const SizedBox(width: 40),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              Text(title, style: typography.titleMD),
-              if (_hasSubtitle)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 56),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
                 Text(
-                  _subtitleText,
-                  style: typography.labelSM.copyWith(
-                    color: AppColors.mutedForeground,
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: typography.heading3Strong.copyWith(
+                    color: AppColors.primary,
                   ),
                 ),
-            ],
+                if (_hasSubtitle)
+                  Text(
+                    _subtitleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: typography.bodySM.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+              ],
+            ),
           ),
           Align(
             alignment: Alignment.centerRight,

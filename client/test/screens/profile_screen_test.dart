@@ -48,10 +48,62 @@ void main() {
       expect(find.byType(AppSkeleton), findsWidgets);
     },
   );
+
+  testWidgets(
+    'own profile recovers from empty cached user state by loading the current user',
+    (tester) async {
+      const userId = 'user-1';
+      final user = User(
+        id: userId,
+        email: 'viewer@example.com',
+        name: 'Viewer',
+      );
+      final router = GoRouter(
+        initialLocation: ProfileScreen.routePath,
+        routes: [
+          GoRoute(
+            path: ProfileScreen.routePath,
+            builder: (context, state) =>
+                ProfileScreen(currentUserLoader: () async => user),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileProvider.overrideWith(() => _NullUserProfile()),
+            profileOverviewProvider(userId: userId).overrideWith(
+              (ref) async => ProfileOverview(
+                myEvents: const [],
+                achievements: const [],
+                recentActivity: const [],
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.theme,
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('User not found'), findsNothing);
+      expect(find.text('Viewer'), findsOneWidget);
+    },
+  );
 }
 
 class _StaticUserProfile extends UserProfile {
   @override
   FutureOr<User?> build() async =>
       User(id: 'user-1', email: 'viewer@example.com', name: 'Viewer');
+}
+
+class _NullUserProfile extends UserProfile {
+  @override
+  FutureOr<User?> build() => null;
 }

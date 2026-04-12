@@ -2,7 +2,7 @@ import type { IActivity, IPaginationParams } from '@/definitions/types';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { Activity } from './model';
 import { Op } from 'sequelize';
-import UserService from '@/features/users/service';
+import UserService, { toUserMini } from '@/features/users/service';
 import { EActivityVisibility } from './constants';
 import {
   deleteActivityCache,
@@ -66,7 +66,7 @@ class ActivityService {
       new Set((data.items || []).map((item) => item.recipientId).filter(Boolean)),
     ) as string[];
 
-    const users = await this.userService.getUserProfiles([...actorIds, ...recipientIds]);
+    const users = await this.userService.getUserProfiles([...actorIds, ...recipientIds], toUserMini);
 
     const populatedItems = (data.items || []).map((item) => ({
       ...item,
@@ -107,7 +107,7 @@ class ActivityService {
     const data = await findAllWithPagination(Activity, { where }, pagination);
 
     const actorIds = Array.from(new Set((data.items || []).map((item) => item.actorId)));
-    const users = await this.userService.getUserProfiles(actorIds);
+    const users = await this.userService.getUserProfiles(actorIds, toUserMini);
 
     const populatedItems = (data.items || []).map((item) => ({
       ...item,

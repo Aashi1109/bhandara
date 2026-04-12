@@ -25,14 +25,8 @@ const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const configuredCorsOrigins = process.env.CORS_ORIGIN?.split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const defaultCorsOrigins = [
-  'https://editor.swagger.io',
-  'https://brave-wren-big.ngrok-free.app',
-];
-const corsOrigins = [
-  localhostOriginPattern,
-  ...(configuredCorsOrigins || defaultCorsOrigins),
-];
+const defaultCorsOrigins = ['https://editor.swagger.io', 'https://brave-wren-big.ngrok-free.app'];
+const corsOrigins = [localhostOriginPattern, ...(configuredCorsOrigins || defaultCorsOrigins)];
 const redisConnections = {
   [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),
   [REDIS_CONNECTION_NAMES.Cache]: withRedisDb(redisBaseConnection, 5),
@@ -96,18 +90,6 @@ const config: AppConfig = {
     appName: 'zentry',
     serviceName: 'zentry-main-server',
   },
-  serviceability: {
-    loki: {
-      url: process.env.LOKI_URL || '',
-      batchSize: +(process.env.LOKI_BATCH_SIZE || 2),
-      flushInterval: +(process.env.LOKI_FLUSH_INTERVAL || 1000),
-    },
-  },
-  grafanaCloud: {
-    prometheusRemoteWriteUrl: process.env.GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL || '',
-    prometheusUsername: process.env.GRAFANA_CLOUD_PROMETHEUS_USERNAME || '',
-    prometheusPassword: process.env.GRAFANA_CLOUD_PROMETHEUS_PASSWORD || '',
-  },
   sentry: {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
@@ -115,15 +97,7 @@ const config: AppConfig = {
   },
   otel: {
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '',
-    headers: (process.env.OTEL_EXPORTER_OTLP_HEADERS || '').split(',').reduce(
-      (acc, curr) => {
-        const idx = curr.indexOf('=');
-        if (idx === -1) acc[curr] = '';
-        else acc[curr.slice(0, idx)] = curr.slice(idx + 1);
-        return acc;
-      },
-      {} as Record<string, string>,
-    ),
+    apiKey: process.env.HYPERDX_API_KEY || '',
   },
 };
 

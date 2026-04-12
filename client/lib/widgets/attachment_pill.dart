@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -19,6 +20,34 @@ class AttachmentPill extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onRetry;
   final VoidCallback? onRemove;
+
+  Widget _buildImagePreview(bool hasError) {
+    Widget fallback() => Container(
+      color: hasError
+          ? AppColors.error.withValues(alpha: 0.08)
+          : AppColors.muted,
+      alignment: Alignment.center,
+      child: Icon(
+        LucideIcons.image,
+        size: AppIconSizes.m,
+        color: hasError ? AppColors.error : AppColors.mutedForeground,
+      ),
+    );
+
+    if (kIsWeb) {
+      return Image.network(
+        file.localPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback(),
+      );
+    }
+
+    return Image.file(
+      File(file.localPath),
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,23 +108,7 @@ class AttachmentPill extends StatelessWidget {
                                     : AppColors.mutedForeground,
                               ),
                             )
-                          : Image.file(
-                              File(file.localPath),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: hasError
-                                    ? AppColors.error.withValues(alpha: 0.08)
-                                    : AppColors.muted,
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  LucideIcons.image,
-                                  size: AppIconSizes.m,
-                                  color: hasError
-                                      ? AppColors.error
-                                      : AppColors.mutedForeground,
-                                ),
-                              ),
-                            ),
+                          : _buildImagePreview(hasError),
                     ),
                   ),
                   if (file.isUploading)

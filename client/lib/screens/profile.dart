@@ -30,11 +30,14 @@ import 'profile_badges.dart';
 import 'my_events.dart';
 import 'updates.dart';
 
+typedef CurrentUserLoader = Future<User?> Function();
+
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key, this.userId});
+  const ProfileScreen({super.key, this.userId, this.currentUserLoader});
 
   static const String routePath = '/profile';
   final String? userId;
+  final CurrentUserLoader? currentUserLoader;
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -148,6 +151,8 @@ class _ProfileBadgeSkeleton extends StatelessWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  Future<User?>? _currentUserFuture;
+  User? _currentUserOverride;
   Future<User?>? _viewedUserFuture;
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   SavedEntitySummary? _saveSummary;
@@ -201,6 +206,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _ensureViewedUser() {
     if (_isViewingOwnProfile || _viewedUserFuture != null) return;
     _viewedUserFuture = userService.getUserById(widget.userId!);
+  }
+
+  void _ensureCurrentUser(AsyncValue<User?> userAsync) {
+    if (!_isViewingOwnProfile || _currentUserFuture != null) return;
+    if (userAsync.isLoading || userAsync.hasError) return;
+
+    final currentUser = userAsync.value;
+    if (currentUser != null) {
+      _currentUserOverride = currentUser;
+      return;
+    }
+
+    _currentUserFuture = _loadCurrentUser();
+  }
+
+  Future<User?> _loadCurrentUser() async {
+    final user = await (widget.currentUserLoader ?? userService.getCurrentUser)
+        .call();
+    if (!mounted || user == null) {
+      return user;
+    }
+
+    setState(() {
+      _currentUserOverride = user;
+    });
+    ref.read(userProfileProvider.notifier).setUser(user);
+    return user;
   }
 
   Future<void> _refreshOverview(String userId) async {
@@ -664,6 +696,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(userProfileProvider);
+    _ensureCurrentUser(userAsync);
     _ensureViewedUser();
 
     return Scaffold(
@@ -680,13 +713,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 error: (_, _) => const Center(child: Text('User not found')),
                 data: (currentUser) {
                   if (_isViewingOwnProfile) {
-                    if (currentUser == null) {
-                      return const Center(child: Text('User not found'));
+                    final resolvedCurrentUser =
+                        _currentUserOverride ?? currentUser;
+                    if (resolvedCurrentUser != null) {
+                      return _buildProfileScaffold(
+                        context,
+                        resolvedCurrentUser,
+                        showSelfActions: true,
+                      );
                     }
-                    return _buildProfileScaffold(
-                      context,
-                      currentUser,
-                      showSelfActions: true,
+
+                    return FutureBuilder<User?>(
+                      future: _currentUserFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return _buildProfileLoadingScaffold(
+                            showSelfActions: true,
+                          );
+                        }
+
+                        final user = _currentUserOverride ?? snapshot.data;
+                        if (user == null) {
+                          return const Center(child: Text('User not found'));
+                        }
+
+                        return _buildProfileScaffold(
+                          context,
+                          user,
+                          showSelfActions: true,
+                        );
+                      },
                     );
                   }
 

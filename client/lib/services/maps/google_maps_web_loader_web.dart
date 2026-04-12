@@ -5,6 +5,7 @@ import 'dart:html' as html;
 
 const _googleMapsScriptId = 'google-maps-javascript-sdk';
 const _loadedState = 'loaded';
+const _postLoadBootstrapDelay = Duration(milliseconds: 120);
 
 Completer<void>? _loaderCompleter;
 
@@ -24,7 +25,7 @@ Future<void> ensureGoogleMapsWebSdkLoaded(String apiKey) {
   final existingScript = html.document.getElementById(_googleMapsScriptId);
   if (existingScript is html.ScriptElement) {
     if (existingScript.dataset['state'] == _loadedState) {
-      _completeLoader();
+      unawaited(_completeLoaderAfterBootstrapDelay());
       return _loaderCompleter!.future;
     }
 
@@ -33,9 +34,9 @@ Future<void> ensureGoogleMapsWebSdkLoaded(String apiKey) {
         StateError('Failed to load the Google Maps JavaScript SDK.'),
       );
     });
-    existingScript.onLoad.first.then((_) {
+    existingScript.onLoad.first.then((_) async {
       existingScript.dataset['state'] = _loadedState;
-      _completeLoader();
+      await _completeLoaderAfterBootstrapDelay();
     });
     return _loaderCompleter!.future;
   }
@@ -52,13 +53,18 @@ Future<void> ensureGoogleMapsWebSdkLoaded(String apiKey) {
       StateError('Failed to load the Google Maps JavaScript SDK.'),
     );
   });
-  script.onLoad.first.then((_) {
+  script.onLoad.first.then((_) async {
     script.dataset['state'] = _loadedState;
-    _completeLoader();
+    await _completeLoaderAfterBootstrapDelay();
   });
 
   html.document.head?.append(script);
   return _loaderCompleter!.future;
+}
+
+Future<void> _completeLoaderAfterBootstrapDelay() async {
+  await Future<void>.delayed(_postLoadBootstrapDelay);
+  _completeLoader();
 }
 
 void _completeLoader() {

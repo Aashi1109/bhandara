@@ -1,17 +1,3 @@
-export interface GrafanaCloudConfig {
-  prometheusRemoteWriteUrl: string;
-  prometheusUsername: string;
-  prometheusPassword: string;
-}
-
-export interface ServiceabilityConfig {
-  loki: {
-    url: string;
-    batchSize: number;
-    flushInterval: number;
-  };
-}
-
 export interface InfrastructureConfig {
   appName: string;
   serviceName: string;
@@ -75,8 +61,6 @@ export interface AppConfig {
     [key: string]: string | undefined;
   };
   infrastructure: InfrastructureConfig;
-  serviceability: ServiceabilityConfig;
-  grafanaCloud: GrafanaCloudConfig;
   sentry: SentryConfig;
   otel: OTelConfig;
 }
@@ -89,5 +73,5 @@ export interface SentryConfig {
 
 export interface OTelConfig {
   url: string;
-  headers: Record<string, string>;
+  apiKey: string;
 }

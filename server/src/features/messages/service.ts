@@ -4,7 +4,7 @@ import { validateMessageCreate, validateMessageUpdate } from './validation';
 import { Message } from './model';
 import MediaService from '@/features/media/service';
 import { isEmpty } from '@/utils';
-import UserService from '@/features/users/service';
+import UserService, { toUserMini } from '@/features/users/service';
 import { BadRequestError, NotFoundError } from '@/exceptions';
 import ReactionService from '@/features/reactions/service';
 import { Op } from 'sequelize';
@@ -148,6 +148,7 @@ class MessageService {
       data: parentItems || [],
       searchKey: 'userId',
       populateKey: 'user',
+      transformerFunction: toUserMini,
     });
 
     // Using the same index ensures each child is matched with its correct parent
@@ -188,6 +189,7 @@ class MessageService {
         data: data.items,
         searchKey: 'userId',
         populateKey: 'user',
+        transformerFunction: toUserMini,
       });
 
       const reactionPromises = userPopulatedMessages.map((msg) =>

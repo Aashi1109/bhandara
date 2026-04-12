@@ -54,9 +54,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _checkSession() async {
-    // Ensuring animation shows for at least 2 seconds
-    await Future.delayed(const Duration(seconds: 2));
-
     final authStorage = SecureStorage(namespace: 'auth');
     final userStorage = LocalStorage(namespace: 'user');
 

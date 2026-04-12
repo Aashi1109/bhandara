@@ -507,6 +507,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
       child: Container(
         width: 40,
         height: 40,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,

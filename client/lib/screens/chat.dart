@@ -25,10 +25,11 @@ import '../models/user.dart';
 import '../utils/error.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.id, this.eventId});
+  const ChatScreen({super.key, this.id, this.eventId});
 
   static const String routePath = '/chat/:id';
-  final String id;
+  /// Thread ID. If null, the screen resolves the thread from [eventId].
+  final String? id;
   final String? eventId;
 
   @override
@@ -41,12 +42,16 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isInputVisible = true;
   bool _isThreadLocked = false;
   bool _isLoadingMessages = true;
+  String? _resolvedThreadId;
   String? _replyingToMessageId;
   String? _eventName;
   final List<Message> _messages = [];
   User? _currentUser;
 
-  String get _threadRoom => SocketRooms.thread(widget.id);
+  /// The resolved thread ID — either from [widget.id] or resolved from [widget.eventId].
+  String get _threadId => _resolvedThreadId ?? '';
+
+  String get _threadRoom => SocketRooms.thread(_threadId);
 
   List<_ChatMessageGroup> get _messageGroups {
     if (_messages.isEmpty) {
@@ -76,10 +81,54 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.addListener(_scrollListener);
     _loadCurrentUser();
     _loadEventName();
+    if (widget.id != null) {
+      _resolvedThreadId = widget.id;
+      _initThreadDependentState();
+    } else {
+      unawaited(_resolveThreadFromEvent());
+    }
+  }
+
+  /// Called once the thread ID is known (either from [widget.id] or resolved).
+  void _initThreadDependentState() {
     _loadThreadState();
     _loadMessages();
     _listenToSocketMessages();
     unawaited(_joinThreadRoom());
+  }
+
+  Future<void> _resolveThreadFromEvent() async {
+    final eventId = widget.eventId;
+    if (eventId == null || eventId.isEmpty) return;
+
+    setState(() {});
+
+    try {
+      final result = await chatService.getEventThreads(eventId, limit: 20);
+      Thread? selected;
+
+      if (result.items.isNotEmpty) {
+        selected = result.items.firstWhere(
+          (thread) => thread.type == 'general',
+          orElse: () => result.items.first,
+        );
+      } else {
+        selected = await chatService.createThread(eventId);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _resolvedThreadId = selected!.id;
+      });
+      _initThreadDependentState();
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackBar.show(
+        context,
+        message: extractExceptionMessage(e),
+        type: SnackBarType.error,
+      );
+    }
   }
 
   Future<void> _joinThreadRoom() async {
@@ -121,7 +170,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadMessages() async {
     try {
-      final result = await chatService.getMessages(widget.id);
+      final result = await chatService.getMessages(_threadId);
       if (mounted) {
         setState(() {
           _messages.addAll(result.items);
@@ -137,7 +186,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadThreadState() async {
     try {
-      final thread = await chatService.getThread(widget.id);
+      final thread = await chatService.getThread(_threadId);
       if (!mounted) return;
       setState(() {
         _isThreadLocked = thread.isLocked;
@@ -159,7 +208,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (eventName == SocketEvents.messageCreate &&
             eventData is Map<String, dynamic>) {
           final message = Message.fromJson(eventData);
-          if (message.threadId != widget.id) {
+          if (message.threadId != _threadId) {
             return;
           }
           final optimisticIndex = _messages.indexWhere(
@@ -196,7 +245,7 @@ class _ChatScreenState extends State<ChatScreen> {
         } else if (eventName == SocketEvents.messageUpdate &&
             eventData is Map<String, dynamic>) {
           final updatedMsg = Message.fromJson(eventData);
-          if (updatedMsg.threadId != widget.id) {
+          if (updatedMsg.threadId != _threadId) {
             return;
           }
           if (updatedMsg.parentId == null) {
@@ -209,7 +258,7 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         } else if (eventName == SocketEvents.messageDelete &&
             eventData is Map<String, dynamic>) {
-          if (eventData['threadId'] != widget.id) {
+          if (eventData['threadId'] != _threadId) {
             return;
           }
           final messageId = eventData['id'];
@@ -225,14 +274,14 @@ class _ChatScreenState extends State<ChatScreen> {
             eventName == SocketEvents.reactionUpdate ||
             eventName == SocketEvents.reactionDelete) {
           if (eventData is! Map<String, dynamic> ||
-              eventData['threadId'] != widget.id) {
+              eventData['threadId'] != _threadId) {
             return;
           }
           _applyReactionEvent(eventName as String, eventData);
         } else if (eventName == SocketEvents.threadDelete &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
-          if (threadId == widget.id) {
+          if (threadId == _threadId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 _goBack();
@@ -242,13 +291,13 @@ class _ChatScreenState extends State<ChatScreen> {
         } else if (eventName == SocketEvents.threadLock &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
-          if (threadId == widget.id) {
+          if (threadId == _threadId) {
             _isThreadLocked = true;
           }
         } else if (eventName == SocketEvents.threadUnlock &&
             eventData is Map<String, dynamic>) {
           final threadId = eventData['id'];
-          if (threadId == widget.id) {
+          if (threadId == _threadId) {
             _isThreadLocked = false;
           }
         }
@@ -333,7 +382,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Message(
       id: localId,
       localId: localId,
-      threadId: widget.id,
+      threadId: _threadId,
       senderId: user?.id ?? '',
       content: text.trim(),
       createdAt: _nextTopLevelOptimisticTimestamp(),
@@ -381,7 +430,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendOptimisticMessage(Message optimistic) async {
     try {
       final message = await chatService.sendMessage(
-        widget.id,
+        _threadId,
         optimistic.content,
         mediaIds: optimistic.retryMediaIds,
       );
@@ -441,7 +490,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Message(
       id: localId,
       localId: localId,
-      threadId: widget.id,
+      threadId: _threadId,
       senderId: user?.id ?? '',
       content: text.trim(),
       parentId: parent.id,
@@ -527,7 +576,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final reply = await chatService.sendMessage(
-        widget.id,
+        _threadId,
         optimistic.content,
         mediaIds: optimistic.retryMediaIds,
         parentId: parent.id,
@@ -553,8 +602,8 @@ class _ChatScreenState extends State<ChatScreen> {
     context.push(
       ThreadScreen.routePath.replaceAll(':id', message.id),
       extra: {
-        'threadId': widget.id,
-        'chatId': widget.id,
+        'threadId': _threadId,
+        'chatId': _threadId,
         'eventId': widget.eventId,
         'message': message,
       },
@@ -1260,7 +1309,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ? null
                     : () async {
                         final message = await chatService.getMessage(
-                          widget.id,
+                          _threadId,
                           threadMessage.id,
                         );
                         return message.reactions;

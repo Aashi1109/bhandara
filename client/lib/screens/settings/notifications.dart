@@ -129,8 +129,8 @@ class _NotificationsSettingsScreenState
                     await ref
                         .read(userSettingsProvider.notifier)
                         .updateSettings(user.id, {
-                      'notifications': _currentPreferences.toJson(),
-                    });
+                          'notifications': _currentPreferences.toJson(),
+                        });
                     if (!mounted) return;
                     setState(() {
                       _initialPreferences = _currentPreferences;

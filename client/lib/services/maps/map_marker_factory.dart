@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'map_marker_painter.dart';
+
 class MapMarkerFactory {
   static const double _markerRenderScale = 3;
 
@@ -79,58 +81,7 @@ class MapMarkerFactory {
   }
 
   static Future<BitmapDescriptor> createUserLocationMarker({double size = 48}) {
-    return _renderMarker(
-      size: size,
-      painter: (canvas, markerSize) {
-        final scale = markerSize / 24;
-        const offset = Offset.zero;
-        final pinPath = Path()
-          ..moveTo(offset.dx + (20 * scale), offset.dy + (10 * scale))
-          ..cubicTo(
-            offset.dx + (20 * scale),
-            offset.dy + (14.993 * scale),
-            offset.dx + (14.461 * scale),
-            offset.dy + (20.193 * scale),
-            offset.dx + (12.601 * scale),
-            offset.dy + (21.799 * scale),
-          )
-          ..arcToPoint(
-            Offset(offset.dx + (11.399 * scale), offset.dy + (21.799 * scale)),
-            radius: Radius.circular(1 * scale),
-            clockwise: true,
-          )
-          ..cubicTo(
-            offset.dx + (9.539 * scale),
-            offset.dy + (20.193 * scale),
-            offset.dx + (4 * scale),
-            offset.dy + (14.993 * scale),
-            offset.dx + (4 * scale),
-            offset.dy + (10 * scale),
-          )
-          ..arcToPoint(
-            Offset(offset.dx + (20 * scale), offset.dy + (10 * scale)),
-            radius: Radius.circular(8 * scale),
-            clockwise: true,
-          );
-
-        final fillPaint = Paint()
-          ..color = const Color(0xFF2E2E2E)
-          ..style = PaintingStyle.fill;
-        canvas.drawPath(pinPath, fillPaint);
-
-        final strokePaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 * scale
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round;
-        canvas.drawCircle(
-          Offset(offset.dx + (12 * scale), offset.dy + (10 * scale)),
-          3 * scale,
-          strokePaint,
-        );
-      },
-    );
+    return _renderMarker(size: size, painter: paintUserLocationMarker);
   }
 
   static Future<BitmapDescriptor> createMapPinMarker({

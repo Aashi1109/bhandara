@@ -1,67 +1,18 @@
 services:
-  prometheus:
-    image: prom/prometheus:latest
+  clickstack:
+    image: clickhouse/clickstack-all-in-one:latest
+    command: clickstack
     ports:
-      - "3010:9090"
+      - "8080:8080"   # HyperDX UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8123:8123"   # ClickHouse HTTP
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    environment:
-      NODEJS_SERVER_ADDRESS: 115.117.121.194:3001/metrics
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/etc/prometheus/console_libraries"
-      - "--web.console.templates=/etc/prometheus/consoles"
-      - "--storage.tsdb.retention.time=200h"
-      - "--web.enable-lifecycle"
+      - ./data/clickstack/db:/data/db
+      - ./data/clickstack/ch:/var/lib/clickhouse
+      - ./data/clickstack/logs:/var/log/clickhouse-server
     networks:
       - monitoring
-
-  loki:
-    image: grafana/loki:latest
-    ports:
-      - "3011:3100"
-    volumes:
-      - loki_data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - monitoring
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3012:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
-      - loki
-
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    environment:
-      - COLLECTOR_ZIPKIN_HTTP_HTTP_PORT=9411
-    ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
-      - "5778:5778"
-      - "9411:9411"
-      - "16685:16685"
-      - "14268:14268"
-    networks:
-      - monitoring
-
-volumes:
-  prometheus_data:
-  grafana_data:
-  loki_data:
 
 networks:
   monitoring:

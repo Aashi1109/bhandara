@@ -32,6 +32,12 @@ class FileService {
     return mimeParts.length > 1 ? mimeParts.last.toLowerCase() : 'bin';
   }
 
+  String _resolveMimeType(XFile file, List<int> fileBytes) {
+    return lookupMimeType(file.name, headerBytes: fileBytes) ??
+        lookupMimeType(file.path, headerBytes: fileBytes) ??
+        'application/octet-stream';
+  }
+
   Future<XFile?> pickImage({ImageSource source = ImageSource.gallery}) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -60,6 +66,24 @@ class FileService {
     }
   }
 
+  /// Picks up to [limit] images and/or videos from the gallery.
+  Future<List<XFile>> pickMultipleMedia({int limit = 5}) async {
+    try {
+      final files = await _picker.pickMultipleMedia(limit: limit);
+      final valid = <XFile>[];
+      for (final file in files) {
+        try {
+          if (await validateFileSize(file)) valid.add(file);
+        } catch (_) {
+          // Skip files that exceed size limit.
+        }
+      }
+      return valid;
+    } catch (e) {
+      return const [];
+    }
+  }
+
   Future<bool> validateFileSize(XFile file) async {
     final length = await file.length();
     if (length > maxFileSize) {
@@ -76,7 +100,8 @@ class FileService {
     try {
       final fileName = file.name;
       final fileSize = await file.length();
-      final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
+      final fileBytes = await file.readAsBytes();
+      final mimeType = _resolveMimeType(file, fileBytes);
       final mediaType = _resolveMediaType(mimeType);
       final format = _resolveFormat(file, mimeType);
 
@@ -97,8 +122,7 @@ class FileService {
       if (signedUrlResponse.statusCode != 200) return null;
 
       final data = signedUrlResponse.data['data'] as Map<String, dynamic>;
-      final signedUrl =
-          (data['signedUrl'] ?? data['url']) as String?;
+      final signedUrl = (data['signedUrl'] ?? data['url']) as String?;
       final row = data['row'] as Map<String, dynamic>?;
 
       if (signedUrl == null || row == null) {
@@ -106,18 +130,14 @@ class FileService {
       }
 
       // 2. Upload file to signed URL
-      final fileBytes = await file.readAsBytes();
-
       final uploadDio = Dio();
       final uploadResponse = await uploadDio.put(
         signedUrl,
         data: fileBytes,
         options: Options(
-          headers: {
-            'Content-Type': mimeType,
-            'Content-Length': fileSize,
-          },
-          validateStatus: (status) => status != null && status >= 200 && status < 300,
+          headers: {'Content-Type': mimeType, 'Content-Length': fileSize},
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
         ),
       );
 
@@ -159,8 +179,7 @@ class FileService {
     }
   }
 
-  Future<bool> updateMedia(String mediaId,
-      Map<String, dynamic> data,) async {
+  Future<bool> updateMedia(String mediaId, Map<String, dynamic> data) async {
     try {
       final response = await _dio.patch(Api.media(mediaId), data: data);
       return response.statusCode == 200;

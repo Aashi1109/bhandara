@@ -35,7 +35,7 @@ export const createThread = async (req: ICustomRequest, res: Response) => {
   const thread = await threadsService.create({ ...req.body, createdBy: user.id }, true);
   if (thread) {
     const event = await eventService.getById((thread as any).eventId);
-    (thread as any).event = event;
+    (thread as any).event = event ? { id: event.id, name: event.name } : null;
   }
   emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, { data: thread });
   return res.status(201).json({ data: thread });
@@ -107,13 +107,17 @@ export const lockThread = async (req: ICustomRequest, res: Response) => {
 
   const thread = await threadsService.lockThread(threadId, userId);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_LOCK, {
-    data: {
-      id: threadId,
-      lockHistory: thread.lockHistory,
-      lockedBy: userId,
+  emitSocketEvent(
+    PLATFORM_SOCKET_EVENTS.THREAD_LOCK,
+    {
+      data: {
+        id: threadId,
+        lockHistory: thread.lockHistory,
+        lockedBy: userId,
+      },
     },
-  }, { room: getThreadRoom(threadId) });
+    { room: getThreadRoom(threadId) },
+  );
 
   return res.status(200).json({
     data: thread,
@@ -127,13 +131,17 @@ export const unlockThread = async (req: ICustomRequest, res: Response) => {
 
   const thread = await threadsService.unlockThread(threadId, userId);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.THREAD_UNLOCK, {
-    data: {
-      id: threadId,
-      lockHistory: thread.lockHistory,
-      unlockedBy: userId,
+  emitSocketEvent(
+    PLATFORM_SOCKET_EVENTS.THREAD_UNLOCK,
+    {
+      data: {
+        id: threadId,
+        lockHistory: thread.lockHistory,
+        unlockedBy: userId,
+      },
     },
-  }, { room: getThreadRoom(threadId) });
+    { room: getThreadRoom(threadId) },
+  );
 
   return res.status(200).json({
     data: thread,

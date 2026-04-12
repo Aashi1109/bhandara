@@ -14,11 +14,12 @@ import '../models/engagement.dart';
 import '../models/event.dart';
 import '../models/save.dart';
 import '../providers/user.dart';
-import '../services/chat.dart';
 import '../services/engagement.dart';
 import '../services/event.dart';
 import '../services/maps/map_manager.dart';
+import '../services/maps/map_marker_painter.dart';
 import '../services/maps/map_provider_type.dart';
+import '../utils/maps.dart';
 import '../services/save.dart';
 import '../services/socket.dart';
 import '../theme/theme.dart';
@@ -29,7 +30,6 @@ import '../widgets/button.dart';
 import '../widgets/review_editor_sheet.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/snackbar.dart';
-import 'chat.dart';
 import 'create_event.dart';
 import 'event_attendees.dart';
 import 'event_ratings.dart';
@@ -78,6 +78,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   static const String _defaultPrimaryTag = 'Food';
   static const double _mobileLocationMapHeight = 176;
   static const double _webLocationMapHeight = 240;
+  static const double _locationMapMarkerSize = 36;
+  static const double _locationMapMarkerAnchorOffset = 0.41;
 
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   Event? _event;
@@ -86,7 +88,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   bool _isHydratingFullEvent = false;
   bool _isLoadingEngagement = false;
   bool _isJoining = false;
-  bool _isOpeningChat = false;
   bool _isSubmittingReview = false;
   bool _isLoadingSaveState = false;
   bool _isTogglingSave = false;
@@ -102,6 +103,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     _event = widget.initialEvent;
     _isLoading = widget.initialEvent == null;
     _isHydratingFullEvent = widget.initialEvent != null;
+    if ((widget.initialEvent?.media?.length ?? 0) > 2) {
+      _isHeroExpanded = false;
+    }
 
     if (widget.initialEvent != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -134,6 +138,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         _isLoading = false;
         _isHydratingFullEvent = false;
         _heroMediaIndex = _clampMediaIndexFor(_event);
+        // Collapse the hero header when the event has more than 2 media items
+        // so carousel navigation gets more visual space.
+        if ((_event?.media?.length ?? 0) > 2) {
+          _isHeroExpanded = false;
+        }
       });
 
       _checkIfJoined();
@@ -373,38 +382,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _openChat() async {
-    if (_isOpeningChat) return;
-    setState(() => _isOpeningChat = true);
-
-    try {
-      final result = await chatService.getEventThreads(widget.id, limit: 20);
-      Thread? selected;
-
-      if (result.items.isNotEmpty) {
-        selected = result.items.firstWhere(
-          (thread) => thread.type == 'general',
-          orElse: () => result.items.first,
-        );
-      } else {
-        selected = await chatService.createThread(widget.id);
-      }
-
-      if (!mounted) return;
-      setState(() => _isOpeningChat = false);
-      await context.push(
-        ChatScreen.routePath.replaceAll(':id', selected.id),
-        extra: {'eventId': widget.id},
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isOpeningChat = false);
-      AppSnackBar.show(
-        context,
-        message: extractExceptionMessage(e),
-        type: SnackBarType.error,
-      );
-    }
+  void _openChat() {
+    context.push('/event/${widget.id}/discussion');
   }
 
   Future<void> _openEditEvent() async {
@@ -646,7 +625,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       width: 1200,
       height: 800,
       zoom: zoom,
-      showMarker: true,
+      showMarker: false,
       fallbackUrl: 'https://picsum.photos/seed/event-location/1200/600',
     );
   }
@@ -1078,14 +1057,27 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             Flexible(
                               child: Align(
                                 alignment: Alignment.centerRight,
-                                child: Text(
-                                  'Open in Maps',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                  style: typography.bodySMStrong.copyWith(
-                                    color: AppColors.primary,
-                                    decoration: TextDecoration.underline,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    final lat = _event?.location.latitude;
+                                    final lng = _event?.location.longitude;
+                                    if (lat != null && lng != null) {
+                                      openInMaps(
+                                        latitude: lat,
+                                        longitude: lng,
+                                        label: _event?.location.address,
+                                      );
+                                    }
+                                  },
+                                  child: Text(
+                                    'Open in Maps',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.right,
+                                    style: typography.bodySMStrong.copyWith(
+                                      color: AppColors.primary,
+                                      decoration: TextDecoration.underline,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1099,51 +1091,71 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               constraints.maxWidth,
                             );
                             return ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: SizedBox(
-                            height: _locationMapHeight,
-                            width: double.infinity,
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: CachedNetworkImage(
-                                    imageUrl: _staticMapUrl(zoom: mapZoom),
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, _) =>
-                                        Container(color: AppColors.muted),
-                                    errorWidget: (_, _, _) =>
-                                        Container(color: AppColors.muted),
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppColors.border,
+                              borderRadius: BorderRadius.circular(24),
+                              child: SizedBox(
+                                height: _locationMapHeight,
+                                width: double.infinity,
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: CachedNetworkImage(
+                                        imageUrl: _staticMapUrl(zoom: mapZoom),
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, _) =>
+                                            Container(color: AppColors.muted),
+                                        errorWidget: (_, _, _) =>
+                                            Container(color: AppColors.muted),
                                       ),
                                     ),
-                                    child: Text(
-                                      _locationAddressLabel,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: typography.overline.copyWith(
-                                        color: AppColors.primary,
+                                    Center(
+                                      child: Transform.translate(
+                                        offset: const Offset(
+                                          0,
+                                          -_locationMapMarkerSize *
+                                              _locationMapMarkerAnchorOffset,
+                                        ),
+                                        child: const SizedBox.square(
+                                          dimension: _locationMapMarkerSize,
+                                          child: CustomPaint(
+                                            painter:
+                                                UserLocationMapMarkerPainter(),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Container(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _locationAddressLabel,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: typography.overline.copyWith(
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
+                              ),
+                            );
                           },
                         ),
                         const SizedBox(height: 40),
@@ -1580,6 +1592,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       child: Container(
         width: 42,
         height: 42,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.38),
           shape: BoxShape.circle,
