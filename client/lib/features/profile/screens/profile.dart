@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -907,13 +908,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               height: 48,
                               color: AppColors.border,
                             ),
-                            _stat('Impact', '4.8k'),
+                            _stat(
+                              'Impact',
+                              _formatCount(
+                                (overview?.impactStats?['totalViews'] as num?)
+                                        ?.toInt() ??
+                                    0,
+                              ),
+                            ),
                             Container(
                               width: 1,
                               height: 48,
                               color: AppColors.border,
                             ),
-                            _stat('Rating', '4.9'),
+                            _stat(
+                              'Rating',
+                              () {
+                                final avg =
+                                    (overview?.impactStats?['avgRating']
+                                            as num?)
+                                        ?.toDouble() ??
+                                    0.0;
+                                return avg > 0
+                                    ? avg.toStringAsFixed(1)
+                                    : '—';
+                              }(),
+                            ),
                           ],
                         ),
                 ),
@@ -1012,51 +1032,93 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: AppColors.muted,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(7, (i) {
-                      final heights = [
-                        40.0,
-                        64.0,
-                        48.0,
-                        80.0,
-                        56.0,
-                        72.0,
-                        96.0,
-                      ];
-                      final days = [
-                        'Mon',
-                        'Tue',
-                        'Wed',
-                        'Thu',
-                        'Fri',
-                        'Sat',
-                        'Sun',
-                      ];
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 32,
-                            height: heights[i],
-                            decoration: BoxDecoration(
-                              color: i == 6
-                                  ? AppColors.primary
-                                  : AppColors.border,
-                              borderRadius: BorderRadius.circular(8),
+                  child: Builder(
+                    builder: (context) {
+                      final rawEvents =
+                          (overview?.impactStats?['events'] as List?)
+                              ?.whereType<Map>()
+                              .map((e) => e.cast<String, dynamic>())
+                              .toList() ??
+                          [];
+                      final graphEvents = rawEvents.take(7).toList();
+
+                      if (graphEvents.isEmpty) {
+                        return SizedBox(
+                          height: 120,
+                          child: Center(
+                            child: Text(
+                              'No events yet',
+                              style: typography.bodySM.copyWith(
+                                color: AppColors.mutedForeground,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            days[i],
-                            style: typography.labelSM.copyWith(
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                        ],
+                        );
+                      }
+
+                      const double graphHeight = 96.0;
+                      const double minBarHeight = 32.0;
+
+                      final maxViews = graphEvents.fold<int>(
+                        0,
+                        (m, e) =>
+                            max(m, (e['viewCount'] as num?)?.toInt() ?? 0),
                       );
-                    }),
+
+                      return SizedBox(
+                        height: graphHeight + 28, // bars + label space
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: graphEvents.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final e = entry.value;
+                          final views =
+                              (e['viewCount'] as num?)?.toInt() ?? 0;
+                          final barHeight = maxViews == 0
+                              ? minBarHeight
+                              : minBarHeight +
+                                  (views / maxViews) *
+                                      (graphHeight - minBarHeight);
+                          final isLast = i == graphEvents.length - 1;
+
+                          String label = '';
+                          final rawStart = e['startTime'];
+                          if (rawStart != null) {
+                            try {
+                              final dt = DateTime.parse(rawStart.toString());
+                              label = DateFormat('MMM d').format(dt);
+                            } catch (_) {
+                              label = '';
+                            }
+                          }
+
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: barHeight,
+                                decoration: BoxDecoration(
+                                  color: isLast
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                label,
+                                style: typography.labelSM.copyWith(
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          );
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -1065,6 +1127,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  String _formatCount(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
   }
 
   Widget _stat(String label, String value) {

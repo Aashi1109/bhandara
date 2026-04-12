@@ -5,10 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../features/chat/models/chat_attachment.dart';
 import '../theme/theme.dart';
 import '../services/file.dart';
+import './action_sheet.dart';
 import './attachment_pill.dart';
 import './snackbar.dart';
 
 export '../../features/chat/models/chat_attachment.dart';
+
+enum _ComposerMediaSourceAction { image, video }
 
 class FloatingMessageBar extends StatefulWidget {
   const FloatingMessageBar({
@@ -139,6 +142,47 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
           type: SnackBarType.error,
         );
       }
+    }
+  }
+
+  Future<void> _openMediaPicker() async {
+    if (_attachments.length >= 5) return;
+
+    final action = await showModalBottomSheet<_ComposerMediaSourceAction>(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return AppActionSheet(
+          children: [
+            AppActionSheetItem(
+              icon: LucideIcons.image,
+              title: 'Image',
+              subtitle: 'Pick from your device',
+              onTap: () =>
+                  Navigator.pop(context, _ComposerMediaSourceAction.image),
+            ),
+            const SizedBox(height: 12),
+            AppActionSheetItem(
+              icon: LucideIcons.video,
+              title: 'Video',
+              subtitle: 'Up to 10MB',
+              onTap: () =>
+                  Navigator.pop(context, _ComposerMediaSourceAction.video),
+            ),
+          ],
+        );
+      },
+    );
+
+    switch (action) {
+      case _ComposerMediaSourceAction.image:
+        await _pickMedia(false);
+        break;
+      case _ComposerMediaSourceAction.video:
+        await _pickMedia(true);
+        break;
+      case null:
+        break;
     }
   }
 
@@ -346,38 +390,8 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                     child: Row(
                       spacing: isCompact ? 4 : 6,
                       children: [
-                        PopupMenuButton<bool>(
-                          onSelected: _pickMedia,
-                          padding: EdgeInsets.zero,
-                          offset: const Offset(0, -140),
-                          color: AppColors.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: false,
-                              child: ListTile(
-                                leading: Icon(
-                                  LucideIcons.image,
-                                  size: AppIconSizes.defaultSize,
-                                ),
-                                title: Text('Image'),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: true,
-                              child: ListTile(
-                                leading: Icon(
-                                  LucideIcons.video,
-                                  size: AppIconSizes.defaultSize,
-                                ),
-                                title: Text('Video (Max 10MB)'),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
+                        GestureDetector(
+                          onTap: _openMediaPicker,
                           child: Container(
                             width: actionSize,
                             height: actionSize,

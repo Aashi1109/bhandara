@@ -23,11 +23,13 @@ Future<ProfileOverview> profileOverview(Ref ref, {required String userId}) async
       includePrivate: isOwnProfile,
       limit: 3,
     ),
+    userService.getUserImpact(userId),
   ]);
 
   final allEvents = results[0] as PaginatedResponse<Event>;
   final achievements = results[1] as List<Achievement>;
   final activity = results[2] as PaginatedResponse<AppUpdate>;
+  final impactStats = results[3] as Map<String, dynamic>?;
 
   final myEvents =
       await Future.wait(
@@ -45,5 +47,6 @@ Future<ProfileOverview> profileOverview(Ref ref, {required String userId}) async
     myEvents: myEvents,
     achievements: achievements,
     recentActivity: activity.items,
+    impactStats: impactStats,
   );
 }

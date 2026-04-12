@@ -1,13 +1,23 @@
 import config from '@/config';
 import { supabase } from '@/connections';
+import supabaseAdmin from '@/connections/supabase/admin';
 import { EAuthProvider } from '@/definitions/enums';
 import type { ICustomRequest } from '@/definitions/types';
-import { BadRequestError, NotFoundError } from '@/exceptions';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '@/exceptions';
 import { AuthService } from '@/features';
 import { deleteUserSessionCache, getUserSessionCacheList } from '@/features/users/helpers';
 import UserService from '@/features/users/service';
 import { isEmpty, merge } from '@/utils';
 import type { Request, Response } from 'express';
+import {
+  generateOTP,
+  generateResetToken,
+  storeOTP,
+  storeResetToken,
+  verifyOTP,
+  consumeResetToken,
+} from './otp-helpers';
+import { sendPasswordResetOTPEmail } from '@/services/email';
 
 const authService = new AuthService();
 const userService = new UserService();
@@ -234,6 +244,59 @@ export const signUp = async (req: Request, res: Response) => {
   return res.status(200).json({
     data: { session: { id: sessionId }, user },
   });
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  // Always return 200 to avoid user enumeration
+  const user = await userService.getUserByEmail(email);
+  if (!user) {
+    return res.status(200).json({ data: 'If that email exists, a reset code has been sent.' });
+  }
+
+  const provider = user.meta?.auth?.provider || user.meta?.provider;
+  if (provider && provider !== EAuthProvider.Email) {
+    return res.status(200).json({ data: 'If that email exists, a reset code has been sent.' });
+  }
+
+  const otp = generateOTP();
+  await storeOTP(email, otp);
+  await sendPasswordResetOTPEmail(email, otp);
+
+  return res.status(200).json({ data: 'If that email exists, a reset code has been sent.' });
+};
+
+export const verifyForgotPasswordOTP = async (req: Request, res: Response) => {
+  const { email, code } = req.body;
+
+  const result = await verifyOTP(email, code);
+  if (!result.valid) {
+    throw new BadRequestError(result.reason ?? 'Invalid code');
+  }
+
+  const token = generateResetToken();
+  await storeResetToken(token, email);
+
+  return res.status(200).json({ data: { token } });
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { token, email, password } = req.body;
+
+  const storedEmail = await consumeResetToken(token);
+  if (!storedEmail || storedEmail !== email) {
+    throw new UnauthorizedError('Invalid or expired reset token');
+  }
+
+  const { data: listData, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
+  const sbUser = listData?.users?.find((u) => u.email === email);
+  if (lookupError || !sbUser) throw new NotFoundError(`Auth account not found for: ${email}`);
+
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(sbUser.id, { password });
+  if (updateError) throw new BadRequestError(updateError.message);
+
+  return res.status(200).json({ data: 'Password reset successfully' });
 };
 
 export { login, logOut, session, googleAuth, googleCallback };

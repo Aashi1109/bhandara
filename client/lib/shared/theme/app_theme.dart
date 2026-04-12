@@ -45,6 +45,9 @@ class AppTheme {
         size: AppIconSizes.defaultSize,
       ),
       dividerColor: AppColors.border,
+      bottomSheetTheme: const BottomSheetThemeData(
+        constraints: BoxConstraints(maxWidth: double.infinity),
+      ),
       useMaterial3: true,
     );
   }

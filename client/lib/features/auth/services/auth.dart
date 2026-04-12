@@ -105,6 +105,48 @@ class AuthService extends BaseService {
     }
   }
 
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _dio.post(Api.forgotPassword, data: {'email': email});
+    } on DioException catch (e) {
+      throwError(e, 'Failed to send reset email');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<String> verifyPasswordResetOTP(String email, String code) async {
+    try {
+      final response = await _dio.post(
+        Api.verifyResetOTP,
+        data: {'email': email, 'code': code},
+      );
+      final data = response.data['data'] as Map<String, dynamic>?;
+      return data?['token'] as String? ?? '';
+    } on DioException catch (e) {
+      throwError(e, 'Invalid or expired code');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.post(
+        Api.resetPassword,
+        data: {'token': token, 'email': email, 'password': newPassword},
+      );
+    } on DioException catch (e) {
+      throwError(e, 'Failed to reset password');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<dynamic>> getSessions() async {
     try {
       final response = await _dio.get(Api.sessions);

@@ -8,11 +8,25 @@ import { NotFoundError } from '@/exceptions';
 import { Op } from 'sequelize';
 import EntityEngagementService from '@/features/engagement/service';
 import { emitSocketEvent } from '@/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS } from '@/constants';
+import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/constants';
+import { Event } from '@/features/events/model';
+import { cacheKeys } from '@/features/cache/keys';
+import { getRedisConnection } from '@/connections/redis';
 
 const userService = new UserService();
 const userSettingsService = new UserSettingsService();
 const entityEngagementService = new EntityEngagementService();
+const analyticsRedis = getRedisConnection(REDIS_CONNECTION_NAMES.Analytics);
+
+const parseEngagementHash = (h: Record<string, string>) => {
+  const rc = parseInt(h.ratingCount ?? '0', 10);
+  const avg = rc > 0 ? [1, 2, 3, 4, 5].reduce((s, i) => s + i * parseInt(h[`rating_${i}`] ?? '0', 10), 0) / rc : 0;
+  return {
+    viewCount: parseInt(h.viewCount ?? '0', 10),
+    ratingCount: rc,
+    ratingAverage: Math.round(avg * 10) / 10,
+  };
+};
 
 const getViewerIp = (req: ICustomRequest) => {
   const forwardedFor = req.headers['x-forwarded-for'];
@@ -135,4 +149,47 @@ export const updateUserSettings = async (req: ICustomRequest, res: Response) => 
     interests,
   });
   return res.status(200).json({ data: settings });
+};
+
+export const getUserImpact = async (req: ICustomRequest, res: Response) => {
+  const { id } = req.params;
+
+  const events = await Event.findAll({
+    where: { createdBy: id },
+    attributes: ['id', 'name', 'timings', 'createdAt'],
+    order: [['createdAt', 'ASC']],
+    limit: 50,
+    raw: true,
+  });
+
+  if (!events.length) {
+    return res.status(200).json({ data: { totalViews: 0, avgRating: 0, totalRatingCount: 0, events: [] } });
+  }
+
+  const breakdown = await Promise.all(
+    events.map(async (event) => {
+      const key = cacheKeys.engagementAggregate('events', event.id);
+      const hash = (await analyticsRedis.hgetall(key)) as Record<string, string>;
+      const stats =
+        hash && Object.keys(hash).length > 0
+          ? parseEngagementHash(hash)
+          : { viewCount: 0, ratingCount: 0, ratingAverage: 0 };
+
+      return {
+        id: event.id,
+        name: event.name,
+        startTime: (event as any).timings?.start ?? event.createdAt,
+        viewCount: stats.viewCount,
+        ratingAverage: stats.ratingAverage,
+        ratingCount: stats.ratingCount,
+      };
+    }),
+  );
+
+  const totalViews = breakdown.reduce((s, e) => s + e.viewCount, 0);
+  const totalRatingCount = breakdown.reduce((s, e) => s + e.ratingCount, 0);
+  const weightedSum = breakdown.reduce((s, e) => s + e.ratingAverage * e.ratingCount, 0);
+  const avgRating = totalRatingCount > 0 ? Math.round((weightedSum / totalRatingCount) * 10) / 10 : 0;
+
+  return res.status(200).json({ data: { totalViews, avgRating, totalRatingCount, events: breakdown } });
 };

@@ -14,6 +14,9 @@ import './features/events/screens/event_ratings.dart';
 import './features/events/screens/event_attendees.dart';
 import './features/events/screens/create_event.dart';
 import './features/auth/screens/success.dart';
+import './features/auth/screens/forgot_password.dart';
+import './features/auth/screens/forgot_password_otp.dart';
+import './features/auth/screens/reset_password.dart';
 import './features/chat/screens/chat.dart';
 import './features/chat/screens/thread.dart';
 import './features/profile/screens/profile.dart';
@@ -117,6 +120,29 @@ final router = GoRouter(
       builder: (context, state) => CreateEventScreen(
         initialEvent: state.extra is Event ? state.extra! as Event : null,
       ),
+    ),
+    GoRoute(
+      path: ForgotPasswordScreen.routePath,
+      builder: (context, state) => const ForgotPasswordScreen(),
+    ),
+    GoRoute(
+      path: ForgotPasswordOTPScreen.routePath,
+      builder: (context, state) {
+        final extra = _extraAsMap(state.extra);
+        return ForgotPasswordOTPScreen(
+          email: extra?['email'] as String?,
+        );
+      },
+    ),
+    GoRoute(
+      path: ResetPasswordScreen.routePath,
+      builder: (context, state) {
+        final extra = _extraAsMap(state.extra);
+        return ResetPasswordScreen(
+          token: extra?['token'] as String?,
+          email: extra?['email'] as String?,
+        );
+      },
     ),
     GoRoute(
       path: SuccessScreen.routePath,

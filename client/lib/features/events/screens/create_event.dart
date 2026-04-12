@@ -28,6 +28,7 @@ import '../utils/event_schedule.dart';
 import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/textarea.dart';
+import '../../../shared/widgets/action_sheet.dart';
 import '../../../shared/widgets/attachment_pill.dart';
 import '../../../shared/widgets/map_view.dart';
 import '../widgets/media_preview.dart';
@@ -81,6 +82,13 @@ class CreateEventScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
+  final _titleFieldKey = GlobalKey();
+  final _descriptionFieldKey = GlobalKey();
+  final _categoryFieldKey = GlobalKey();
+  final _timingFieldKey = GlobalKey();
+  final _locationFieldKey = GlobalKey();
+  final _titleFocusNode = FocusNode();
+  final _descriptionFocusNode = FocusNode();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final DateFormat _dateFormat = DateFormat('EEE, d MMM');
@@ -184,9 +192,55 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
   @override
   void dispose() {
+    _titleFocusNode.dispose();
+    _descriptionFocusNode.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  void _focusFirstInvalidField({
+    required String? titleError,
+    required String? descriptionError,
+    required String? categoryError,
+    required String? timingError,
+    required String? locationError,
+  }) {
+    GlobalKey? targetKey;
+    FocusNode? targetFocusNode;
+
+    if (titleError != null) {
+      targetKey = _titleFieldKey;
+      targetFocusNode = _titleFocusNode;
+    } else if (descriptionError != null) {
+      targetKey = _descriptionFieldKey;
+      targetFocusNode = _descriptionFocusNode;
+    } else if (categoryError != null) {
+      targetKey = _categoryFieldKey;
+    } else if (timingError != null) {
+      targetKey = _timingFieldKey;
+    } else if (locationError != null) {
+      targetKey = _locationFieldKey;
+    }
+
+    if (targetKey == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      final targetContext = targetKey?.currentContext;
+      if (targetContext != null) {
+        await Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          alignment: 0.2,
+        );
+      }
+
+      if (!mounted) return;
+      targetFocusNode?.requestFocus();
+    });
   }
 
   void _handleTitleChanged(String value) {
@@ -242,40 +296,24 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     final action = await showModalBottomSheet<_MediaSourceAction>(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _mediaActionTile(
-                icon: LucideIcons.galleryHorizontal,
-                title: 'Pick from Gallery (up to ${CreateEventScreen.maxAttachments})',
-                onTap: () =>
-                    Navigator.pop(context, _MediaSourceAction.gallery),
-              ),
-              _mediaActionTile(
-                icon: LucideIcons.camera,
-                title: 'Take Photo',
-                onTap: () =>
-                    Navigator.pop(context, _MediaSourceAction.cameraImage),
-              ),
-            ],
+      backgroundColor: AppColors.transparent,
+      builder: (context) => AppActionSheet(
+        children: [
+          AppActionSheetItem(
+            icon: LucideIcons.galleryHorizontal,
+            title: 'Gallery',
+            subtitle:
+                'Pick up to ${CreateEventScreen.maxAttachments} photos or videos',
+            onTap: () => Navigator.pop(context, _MediaSourceAction.gallery),
           ),
-        ),
+          const SizedBox(height: 12),
+          AppActionSheetItem(
+            icon: LucideIcons.camera,
+            title: 'Take Photo',
+            subtitle: 'Capture with your camera',
+            onTap: () => Navigator.pop(context, _MediaSourceAction.cameraImage),
+          ),
+        ],
       ),
     );
 
@@ -291,30 +329,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     }
   }
 
-  Widget _mediaActionTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: AppColors.muted,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Icon(icon, color: AppColors.primary),
-      ),
-      title: Text(
-        title,
-        style: context.appTypography.titleXS.copyWith(color: AppColors.primary),
-      ),
-      onTap: onTap,
-    );
-  }
-
   Future<void> _addImage(ImageSource source) async {
     final file = await _pickImageFile(source);
     if (file == null) return;
@@ -322,8 +336,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 
   Future<void> _addFromGallery() async {
-    final remaining =
-        CreateEventScreen.maxAttachments - _attachments.length;
+    final remaining = CreateEventScreen.maxAttachments - _attachments.length;
     if (remaining <= 0) return;
 
     final files = await _pickMultipleMediaFiles(remaining);
@@ -332,7 +345,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     // Upload all picked files concurrently.
     await Future.wait(
       files.map((file) {
-        final isVideo = file.mimeType?.startsWith('video/') == true ||
+        final isVideo =
+            file.mimeType?.startsWith('video/') == true ||
             file.name.toLowerCase().endsWith('.mp4') ||
             file.name.toLowerCase().endsWith('.mov') ||
             file.name.toLowerCase().endsWith('.avi') ||
@@ -569,6 +583,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           ? 'Fix the highlighted event details before continuing.'
           : null;
     });
+
+    _focusFirstInvalidField(
+      titleError: titleError,
+      descriptionError: descriptionError,
+      categoryError: categoryError,
+      timingError: timingError,
+      locationError: locationError,
+    );
 
     return titleError == null &&
         descriptionError == null &&
@@ -1267,95 +1289,98 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             ),
           ),
         ],
-        Container(
-          height: 160,
-          width: double.infinity,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.muted,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(child: _buildMiniMapPreview(location)),
-              IgnorePointer(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.mapPin,
-                          size: AppIconSizes.defaultSize,
-                          color: AppColors.surface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          location?.label.isNotEmpty == true
-                              ? location!.label.toUpperCase()
-                              : 'TAP TO PINPOINT',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.appTypography.overline.copyWith(
+        KeyedSubtree(
+          key: _locationFieldKey,
+          child: Container(
+            height: 160,
+            width: double.infinity,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(child: _buildMiniMapPreview(location)),
+                IgnorePointer(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
                             color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            LucideIcons.mapPin,
+                            size: AppIconSizes.defaultSize,
+                            color: AppColors.surface,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Text(
+                            location?.label.isNotEmpty == true
+                                ? location!.label.toUpperCase()
+                                : 'TAP TO PINPOINT',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.appTypography.overline.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: GestureDetector(
+                    key: const ValueKey('create_event_location_card'),
+                    onTap: _openLocationPicker,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: GestureDetector(
-                  key: const ValueKey('create_event_location_card'),
-                  onTap: _openLocationPicker,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Icon(
-                      LucideIcons.expand,
-                      size: AppIconSizes.defaultSize,
-                      color: AppColors.primary,
+                      child: const Icon(
+                        LucideIcons.expand,
+                        size: AppIconSizes.defaultSize,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.border),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppColors.border),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -1368,62 +1393,73 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       children: [
         _sectionLabel('Event Details'),
         const SizedBox(height: 8),
-        AppInput(
-          placeholder: 'Event Title (e.g. Midnight Pizza)',
-          controller: _titleController,
-          error: _titleError,
-          onChanged: _handleTitleChanged,
+        KeyedSubtree(
+          key: _titleFieldKey,
+          child: AppInput(
+            placeholder: 'Event Title (e.g. Midnight Pizza)',
+            controller: _titleController,
+            focusNode: _titleFocusNode,
+            error: _titleError,
+            onChanged: _handleTitleChanged,
+          ),
         ),
         const SizedBox(height: 16),
         _sectionLabel('About Event'),
         const SizedBox(height: 8),
-        AppTextArea(
-          placeholder:
-              'What is happening, who is it for, and what should people know?',
-          controller: _descriptionController,
-          minLines: 5,
-          maxLines: 5,
-          error: _descriptionError,
-          onChanged: _handleDescriptionChanged,
+        KeyedSubtree(
+          key: _descriptionFieldKey,
+          child: AppTextArea(
+            placeholder:
+                'What is happening, who is it for, and what should people know?',
+            controller: _descriptionController,
+            focusNode: _descriptionFocusNode,
+            minLines: 5,
+            maxLines: 5,
+            error: _descriptionError,
+            onChanged: _handleDescriptionChanged,
+          ),
         ),
         const SizedBox(height: 16),
-        GestureDetector(
-          key: const ValueKey('create_event_category_field'),
-          onTap: categories.isEmpty
-              ? null
-              : () => _openCategoryPicker(categories),
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _categoryError != null
-                    ? AppColors.error
-                    : AppColors.border,
+        KeyedSubtree(
+          key: _categoryFieldKey,
+          child: GestureDetector(
+            key: const ValueKey('create_event_category_field'),
+            onTap: categories.isEmpty
+                ? null
+                : () => _openCategoryPicker(categories),
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _categoryError != null
+                      ? AppColors.error
+                      : AppColors.border,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedCategory?.name ??
-                        (categories.isEmpty
-                            ? 'Loading categories...'
-                            : 'Select Category'),
-                    style: context.appTypography.labelMD.copyWith(
-                      color: _selectedCategory != null
-                          ? AppColors.primary
-                          : AppColors.mutedForeground,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _selectedCategory?.name ??
+                          (categories.isEmpty
+                              ? 'Loading categories...'
+                              : 'Select Category'),
+                      style: context.appTypography.labelMD.copyWith(
+                        color: _selectedCategory != null
+                            ? AppColors.primary
+                            : AppColors.mutedForeground,
+                      ),
                     ),
                   ),
-                ),
-                const Icon(
-                  LucideIcons.chevronDown,
-                  size: AppIconSizes.defaultSize,
-                  color: AppColors.mutedForeground,
-                ),
-              ],
+                  const Icon(
+                    LucideIcons.chevronDown,
+                    size: AppIconSizes.defaultSize,
+                    color: AppColors.mutedForeground,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1440,26 +1476,29 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           ),
         ],
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildDateTimeField(
-                key: const ValueKey('create_event_start_field'),
-                label: 'Starts',
-                value: _startAt,
-                onTap: () => _pickDateTime(isStart: true),
+        KeyedSubtree(
+          key: _timingFieldKey,
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildDateTimeField(
+                  key: const ValueKey('create_event_start_field'),
+                  label: 'Starts',
+                  value: _startAt,
+                  onTap: () => _pickDateTime(isStart: true),
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildDateTimeField(
-                key: const ValueKey('create_event_end_field'),
-                label: 'Ends',
-                value: _endAt,
-                onTap: () => _pickDateTime(isStart: false),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildDateTimeField(
+                  key: const ValueKey('create_event_end_field'),
+                  label: 'Ends',
+                  value: _endAt,
+                  onTap: () => _pickDateTime(isStart: false),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         if (_timingError != null) ...[
           const SizedBox(height: 8),

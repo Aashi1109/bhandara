@@ -90,6 +90,12 @@ const config: AppConfig = {
     appName: 'zentry',
     serviceName: 'zentry-main-server',
   },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@zentry.app',
+    fromName: process.env.RESEND_FROM_NAME || 'Zentry',
+  },
+  supabaseServiceRole: process.env.SUPABASE_SERVICE_ROLE_KEY,
   sentry: {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',

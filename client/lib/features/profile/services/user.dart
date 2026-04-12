@@ -127,6 +127,15 @@ class UserService extends BaseService {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>?> getUserImpact(String userId) async {
+    try {
+      final response = await _dio.get(Api.userImpact(userId));
+      return response.data['data'] as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 final userService = UserService();

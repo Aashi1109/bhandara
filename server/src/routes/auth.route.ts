@@ -9,6 +9,9 @@ import {
   deleteSession,
   signUp,
   signInWithIdToken,
+  forgotPassword,
+  verifyForgotPasswordOTP,
+  resetPassword,
 } from '@/features/auth/controller';
 import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
 
@@ -129,6 +132,90 @@ router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHand
  *               $ref: '#/components/schemas/AuthResponse'
  */
 router.post('/oauth/signin-with-id-token', asyncHandler(signInWithIdToken));
+
+/**
+ * @openapi
+ * /auth/forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Request a password reset OTP
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP sent (response is the same regardless of whether the email exists)
+ */
+router.post(
+  '/forgot-password',
+  validateRequest('AUTH_FORGOT_PASSWORD', schemas.forgotPassword),
+  asyncHandler(forgotPassword),
+);
+
+/**
+ * @openapi
+ * /auth/forgot-password/verify:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify the OTP and receive a short-lived reset token
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Returns a one-time reset token
+ */
+router.post(
+  '/forgot-password/verify',
+  validateRequest('AUTH_VERIFY_OTP', schemas.verifyOTP),
+  asyncHandler(verifyForgotPasswordOTP),
+);
+
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Set a new password using the reset token
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ */
+router.post(
+  '/reset-password',
+  validateRequest('AUTH_RESET_PASSWORD', schemas.resetPassword),
+  asyncHandler(resetPassword),
+);
 
 router.use([sessionParser, userParser]);
 /**

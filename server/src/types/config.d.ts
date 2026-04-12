@@ -63,6 +63,12 @@ export interface AppConfig {
   infrastructure: InfrastructureConfig;
   sentry: SentryConfig;
   otel: OTelConfig;
+  resend: {
+    apiKey: string | undefined;
+    fromEmail: string;
+    fromName: string;
+  };
+  supabaseServiceRole: string | undefined;
 }
 
 export interface SentryConfig {

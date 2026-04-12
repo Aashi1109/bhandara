@@ -9,6 +9,7 @@ import {
   getUserInterests,
   getUserSettings,
   updateUserSettings,
+  getUserImpact,
 } from '@/features/users/controller';
 import { validateUserUpdate, validateUserSettings } from '@/features/users/validation';
 import { getMyUpdates, getUserActivity, markAllUpdatesAsRead, markUpdateAsRead } from '@/features/activity/controller';
@@ -98,6 +99,7 @@ router.patch('/me/updates/:activityId/read', asyncHandler(markUpdateAsRead));
 router.get('/:id/activity', paginationParser, asyncHandler(getUserActivity));
 router.get('/:id/achievements', asyncHandler(getUserAchievements));
 router.get('/:id/achievements/progress', asyncHandler(getUserAchievementProgress));
+router.get('/:id/impact', asyncHandler(getUserImpact));
 
 router.get('/:id/settings', asyncHandler(getUserSettings));
 router.patch('/:id/settings', validateUserSettings, asyncHandler(updateUserSettings));

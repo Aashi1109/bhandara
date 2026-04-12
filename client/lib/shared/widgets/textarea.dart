@@ -16,6 +16,8 @@ class AppTextArea extends StatelessWidget {
     this.hasBorder = true,
     this.minLines = 4,
     this.maxLines,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   final String? label;
@@ -29,6 +31,8 @@ class AppTextArea extends StatelessWidget {
   final bool hasBorder;
   final int minLines;
   final int? maxLines;
+  final FocusNode? focusNode;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +67,8 @@ class AppTextArea extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
+            autofocus: autofocus,
             onChanged: onChanged,
             minLines: minLines,
             maxLines: maxLines,

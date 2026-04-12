@@ -16,6 +16,7 @@ import '../../../shared/utils/error.dart';
 import '../../../shared/widgets/password_requirements.dart';
 
 import './auth.dart';
+import './forgot_password.dart';
 import '../../onboarding/screens/profile_setup.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -265,13 +266,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           loadable: !isNewUser,
                         ),
                         const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () {},
-                          child: Text(
-                            'FORGOT PASSWORD?',
-                            style: typography.captionSM,
+                        if (!isNewUser)
+                          TextButton(
+                            onPressed: () => context.push(ForgotPasswordScreen.routePath),
+                            child: Text(
+                              'FORGOT PASSWORD?',
+                              style: typography.captionSM,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),

@@ -8,6 +8,9 @@ class Api {
   static const String sessions = '/auth/sessions';
 
   static String deleteSession(String sessionId) => '/auth/session/$sessionId';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String verifyResetOTP = '/auth/forgot-password/verify';
+  static const String resetPassword = '/auth/reset-password';
 
   // User endpoints
   static const String users = '/users';
@@ -26,6 +29,7 @@ class Api {
       '/users/$userId/achievements';
   static String userAchievementProgress(String userId) =>
       '/users/$userId/achievements/progress';
+  static String userImpact(String userId) => '/users/$userId/impact';
   static const String myUpdates = '/users/me/updates';
   static const String markAllMyUpdatesRead = '/users/me/updates/read-all';
   static String markMyUpdateRead(String activityId) =>

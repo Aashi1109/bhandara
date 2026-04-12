@@ -75,9 +75,7 @@ class _LocationSettingsScreenState
   Timer? _debounce;
   bool _isSearching = false;
   bool _didHydrate = false;
-  bool _isResolvingDraggedLocation = false;
   bool _isSearchOpen = false;
-  bool _isDraggingMarker = false;
 
   Set<Factory<OneSequenceGestureRecognizer>> get _mapGestureRecognizers => {
     Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
@@ -308,24 +306,8 @@ class _LocationSettingsScreenState
     await _moveToLocation(target);
   }
 
-  Future<void> _handleMapIdle() async {
-    if (_isResolvingDraggedLocation ||
-        _isDraggingMarker ||
-        widget.useStaticMapPlaceholder) {
-      return;
-    }
-
-    _isResolvingDraggedLocation = true;
-    try {
-      await _resolveLocationLabel(_cameraTarget);
-    } finally {
-      _isResolvingDraggedLocation = false;
-    }
-  }
-
   Future<void> _handleMarkerDragEnd(LatLng target) async {
     setState(() {
-      _isDraggingMarker = false;
       _selectedLocation = target;
       _cameraTarget = target;
     });
@@ -476,11 +458,6 @@ class _LocationSettingsScreenState
                                           anchor: const Offset(0.5, 1),
                                           icon: _selectedLocationMarkerIcon!,
                                           draggable: true,
-                                          onDragStart: (_) {
-                                            setState(() {
-                                              _isDraggingMarker = true;
-                                            });
-                                          },
                                           onDragEnd: (target) {
                                             _handleMarkerDragEnd(target);
                                           },
@@ -501,7 +478,6 @@ class _LocationSettingsScreenState
                                       _cameraTarget = position.target;
                                     },
                                     onTap: _handleMapTap,
-                                    onCameraIdle: _handleMapIdle,
                                   ),
                           ),
                         ),

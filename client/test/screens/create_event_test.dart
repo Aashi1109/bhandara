@@ -100,6 +100,22 @@ void main() {
     expect(createCalls, 0);
   });
 
+  testWidgets('focuses title when submit fails validation', (tester) async {
+    await _pumpCreateScreen(tester, user: testUser);
+
+    await _dragLaunch(tester);
+    await _settle(tester);
+
+    expect(find.text('Please enter an event title.'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byType(TextField).first)
+          .focusNode
+          ?.hasFocus,
+      isTrue,
+    );
+  });
+
   testWidgets('keeps about-event order and submits typed ISO datetimes', (
     tester,
   ) async {

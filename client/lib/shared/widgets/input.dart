@@ -56,6 +56,8 @@ class AppInput extends StatefulWidget {
     this.onValidationError,
     this.maxLines = 1,
     this.minLines,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   final AppInputType type;
@@ -76,6 +78,8 @@ class AppInput extends StatefulWidget {
   final ValueChanged<String?>? onValidationError;
   final int? maxLines;
   final int? minLines;
+  final FocusNode? focusNode;
+  final bool autofocus;
 
   @override
   State<AppInput> createState() => _AppInputState();
@@ -238,6 +242,8 @@ class _AppInputState extends State<AppInput> {
               Expanded(
                 child: TextField(
                   controller: widget.controller,
+                  focusNode: widget.focusNode,
+                  autofocus: widget.autofocus,
                   onChanged: (value) {
                     _validate(value);
                     if (widget.onChanged != null) {
@@ -252,9 +258,7 @@ class _AppInputState extends State<AppInput> {
                           : null),
                   maxLines: widget.maxLines,
                   minLines: widget.minLines,
-                  style: typography.bodyMD.copyWith(
-                    color: AppColors.primary,
-                  ),
+                  style: typography.bodyMD.copyWith(color: AppColors.primary),
                   decoration: InputDecoration(
                     hintText: widget.placeholder,
                     hintStyle: typography.bodyMD.copyWith(
@@ -280,9 +284,7 @@ class _AppInputState extends State<AppInput> {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               displayError,
-              style: typography.overline.copyWith(
-                color: AppColors.error,
-              ),
+              style: typography.overline.copyWith(color: AppColors.error),
             ),
           ),
         ],
