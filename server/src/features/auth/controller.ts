@@ -17,7 +17,7 @@ import {
   verifyOTP,
   consumeResetToken,
 } from './otp-helpers';
-import { sendPasswordResetOTPEmail } from '@/services/email';
+import { sendPasswordResetOTPEmail, sendPasswordResetSuccessEmail } from '@/services/email';
 
 const authService = new AuthService();
 const userService = new UserService();
@@ -295,6 +295,8 @@ export const resetPassword = async (req: Request, res: Response) => {
 
   const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(sbUser.id, { password });
   if (updateError) throw new BadRequestError(updateError.message);
+
+  await sendPasswordResetSuccessEmail(email);
 
   return res.status(200).json({ data: 'Password reset successfully' });
 };

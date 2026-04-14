@@ -4,9 +4,16 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
 
 class AppActionSheet extends StatelessWidget {
-  const AppActionSheet({super.key, required this.children});
+  const AppActionSheet({
+    super.key,
+    required this.children,
+    this.title,
+    this.description,
+  });
 
   final List<Widget> children;
+  final String? title;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +39,38 @@ class AppActionSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              if (title != null) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title!,
+                        style: context.appTypography.titleLGStrong.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (description != null) ...[
+                if (title != null) const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        description!,
+                        style: context.appTypography.bodyBase.copyWith(
+                          color: AppColors.mutedForeground,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (title != null || description != null)
+                const SizedBox(height: 20),
               ...children,
             ],
           ),
@@ -48,12 +87,14 @@ class AppActionSheetItem extends StatelessWidget {
     required this.title,
     this.subtitle,
     required this.onTap,
+    this.isDestructive = false,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback onTap;
+  final bool isDestructive;
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +108,15 @@ class AppActionSheetItem extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: isDestructive
+                ? AppColors.error.withValues(alpha: 0.06)
+                : AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(
+              color: isDestructive
+                  ? AppColors.error.withValues(alpha: 0.18)
+                  : AppColors.border,
+            ),
           ),
           child: Row(
             children: [
@@ -77,13 +124,15 @@ class AppActionSheetItem extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.muted,
+                  color: isDestructive
+                      ? AppColors.error.withValues(alpha: 0.1)
+                      : AppColors.muted,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
                   size: AppIconSizes.defaultSize,
-                  color: AppColors.primary,
+                  color: isDestructive ? AppColors.error : AppColors.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -94,7 +143,9 @@ class AppActionSheetItem extends StatelessWidget {
                     Text(
                       title,
                       style: typography.titleXSStrong.copyWith(
-                        color: AppColors.primary,
+                        color: isDestructive
+                            ? AppColors.error
+                            : AppColors.primary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -102,17 +153,21 @@ class AppActionSheetItem extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: typography.bodySM.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: isDestructive
+                              ? AppColors.error.withValues(alpha: 0.8)
+                              : AppColors.mutedForeground,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 LucideIcons.chevronRight,
                 size: AppIconSizes.defaultSize,
-                color: AppColors.mutedForeground,
+                color: isDestructive
+                    ? AppColors.error.withValues(alpha: 0.8)
+                    : AppColors.mutedForeground,
               ),
             ],
           ),

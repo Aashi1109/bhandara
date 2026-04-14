@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
@@ -5,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../config.dart';
 import '../services/maps/map_manager.dart';
+import '../services/maps/google_map_view_options.dart';
 import '../services/maps/google_maps_web_loader.dart';
 import '../theme/theme.dart';
 
@@ -102,6 +105,16 @@ class _AppMapViewState extends State<AppMapView> {
   late final Future<void> _webMapsLoader = kIsWeb
       ? ensureGoogleMapsWebSdkLoaded(AppConfig.googleMapsApiKey)
       : Future<void>.value();
+  late final GoogleMapViewOptions _mapViewOptions =
+      GoogleMapViewOptions.resolve(
+        isWeb: kIsWeb,
+        platform: defaultTargetPlatform,
+        configuredWebMapId: AppConfig.googleMapsWebMapId,
+        configuredAndroidMapId: AppConfig.googleMapsAndroidMapId,
+        configuredIosMapId: AppConfig.googleMapsIosMapId,
+        requestedStyle: widget.mapStyle,
+        fallbackStyle: widget.manager.nativeMapStyle,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -158,23 +171,37 @@ class _AppMapViewState extends State<AppMapView> {
         myLocationButtonEnabled: widget.myLocationButtonEnabled,
         myLocationEnabled: widget.myLocationEnabled,
         padding: widget.padding,
-        style: widget.mapStyle ?? widget.manager.nativeMapStyle,
+        style: _mapViewOptions.style,
+        mapId: _mapViewOptions.mapId,
         gestureRecognizers: widget.gestureRecognizers,
         onTap: widget.onTap,
         onCameraMoveStarted: widget.onCameraMoveStarted,
         onCameraMove: widget.onCameraMove,
         onCameraIdle: widget.onCameraIdle,
         onMapCreated: (controller) {
-          if (kIsWeb) {
-            final style = widget.mapStyle ?? widget.manager.nativeMapStyle;
-            if (style.isNotEmpty) {
-              // ignore: deprecated_member_use
-              controller.setMapStyle(style);
-            }
-          }
-          widget.onMapReady?.call(controller);
+          unawaited(_handleMapCreated(controller));
         },
       ),
     );
+  }
+
+  Future<void> _handleMapCreated(GoogleMapController controller) async {
+    try {
+      if (_mapViewOptions.shouldReapplyStyleOnWeb) {
+        // The web plugin supports constructor style config, but reapplying once
+        // the JS map is ready avoids cases where the initial style is dropped.
+        // ignore: deprecated_member_use
+        await controller.setMapStyle(_mapViewOptions.style);
+        final styleError = await controller.getStyleError();
+        if (styleError != null && styleError.isNotEmpty) {
+          debugPrint('Google Maps web style error: $styleError');
+        }
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed to apply Google Maps web style: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      widget.onMapReady?.call(controller);
+    }
   }
 }

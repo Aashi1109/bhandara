@@ -65,3 +65,6 @@ client/ios/
 
 # Infra
 infra/data
+
+.claude
+.claude-flow

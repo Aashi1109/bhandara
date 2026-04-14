@@ -5,6 +5,7 @@ import '../../../config.dart';
 import './map_models.dart';
 import './map_provider_service.dart';
 import './map_provider_type.dart';
+import './google_maps_styles.dart';
 
 class GoogleMapsService implements MapProviderService {
   GoogleMapsService({Dio? dio}) : _dio = dio ?? Dio();
@@ -12,78 +13,6 @@ class GoogleMapsService implements MapProviderService {
   final Dio _dio;
 
   static const String _apiKey = AppConfig.googleMapsApiKey;
-
-  static const String _nativeStyle = '''
-[
-  {
-    "featureType": "administrative",
-    "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": 6}]
-  },
-  {
-    "featureType": "administrative.province",
-    "elementType": "all",
-    "stylers": [{"visibility": "off"}]
-  },
-  {
-    "featureType": "landscape",
-    "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": 42}, {"visibility": "on"}]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "all",
-    "stylers": [
-      {"saturation": -100},
-      {"lightness": 28},
-      {"visibility": "simplified"}
-    ]
-  },
-  {
-    "featureType": "road",
-    "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": 8}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "all",
-    "stylers": [
-      {"saturation": -100},
-      {"lightness": -10},
-      {"visibility": "simplified"}
-    ]
-  },
-  {
-    "featureType": "road.arterial",
-    "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": -2}]
-  },
-  {
-    "featureType": "road.local",
-    "elementType": "all",
-    "stylers": [{"saturation": -100}, {"lightness": 14}]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "all",
-    "stylers": [
-      {"saturation": -100},
-      {"lightness": 18},
-      {"visibility": "simplified"}
-    ]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{"saturation": -100}, {"lightness": 16}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels",
-    "stylers": [{"saturation": -100}, {"lightness": 4}]
-  }
-]
-''';
 
   static const List<String> _staticMapStyles = [
     'feature:all|element:labels.icon|visibility:off',
@@ -105,7 +34,7 @@ class GoogleMapsService implements MapProviderService {
   MapProviderType get type => MapProviderType.google;
 
   @override
-  String get nativeMapStyle => _nativeStyle;
+  String get nativeMapStyle => googleMapsLegacyNativeStyle;
 
   @override
   Future<MapAddress?> getAddressFromCoordinates({
@@ -251,8 +180,7 @@ class GoogleMapsService implements MapProviderService {
       'style': _staticMapStyles,
     };
     if (showMarker) {
-      final markerValue =
-          customMarkerUrl == null || customMarkerUrl.isEmpty
+      final markerValue = customMarkerUrl == null || customMarkerUrl.isEmpty
           ? '$latitude,$longitude'
           : 'anchor:bottom|icon:$customMarkerUrl|$latitude,$longitude';
       params['markers'] = [markerValue];

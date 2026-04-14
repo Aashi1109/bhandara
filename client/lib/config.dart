@@ -47,6 +47,15 @@ class AppConfig {
   static const String googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
   );
+  static const String googleMapsWebMapId = String.fromEnvironment(
+    'GOOGLE_MAPS_WEB_MAP_ID',
+  );
+  static const String googleMapsAndroidMapId = String.fromEnvironment(
+    'GOOGLE_MAPS_ANDROID_MAP_ID',
+  );
+  static const String googleMapsIosMapId = String.fromEnvironment(
+    'GOOGLE_MAPS_IOS_MAP_ID',
+  );
 
   // ── Mapbox ───────────────────────────────────────────
   static const String mapboxAccessToken = String.fromEnvironment(

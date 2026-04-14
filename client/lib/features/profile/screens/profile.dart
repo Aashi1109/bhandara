@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../shared/constants/socket_events.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/button.dart';
+import '../../../shared/widgets/action_sheet.dart';
 import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/bottom_nav.dart';
 import '../../events/widgets/media_preview.dart';
@@ -455,155 +456,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showEditPhotoOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (sheetContext) {
-        final typography = sheetContext.appTypography;
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              16,
-              20,
-              MediaQuery.of(sheetContext).padding.bottom + 20,
+        return AppActionSheet(
+          title: 'Profile Photo',
+          description: 'Manage how your profile photo appears across the app.',
+          children: [
+            AppActionSheetItem(
+              title: 'View Photo',
+              icon: LucideIcons.eye,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _viewPhoto();
+              },
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Text(
-                      'Profile Photo',
-                      style: typography.titleLGStrong.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Manage how your profile photo appears across the app.',
-                        style: typography.bodyBase.copyWith(
-                          color: AppColors.mutedForeground,
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _sheetItem(
-                  label: 'View Photo',
-                  icon: LucideIcons.eye,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _viewPhoto();
-                  },
-                ),
-                const SizedBox(height: 12),
-                _sheetItem(
-                  label: 'Change Photo',
-                  icon: LucideIcons.image,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _changePhoto();
-                  },
-                ),
-                const SizedBox(height: 12),
-                _sheetItem(
-                  label: 'Remove Photo',
-                  icon: LucideIcons.trash2,
-                  isDestructive: true,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _removePhoto();
-                  },
-                ),
-              ],
+            const SizedBox(height: 12),
+            AppActionSheetItem(
+              title: 'Change Photo',
+              icon: LucideIcons.image,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _changePhoto();
+              },
             ),
-          ),
+            const SizedBox(height: 12),
+            AppActionSheetItem(
+              title: 'Remove Photo',
+              icon: LucideIcons.trash2,
+              isDestructive: true,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _removePhoto();
+              },
+            ),
+          ],
         );
       },
-    );
-  }
-
-  Widget _sheetItem({
-    required String label,
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
-    final typography = context.appTypography;
-    return Material(
-      color: AppColors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDestructive
-                ? AppColors.error.withValues(alpha: 0.06)
-                : AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDestructive
-                  ? AppColors.error.withValues(alpha: 0.18)
-                  : AppColors.border,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDestructive
-                      ? AppColors.error.withValues(alpha: 0.1)
-                      : AppColors.muted,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  icon,
-                  size: AppIconSizes.defaultSize,
-                  color: isDestructive ? AppColors.error : AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: typography.titleXSStrong.copyWith(
-                    color: isDestructive ? AppColors.error : AppColors.primary,
-                  ),
-                ),
-              ),
-              Icon(
-                LucideIcons.chevronRight,
-                size: AppIconSizes.defaultSize,
-                color: isDestructive
-                    ? AppColors.error.withValues(alpha: 0.8)
-                    : AppColors.mutedForeground,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -921,19 +810,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               height: 48,
                               color: AppColors.border,
                             ),
-                            _stat(
-                              'Rating',
-                              () {
-                                final avg =
-                                    (overview?.impactStats?['avgRating']
-                                            as num?)
-                                        ?.toDouble() ??
-                                    0.0;
-                                return avg > 0
-                                    ? avg.toStringAsFixed(1)
-                                    : '—';
-                              }(),
-                            ),
+                            _stat('Rating', () {
+                              final avg =
+                                  (overview?.impactStats?['avgRating'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
+                              return avg > 0 ? avg.toStringAsFixed(1) : '—';
+                            }()),
                           ],
                         ),
                 ),
@@ -1071,50 +954,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: graphEvents.asMap().entries.map((entry) {
-                          final i = entry.key;
-                          final e = entry.value;
-                          final views =
-                              (e['viewCount'] as num?)?.toInt() ?? 0;
-                          final barHeight = maxViews == 0
-                              ? minBarHeight
-                              : minBarHeight +
-                                  (views / maxViews) *
-                                      (graphHeight - minBarHeight);
-                          final isLast = i == graphEvents.length - 1;
+                            final i = entry.key;
+                            final e = entry.value;
+                            final views =
+                                (e['viewCount'] as num?)?.toInt() ?? 0;
+                            final barHeight = maxViews == 0
+                                ? minBarHeight
+                                : minBarHeight +
+                                      (views / maxViews) *
+                                          (graphHeight - minBarHeight);
+                            final isLast = i == graphEvents.length - 1;
 
-                          String label = '';
-                          final rawStart = e['startTime'];
-                          if (rawStart != null) {
-                            try {
-                              final dt = DateTime.parse(rawStart.toString());
-                              label = DateFormat('MMM d').format(dt);
-                            } catch (_) {
-                              label = '';
+                            String label = '';
+                            final rawStart = e['startTime'];
+                            if (rawStart != null) {
+                              try {
+                                final dt = DateTime.parse(rawStart.toString());
+                                label = DateFormat('MMM d').format(dt);
+                              } catch (_) {
+                                label = '';
+                              }
                             }
-                          }
 
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: barHeight,
-                                decoration: BoxDecoration(
-                                  color: isLast
-                                      ? AppColors.primary
-                                      : AppColors.border,
-                                  borderRadius: BorderRadius.circular(8),
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: barHeight,
+                                  decoration: BoxDecoration(
+                                    color: isLast
+                                        ? AppColors.primary
+                                        : AppColors.border,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                label,
-                                style: typography.labelSM.copyWith(
-                                  color: AppColors.mutedForeground,
+                                const SizedBox(height: 8),
+                                Text(
+                                  label,
+                                  style: typography.labelSM.copyWith(
+                                    color: AppColors.mutedForeground,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          );
+                              ],
+                            );
                           }).toList(),
                         ),
                       );

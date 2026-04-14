@@ -83,5 +83,17 @@ final results = await mapManager.searchPlaces(
 Provider keys are read inside each service from env:
 
 - Google: `GOOGLE_MAPS_API_KEY`
+- Google web cloud styling: `GOOGLE_MAPS_WEB_MAP_ID` (optional, preferred on web)
+- Google Android cloud styling: `GOOGLE_MAPS_ANDROID_MAP_ID` (optional, preferred on Android)
+- Google iOS cloud styling: `GOOGLE_MAPS_IOS_MAP_ID` (optional, preferred on iOS)
 - Mapbox: `MAPBOX_ACCESS_TOKEN` (`MAPBOX_STYLE_ID` optional)
 - Backend: `API_HOST` (`API_PORT` and `API_SCHEME` optional)
+
+This app supports two Google Maps styling paths:
+
+- Preferred: set the platform map ID (`GOOGLE_MAPS_WEB_MAP_ID`, `GOOGLE_MAPS_ANDROID_MAP_ID`, `GOOGLE_MAPS_IOS_MAP_ID`) and manage the style in Google Cloud
+- Fallback: omit the platform map ID and the app will use the local legacy JSON style
+
+Do not use both on the same platform map. When a platform `mapId` is present,
+the app intentionally skips local JSON styling and lets cloud styling own the
+map appearance.
