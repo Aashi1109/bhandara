@@ -60,9 +60,12 @@ bool matchesExploreFilters(
 }) {
   final resolvedNow = now ?? DateTime.now();
   final status = resolveEventStatus(event, now: resolvedNow);
-  final matchesQuickStatus =
-      filters.quickStatus == EventStatusValue.all ||
-      status == filters.quickStatus;
+  // "All" tab only shows active (upcoming + ongoing) events, consistent with
+  // the status filter sent to the API.
+  final matchesQuickStatus = filters.quickStatus == EventStatusValue.all
+      ? (status == EventStatusValue.upcoming ||
+          status == EventStatusValue.ongoing)
+      : status == filters.quickStatus;
   if (!matchesQuickStatus) {
     return false;
   }

@@ -4,7 +4,12 @@ const loginSchema = {
   type: 'object',
   properties: {
     email: { type: 'string', format: 'email', errorMessage: 'Valid email is required' },
-    password: { type: 'string', minLength: 6, errorMessage: 'Password must be at least 6 characters long' },
+    password: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 128,
+      errorMessage: 'Password must be at least 8 characters long',
+    },
   },
   required: ['email', 'password'],
   additionalProperties: false,
@@ -14,7 +19,12 @@ const signupSchema = {
   type: 'object',
   properties: {
     email: { type: 'string', format: 'email', errorMessage: 'Valid email is required' },
-    password: { type: 'string', minLength: 6, errorMessage: 'Password must be at least 6 characters long' },
+    password: {
+      type: 'string',
+      minLength: 8,
+      maxLength: 128,
+      errorMessage: 'Password must be at least 8 characters long',
+    },
     name: { type: 'string', minLength: 2, errorMessage: 'Name is required (min 2 characters)' },
     location: { type: 'object', additionalProperties: true },
     gender: { type: ['string', 'null'], enum: ['male', 'female', 'other'], errorMessage: 'Valid gender is required' },
@@ -54,6 +64,7 @@ const resetPasswordSchema = {
     password: {
       type: 'string',
       minLength: 8,
+      maxLength: 128,
       errorMessage: 'Password must be at least 8 characters',
     },
   },
@@ -61,8 +72,23 @@ const resetPasswordSchema = {
   additionalProperties: false,
 };
 
+const signInWithIdTokenSchema = {
+  type: 'object',
+  properties: {
+    token: { type: 'string', minLength: 1, maxLength: 4096 },
+    code: { type: 'string', minLength: 1, maxLength: 4096 },
+    codeVerifier: { type: 'string', minLength: 1, maxLength: 4096 },
+    redirectUri: { type: 'string', format: 'uri', maxLength: 2048 },
+  },
+  additionalProperties: false,
+};
+
 export const validateLogin = validateSchema('AUTH_LOGIN', loginSchema);
 export const validateSignup = validateSchema('AUTH_SIGNUP', signupSchema);
+export const validateSignInWithIdToken = validateSchema('AUTH_SIGN_IN_WITH_ID_TOKEN', signInWithIdTokenSchema);
+export const validateForgotPassword = validateSchema('AUTH_FORGOT_PASSWORD', forgotPasswordSchema);
+export const validateVerifyOTP = validateSchema('AUTH_VERIFY_OTP', verifyOTPSchema);
+export const validateResetPassword = validateSchema('AUTH_RESET_PASSWORD', resetPasswordSchema);
 
 export const schemas = {
   login: loginSchema,
@@ -70,4 +96,5 @@ export const schemas = {
   forgotPassword: forgotPasswordSchema,
   verifyOTP: verifyOTPSchema,
   resetPassword: resetPasswordSchema,
+  signInWithIdToken: signInWithIdTokenSchema,
 };

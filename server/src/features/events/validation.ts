@@ -262,4 +262,11 @@ const validateEventUpdate = <
     return callback(validData);
   });
 
-export { validateEventCreateWithTiming as validateEventCreate, validateEventUpdate, eventSchema, eventUpdateSchema };
+export {
+  validateEventCreate as validateEventCreateBody,
+  validateEventCreateWithTiming as validateEventCreate,
+  validateEventUpdateBase as validateEventUpdateBody,
+  validateEventUpdate,
+  eventSchema,
+  eventUpdateSchema,
+};

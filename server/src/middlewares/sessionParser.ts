@@ -8,7 +8,7 @@ import type { NextFunction, Request, Response } from 'express';
 const authService = new AuthService();
 
 const sessionParser = async (req: Request, res: Response, next: NextFunction) => {
-  const jwtCookie = req.cookies?.[config.sessionCookie.keyName];
+  const jwtCookie = req.signedCookies?.[config.sessionCookie.keyName] ?? req.cookies?.[config.sessionCookie.keyName];
 
   if (!jwtCookie) throw new UnauthorizedError(`Missing or invalid token`);
 

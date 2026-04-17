@@ -95,6 +95,100 @@ void main() {
       expect(find.text('Viewer'), findsOneWidget);
     },
   );
+
+  testWidgets('impact overview shows tooltips only for points with stats', (
+    tester,
+  ) async {
+    const userId = 'user-1';
+    final user = User(id: userId, email: 'viewer@example.com', name: 'Viewer');
+    final router = GoRouter(
+      initialLocation: ProfileScreen.routePath,
+      routes: [
+        GoRoute(
+          path: ProfileScreen.routePath,
+          builder: (context, state) =>
+              ProfileScreen(currentUserLoader: () async => user),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userProfileProvider.overrideWith(() => _NullUserProfile()),
+          profileOverviewProvider(userId: userId).overrideWith(
+            (ref) async => ProfileOverview(
+              myEvents: const [],
+              achievements: const [],
+              recentActivity: const [],
+              impactStats: {
+                'totalViews': 36,
+                'avgRating': 4.8,
+                'events': [
+                  {
+                    'id': 'event-1',
+                    'name': 'Spring Supper',
+                    'startTime': '2026-04-08T18:00:00.000Z',
+                    'viewCount': 24,
+                    'ratingAverage': 4.8,
+                    'ratingCount': 5,
+                  },
+                  {
+                    'id': 'event-2',
+                    'name': 'Quiet Brunch',
+                    'startTime': '2026-04-09T18:00:00.000Z',
+                    'viewCount': 0,
+                    'ratingAverage': 0,
+                    'ratingCount': 0,
+                  },
+                  {
+                    'id': 'event-3',
+                    'name': 'Rooftop Dinner',
+                    'startTime': '2026-04-10T18:00:00.000Z',
+                    'viewCount': 12,
+                    'ratingAverage': 4.6,
+                    'ratingCount': 3,
+                  },
+                ],
+              },
+            ),
+          ),
+        ],
+        child: MaterialApp.router(theme: AppTheme.theme, routerConfig: router),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Tooltip &&
+            widget.message != null &&
+            widget.message!.contains('Spring Supper'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Tooltip &&
+            widget.message != null &&
+            widget.message!.contains('Rooftop Dinner'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Tooltip &&
+            widget.message != null &&
+            widget.message!.contains('Quiet Brunch'),
+      ),
+      findsNothing,
+    );
+  });
 }
 
 class _StaticUserProfile extends UserProfile {

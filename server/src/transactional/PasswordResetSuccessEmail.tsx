@@ -84,14 +84,14 @@ export const PasswordResetSuccessEmail = ({
         <Section style={cardsSection}>
           {/* Card 1 */}
           <Section style={card}>
-            <Text style={cardIcon}>security</Text>
+            <Text style={cardIcon}>✦</Text>
             <Text style={cardTitle}>Account Security</Text>
             <Text style={cardDesc}>Your account remains protected with industry-standard encryption protocols.</Text>
           </Section>
 
           {/* Card 2 */}
           <Section style={card}>
-            <Text style={cardIcon}>notifications</Text>
+            <Text style={cardIcon}>◎</Text>
             <Text style={cardTitle}>Wasn't you?</Text>
             <Text style={cardDesc}>
               If you didn't perform this action, please contact our security team immediately at{' '}

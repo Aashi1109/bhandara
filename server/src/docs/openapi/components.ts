@@ -430,6 +430,292 @@
  *             $ref: '#/components/schemas/Event'
  *         pagination:
  *           $ref: '#/components/schemas/PaginationMeta'
+ *     SearchResultItem:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         type:
+ *           type: string
+ *           enum: [event]
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *           nullable: true
+ *         imageUrl:
+ *           type: string
+ *           nullable: true
+ *         metadata:
+ *           type: object
+ *           properties:
+ *             status:
+ *               type: string
+ *             type:
+ *               type: string
+ *             location:
+ *               type: object
+ *               nullable: true
+ *             timings:
+ *               type: object
+ *               nullable: true
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *         relevanceScore:
+ *           type: number
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     PaginatedSearchResults:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SearchResultItem'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     SearchOptionItem:
+ *       type: object
+ *       properties:
+ *         value:
+ *           type: string
+ *         label:
+ *           type: string
+ *       required: [value, label]
+ *     SearchOptions:
+ *       type: object
+ *       properties:
+ *         types:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SearchOptionItem'
+ *         eventStatus:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SearchOptionItem'
+ *         eventType:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SearchOptionItem'
+ *     ActivityItem:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         type:
+ *           type: string
+ *         entityType:
+ *           type: string
+ *           enum: [event, message, thread, reaction, achievement, user, system]
+ *         entityId:
+ *           type: string
+ *         payload:
+ *           type: object
+ *         visibility:
+ *           type: string
+ *           enum: [public, private]
+ *         readAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         actor:
+ *           allOf:
+ *             - $ref: '#/components/schemas/PublicUser'
+ *           nullable: true
+ *         recipient:
+ *           allOf:
+ *             - $ref: '#/components/schemas/PublicUser'
+ *           nullable: true
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     PaginatedActivities:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ActivityItem'
+ *         pagination:
+ *           $ref: '#/components/schemas/PaginationMeta'
+ *     UserAchievement:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         userId:
+ *           type: string
+ *         key:
+ *           type: string
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         icon:
+ *           type: string
+ *           nullable: true
+ *         metadata:
+ *           type: object
+ *         unlockedAt:
+ *           type: string
+ *           format: date-time
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     AchievementDefinition:
+ *       type: object
+ *       properties:
+ *         key:
+ *           type: string
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         icon:
+ *           type: string
+ *           nullable: true
+ *         type:
+ *           type: string
+ *           enum: [count, streak]
+ *         metric:
+ *           type: string
+ *         threshold:
+ *           type: integer
+ *       required: [key, title, description, type, metric, threshold]
+ *     UserAchievementsPayload:
+ *       type: object
+ *       properties:
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/UserAchievement'
+ *         definitions:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/AchievementDefinition'
+ *     AchievementProgress:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         userId:
+ *           type: string
+ *         metrics:
+ *           type: object
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     UserSettings:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         userId:
+ *           type: string
+ *         notifications:
+ *           type: object
+ *           properties:
+ *             events:
+ *               type: boolean
+ *             chat:
+ *               type: boolean
+ *             replies:
+ *               type: boolean
+ *             reminders:
+ *               type: boolean
+ *         privacy:
+ *           type: object
+ *           properties:
+ *             shareLocation:
+ *               type: boolean
+ *         onboarding:
+ *           type: object
+ *           properties:
+ *             hasOnboarded:
+ *               type: boolean
+ *         interests:
+ *           type: array
+ *           items:
+ *             type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     UserSettingsUpdateRequest:
+ *       type: object
+ *       properties:
+ *         notifications:
+ *           type: object
+ *           properties:
+ *             events:
+ *               type: boolean
+ *             chat:
+ *               type: boolean
+ *             replies:
+ *               type: boolean
+ *             reminders:
+ *               type: boolean
+ *         privacy:
+ *           type: object
+ *           properties:
+ *             shareLocation:
+ *               type: boolean
+ *         onboarding:
+ *           type: object
+ *           properties:
+ *             hasOnboarded:
+ *               type: boolean
+ *         interests:
+ *           type: array
+ *           items:
+ *             type: string
+ *     UserImpactEvent:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         startTime:
+ *           oneOf:
+ *             - type: string
+ *               format: date-time
+ *             - type: object
+ *         viewCount:
+ *           type: integer
+ *         ratingAverage:
+ *           type: number
+ *         ratingCount:
+ *           type: integer
+ *     UserImpactSummary:
+ *       type: object
+ *       properties:
+ *         totalViews:
+ *           type: integer
+ *         avgRating:
+ *           type: number
+ *         totalRatingCount:
+ *           type: integer
+ *         events:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/UserImpactEvent'
  *     EntityEngagement:
  *       type: object
  *       properties:

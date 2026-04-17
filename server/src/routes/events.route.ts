@@ -1,13 +1,5 @@
 import { Router } from 'express';
-import {
-  asyncHandler,
-  sessionParser,
-  userParser,
-  validateParams,
-  paginationParser,
-  validateRequest,
-  rateLimit,
-} from '@/middlewares';
+import { asyncHandler, sessionParser, userParser, validateParams, paginationParser, rateLimit } from '@/middlewares';
 
 import {
   updateEvent,
@@ -23,7 +15,7 @@ import {
   deleteEvent,
   disassociateMediaFromEvent,
 } from '@/features/events/controller';
-import { eventSchema, eventUpdateSchema } from '@/features/events/validation';
+import { validateEventCreateBody, validateEventUpdateBody } from '@/features/events/validation';
 import {
   createThread,
   deleteThread,
@@ -88,7 +80,7 @@ router.use([sessionParser, userParser]);
 router
   .route('/')
   .get([paginationParser], asyncHandler(getEvents))
-  .post(validateRequest('EVENT_CREATE', eventSchema), asyncHandler(createEvent));
+  .post(validateEventCreateBody, asyncHandler(createEvent));
 
 const markersRateLimit = rateLimit({
   keyPrefix: 'markers',
@@ -162,7 +154,7 @@ router
    *                   nullable: true
    */
   .get([validateParams(['eventId'])], asyncHandler(getEventById))
-  .put([validateParams(['eventId']), validateRequest('EVENT_UPDATE', eventUpdateSchema)], asyncHandler(updateEvent))
+  .put([validateParams(['eventId']), validateEventUpdateBody], asyncHandler(updateEvent))
   .delete([validateParams(['eventId'])], asyncHandler(deleteEvent));
 
 /**

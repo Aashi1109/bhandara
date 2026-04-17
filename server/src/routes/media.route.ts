@@ -8,9 +8,9 @@ import {
   getMediaPublicUrls,
   getPublicSignedUploadUrl,
 } from '@/features/media/controller';
-import { asyncHandler, sessionParser, userParser, validateRequest } from '@/middlewares';
+import { asyncHandler, sessionParser, userParser } from '@/middlewares';
 import { Router } from 'express';
-import { mediaUpdateSchema } from '@/features/media/validation';
+import { validateMediaUpdate } from '@/features/media/validation';
 
 const router = Router({ mergeParams: true });
 
@@ -158,7 +158,7 @@ router
    */
   .delete(asyncHandler(deleteFile))
   .get(asyncHandler(getMediaById))
-  .patch(validateRequest('MEDIA_UPDATE', mediaUpdateSchema), asyncHandler(updateMedia));
+  .patch(validateMediaUpdate, asyncHandler(updateMedia));
 
 /**
  * @openapi

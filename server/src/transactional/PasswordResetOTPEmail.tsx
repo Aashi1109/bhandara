@@ -50,7 +50,7 @@ export const PasswordResetOTPEmail = ({ appName, otp, _digits }: PasswordResetOT
               <tbody>
                 <tr>
                   <td style={iconCircle}>
-                    <Text style={lockIcon}>🔒</Text>
+                    <Text style={lockIcon}>✦</Text>
                   </td>
                 </tr>
               </tbody>
@@ -67,11 +67,19 @@ export const PasswordResetOTPEmail = ({ appName, otp, _digits }: PasswordResetOT
               <table cellPadding={0} cellSpacing={0} style={{ margin: '0 auto' }}>
                 <tbody>
                   <tr>
-                    {digits.map((digit, i) => (
-                      <td key={i} style={i < digits.length - 1 ? otpCellWithGap : otpCell}>
-                        <Text style={otpDigit}>{digit}</Text>
-                      </td>
-                    ))}
+                    <td style={otpWrapper}>
+                      <table cellPadding={0} cellSpacing={0}>
+                        <tbody>
+                          <tr>
+                            {digits.map((digit, i) => (
+                              <td key={i} style={i < digits.length - 1 ? otpCellWithGap : otpCell}>
+                                <Text style={otpDigit}>{digit}</Text>
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -101,7 +109,7 @@ export const PasswordResetOTPEmail = ({ appName, otp, _digits }: PasswordResetOT
                 <tbody>
                   <tr>
                     <td style={securityIconCell}>
-                      <Text style={securityIcon}>ℹ️</Text>
+                      <Text style={securityIcon}>ℹ</Text>
                     </td>
                     <td style={securityTextCell}>
                       <Text style={securityText}>
@@ -214,6 +222,7 @@ const lockIcon: React.CSSProperties = {
   fontSize: '36px',
   lineHeight: '96px',
   textAlign: 'center',
+  color: '#ffffff',
 };
 
 // Heading
@@ -246,20 +255,24 @@ const otpSection: React.CSSProperties = {
   marginBottom: '32px',
 };
 
-// Individual digit cell — w-12 h-16 (48×64px), border-2 border-primary, rounded-lg (16px)
+// Shared background container for all OTP digits
+const otpWrapper: React.CSSProperties = {
+  backgroundColor: '#f3f4f6',
+  borderRadius: '16px',
+  padding: '16px 24px',
+};
+
+// Individual digit cell — no background, part of the shared container
 const otpCell: React.CSSProperties = {
   width: '48px',
   height: '64px',
-  border: '2px solid #111827',
-  borderRadius: '16px',
-  backgroundColor: '#ffffff',
   textAlign: 'center',
   verticalAlign: 'middle',
 };
 
 const otpCellWithGap: React.CSSProperties = {
   ...otpCell,
-  paddingRight: '12px',
+  paddingRight: '8px',
 };
 
 const otpDigit: React.CSSProperties = {
@@ -320,6 +333,7 @@ const securityIcon: React.CSSProperties = {
   margin: 0,
   fontSize: '16px',
   lineHeight: '1',
+  color: '#374151',
 };
 
 const securityTextCell: React.CSSProperties = {

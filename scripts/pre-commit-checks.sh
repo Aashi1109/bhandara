@@ -84,6 +84,7 @@ run_server_checks() {
   echo "Running server lint and tests..."
   (
     cd server
+    pnpm email:build
     pnpm lint
     pnpm test
   )

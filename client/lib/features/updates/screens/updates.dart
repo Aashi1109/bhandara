@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../profile/models/update.dart';
 import '../../events/services/activity.dart';
+import '../../../shared/constants/socket_events.dart';
+import '../../../shared/providers/notification_count.dart';
+import '../../../shared/services/socket.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/app_pull_to_refresh.dart';
 import '../../../shared/widgets/header.dart';
@@ -15,19 +19,20 @@ import '../../events/screens/event_detail.dart';
 import '../../chat/screens/thread.dart';
 import '../../profile/screens/profile_badges.dart';
 
-class UpdatesScreen extends StatefulWidget {
+class UpdatesScreen extends ConsumerStatefulWidget {
   const UpdatesScreen({super.key});
 
   static const String routePath = '/updates';
 
   @override
-  State<UpdatesScreen> createState() => _UpdatesScreenState();
+  ConsumerState<UpdatesScreen> createState() => _UpdatesScreenState();
 }
 
-class _UpdatesScreenState extends State<UpdatesScreen> {
+class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   static const int _pageSize = 20;
 
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
 
   bool _isLoading = true;
   bool _isFetchingMore = false;
@@ -41,10 +46,26 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadUpdates(refresh: true);
+
+    // Reset unread badge when updates screen opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(unreadNotificationCountProvider.notifier).state = 0;
+    });
+
+    // Listen for real-time activity:new events and prepend to list.
+    _socketSubscription = socketService.messages.listen((event) {
+      if (event['event'] != SocketEvents.activityNew) return;
+      final data = event['data'];
+      if (data is! Map<String, dynamic>) return;
+      final update = AppUpdate.fromJson(data);
+      if (!mounted) return;
+      setState(() => _updates = [update, ..._updates]);
+    });
   }
 
   @override
   void dispose() {
+    _socketSubscription?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -108,6 +129,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
 
   Future<void> _markAllRead() async {
     setState(() => _isMarkingAll = true);
+    ref.read(unreadNotificationCountProvider.notifier).state = 0;
     try {
       await activityService.markAllRead();
       if (!mounted) return;

@@ -27,7 +27,7 @@ import ActivityService from '@/features/activity/service';
 import { EActivityType } from '@/features/activity/constants';
 import AchievementService from '@/features/achievements/service';
 import { buildMessageActivities } from '@/features/activity/chat';
-import { getThreadRoom } from './rooms';
+import { getThreadRoom, getUserRoom } from './rooms';
 
 interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, IBaseUser> {
   request: IncomingMessage & {
@@ -66,6 +66,7 @@ export function initializeSocket(server: http.Server) {
   platformNamespace.on(PLATFORM_SOCKET_EVENTS.CONNECT, async (socket: CustomSocket) => {
     logger.info(`Connected ${socket.id}`);
     const socketUserId = socket.request.user.id;
+    socket.join(getUserRoom(socketUserId));
 
     socket.on(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE, async (request, _, cb) => {
       try {
@@ -83,14 +84,24 @@ export function initializeSocket(server: http.Server) {
         }
 
         const message = await messageService.create(messageData, true);
-        await Promise.all([
-          ...buildMessageActivities({
-            actorId: socketUserId,
-            message,
-            threadOwnerId: threadResponse.createdBy,
-          }).map((activity) => activityService.create(activity)),
+        const activityData = buildMessageActivities({
+          actorId: socketUserId,
+          message,
+          threadOwnerId: threadResponse.createdBy,
+        });
+        const [createdActivities] = await Promise.all([
+          Promise.all(activityData.map((a) => activityService.create(a))),
           achievementService.trackActivity(socketUserId, EActivityType.MessageCreated),
         ]);
+        for (const activity of createdActivities) {
+          if (activity.recipientId) {
+            emitSocketEvent(
+              PLATFORM_SOCKET_EVENTS.ACTIVITY_NEW,
+              { data: activity },
+              { room: getUserRoom(activity.recipientId) },
+            );
+          }
+        }
         emitSocketEvent(
           PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE,
           {

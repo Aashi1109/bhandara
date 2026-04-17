@@ -1,59 +1,145 @@
-# Zentry Agent Guide
+# zentry
 
-This repository has three instruction layers:
+> Multi-agent orchestration framework for agentic coding
 
-- Root: shared repo rules and coordination
-- `client/AGENTS.md`: Flutter client rules
-- `server/AGENTS.md`: Node/Redis/backend container rules
+## Project Overview
 
-When working in a subdirectory, apply the root guidance first, then the nearest local `AGENTS.md`.
+A Claude Flow powered project
 
-## Repo Structure
+**Tech Stack**: TypeScript, Node.js
+**Architecture**: Domain-Driven Design with bounded contexts
 
-- `client/`: Flutter application
-- `server/`: Node.js/TypeScript backend
-- `compose.yml`: local container orchestration
-- `infra/`: ops-related configs
+## Quick Start
 
-## General Rules
+### Installation
+```bash
+npm install
+```
 
-- Prefer targeted changes over broad refactors.
-- Verify changes with the smallest relevant command first, then broader verification if needed.
-- Do not assume Docker runtime paths match source paths; verify what the final image actually copies.
-- Keep runtime assets explicit in Docker builds. Compiled JS alone is not enough when SQL, templates, or static assets are loaded at runtime.
-- Organize code by feature or scope of responsibility, not by creating files mechanically. Prefer keeping related logic together when it serves one feature, and only split files when the boundary is meaningful.
-- Default to delegating substantive work to subagents instead of implementing directly in one pass. For each delegated task, define the exact scope, file or responsibility boundary, expected behavior, non-goals, required output format, and verification expectations before execution.
-- Treat complex or long-running tasks as delegated-by-default. Unless there is a strong reason to keep work local, hand them off to subagents first and use the main agent for coordination, integration, and verification.
-- Git pre-commit checks live in `.githooks/pre-commit` and dispatch to `scripts/pre-commit-checks.sh` for repo-local lint/test enforcement.
+### Build
+```bash
+npm run build
+```
 
-## Current Project Patterns
+### Test
+```bash
+npm test
+```
 
-- The backend supports two Redis integration modes:
-  - Node backend/server/workers use TCP Redis config via explicit fields.
-  - Supabase edge functions keep using Upstash REST env vars.
-- The Node backend Redis usage is segmented by logical DB:
-  - sessions -> DB 1
-  - BullMQ -> DB 2
-  - engagement/stats -> DB 3
-  - rate limiting -> DB 4
-  - general cache -> DB 5
-  - activity/achievements -> DB 6
-- Those Redis DB mappings are fixed in backend config code, not configurable by env.
-- The mono backend container is intentionally separate from the split container setup.
-- Mono container design:
-  - single externally exposed port
-  - internal nginx reverse proxy
-  - `/` routes to backend API
-  - `/redis/` routes to Redis Commander
-- When adding mono-only tooling, keep it confined to `server/Dockerfile.mono`, `server/scripts/docker-mono-entrypoint.sh`, and mono compose wiring rather than the main app runtime.
+### Development
+```bash
+npm run dev
+```
 
-## Compose Notes
+## Agent Coordination
 
-- `server-mono` is behind the `mono` profile in `compose.yml`.
-- Use `docker compose --profile mono up --build server-mono` for the mono container path.
-- Avoid changing split services unless the task explicitly asks for them.
+### Swarm Configuration
 
-## Maintenance
+This project uses hierarchical swarm coordination for complex tasks:
 
-- Keep these `AGENTS.md` files current when stable repo-specific patterns emerge.
-- Update the closest relevant `AGENTS.md` when a new convention becomes intentional rather than incidental.
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| Topology | `hierarchical` | Queen-led coordination (anti-drift) |
+| Max Agents | 8 | Optimal team size |
+| Strategy | `specialized` | Clear role boundaries |
+| Consensus | `raft` | Leader-based consistency |
+
+### When to Use Swarms
+
+**Invoke swarm for:**
+- Multi-file changes (3+ files)
+- New feature implementation
+- Cross-module refactoring
+- API changes with tests
+- Security-related changes
+- Performance optimization
+
+**Skip swarm for:**
+- Single file edits
+- Simple bug fixes (1-2 lines)
+- Documentation updates
+- Configuration changes
+
+### Available Skills
+
+Use `$skill-name` syntax to invoke:
+
+| Skill | Use Case |
+|-------|----------|
+| `$swarm-orchestration` | Multi-agent task coordination |
+| `$memory-management` | Pattern storage and retrieval |
+| `$sparc-methodology` | Structured development workflow |
+| `$security-audit` | Security scanning and CVE detection |
+
+### Agent Types
+
+| Type | Role | Use Case |
+|------|------|----------|
+| `researcher` | Requirements analysis | Understanding scope |
+| `architect` | System design | Planning structure |
+| `coder` | Implementation | Writing code |
+| `tester` | Test creation | Quality assurance |
+| `reviewer` | Code review | Security and quality |
+
+## Code Standards
+
+### File Organization
+- **NEVER** save to root folder
+- `/src` - Source code files
+- `/tests` - Test files
+- `/docs` - Documentation
+- `/config` - Configuration files
+
+### Quality Rules
+- Files under 500 lines
+- No hardcoded secrets
+- Input validation at boundaries
+- Typed interfaces for public APIs
+- TDD London School (mock-first) preferred
+
+### Commit Messages
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+Co-Authored-By: claude-flow <ruv@ruv.net>
+```
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
+
+## Security
+
+### Critical Rules
+- NEVER commit secrets, credentials, or .env files
+- NEVER hardcode API keys
+- Always validate user input
+- Use parameterized queries for SQL
+- Sanitize output to prevent XSS
+
+### Path Security
+- Validate all file paths
+- Prevent directory traversal (../)
+- Use absolute paths internally
+
+## Memory System
+
+### Storing Patterns
+```bash
+npx @claude-flow/cli memory store \
+  --key "pattern-name" \
+  --value "pattern description" \
+  --namespace patterns
+```
+
+### Searching Memory
+```bash
+npx @claude-flow/cli memory search \
+  --query "search terms" \
+  --namespace patterns
+```
+
+## Links
+
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues

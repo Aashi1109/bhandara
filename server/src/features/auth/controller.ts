@@ -38,6 +38,7 @@ const getSessionCookieOptions = (req: Request) => {
 
   return {
     httpOnly: true,
+    signed: true,
     maxAge: config.sessionCookie.maxAge,
     path: '/',
     sameSite: isCrossOrigin ? 'none' : 'lax',
@@ -59,7 +60,7 @@ const login = async (req: Request, res: Response) => {
 
   const existingUser = await userService.getUserByEmail(email);
 
-  if (!existingUser) throw new NotFoundError(`User not found with email: ${email}`);
+  if (!existingUser) throw new UnauthorizedError('Invalid email or password');
 
   const provider = existingUser.meta?.auth?.provider || existingUser.meta?.provider;
   if (!provider) {
@@ -99,7 +100,7 @@ const login = async (req: Request, res: Response) => {
 };
 
 const logOut = async (req: ICustomRequest, res: Response) => {
-  await deleteUserSessionCache(req.user.id, req.cookies[config.sessionCookie.keyName]);
+  await deleteUserSessionCache(req.user.id, req.signedCookies[config.sessionCookie.keyName]);
   res.clearCookie(config.sessionCookie.keyName, getSessionCookieOptions(req));
   return res.status(200).json({ data: 'Logout successful' });
 };
@@ -108,7 +109,7 @@ const session = (req: ICustomRequest, res: Response) => {
   const { user } = req;
 
   return res.status(200).json({
-    data: { user, session: { id: req.cookies[config.sessionCookie.keyName] } },
+    data: { user, session: { id: req.signedCookies[config.sessionCookie.keyName] } },
   });
 };
 
@@ -289,9 +290,9 @@ export const resetPassword = async (req: Request, res: Response) => {
     throw new UnauthorizedError('Invalid or expired reset token');
   }
 
-  const { data: listData, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
-  const sbUser = listData?.users?.find((u) => u.email === email);
-  if (lookupError || !sbUser) throw new NotFoundError(`Auth account not found for: ${email}`);
+  const { data: sbUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+  const sbUser = sbUserData?.user;
+  if (lookupError || !sbUser) throw new NotFoundError('Auth account not found');
 
   const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(sbUser.id, { password });
   if (updateError) throw new BadRequestError(updateError.message);

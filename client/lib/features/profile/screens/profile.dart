@@ -940,7 +940,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       }
 
                       const double graphHeight = 96.0;
-                      const double minBarHeight = 32.0;
+                      const double minFillHeight = 12.0;
+                      const double trackWidth = 32.0;
 
                       final maxViews = graphEvents.fold<int>(
                         0,
@@ -954,16 +955,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: graphEvents.asMap().entries.map((entry) {
-                            final i = entry.key;
                             final e = entry.value;
                             final views =
                                 (e['viewCount'] as num?)?.toInt() ?? 0;
-                            final barHeight = maxViews == 0
-                                ? minBarHeight
-                                : minBarHeight +
-                                      (views / maxViews) *
-                                          (graphHeight - minBarHeight);
-                            final isLast = i == graphEvents.length - 1;
+                            final fillHeight = views <= 0
+                                ? 0.0
+                                : maxViews == 0
+                                ? minFillHeight
+                                : max(
+                                    minFillHeight,
+                                    (views / maxViews) * graphHeight,
+                                  );
 
                             String label = '';
                             final rawStart = e['startTime'];
@@ -976,19 +978,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               }
                             }
 
+                            final bar = SizedBox(
+                              width: trackWidth,
+                              height: graphHeight,
+                              child: Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Container(
+                                    width: trackWidth,
+                                    height: graphHeight,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.mutedForeground
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  if (fillHeight > 0)
+                                    Container(
+                                      width: trackWidth,
+                                      height: fillHeight,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+
                             return Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 32,
-                                  height: barHeight,
-                                  decoration: BoxDecoration(
-                                    color: isLast
-                                        ? AppColors.primary
-                                        : AppColors.border,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
+                                if (fillHeight > 0)
+                                  Tooltip(
+                                    message: _impactTooltipMessage(e),
+                                    waitDuration: const Duration(
+                                      milliseconds: 120,
+                                    ),
+                                    preferBelow: false,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    textStyle: typography.bodySM.copyWith(
+                                      color: AppColors.surface,
+                                    ),
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: bar,
+                                    ),
+                                  )
+                                else
+                                  bar,
                                 const SizedBox(height: 8),
                                 Text(
                                   label,
@@ -1016,6 +1057,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
+  }
+
+  String _impactTooltipMessage(Map<String, dynamic> event) {
+    final name = (event['name'] as String?)?.trim();
+    final views = (event['viewCount'] as num?)?.toInt() ?? 0;
+    final ratingAverage = (event['ratingAverage'] as num?)?.toDouble() ?? 0;
+    final ratingCount = (event['ratingCount'] as num?)?.toInt() ?? 0;
+
+    String? dateLabel;
+    final rawStart = event['startTime'];
+    if (rawStart != null) {
+      try {
+        dateLabel = DateFormat(
+          'EEE, d MMM',
+        ).format(DateTime.parse(rawStart.toString()));
+      } catch (_) {
+        dateLabel = null;
+      }
+    }
+
+    final lines = <String>[
+      if (name != null && name.isNotEmpty) name,
+      '$views ${views == 1 ? 'view' : 'views'}',
+      if (ratingCount > 0)
+        '${ratingAverage.toStringAsFixed(1)} average rating from $ratingCount',
+      if (dateLabel != null && dateLabel.isNotEmpty) dateLabel,
+    ];
+
+    return lines.join('\n');
   }
 
   Widget _stat(String label, String value) {

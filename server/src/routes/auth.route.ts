@@ -13,9 +13,16 @@ import {
   verifyForgotPasswordOTP,
   resetPassword,
 } from '@/features/auth/controller';
-import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
+import { sessionParser, userParser, asyncHandler, rateLimit } from '@/middlewares';
 
-import { schemas } from '@/features/auth/validation';
+import {
+  validateLogin,
+  validateSignup,
+  validateSignInWithIdToken,
+  validateForgotPassword,
+  validateVerifyOTP,
+  validateResetPassword,
+} from '@/features/auth/validation';
 
 const router = Router();
 
@@ -45,7 +52,12 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  */
-router.post('/login', validateRequest('AUTH_LOGIN', schemas.login), asyncHandler(login));
+router.post(
+  '/login',
+  rateLimit({ keyPrefix: 'auth_login', limit: 10, windowSeconds: 60 }),
+  validateLogin,
+  asyncHandler(login),
+);
 /**
  * @openapi
  * /auth/google/callback:
@@ -104,7 +116,12 @@ router.get('/google', asyncHandler(googleAuth));
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  */
-router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHandler(signUp));
+router.post(
+  '/signup',
+  rateLimit({ keyPrefix: 'auth_signup', limit: 5, windowSeconds: 60 }),
+  validateSignup,
+  asyncHandler(signUp),
+);
 /**
  * @openapi
  * /auth/oauth/signin-with-id-token:
@@ -131,7 +148,12 @@ router.post('/signup', validateRequest('AUTH_SIGNUP', schemas.signup), asyncHand
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  */
-router.post('/oauth/signin-with-id-token', asyncHandler(signInWithIdToken));
+router.post(
+  '/oauth/signin-with-id-token',
+  rateLimit({ keyPrefix: 'auth_oauth', limit: 10, windowSeconds: 60 }),
+  validateSignInWithIdToken,
+  asyncHandler(signInWithIdToken),
+);
 
 /**
  * @openapi
@@ -155,7 +177,8 @@ router.post('/oauth/signin-with-id-token', asyncHandler(signInWithIdToken));
  */
 router.post(
   '/forgot-password',
-  validateRequest('AUTH_FORGOT_PASSWORD', schemas.forgotPassword),
+  rateLimit({ keyPrefix: 'auth_forgot', limit: 5, windowSeconds: 300 }),
+  validateForgotPassword,
   asyncHandler(forgotPassword),
 );
 
@@ -183,7 +206,8 @@ router.post(
  */
 router.post(
   '/forgot-password/verify',
-  validateRequest('AUTH_VERIFY_OTP', schemas.verifyOTP),
+  rateLimit({ keyPrefix: 'auth_otp_verify', limit: 5, windowSeconds: 300 }),
+  validateVerifyOTP,
   asyncHandler(verifyForgotPasswordOTP),
 );
 
@@ -213,7 +237,8 @@ router.post(
  */
 router.post(
   '/reset-password',
-  validateRequest('AUTH_RESET_PASSWORD', schemas.resetPassword),
+  rateLimit({ keyPrefix: 'auth_reset', limit: 5, windowSeconds: 300 }),
+  validateResetPassword,
   asyncHandler(resetPassword),
 );
 

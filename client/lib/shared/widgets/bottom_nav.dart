@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
+import '../providers/notification_count.dart';
 
 import '../../features/explore/screens/explore_screen.dart';
 import '../../features/events/screens/create_event.dart';
@@ -9,16 +11,17 @@ import '../../features/updates/screens/updates.dart';
 import '../../features/profile/screens/profile.dart';
 import '../../features/saved/screens/saved.dart';
 
-class AppBottomNav extends StatelessWidget {
+class AppBottomNav extends ConsumerWidget {
   const AppBottomNav({super.key});
 
   static const double maxWidth = 500;
   static const Key surfaceKey = ValueKey('app_bottom_nav_surface');
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentPath = GoRouterState.of(context).uri.path;
     final typography = context.appTypography;
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     final items = [
       _NavItem(ExploreScreen.routePath, LucideIcons.compass, 'Explore'),
@@ -133,15 +136,36 @@ class AppBottomNav extends StatelessWidget {
                   );
                 }
 
+                final showBadge =
+                    item.path == UpdatesScreen.routePath && unreadCount > 0;
                 return GestureDetector(
                   onTap: () => context.go(item.path),
                   child: SizedBox(
                     width: 40,
                     height: 40,
-                    child: Icon(
-                      item.icon,
-                      size: AppIconSizes.l,
-                      color: AppColors.mutedForeground,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: AppIconSizes.l,
+                          color: AppColors.mutedForeground,
+                        ),
+                        if (showBadge)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 );

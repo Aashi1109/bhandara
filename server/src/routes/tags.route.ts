@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { sessionParser, userParser, asyncHandler, validateRequest } from '@/middlewares';
+import { sessionParser, userParser, asyncHandler } from '@/middlewares';
 import { createTag, deleteTag, getSubTags, getTagById, getTags, updateTag } from '@/features/tags/controller';
-import { tagSchema, tagUpdateSchema } from '@/features/tags/validation';
+import { validateTagCreate, validateTagUpdate } from '@/features/tags/validation';
 
 const router = Router();
 
@@ -31,7 +31,7 @@ router.use([sessionParser, userParser]);
  *               $ref: '#/components/schemas/ApiEnvelope'
  */
 router.get('/', asyncHandler(getTags));
-router.post('/', validateRequest('TAG_CREATE', tagSchema), asyncHandler(createTag));
+router.post('/', validateTagCreate, asyncHandler(createTag));
 router
   .route('/:tagId')
   /**
@@ -93,7 +93,7 @@ router
    *               $ref: '#/components/schemas/ApiEnvelope'
    */
   .get(asyncHandler(getTagById))
-  .put(validateRequest('TAG_UPDATE', tagUpdateSchema), asyncHandler(updateTag))
+  .put(validateTagUpdate, asyncHandler(updateTag))
   .delete(asyncHandler(deleteTag));
 
 /**

@@ -116,4 +116,7 @@ export const PLATFORM_SOCKET_EVENTS = {
   // USERs
   USER_UPDATE: 'user:update',
   EXPLORE: 'explore',
+
+  // ACTIVITYs
+  ACTIVITY_NEW: 'activity:new',
 };

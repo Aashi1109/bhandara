@@ -36,12 +36,19 @@ export const uploadFile = async (req: ICustomRequest, res: Response) => {
   return res.status(201).json({ data: uploadRes?.data });
 };
 
+const sanitizeParentPath = (parentPath: unknown, fallback: string): string => {
+  if (typeof parentPath !== 'string' || parentPath.trim() === '') return fallback;
+  // Reject any path traversal attempts
+  if (/\.\./.test(parentPath) || /[/\\]/.test(parentPath)) return fallback;
+  return parentPath;
+};
+
 export const getSignedUploadUrl = async (req: ICustomRequest, res: Response) => {
   const { path, bucket, mimeType, parentPath, format, ...rest } = req.body;
   let provider = req.body.provider as string | undefined;
   provider ??= EMediaProvider.Supabase;
 
-  const uploadPath = `${parentPath || req.user.id}/${path}`;
+  const uploadPath = `${sanitizeParentPath(parentPath, req.user.id)}/${path}`;
   const insertData = {
     path: uploadPath,
     bucket,
@@ -62,7 +69,7 @@ export const getSignedUploadUrl = async (req: ICustomRequest, res: Response) => 
 export const getPublicSignedUploadUrl = async (req: ICustomRequest, res: Response) => {
   const { path, parentPath } = req.body;
 
-  const uploadPath = `${parentPath || req.user.id}/${path}`;
+  const uploadPath = `${sanitizeParentPath(parentPath, req.user.id)}/${path}`;
 
   const responseSignedURL = await mediaService.getSignedUrlForPublicUpload({
     path: uploadPath,

@@ -103,6 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   int _selectedEventRequestVersion = 0;
   int _selectedEventFocusRequestId = 0;
   int _selectedEventPageIndex = 0;
+  int _eventListVersion = 0;
   String? _nextEventsCursor;
 
   List<Event> _events = <Event>[];
@@ -518,11 +519,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     ].join('|');
   }
 
-  String? _statusQueryForFilters(ExploreFilterState filters) {
+  String _statusQueryForFilters(ExploreFilterState filters) {
     return switch (filters.quickStatus) {
       EventStatusValue.ongoing => EventStatusValue.ongoing,
       EventStatusValue.upcoming => EventStatusValue.upcoming,
-      _ => null,
+      // "All" tab should only show discoverable (active) events — not completed or cancelled.
+      _ => '${EventStatusValue.upcoming},${EventStatusValue.ongoing}',
     };
   }
 
@@ -635,6 +637,11 @@ class _ExploreScreenState extends State<ExploreScreen>
           viewport: resolvedViewport,
         );
 
+    // Bump the version on every refresh so stale in-flight responses from a
+    // previous filter selection can be detected and discarded.
+    if (refresh) _eventListVersion++;
+    final expectedVersion = _eventListVersion;
+
     if (refresh) {
       setState(() {
         _isLoading = true;
@@ -658,6 +665,17 @@ class _ExploreScreenState extends State<ExploreScreen>
         next: refresh ? null : _nextEventsCursor,
       );
       if (!mounted) return;
+
+      // A newer tab switch or filter change happened while this request was in
+      // flight — discard the stale response so it doesn't overwrite the result
+      // of the most-recent request.
+      if (expectedVersion != _eventListVersion) {
+        setState(() {
+          _isLoading = false;
+          _isFetchingMoreEvents = false;
+        });
+        return;
+      }
 
       final events = _mergeEvents(
         refresh ? const <Event>[] : _events,

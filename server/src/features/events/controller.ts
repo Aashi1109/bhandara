@@ -6,6 +6,7 @@ import { hasMeaningfulChange, isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/constants';
+import { getUserRoom } from '@/socket/rooms';
 import { EEventStatus, EEventType } from '@/definitions/enums';
 import ActivityService from '@/features/activity/service';
 import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
@@ -247,7 +248,7 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
 
   const activityType = action === 'join' ? EActivityType.EventJoined : EActivityType.EventLeft;
 
-  await Promise.all([
+  const [joinActivity] = await Promise.all([
     activityService.create({
       actorId: req.user.id,
       recipientId: eventData && eventData.createdBy !== req.user.id ? eventData.createdBy : null,
@@ -262,6 +263,13 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
     }),
     achievementService.trackActivity(req.user.id, activityType),
   ]);
+  if (joinActivity.recipientId) {
+    emitSocketEvent(
+      PLATFORM_SOCKET_EVENTS.ACTIVITY_NEW,
+      { data: joinActivity },
+      { room: getUserRoom(joinActivity.recipientId) },
+    );
+  }
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
     emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: toEventSummary(updatedEvent) });

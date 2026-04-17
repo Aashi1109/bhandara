@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/socket_events.dart';
 import '../../features/profile/models/user.dart';
+import '../providers/notification_count.dart';
 import '../providers/user.dart';
 import '../services/api.dart';
 import '../services/socket.dart';
@@ -53,6 +54,11 @@ class _AppSessionCoordinatorState extends ConsumerState<AppSessionCoordinator> {
     _socketSubscription = socketService.messages.listen((event) {
       final eventName = event['event'];
       if (eventName != SocketEvents.userUpdate) {
+        return;
+      }
+
+      if (eventName == SocketEvents.activityNew) {
+        ref.read(unreadNotificationCountProvider.notifier).state++;
         return;
       }
 

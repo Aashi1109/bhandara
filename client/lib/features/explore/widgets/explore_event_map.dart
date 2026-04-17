@@ -76,16 +76,13 @@ class ExploreEventMap extends StatefulWidget {
 class _ExploreEventMapState extends State<ExploreEventMap>
     with SingleTickerProviderStateMixin {
   static double _zoomForWidth(double width) {
-    if (width >= 1400) return 8.5;
-    if (width >= 1100) return 10;
-    if (width >= 800) return 12;
-    if (width >= 600) return 14;
+    if (width >= 1100) return 14;
+    if (width >= 800) return 15;
     return 16;
   }
 
   double get _initialZoom =>
-      widget.initialZoom ??
-      _zoomForWidth(MediaQuery.sizeOf(context).width);
+      widget.initialZoom ?? _zoomForWidth(MediaQuery.sizeOf(context).width);
 
   static const double _userPulseMinRadius = 30;
   static const double _userPulseMaxRadius = 120;
@@ -331,7 +328,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
               icon: icon,
               zIndexInt: 2,
               infoWindow: InfoWindow(
-                title: 'Event at ${cluster.latitude.toStringAsFixed(4)}, ${cluster.longitude.toStringAsFixed(4)}',
+                title:
+                    'Event at ${cluster.latitude.toStringAsFixed(4)}, ${cluster.longitude.toStringAsFixed(4)}',
               ),
               onTap: () => _focusOnServerCluster(cluster),
             ),
@@ -649,7 +647,9 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     _viewportDebounce?.cancel();
 
     // Sync zoom — _handleCameraIdle was suppressed so _mapZoom is stale.
-    debugPrint('[MAP] zoom animated: ${_mapZoom.toStringAsFixed(2)} → ${_pendingZoom.toStringAsFixed(2)}');
+    debugPrint(
+      '[MAP] zoom animated: ${_mapZoom.toStringAsFixed(2)} → ${_pendingZoom.toStringAsFixed(2)}',
+    );
     _mapZoom = _pendingZoom;
 
     // Force emit viewport change so the parent loads data for the new position.
@@ -667,9 +667,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     // Pan to the selected event WITHOUT emitting a viewport change.
     // The event data is already loaded — a refetch would replace markers
     // and potentially remove the very marker the user just selected.
-    await _runProgrammaticCameraMove(
-      CameraUpdate.newLatLng(LatLng(lat, lng)),
-    );
+    await _runProgrammaticCameraMove(CameraUpdate.newLatLng(LatLng(lat, lng)));
   }
 
   Future<void> _runProgrammaticCameraMove(CameraUpdate update) async {
@@ -714,7 +712,9 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
     final nextZoom = _pendingZoom;
     if ((nextZoom - _mapZoom).abs() >= 0.05) {
-      debugPrint('[MAP] zoom idle: ${_mapZoom.toStringAsFixed(2)} → ${nextZoom.toStringAsFixed(2)}');
+      debugPrint(
+        '[MAP] zoom idle: ${_mapZoom.toStringAsFixed(2)} → ${nextZoom.toStringAsFixed(2)}',
+      );
       setState(() {
         _mapZoom = nextZoom;
       });
@@ -882,7 +882,9 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                           // Keep _mapZoom live so client-side clustering
                           // never runs against a stale zoom during animation.
                           if ((position.zoom - _mapZoom).abs() >= 0.25) {
-                            debugPrint('[MAP] zoom move: ${_mapZoom.toStringAsFixed(2)} → ${position.zoom.toStringAsFixed(2)}');
+                            debugPrint(
+                              '[MAP] zoom move: ${_mapZoom.toStringAsFixed(2)} → ${position.zoom.toStringAsFixed(2)}',
+                            );
                             _mapZoom = position.zoom;
                           }
                         },

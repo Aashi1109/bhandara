@@ -25,7 +25,7 @@ const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const configuredCorsOrigins = process.env.CORS_ORIGIN?.split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const defaultCorsOrigins = ['https://editor.swagger.io', 'https://brave-wren-big.ngrok-free.app'];
+const defaultCorsOrigins: string[] = [];
 const corsOrigins = [localhostOriginPattern, ...(configuredCorsOrigins || defaultCorsOrigins)];
 const redisConnections = {
   [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),

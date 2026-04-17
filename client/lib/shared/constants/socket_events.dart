@@ -27,4 +27,7 @@ class SocketEvents {
 
   static const String userUpdate = 'user:update';
   static const String explore = 'explore';
+
+  // ACTIVITYs
+  static const String activityNew = 'activity:new';
 }

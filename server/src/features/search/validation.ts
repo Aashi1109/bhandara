@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { validateRequest } from '@/middlewares/validation';
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),
@@ -18,10 +19,7 @@ export const suggestionsQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(20).default(5),
 });
 
-export const validateSearchRequest = (data: any) => {
-  return searchQuerySchema.validate(data, { abortEarly: false });
-};
+export const validateSearchRequest = (data: any) => searchQuerySchema.validate(data, { abortEarly: false });
 
-export const validateSuggestionsRequest = (data: any) => {
-  return suggestionsQuerySchema.validate(data, { abortEarly: false });
-};
+export const validateSearchQuery = validateRequest(searchQuerySchema);
+export const validateSuggestionsQuery = validateRequest(suggestionsQuerySchema);
