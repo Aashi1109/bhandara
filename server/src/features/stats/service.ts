@@ -1,22 +1,15 @@
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from "@/constants";
-import type {
-  IBaseThread,
-  IEvent,
-  IEventStats,
-  IMessage,
-  IMessageStats,
-  IThreadStats,
-} from "@/definitions/types";
-import RedisCache from "@/features/cache/redis";
-import { EEventParticipantStatus } from "@/definitions/enums";
-import { Event } from "@/features/events/model";
-import { Thread } from "@/features/threads/model";
-import { Message } from "@/features/messages/model";
-import { Reaction } from "@/features/reactions/model";
-import EntityEngagementService from "@/features/engagement/service";
-import { cacheKeys } from "@/features/cache/keys";
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
+import type { IBaseThread, IEvent, IEventStats, IMessage, IMessageStats, IThreadStats } from '@/definitions/types';
+import RedisCache from '@/features/cache/redis';
+import { EEventParticipantStatus } from '@/definitions/enums';
+import { Event } from '@/features/events/model';
+import { Thread } from '@/features/threads/model';
+import { Message } from '@/features/messages/model';
+import { Reaction } from '@/features/reactions/model';
+import EntityEngagementService from '@/features/engagement/service';
+import { cacheKeys } from '@/features/cache/keys';
 
-type EntityType = "events" | "threads" | "messages";
+type EntityType = 'events' | 'threads' | 'messages';
 
 type StatsByEntity = {
   events: IEventStats;
@@ -58,11 +51,11 @@ class EntityStatsService {
   }
 
   private getDefaults<T extends EntityType>(entityType: T): StatsByEntity[T] {
-    if (entityType === "events") {
+    if (entityType === 'events') {
       return { ...DEFAULT_EVENT_STATS } as StatsByEntity[T];
     }
 
-    if (entityType === "threads") {
+    if (entityType === 'threads') {
       return { ...DEFAULT_THREAD_STATS } as StatsByEntity[T];
     }
 
@@ -77,19 +70,22 @@ class EntityStatsService {
       return null;
     }
 
-    return Object.keys(defaults).reduce((acc, field) => {
-      const rawValue = raw[field];
-      const parsedValue =
-        typeof rawValue === "number"
-          ? rawValue
-          : typeof rawValue === "string"
-            ? Number(rawValue)
-            : Number(defaults[field as keyof T]);
-      acc[field as keyof T] = Number.isFinite(parsedValue)
-        ? (Math.max(0, parsedValue) as T[keyof T])
-        : defaults[field as keyof T];
-      return acc;
-    }, { ...defaults });
+    return Object.keys(defaults).reduce(
+      (acc, field) => {
+        const rawValue = raw[field];
+        const parsedValue =
+          typeof rawValue === 'number'
+            ? rawValue
+            : typeof rawValue === 'string'
+              ? Number(rawValue)
+              : Number(defaults[field as keyof T]);
+        acc[field as keyof T] = Number.isFinite(parsedValue)
+          ? (Math.max(0, parsedValue) as T[keyof T])
+          : defaults[field as keyof T];
+        return acc;
+      },
+      { ...defaults },
+    );
   }
 
   private normalizeEntityStats<T extends EntityType>(
@@ -111,36 +107,39 @@ class EntityStatsService {
   }
 
   private async readPersistedStats<T extends EntityType>(entityType: T, id: string): Promise<StatsByEntity[T] | null> {
-    if (entityType === "events") {
+    if (entityType === 'events') {
       const event = (await Event.findByPk(id, {
         raw: true,
-        attributes: ["stats"],
-      })) as Pick<IEvent, "stats"> | null;
+        attributes: ['stats'],
+      })) as Pick<IEvent, 'stats'> | null;
       return this.normalizeEntityStats(entityType, (event?.stats ?? null) as unknown as Record<string, unknown> | null);
     }
 
-    if (entityType === "threads") {
+    if (entityType === 'threads') {
       const thread = (await Thread.findByPk(id, {
         raw: true,
-        attributes: ["stats"],
-      })) as Pick<IBaseThread, "stats"> | null;
-      return this.normalizeEntityStats(entityType, (thread?.stats ?? null) as unknown as Record<string, unknown> | null);
+        attributes: ['stats'],
+      })) as Pick<IBaseThread, 'stats'> | null;
+      return this.normalizeEntityStats(
+        entityType,
+        (thread?.stats ?? null) as unknown as Record<string, unknown> | null,
+      );
     }
 
     const message = (await Message.findByPk(id, {
       raw: true,
-      attributes: ["stats"],
-    })) as Pick<IMessage, "stats"> | null;
+      attributes: ['stats'],
+    })) as Pick<IMessage, 'stats'> | null;
     return this.normalizeEntityStats(entityType, (message?.stats ?? null) as unknown as Record<string, unknown> | null);
   }
 
   private async persistStats<T extends EntityType>(entityType: T, id: string, stats: StatsByEntity[T]) {
-    if (entityType === "events") {
+    if (entityType === 'events') {
       await Event.update({ stats } as Partial<IEvent>, { where: { id } });
       return;
     }
 
-    if (entityType === "threads") {
+    if (entityType === 'threads') {
       await Thread.update({ stats } as Partial<IBaseThread>, { where: { id } });
       return;
     }
@@ -151,8 +150,8 @@ class EntityStatsService {
   private async bootstrapEventStats(id: string): Promise<IEventStats> {
     const event = (await Event.findByPk(id, {
       raw: true,
-      attributes: ["participants", "verifiers", "media", "tags"],
-    })) as Pick<IEvent, "participants" | "verifiers" | "media" | "tags"> | null;
+      attributes: ['participants', 'verifiers', 'media', 'tags'],
+    })) as Pick<IEvent, 'participants' | 'verifiers' | 'media' | 'tags'> | null;
 
     if (!event) {
       return { ...DEFAULT_EVENT_STATS };
@@ -206,9 +205,9 @@ class EntityStatsService {
     }
 
     const bootstrapped =
-      entityType === "events"
+      entityType === 'events'
         ? ((await this.bootstrapEventStats(id)) as StatsByEntity[T])
-        : entityType === "threads"
+        : entityType === 'threads'
           ? ((await this.bootstrapThreadStats(id)) as StatsByEntity[T])
           : ((await this.bootstrapMessageStats(id)) as StatsByEntity[T]);
 
@@ -231,7 +230,7 @@ class EntityStatsService {
 
     if (by < 0) {
       const currentValue = await this.cache.getHKey(key, field as string);
-      const parsedValue = typeof currentValue === "string" ? Number(currentValue) : Number(currentValue ?? 0);
+      const parsedValue = typeof currentValue === 'string' ? Number(currentValue) : Number(currentValue ?? 0);
       if (Number.isFinite(parsedValue) && parsedValue < 0) {
         await this.cache.setHKey(key, field as string, 0, this.cache.defaultTTLMs);
       }
@@ -239,15 +238,15 @@ class EntityStatsService {
   }
 
   async getEventStats(id: string): Promise<IEventStats> {
-    return this.getOrBootstrap("events", id);
+    return this.getOrBootstrap('events', id);
   }
 
   async getThreadStats(id: string): Promise<IThreadStats> {
-    return this.getOrBootstrap("threads", id);
+    return this.getOrBootstrap('threads', id);
   }
 
   async getMessageStats(id: string): Promise<IMessageStats> {
-    return this.getOrBootstrap("messages", id);
+    return this.getOrBootstrap('messages', id);
   }
 
   async getEventStatsMap(ids: string[]) {
@@ -269,39 +268,42 @@ class EntityStatsService {
   }
 
   async incrementEventStat(id: string, field: keyof IEventStats, by: number) {
-    await this.incrementCachedField("events", id, field, by);
+    await this.incrementCachedField('events', id, field, by);
   }
 
   async incrementThreadStat(id: string, field: keyof IThreadStats, by: number) {
-    await this.incrementCachedField("threads", id, field, by);
+    await this.incrementCachedField('threads', id, field, by);
   }
 
   async incrementMessageStat(id: string, field: keyof IMessageStats, by: number) {
-    await this.incrementCachedField("messages", id, field, by);
+    await this.incrementCachedField('messages', id, field, by);
   }
 
   async setEventStats(id: string, stats: IEventStats, persist = false) {
-    await this.setCachedStats("events", id, stats);
+    await this.setCachedStats('events', id, stats);
     if (persist) {
-      await this.persistStats("events", id, stats);
+      await this.persistStats('events', id, stats);
     }
   }
 
   async setThreadStats(id: string, stats: IThreadStats, persist = false) {
-    await this.setCachedStats("threads", id, stats);
+    await this.setCachedStats('threads', id, stats);
     if (persist) {
-      await this.persistStats("threads", id, stats);
+      await this.persistStats('threads', id, stats);
     }
   }
 
   async setMessageStats(id: string, stats: IMessageStats, persist = false) {
-    await this.setCachedStats("messages", id, stats);
+    await this.setCachedStats('messages', id, stats);
     if (persist) {
-      await this.persistStats("messages", id, stats);
+      await this.persistStats('messages', id, stats);
     }
   }
 
-  async syncEventRowStats(event: Pick<IEvent, "id" | "participants" | "verifiers" | "media" | "tags">, persist = false) {
+  async syncEventRowStats(
+    event: Pick<IEvent, 'id' | 'participants' | 'verifiers' | 'media' | 'tags'>,
+    persist = false,
+  ) {
     const current = await this.getEventStats(event.id);
     const next: IEventStats = {
       ...current,
@@ -318,7 +320,8 @@ class EntityStatsService {
   }
 
   async syncStatsSnapshot<T extends EntityType>(entityType: T, id: string, stats?: StatsByEntity[T]) {
-    const snapshot = stats ?? (await this.getCachedStats(entityType, id)) ?? (await this.getOrBootstrap(entityType, id));
+    const snapshot =
+      stats ?? (await this.getCachedStats(entityType, id)) ?? (await this.getOrBootstrap(entityType, id));
     await this.persistStats(entityType, id, snapshot);
     return snapshot;
   }
@@ -326,7 +329,7 @@ class EntityStatsService {
   async hydrateEvent<T extends IEvent>(event: T): Promise<T> {
     const [stats, engagement] = await Promise.all([
       this.getEventStats(event.id),
-      this.entityEngagementService.getStats("events", event.id),
+      this.entityEngagementService.getStats('events', event.id),
     ]);
     event.stats = {
       ...stats,
@@ -341,7 +344,10 @@ class EntityStatsService {
     if (events.length === 0) return events;
     const [statsMap, engagementMap] = await Promise.all([
       this.getEventStatsMap(events.map((event) => event.id)),
-      this.entityEngagementService.getStatsMap("events", events.map((event) => event.id)),
+      this.entityEngagementService.getStatsMap(
+        'events',
+        events.map((event) => event.id),
+      ),
     ]);
     events.forEach((event) => {
       const stats = statsMap[event.id] || DEFAULT_EVENT_STATS;
@@ -359,7 +365,7 @@ class EntityStatsService {
   async hydrateThread<T extends IBaseThread>(thread: T): Promise<T> {
     const [stats, engagement] = await Promise.all([
       this.getThreadStats(thread.id),
-      this.entityEngagementService.getStats("threads", thread.id),
+      this.entityEngagementService.getStats('threads', thread.id),
     ]);
     thread.stats = {
       ...stats,
@@ -374,7 +380,10 @@ class EntityStatsService {
     if (threads.length === 0) return threads;
     const [statsMap, engagementMap] = await Promise.all([
       this.getThreadStatsMap(threads.map((thread) => thread.id)),
-      this.entityEngagementService.getStatsMap("threads", threads.map((thread) => thread.id)),
+      this.entityEngagementService.getStatsMap(
+        'threads',
+        threads.map((thread) => thread.id),
+      ),
     ]);
     threads.forEach((thread) => {
       const stats = statsMap[thread.id] || DEFAULT_THREAD_STATS;
@@ -392,7 +401,7 @@ class EntityStatsService {
   async hydrateMessage<T extends IMessage>(message: T): Promise<T> {
     const [stats, engagement] = await Promise.all([
       this.getMessageStats(message.id),
-      this.entityEngagementService.getStats("messages", message.id),
+      this.entityEngagementService.getStats('messages', message.id),
     ]);
     message.stats = {
       ...stats,
@@ -407,7 +416,10 @@ class EntityStatsService {
     if (messages.length === 0) return messages;
     const [statsMap, engagementMap] = await Promise.all([
       this.getMessageStatsMap(messages.map((message) => message.id)),
-      this.entityEngagementService.getStatsMap("messages", messages.map((message) => message.id)),
+      this.entityEngagementService.getStatsMap(
+        'messages',
+        messages.map((message) => message.id),
+      ),
     ]);
     messages.forEach((message) => {
       const stats = statsMap[message.id] || DEFAULT_MESSAGE_STATS;

@@ -28,10 +28,7 @@ export const storeOTP = (email: string, otp: string): Promise<unknown> => {
   return otpCache.setItem(email, record, PASSWORD_RESET_CONFIG.otpTtl);
 };
 
-export const verifyOTP = async (
-  email: string,
-  otp: string,
-): Promise<{ valid: boolean; reason?: string }> => {
+export const verifyOTP = async (email: string, otp: string): Promise<{ valid: boolean; reason?: string }> => {
   const record = await otpCache.getItem<OTPRecord>(email);
 
   if (!record) {

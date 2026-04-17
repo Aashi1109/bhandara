@@ -1,1 +1,1 @@
-export { default as RedisCache } from "./redis";
+export { default as RedisCache } from './redis';

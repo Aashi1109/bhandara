@@ -1,8 +1,8 @@
 // Import with `import * as Sentry from "@sentry/node"` if you are using ESM
-import * as Sentry from "@sentry/node";
-import config from "./config";
+import * as Sentry from '@sentry/node';
+import config from './config';
 
-if (process.env.NODE_ENV !== "development")
+if (process.env.NODE_ENV !== 'development')
   Sentry.init({
     ...config.sentry,
     // Prevent Sentry from initializing OpenTelemetry to avoid duplicate registration

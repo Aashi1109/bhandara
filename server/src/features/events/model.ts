@@ -2,7 +2,15 @@ import { getDBConnection } from '@/connections/db';
 import { EEventStatus, EEventType } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
 import { DataTypes, Model } from 'sequelize';
-import { type IEvent, type IMedia, type IParticipant, type IEventStats, type IVerifier, type IBaseUser, type IReaction } from '@/definitions/types';
+import {
+  type IEvent,
+  type IMedia,
+  type IParticipant,
+  type IEventStats,
+  type IVerifier,
+  type IBaseUser,
+  type IReaction,
+} from '@/definitions/types';
 
 const sequelize = getDBConnection()!;
 

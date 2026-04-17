@@ -6,11 +6,7 @@ export const setPlatformNamespace = (ns: Namespace) => {
   namespace = ns;
 };
 
-export const emitSocketEvent = (
-  event: string,
-  payload: { data?: any; error?: any },
-  options?: { room?: string },
-) => {
+export const emitSocketEvent = (event: string, payload: { data?: any; error?: any }, options?: { room?: string }) => {
   if (!namespace) return;
 
   if (options?.room) {

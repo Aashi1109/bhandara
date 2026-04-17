@@ -13,9 +13,7 @@ export const deleteUserAchievementsCache = (userId: string) =>
   achievementCache.invalidateCache(cacheKeys.achievementPattern(userId));
 
 export const getUserAchievementProgressCache = (userId: string) =>
-  achievementCache.getItem<IAchievementProgress>(
-    cacheKeys.achievementProgress(userId),
-  );
+  achievementCache.getItem<IAchievementProgress>(cacheKeys.achievementProgress(userId));
 
 export const setUserAchievementProgressCache = (userId: string, data: IAchievementProgress) =>
   achievementCache.setItem(cacheKeys.achievementProgress(userId), data);

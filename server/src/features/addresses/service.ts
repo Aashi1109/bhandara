@@ -25,13 +25,13 @@ class AddressService {
     const latitude = Number.isFinite(directLatitude)
       ? directLatitude
       : Number.isFinite(nestedLatitude)
-          ? nestedLatitude
-          : null;
+        ? nestedLatitude
+        : null;
     const longitude = Number.isFinite(directLongitude)
       ? directLongitude
       : Number.isFinite(nestedLongitude)
-          ? nestedLongitude
-          : null;
+        ? nestedLongitude
+        : null;
 
     return { latitude, longitude };
   }
@@ -59,7 +59,9 @@ class AddressService {
     };
   }
 
-  toLocation(address: Pick<AddressAttributes, 'address' | 'latitude' | 'longitude' | 'metadata'> | null): ILocation | null {
+  toLocation(
+    address: Pick<AddressAttributes, 'address' | 'latitude' | 'longitude' | 'metadata'> | null,
+  ): ILocation | null {
     if (!address) {
       return null;
     }

@@ -1,4 +1,4 @@
-import MD5 from "crypto-js/md5";
+import MD5 from 'crypto-js/md5';
 
 /**
  * Return the 32‑bit MD5 hash of the provided value.

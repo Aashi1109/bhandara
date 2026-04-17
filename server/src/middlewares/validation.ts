@@ -1,14 +1,12 @@
-import type { Request, Response, NextFunction } from "express";
-import { BadRequestError } from "@/exceptions";
+import type { Request, Response, NextFunction } from 'express';
+import { BadRequestError } from '@/exceptions';
 
 export const validateRequest = (schema: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error, value } = schema.validate(req.query, { abortEarly: false });
 
     if (error) {
-      const errorMessage = error.details
-        .map((detail: any) => detail.message)
-        .join(", ");
+      const errorMessage = error.details.map((detail: any) => detail.message).join(', ');
       throw new BadRequestError(`Validation error: ${errorMessage}`);
     }
 
@@ -23,9 +21,7 @@ export const validateBody = (schema: any) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false });
 
     if (error) {
-      const errorMessage = error.details
-        .map((detail: any) => detail.message)
-        .join(", ");
+      const errorMessage = error.details.map((detail: any) => detail.message).join(', ');
       throw new BadRequestError(`Validation error: ${errorMessage}`);
     }
 
@@ -40,9 +36,7 @@ export const validateParams = (schema: any) => {
     const { error, value } = schema.validate(req.params, { abortEarly: false });
 
     if (error) {
-      const errorMessage = error.details
-        .map((detail: any) => detail.message)
-        .join(", ");
+      const errorMessage = error.details.map((detail: any) => detail.message).join(', ');
       throw new BadRequestError(`Validation error: ${errorMessage}`);
     }
 

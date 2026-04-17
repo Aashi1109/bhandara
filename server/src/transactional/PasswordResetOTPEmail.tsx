@@ -1,17 +1,4 @@
-import {
-  Body,
-  Button,
-  Column,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Row,
-  Section,
-  Text,
-} from '@react-email/components';
+import { Body, Button, Container, Head, Html, Link, Preview, Section, Text } from '@react-email/components';
 import * as React from 'react';
 
 interface PasswordResetOTPEmailProps {

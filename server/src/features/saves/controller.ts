@@ -1,7 +1,4 @@
-import type {
-  ICustomRequest,
-  IRequestPagination,
-} from '@/definitions/types';
+import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
 import { BadRequestError } from '@/exceptions';
 import type { Response } from 'express';
 
@@ -9,8 +6,7 @@ import SavedEntityService from './service';
 
 const savedEntityService = new SavedEntityService();
 
-const asString = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value;
+const asString = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 const getEntityParams = (req: ICustomRequest) => {
   const entityType = asString(req.params.entityType);
@@ -26,51 +22,31 @@ const getEntityParams = (req: ICustomRequest) => {
   };
 };
 
-export const getSavedEntityState = async (
-  req: ICustomRequest,
-  res: Response,
-) => {
+export const getSavedEntityState = async (req: ICustomRequest, res: Response) => {
   const { entityType, entityId } = getEntityParams(req);
-  const data = await savedEntityService.getSaveState(
-    req.user.id,
-    entityType,
-    entityId,
-  );
+  const data = await savedEntityService.getSaveState(req.user.id, entityType, entityId);
 
   return res.status(200).json({ data });
 };
 
 export const saveEntity = async (req: ICustomRequest, res: Response) => {
   const { entityType, entityId } = getEntityParams(req);
-  const data = await savedEntityService.saveEntity(
-    req.user.id,
-    entityType,
-    entityId,
-  );
+  const data = await savedEntityService.saveEntity(req.user.id, entityType, entityId);
 
   return res.status(200).json({ data });
 };
 
 export const unsaveEntity = async (req: ICustomRequest, res: Response) => {
   const { entityType, entityId } = getEntityParams(req);
-  const data = await savedEntityService.unsaveEntity(
-    req.user.id,
-    entityType,
-    entityId,
-  );
+  const data = await savedEntityService.unsaveEntity(req.user.id, entityType, entityId);
 
   return res.status(200).json({ data });
 };
 
-export const listSavedEntities = async (
-  req: ICustomRequest & IRequestPagination,
-  res: Response,
-) => {
+export const listSavedEntities = async (req: ICustomRequest & IRequestPagination, res: Response) => {
   const entityTypeQuery = asString(req.query.entityType as string | undefined);
   const query = asString(req.query.query as string | undefined)?.trim();
-  const entityType = entityTypeQuery
-    ? savedEntityService.validateEntityType(entityTypeQuery)
-    : undefined;
+  const entityType = entityTypeQuery ? savedEntityService.validateEntityType(entityTypeQuery) : undefined;
 
   const data = await savedEntityService.listSavedEntities(
     req.user.id,

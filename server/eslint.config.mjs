@@ -79,6 +79,12 @@ export default defineConfig([
   },
   prettierConfig,
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.{js,mjs,cjs}'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'src/transactional/generated/**',
+      '*.config.{js,mjs,cjs}',
+    ],
   },
 ]);

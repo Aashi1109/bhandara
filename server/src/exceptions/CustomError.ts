@@ -29,11 +29,7 @@ class CustomError extends Error {
    * @param {number} [status=500] - The HTTP status code associated with the error. Default is 500 (Internal Server Error).
    * @param {any} [additionalInfo=undefined] - Additional information about the error.
    */
-  constructor(
-    message: string,
-    status: number = 500,
-    additionalInfo: any = undefined
-  ) {
+  constructor(message: string, status: number = 500, additionalInfo: any = undefined) {
     super(message);
     Object.setPrototypeOf(this, CustomError.prototype);
     this.message = message;

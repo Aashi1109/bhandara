@@ -1,7 +1,13 @@
 import { faker } from '@faker-js/faker';
 import { type Sequelize } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
-import { EAccessLevel, EAddressEntityType, EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import {
+  EAccessLevel,
+  EAddressEntityType,
+  EEventParticipantStatus,
+  EEventStatus,
+  EEventType,
+} from '@/definitions/enums';
 import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
 import { Activity } from '@/features/activity/model';
 import { Address } from '@/features/addresses/model';
@@ -53,9 +59,7 @@ export async function seedContentForUsers({
   const plannedEventCounts = new Map(
     allUsers.map((user) => [
       user.id,
-      options.totalEvents !== undefined
-        ? 0
-        : resolveRangeForKey(eventRange, `${user.id}:events`),
+      options.totalEvents !== undefined ? 0 : resolveRangeForKey(eventRange, `${user.id}:events`),
     ]),
   );
 
@@ -144,8 +148,12 @@ export async function seedContentForUsers({
       const metricsByUserId = new Map<string, UserMetrics>();
       const reactionRows: Array<{ id: string; userId: string; contentId: string; emoji: string }> = [];
       const reactionActivityRows: Array<Record<string, unknown>> = [];
-      const saveRows: Array<{ id: string; userId: string; entityType: 'event' | 'thread' | 'message'; entityId: string }> =
-        [];
+      const saveRows: Array<{
+        id: string;
+        userId: string;
+        entityType: 'event' | 'thread' | 'message';
+        entityId: string;
+      }> = [];
       const engagementRows: Array<Record<string, unknown>> = [];
       const ratingRows: Array<Record<string, unknown>> = [];
       const userStats = {
@@ -264,7 +272,13 @@ export async function seedContentForUsers({
 
           if (reactionRows.length >= currentChunkSize) {
             await flushPendingRows(Reaction, reactionRows, transaction, step('reactions'), currentChunkSize);
-            await flushPendingRows(Activity, reactionActivityRows, transaction, step('reaction-activities'), currentChunkSize);
+            await flushPendingRows(
+              Activity,
+              reactionActivityRows,
+              transaction,
+              step('reaction-activities'),
+              currentChunkSize,
+            );
           }
           if (saveRows.length >= currentChunkSize) {
             await flushPendingRows(SavedEntity, saveRows, transaction, step('saves'), currentChunkSize);
@@ -298,7 +312,13 @@ export async function seedContentForUsers({
           step('event-addresses', `user=${user.email}`),
           currentChunkSize,
         );
-        await bulkCreateInChunks(Activity, eventActivityRows, transaction, step('event-activities', `user=${user.email}`), currentChunkSize);
+        await bulkCreateInChunks(
+          Activity,
+          eventActivityRows,
+          transaction,
+          step('event-activities', `user=${user.email}`),
+          currentChunkSize,
+        );
         userStats.eventsCreated += eventRows.length;
 
         const totalThreadsForUser = userEvents.reduce((sum, event) => sum + event.threadsForEvent, 0);
@@ -306,7 +326,10 @@ export async function seedContentForUsers({
           options.totalMessages !== undefined
             ? distributeTotalAcrossKeys(
                 userMessageBudget,
-                Array.from({ length: totalThreadsForUser }, (_, index) => `${user.id}:thread-slot:${index}:message-budget`),
+                Array.from(
+                  { length: totalThreadsForUser },
+                  (_, index) => `${user.id}:thread-slot:${index}:message-budget`,
+                ),
                 {
                   zeroProbability: MESSAGES_EMPTY_PROBABILITY,
                 },
@@ -315,7 +338,14 @@ export async function seedContentForUsers({
         let threadSlotIndex = 0;
 
         for (const event of userEvents) {
-          const threadRows: Array<{ id: string; visibility: EAccessLevel; parentId: null; eventId: string; lockHistory: never[]; createdBy: string }> = [];
+          const threadRows: Array<{
+            id: string;
+            visibility: EAccessLevel;
+            parentId: null;
+            eventId: string;
+            lockHistory: never[];
+            createdBy: string;
+          }> = [];
           const threadPlans: Array<{ id: string; messagesForThread: number }> = [];
           for (let threadIndex = 0; threadIndex < event.threadsForEvent; threadIndex += 1) {
             const threadId = getUUIDv7();
@@ -365,7 +395,13 @@ export async function seedContentForUsers({
 
           if (reactionRows.length >= currentChunkSize) {
             await flushPendingRows(Reaction, reactionRows, transaction, step('reactions'), currentChunkSize);
-            await flushPendingRows(Activity, reactionActivityRows, transaction, step('reaction-activities'), currentChunkSize);
+            await flushPendingRows(
+              Activity,
+              reactionActivityRows,
+              transaction,
+              step('reaction-activities'),
+              currentChunkSize,
+            );
           }
           if (saveRows.length >= currentChunkSize) {
             await flushPendingRows(SavedEntity, saveRows, transaction, step('saves'), currentChunkSize);
@@ -377,7 +413,13 @@ export async function seedContentForUsers({
             await flushPendingRows(EntityRating, ratingRows, transaction, step('ratings'), currentChunkSize);
           }
 
-          await bulkCreateInChunks(Thread, threadRows, transaction, step('threads', `eventId=${event.id}`), currentChunkSize);
+          await bulkCreateInChunks(
+            Thread,
+            threadRows,
+            transaction,
+            step('threads', `eventId=${event.id}`),
+            currentChunkSize,
+          );
           userStats.threadsCreated += threadRows.length;
 
           const messageRows = [];
@@ -442,17 +484,35 @@ export async function seedContentForUsers({
 
               if (messageRows.length >= currentChunkSize) {
                 await flushPendingRows(Message, messageRows, transaction, step('messages'), currentChunkSize);
-                await flushPendingRows(Activity, messageActivityRows, transaction, step('message-activities'), currentChunkSize);
+                await flushPendingRows(
+                  Activity,
+                  messageActivityRows,
+                  transaction,
+                  step('message-activities'),
+                  currentChunkSize,
+                );
               }
               if (reactionRows.length >= currentChunkSize) {
                 await flushPendingRows(Reaction, reactionRows, transaction, step('reactions'), currentChunkSize);
-                await flushPendingRows(Activity, reactionActivityRows, transaction, step('reaction-activities'), currentChunkSize);
+                await flushPendingRows(
+                  Activity,
+                  reactionActivityRows,
+                  transaction,
+                  step('reaction-activities'),
+                  currentChunkSize,
+                );
               }
               if (saveRows.length >= currentChunkSize) {
                 await flushPendingRows(SavedEntity, saveRows, transaction, step('saves'), currentChunkSize);
               }
               if (engagementRows.length >= currentChunkSize) {
-                await flushPendingRows(EntityEngagement, engagementRows, transaction, step('engagement'), currentChunkSize);
+                await flushPendingRows(
+                  EntityEngagement,
+                  engagementRows,
+                  transaction,
+                  step('engagement'),
+                  currentChunkSize,
+                );
               }
               if (ratingRows.length >= currentChunkSize) {
                 await flushPendingRows(EntityRating, ratingRows, transaction, step('ratings'), currentChunkSize);
@@ -461,11 +521,23 @@ export async function seedContentForUsers({
           }
 
           await flushPendingRows(Message, messageRows, transaction, step('messages'), currentChunkSize);
-          await flushPendingRows(Activity, messageActivityRows, transaction, step('message-activities'), currentChunkSize);
+          await flushPendingRows(
+            Activity,
+            messageActivityRows,
+            transaction,
+            step('message-activities'),
+            currentChunkSize,
+          );
         }
 
         await flushPendingRows(Reaction, reactionRows, transaction, step('reactions'), currentChunkSize);
-        await flushPendingRows(Activity, reactionActivityRows, transaction, step('reaction-activities'), currentChunkSize);
+        await flushPendingRows(
+          Activity,
+          reactionActivityRows,
+          transaction,
+          step('reaction-activities'),
+          currentChunkSize,
+        );
         await flushPendingRows(SavedEntity, saveRows, transaction, step('saves'), currentChunkSize);
         await flushPendingRows(EntityEngagement, engagementRows, transaction, step('engagement'), currentChunkSize);
         await flushPendingRows(EntityRating, ratingRows, transaction, step('ratings'), currentChunkSize);
@@ -475,7 +547,11 @@ export async function seedContentForUsers({
           0,
         );
 
-        const { createdAchievementRows, progressCount } = await persistAchievementDataForUsers([user], metricsByUserId, transaction);
+        const { createdAchievementRows, progressCount } = await persistAchievementDataForUsers(
+          [user],
+          metricsByUserId,
+          transaction,
+        );
         if (progressCount > 0) {
           logSeedProgress(step('achievements', `progress-updated users=${progressCount}`));
         }
@@ -498,12 +574,21 @@ export async function seedContentForUsers({
             readAt: null,
           }));
 
-          await bulkCreateInChunks(Activity, achievementActivityRows, transaction, step('achievement-activities'), currentChunkSize);
+          await bulkCreateInChunks(
+            Activity,
+            achievementActivityRows,
+            transaction,
+            step('achievement-activities'),
+            currentChunkSize,
+          );
         }
 
         userStats.achievementsCreated = createdAchievementRows.length;
         userStats.activitiesCreated =
-          userStats.eventsCreated + userStats.messagesCreated + userStats.reactionsCreated + userStats.achievementsCreated;
+          userStats.eventsCreated +
+          userStats.messagesCreated +
+          userStats.reactionsCreated +
+          userStats.achievementsCreated;
 
         await transaction.commit();
 

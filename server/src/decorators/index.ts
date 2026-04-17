@@ -3,4 +3,4 @@
  * cache helper functions. Import and call the helpers in your
  * service methods instead.
  */
-export { default as MethodCacheSync } from "./methodcachesync";
+export { default as MethodCacheSync } from './methodcachesync';

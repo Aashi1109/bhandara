@@ -111,8 +111,5 @@ const normalizeComparableValue = (value: any): any => {
  * Compare two payloads while ignoring automatic timestamp churn such as updatedAt.
  */
 export const hasMeaningfulChange = (previousValue: any, nextValue: any) => {
-  return !isDeepStrictEqual(
-    normalizeComparableValue(previousValue),
-    normalizeComparableValue(nextValue),
-  );
+  return !isDeepStrictEqual(normalizeComparableValue(previousValue), normalizeComparableValue(nextValue));
 };

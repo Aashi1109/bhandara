@@ -1,8 +1,8 @@
-import Ajv, { type ValidateFunction } from "ajv";
-import addFormats from "ajv-formats";
-import addErrors from "ajv-errors";
-import { type NextFunction, type Request, type Response } from "express";
-import { BadRequestError } from "@/exceptions";
+import Ajv, { type ValidateFunction } from 'ajv';
+import addFormats from 'ajv-formats';
+import addErrors from 'ajv-errors';
+import { type NextFunction, type Request, type Response } from 'express';
+import { BadRequestError } from '@/exceptions';
 
 const ajv = new Ajv({
   allErrors: true,
@@ -27,31 +27,31 @@ function compileSchema(schemaName: string, schema: object): ValidateFunction {
 function buildErrorMessage(validate: ValidateFunction): string {
   return (validate.errors || [])
     .map((err) => {
-      const path = err.instancePath || "/";
+      const path = err.instancePath || '/';
       const { keyword } = err;
-      const msg = err.message || "Validation error";
+      const msg = err.message || 'Validation error';
 
       switch (keyword) {
-        case "required":
+        case 'required':
           return `Missing required property "${(err.params as any).missingProperty}" at ${path}`;
-        case "additionalProperties":
+        case 'additionalProperties':
           return `Unexpected property "${(err.params as any).additionalProperty}" at ${path}`;
-        case "type":
+        case 'type':
           return `Invalid type at ${path}, expected ${(err.params as any).type}`;
-        case "enum":
-          return `Invalid value at ${path}, expected one of ${(err.params as any).allowedValues.join(", ")}`;
-        case "minLength":
+        case 'enum':
+          return `Invalid value at ${path}, expected one of ${(err.params as any).allowedValues.join(', ')}`;
+        case 'minLength':
           return `String at ${path} is too short (minLength: ${(err.params as any).limit})`;
-        case "maxLength":
+        case 'maxLength':
           return `String at ${path} is too long (maxLength: ${(err.params as any).limit})`;
-        case "minimum":
-        case "maximum":
+        case 'minimum':
+        case 'maximum':
           return `Value at ${path} must be ${keyword} ${(err.params as any).limit}`;
         default:
           return `${path} ${msg}`;
       }
     })
-    .join(", ");
+    .join(', ');
 }
 
 /**
@@ -65,7 +65,7 @@ export const validateSchema = (schemaName: string, schema: object) => {
   function validator(req: Request, res: Response, next: NextFunction): void;
   function validator<T, R>(data: T, callback: (validData: T) => R): R;
   function validator(reqOrData: any, resOrCallback: any, next?: NextFunction): any {
-    if (typeof next === "function") {
+    if (typeof next === 'function') {
       // Middleware mode — validate req.body
       const isValid = validate(reqOrData.body);
       if (!isValid) throw new BadRequestError(buildErrorMessage(validate));

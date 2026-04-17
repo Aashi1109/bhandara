@@ -1,18 +1,4 @@
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-  Row,
-  Column,
-  Img,
-} from '@react-email/components';
+import { Body, Button, Container, Head, Html, Link, Preview, Section, Text } from '@react-email/components';
 import * as React from 'react';
 
 interface PasswordResetSuccessEmailProps {

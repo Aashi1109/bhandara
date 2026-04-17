@@ -15,11 +15,9 @@ export const deleteUserActivityCache = (userId: string) =>
 export const deleteUserUpdatesCache = (userId: string) =>
   activityCache.invalidateCache(cacheKeys.userUpdatesPattern(userId));
 
-export const getActivityCache = (id: string) =>
-  activityCache.getItem<IActivity>(cacheKeys.activityItem(id));
+export const getActivityCache = (id: string) => activityCache.getItem<IActivity>(cacheKeys.activityItem(id));
 
 export const setActivityCache = (id: string, data: IActivity) =>
   activityCache.setItem(cacheKeys.activityItem(id), data);
 
-export const deleteActivityCache = (id: string) =>
-  activityCache.deleteItem(cacheKeys.activityItem(id));
+export const deleteActivityCache = (id: string) => activityCache.deleteItem(cacheKeys.activityItem(id));

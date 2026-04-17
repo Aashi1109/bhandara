@@ -23,7 +23,10 @@ export async function findReusableSeedUsers(targetCount: number, options: SeedOp
       },
     },
     attributes: ['id', 'email', 'name'],
-    order: [['updatedAt', 'DESC'], ['id', 'ASC']],
+    order: [
+      ['updatedAt', 'DESC'],
+      ['id', 'ASC'],
+    ],
     limit: reusableLimit,
     raw: true,
   });

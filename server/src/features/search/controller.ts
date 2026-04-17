@@ -60,7 +60,9 @@ class SearchController {
       if (
         (parsedLatitude !== null && parsedLatitude !== undefined && !Number.isFinite(parsedLatitude)) ||
         (parsedLongitude !== null && parsedLongitude !== undefined && !Number.isFinite(parsedLongitude)) ||
-        (parsedRadiusKm !== null && parsedRadiusKm !== undefined && (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
+        (parsedRadiusKm !== null &&
+          parsedRadiusKm !== undefined &&
+          (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
       ) {
         return res.status(400).json({
           data: null,

@@ -1,1 +1,1 @@
-export const USER_TABLE_NAME = "Users";
+export const USER_TABLE_NAME = 'Users';

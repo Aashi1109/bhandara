@@ -81,13 +81,9 @@ Address.init(
       {
         name: 'addresses_coords_gix',
         using: 'GIST',
-        fields: [
-          sequelize.literal(
-            `ST_SetSRID(ST_MakePoint("longitude", "latitude"), 4326)`,
-          ),
-        ],
+        fields: [sequelize.literal(`ST_SetSRID(ST_MakePoint("longitude", "latitude"), 4326)`)],
       },
-      { fields: ['entityType'] }  
+      { fields: ['entityType'] },
     ],
   },
 );

@@ -26,15 +26,15 @@ const getSessionCookieOptions = (req: Request) => {
   const originHeader = req.headers?.origin;
   const hostHeader = req.headers?.host;
   const originHost = (() => {
-    if (typeof originHeader != 'string') return null;
+    if (typeof originHeader !== 'string') return null;
     try {
       return new URL(originHeader).host.toLowerCase();
     } catch (_) {
       return null;
     }
   })();
-  const requestHost = typeof hostHeader == 'string' ? hostHeader.toLowerCase() : null;
-  const isCrossOrigin = originHost != null && requestHost != null && originHost != requestHost;
+  const requestHost = typeof hostHeader === 'string' ? hostHeader.toLowerCase() : null;
+  const isCrossOrigin = originHost !== null && requestHost !== null && originHost !== requestHost;
 
   return {
     httpOnly: true,
@@ -289,8 +289,11 @@ export const resetPassword = async (req: Request, res: Response) => {
   if (!storedEmail || storedEmail !== email) {
     throw new UnauthorizedError('Invalid or expired reset token');
   }
-
-  const { data: sbUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+  const user = await userService.getUserByEmail(email);
+  if (!user) throw new NotFoundError('User not found');
+  const { data: sbUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserById(
+    user.meta.auth.supabaseId,
+  );
   const sbUser = sbUserData?.user;
   if (lookupError || !sbUser) throw new NotFoundError('Auth account not found');
 

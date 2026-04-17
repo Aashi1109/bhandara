@@ -1,1 +1,1 @@
-export const EVENT_TABLE_NAME = "Events";
+export const EVENT_TABLE_NAME = 'Events';

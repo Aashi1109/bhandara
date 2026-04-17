@@ -184,4 +184,11 @@ const validateUserCreate = validateSchema(`${USER_TABLE_NAME}_CREATE`, createSch
 const validateUserUpdate = validateSchema(`${USER_TABLE_NAME}_UPDATE`, updateSchema);
 const validateUserSettings = validateSchema(`${USER_SETTINGS_TABLE_NAME}_CREATE`, settingsUpdateSchema);
 
-export { validateUserCreate, validateUserUpdate, createSchema, updateSchema, validateUserSettings, settingsUpdateSchema };
+export {
+  validateUserCreate,
+  validateUserUpdate,
+  createSchema,
+  updateSchema,
+  validateUserSettings,
+  settingsUpdateSchema,
+};

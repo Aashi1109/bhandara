@@ -1,6 +1,6 @@
-import logger from "@/logger";
-import CustomError from "@/exceptions/CustomError";
-import type { NextFunction, Request, Response } from "express";
+import logger from '@/logger';
+import CustomError from '@/exceptions/CustomError';
+import type { NextFunction, Request, Response } from 'express';
 
 /**
  * Handles errors and sends appropriate HTTP responses.
@@ -10,12 +10,7 @@ import type { NextFunction, Request, Response } from "express";
  * @param {Response} res - The Express response object.
  * @param {NextFunction} next - The Express next function.
  */
-const errorHandler = (
-  err: unknown,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const errorHandler = (err: unknown, req: Request, res: Response, next: NextFunction) => {
   logger.error(err);
 
   if (!(err instanceof CustomError)) {
@@ -44,9 +39,7 @@ const errorHandler = (
   if (err.name) response.type = err.name;
   if (err.status) response.status = err.status;
 
-  return res
-    .status(err.status)
-    .json({ data: null, error: response });
+  return res.status(err.status).json({ data: null, error: response });
 };
 
 export default errorHandler;

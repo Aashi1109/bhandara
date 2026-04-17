@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from "async_hooks";
+import { AsyncLocalStorage } from 'async_hooks';
 
 export interface IRequestContext {
   requestId: string;
@@ -48,10 +48,7 @@ const RequestContext = {
   },
 
   // Add method to set specific values
-  setContextValue: <K extends keyof IRequestContext>(
-    key: K,
-    value: IRequestContext[K]
-  ): void => {
+  setContextValue: <K extends keyof IRequestContext>(key: K, value: IRequestContext[K]): void => {
     const currentContext = asyncLocalStorage.getStore();
     if (currentContext) {
       currentContext[key] = value;
