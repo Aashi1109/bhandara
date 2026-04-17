@@ -39,6 +39,7 @@ export const createTestApp = async ({
     const sessionParser: RequestHandler = authenticated
       ? (req, _res, next) => {
           (req as any).session = createAuthenticatedSession();
+          (req as any).signedCookies = { bh_session: "test-session" };
           next();
         }
       : (actual.sessionParser as RequestHandler);

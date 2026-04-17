@@ -74,7 +74,7 @@ describe('auth routes', () => {
     const response = await invokeApp(app, {
       body: {
         email: 'user@example.com',
-        password: 'secret1',
+        password: 'secret12',
       },
       method: 'POST',
       url: '/api/auth/login',
@@ -87,7 +87,8 @@ describe('auth routes', () => {
         user: { email: 'user@example.com', id: 'user-1' },
       },
     });
-    expect(String(response.headers['set-cookie'])).toContain('bh_session=session-123');
+    expect(String(response.headers['set-cookie'])).toContain('bh_session=');
+    expect(String(response.headers['set-cookie'])).toContain('session-123');
   });
 
   it('marks auth cookies for cross-origin web requests', async () => {
@@ -130,7 +131,7 @@ describe('auth routes', () => {
     const response = await invokeApp(app, {
       body: {
         email: 'user@example.com',
-        password: 'secret1',
+        password: 'secret12',
       },
       headers: {
         host: 'brave-wren-big.ngrok-free.app',
@@ -220,7 +221,7 @@ describe('auth routes', () => {
     const response = await invokeApp(app, {
       body: {
         email: 'user@example.com',
-        password: 'secret1',
+        password: 'secret12',
       },
       method: 'POST',
       url: '/api/auth/login',
@@ -266,7 +267,7 @@ describe('auth routes', () => {
       body: {
         email: 'user@example.com',
         name: 'Test User',
-        password: 'secret1',
+        password: 'secret12',
       },
       method: 'POST',
       url: '/api/auth/signup',

@@ -80,6 +80,11 @@ vi.mock('@/features/reactions/constants', () => ({
   },
 }));
 
+vi.mock('@/features/users/service', () => ({
+  default: class {},
+  toUserMini: vi.fn((user) => user),
+}));
+
 vi.mock('@/features', () => ({
   EventService: class {
     getAll = vi.fn();

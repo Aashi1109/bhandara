@@ -11,6 +11,7 @@ const {
   updateMock,
   joinLeaveEventMock,
   trackActivityMock,
+  toEventSummaryMock,
   verifyEventMock,
 } = vi.hoisted(() => ({
   activityCreateMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   updateMock: vi.fn(),
   joinLeaveEventMock: vi.fn(),
   trackActivityMock: vi.fn(),
+  toEventSummaryMock: vi.fn((event) => event),
   verifyEventMock: vi.fn(),
 }));
 
@@ -35,6 +37,7 @@ vi.mock('@/features/events/service', () => ({
     joinLeaveEvent = joinLeaveEventMock;
     verifyEvent = verifyEventMock;
   },
+  toEventSummary: toEventSummaryMock,
 }));
 
 vi.mock('@/features/tags/service', () => ({
@@ -72,7 +75,9 @@ describe('events controller', () => {
     updateMock.mockReset();
     joinLeaveEventMock.mockReset();
     trackActivityMock.mockReset();
+    toEventSummaryMock.mockClear();
     verifyEventMock.mockReset();
+    activityCreateMock.mockResolvedValue({ recipientId: null });
     vi.useRealTimers();
   });
 
