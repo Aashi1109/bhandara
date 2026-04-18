@@ -15,7 +15,28 @@ export const initializeTracing = () => {
     url: config.otel.url,
     apiKey: config.otel.apiKey,
     service: config.infrastructure.serviceName,
-  });
+    disableMetrics: !config.otel.enableMetrics,
+    instrumentations: {
+      '@opentelemetry/instrumentation-http': {
+        enabled: true,
+      },
+      '@opentelemetry/instrumentation-express': {
+        enabled: true,
+      },
+      '@opentelemetry/instrumentation-pg': {
+        enabled: config.otel.enableDbClientSpans,
+      },
+      '@opentelemetry/instrumentation-ioredis': {
+        enabled: config.otel.enableRedisClientSpans,
+      },
+      '@opentelemetry/instrumentation-redis': {
+        enabled: config.otel.enableRedisClientSpans,
+      },
+      '@opentelemetry/instrumentation-generic-pool': {
+        enabled: false,
+      },
+    },
+  } as Parameters<typeof HyperDX.init>[0] & { url: string });
 
   console.log('OpenTelemetry tracing initialized');
 };

@@ -215,11 +215,12 @@ export async function seedContentForUsers({
             verifiers: [],
             type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
             createdBy: user.id,
-            status: faker.helpers.arrayElement([EEventStatus.Upcoming, EEventStatus.Draft]),
+            isDraft: faker.helpers.arrayElement([false, true]),
+            cancelledAt: null,
             capacity: faker.number.int({ min: 50, max: 200 }),
             tags: eventTags,
             media: [],
-            timings: buildTimings(),
+            ...buildTimings(),
           });
           eventAddressRows.push({
             id: getUUIDv7(),

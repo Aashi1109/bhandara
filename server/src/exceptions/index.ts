@@ -11,11 +11,11 @@ export function createCustomErrorClass(
      * Creates a new instance of the custom error.
      * @constructor
      * @param {string} message - The error message.
-     * @param {number} [status=defaultStatus] - The HTTP status code associated with the error.
      * @param {any} [additionalInfo=undefined] - Additional information about the error.
+     * @param {number} [status=defaultStatus] - The HTTP status code associated with the error.
      */
-    constructor(message: string = defaultMessage, status: number = defaultStatus, additionalInfo: any = undefined) {
-      super(message, status, additionalInfo);
+    constructor(message: string = defaultMessage, additionalInfo: any = undefined, status: number = defaultStatus) {
+      super(message, additionalInfo, status);
       this.name = className; // Set the name of the error class
     }
   }

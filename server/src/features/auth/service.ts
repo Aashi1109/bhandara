@@ -2,6 +2,7 @@ import { supabase } from '@/connections';
 import { RequestContext } from '@/contexts';
 import { EAuthProvider } from '@/definitions/enums';
 import type { IBaseUser } from '@/definitions/types';
+import { UnauthorizedError } from '@/exceptions';
 import { getSafeUser, setUserCache, setUserSessionCache } from '@/features/users/helpers';
 import UserService from '@/features/users/service';
 import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from '@/helpers';
@@ -112,6 +113,10 @@ class Auth {
       existingUser = userData ?? undefined;
     }
 
+    if (existingUser && existingUser.__sid !== user!.id) {
+      existingUser = (await this.userService.setSupabaseSid(existingUser.id, user!.id)) ?? existingUser;
+    }
+
     // Extract IP and location info
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || '';
     const rawUserAgent = req.headers['user-agent'] as string;
@@ -152,8 +157,9 @@ class Auth {
       const newUser = await this.userService.create(newUserData);
       existingUser = (newUser as any)?.[0] ?? newUser;
     }
-    existingUser = getSafeUser(existingUser!);
-    await setUserCache(existingUser.id, existingUser);
+    const cachedUser = existingUser!;
+    const safeUser = getSafeUser(cachedUser);
+    await setUserCache(cachedUser.id, cachedUser);
 
     // Extract device metadata
     const parser = new UAParser();
@@ -182,18 +188,18 @@ class Auth {
       location: geoLocationData ?? {},
       expiresAt: new Date(new Date(0).setUTCSeconds(session!.expires_at ?? 0)).toISOString(),
       expiresIn: session!.expires_in,
-      user: { id: existingUser.id },
+      user: { id: cachedUser.id },
     };
 
     const sessionId = getAlphaNumericId();
 
     await setUserSessionCache({
-      userId: existingUser.id,
+      userId: cachedUser.id,
       sessionId,
       data: sessionDataToSave,
     });
 
-    return { sessionId, user: existingUser };
+    return { sessionId, user: safeUser };
   };
 }
 

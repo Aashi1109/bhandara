@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import { QueryTypes, type CreationAttributes } from 'sequelize';
 
 import { disconnect, getDBConnection } from '@/connections/db';
-import { EAddressEntityType, EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { EAddressEntityType, EEventParticipantStatus, EEventType } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
 import { Address } from '@/features/addresses/model';
 import { Event } from '@/features/events/model';
@@ -23,14 +23,13 @@ type EventInsert = {
   verifiers: { user: string; verifiedAt: string }[];
   type: EEventType;
   createdBy: string;
-  status: EEventStatus;
+  isDraft: boolean;
+  cancelledAt: null;
   capacity: number;
   tags: string[];
   media: string[];
-  timings: {
-    start: string;
-    end: string;
-  };
+  startTime: string;
+  endTime: string;
 };
 
 type EventLocation = {
@@ -193,15 +192,16 @@ function buildEventPayload(args: {
     verifiers,
     type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
     createdBy: args.ownerId,
-    status: faker.helpers.weightedArrayElement([
-      { value: EEventStatus.Upcoming, weight: 8 },
-      { value: EEventStatus.Ongoing, weight: 1 },
-      { value: EEventStatus.Draft, weight: 1 },
+    isDraft: faker.helpers.weightedArrayElement([
+      { value: false, weight: 9 },
+      { value: true, weight: 1 },
     ]),
+    cancelledAt: null,
     capacity: faker.number.int({ min: 50, max: 250 }),
     tags,
     media: [],
-    timings,
+    startTime: timings.start,
+    endTime: timings.end,
   } satisfies SeedEventPayload;
 }
 

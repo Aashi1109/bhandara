@@ -83,8 +83,8 @@ const toBasePayload = (ev: any): BasePayload => {
         }
       : { type: '', url: '', thumbnailUrl: '' },
     location: ev.location,
-    startTime: ev.timings?.start,
-    endTime: ev.timings?.end,
+    startTime: ev.startTime,
+    endTime: ev.endTime,
     tags: ev.tags || [],
     creator: ev.creator,
     createdAt: ev.createdAt,
@@ -105,7 +105,7 @@ export const buildExploreSections = (events: any[]): ExploreSection[] => {
 
   const tasteCalendarPayload = events.map((ev) => ({
     ...toBasePayload(ev),
-    filter: [getTimeOfDay(ev.timings?.start)],
+    filter: [getTimeOfDay(ev.startTime)],
   }));
 
   const foodieFeedPayload = baseEvents.filter((ev) => ev.status === 'ongoing' || ev.status === 'upcoming');
@@ -124,7 +124,7 @@ export const buildExploreSections = (events: any[]): ExploreSection[] => {
     .map((ev) => ({
       ...toBasePayload(ev),
       chef: ev.creator?.name || '',
-      time: ev.timings?.start,
+      time: ev.startTime,
       going: Array.isArray(ev.participants) ? ev.participants.length : 0,
       verifiers: ev.verifiers,
     }));

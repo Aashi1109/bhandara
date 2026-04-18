@@ -1,0 +1,2 @@
+ALTER TABLE "Users"
+  ALTER COLUMN "emailLookupHash" SET NOT NULL;

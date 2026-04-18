@@ -3,7 +3,7 @@ import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from
 import AddressService from '@/features/addresses/service';
 import { findAllWithPagination } from '@/utils/dbUtils';
 import { validateUserCreate, validateUserUpdate } from './validation';
-import { User } from './model';
+import { decryptUserRows, User } from './model';
 import UserSettingsService from './settings.service';
 import {
   bulkGetUserCache,
@@ -21,7 +21,7 @@ import {
   setUserInterestsCache,
 } from './helpers';
 import { BadRequestError, NotFoundError } from '@/exceptions';
-import { isEmpty } from '@/utils';
+import { hashForLookup, isEmpty } from '@/utils';
 import TagService from '@/features/tags/service';
 import MediaService from '@/features/media/service';
 import type { FindOptions } from 'sequelize';
@@ -58,6 +58,10 @@ class UserService {
     this.settingsService = new UserSettingsService();
   }
 
+  private decryptUsers<T extends Record<string, any>>(users: T[]) {
+    return decryptUserRows(users);
+  }
+
   private async hydrateUsers<T extends Pick<IBaseUser, 'id'> & Partial<IBaseUser>>(users: T[]): Promise<T[]> {
     if (users.length === 0) {
       return users;
@@ -80,7 +84,7 @@ class UserService {
       return null;
     }
 
-    const [hydrated] = await this.hydrateUsers([res as IBaseUser]);
+    const [hydrated] = await this.hydrateUsers(this.decryptUsers([res as IBaseUser]));
     return hydrated;
   }
 
@@ -95,17 +99,18 @@ class UserService {
       pagination,
       select,
     )) as unknown as PaginatedResult<IBaseUser>;
-    result.items = await this.hydrateUsers(result.items as IBaseUser[]);
+    result.items = await this.hydrateUsers(this.decryptUsers(result.items as IBaseUser[]));
     return result;
   }
 
   async create(data: Partial<IBaseUser>): Promise<IBaseUser | null> {
     const res = await validateUserCreate(data, async (d) => {
-      const { address, ...rest } = d;
+      const { address, __sid, ...rest } = d as IBaseUser;
       const row = await User.sequelize!.transaction(async (transaction) => {
         const created = await User.create(
           {
             ...rest,
+            __sid,
             mediaId: d.mediaId as string,
           } as any,
           { transaction },
@@ -123,6 +128,22 @@ class UserService {
       await this.setCache(created.id, created);
     }
     return res;
+  }
+
+  async setSupabaseSid(id: string, sid: string): Promise<IBaseUser | null> {
+    const existing = await this._getByIdNoCache(id);
+    if (!existing) {
+      return null;
+    }
+
+    const row = await User.findByPk(id);
+    if (!row) {
+      return null;
+    }
+
+    await row.update({ __sid: sid } as Partial<IBaseUser>);
+    await deleteAllUserCache(id, existing);
+    return this._getByIdNoCache(id);
   }
 
   async update(id: string, data: Partial<IBaseUser>) {
@@ -188,11 +209,11 @@ class UserService {
     if (cached) return cached;
     const data = (await findAllWithPagination(
       User,
-      { where: { email } },
+      { where: { emailLookupHash: hashForLookup(email) } },
       { limit: 1 },
     )) as unknown as PaginatedResult<IBaseUser>;
     if (data.items.length === 0) return null;
-    const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
+    const [user] = await this.hydrateUsers(this.decryptUsers(data.items as IBaseUser[]));
     if (user.mediaId) {
       const media = await this.mediaService.getById(user.mediaId as string);
       user.media = media as IMedia;
@@ -214,7 +235,7 @@ class UserService {
       { limit: 1 },
     )) as unknown as PaginatedResult<IBaseUser>;
     if (!isEmpty(data.items)) {
-      const [user] = await this.hydrateUsers(data.items as IBaseUser[]);
+      const [user] = await this.hydrateUsers(this.decryptUsers(data.items as IBaseUser[]));
       data.items = [user] as typeof data.items;
       await setUserCacheByUsername(username, user);
     }
@@ -231,7 +252,7 @@ class UserService {
       await this.addressService.replaceAddress(EAddressEntityType.User, id, null, transaction);
       await row.destroy({ transaction });
     });
-    await deleteAllUserCache(id);
+    await deleteAllUserCache(id, existing);
     return existing;
   }
 

@@ -24,6 +24,7 @@ export interface IBaseUser extends ITimeStamp {
   id: string;
   name: string;
   email: string;
+  __sid?: string | null;
   gender: string;
   address: Record<string, any> | null;
   isVerified: boolean;
@@ -107,12 +108,15 @@ export interface IEvent extends ITimeStamp {
   createdBy: string; // References "User" table
   creator?: IBaseUser;
   status: EEventStatus;
+  isDraft: boolean;
+  cancelledAt: Date | string | null;
   capacity: number;
   tags: ITag[] | string[]; // Array of tag IDs
   media: IMedia[] | string[]; // Array of media IDs
   stats?: IEventStats;
   reactions?: IReaction[];
-  timings: { start: Date; end: Date };
+  startTime: Date | string;
+  endTime: Date | string;
 }
 
 export interface IEventStats {

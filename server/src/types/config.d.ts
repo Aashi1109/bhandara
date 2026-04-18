@@ -14,6 +14,10 @@ export interface RedisConnectionConfig {
 export interface AppConfig {
   baseUrl: string;
   port: string | number;
+  encryption: {
+    dataKey: string;
+    hashKey: string;
+  };
   jwt: {
     secret: string | undefined;
     expiresIn: string;
@@ -80,4 +84,7 @@ export interface SentryConfig {
 export interface OTelConfig {
   url: string;
   apiKey: string;
+  enableDbClientSpans: boolean;
+  enableRedisClientSpans: boolean;
+  enableMetrics: boolean;
 }

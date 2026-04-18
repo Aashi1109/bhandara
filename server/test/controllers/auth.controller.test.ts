@@ -1,11 +1,14 @@
 import type { Request, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockSupabaseAuth } from "../mocks/external";
+import { mockSupabaseAdminAuth, mockSupabaseAuth } from "../mocks/external";
 
-const { createPlatformUserMock, getUserByEmailMock } = vi.hoisted(() => ({
+const { consumeResetTokenMock, createPlatformUserMock, getUserByEmailMock, sendPasswordResetSuccessEmailMock } =
+  vi.hoisted(() => ({
+    consumeResetTokenMock: vi.fn(),
   createPlatformUserMock: vi.fn(),
   getUserByEmailMock: vi.fn(),
-}));
+    sendPasswordResetSuccessEmailMock: vi.fn(),
+  }));
 
 vi.mock("@/features", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@/features");
@@ -23,10 +26,25 @@ vi.mock("@/features/users/service", () => ({
   },
 }));
 
+vi.mock("@/features/auth/otp-helpers", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/features/auth/otp-helpers");
+  return {
+    ...actual,
+    consumeResetToken: consumeResetTokenMock,
+  };
+});
+
+vi.mock("@/services/email", () => ({
+  sendPasswordResetOTPEmail: vi.fn(),
+  sendPasswordResetSuccessEmail: sendPasswordResetSuccessEmailMock,
+}));
+
 describe("auth controller", () => {
   beforeEach(() => {
+    consumeResetTokenMock.mockReset();
     createPlatformUserMock.mockReset();
     getUserByEmailMock.mockReset();
+    sendPasswordResetSuccessEmailMock.mockReset();
   });
 
   it("returns 400 when Google id-token exchange does not yield an access token", async () => {
@@ -102,5 +120,45 @@ describe("auth controller", () => {
         user: { email: "user@example.com", id: "user-1" },
       },
     });
+  });
+
+  it("uses the persisted __sid for password resets", async () => {
+    consumeResetTokenMock.mockResolvedValue("user@example.com");
+    getUserByEmailMock.mockResolvedValue({
+      __sid: "supabase-user-42",
+      email: "user@example.com",
+      id: "user-1",
+      meta: { auth: { provider: "email" } },
+    });
+    mockSupabaseAdminAuth.getUserById.mockResolvedValue({
+      data: { user: { id: "supabase-user-42" } },
+      error: null,
+    });
+    mockSupabaseAdminAuth.updateUserById.mockResolvedValue({ error: null });
+
+    const { resetPassword } = await import("@/features/auth/controller");
+    const status = vi.fn().mockReturnThis();
+    const json = vi.fn();
+    const req = {
+      body: {
+        email: "user@example.com",
+        password: "new-password-123",
+        token: "reset-token",
+      },
+    } as unknown as Request;
+    const res = {
+      json,
+      status,
+    } as unknown as Response;
+
+    await resetPassword(req, res);
+
+    expect(mockSupabaseAdminAuth.getUserById).toHaveBeenCalledWith("supabase-user-42");
+    expect(mockSupabaseAdminAuth.updateUserById).toHaveBeenCalledWith("supabase-user-42", {
+      password: "new-password-123",
+    });
+    expect(sendPasswordResetSuccessEmailMock).toHaveBeenCalledWith("user@example.com");
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith({ data: "Password reset successfully" });
   });
 });

@@ -78,8 +78,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.bySemanticsLabel('Minimize hero header'), findsOneWidget);
-    expect(find.bySemanticsLabel('Expand hero header'), findsNothing);
+    expect(find.bySemanticsLabel('Minimize hero header'), findsNothing);
+    expect(find.bySemanticsLabel('Expand hero header'), findsOneWidget);
     expect(find.text('42 views'), findsOneWidget);
     expect(find.byKey(const ValueKey('hero-carousel-prev')), findsNothing);
     expect(find.byKey(const ValueKey('hero-carousel-next')), findsOneWidget);

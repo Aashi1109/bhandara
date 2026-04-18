@@ -1,3 +1,5 @@
+import { hashForCacheKey, hashForLookup } from '@/utils';
+
 type CacheEntityType = 'events' | 'threads' | 'messages' | 'users';
 
 const ENTITY_CODES: Record<CacheEntityType, string> = {
@@ -9,6 +11,9 @@ const ENTITY_CODES: Record<CacheEntityType, string> = {
 
 const compact = (...parts: Array<string | null | undefined>) =>
   parts.filter((part): part is string => !!part && part.length > 0).join(':');
+
+const hashed = (value: string) => hashForLookup(value) ?? '';
+const shortHashed = (value: string) => hashForCacheKey(value) ?? '';
 
 export const entityCode = (entityType: CacheEntityType) => ENTITY_CODES[entityType];
 
@@ -39,5 +44,17 @@ export const cacheKeys = {
   },
   exploreCursor(userId: string) {
     return compact('u', userId, 'c');
+  },
+  userEmailLookup(email: string) {
+    return compact('ul', 'e', shortHashed(email));
+  },
+  userUsernameLookup(username: string) {
+    return compact('ul', 'u', hashed(username));
+  },
+  passwordResetOtp(email: string) {
+    return compact('pwd', 'otp', hashed(email));
+  },
+  passwordResetToken(token: string) {
+    return compact('pwd', 'tok', hashed(token));
   },
 };

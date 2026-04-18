@@ -5,7 +5,7 @@ import swaggerUI from 'swagger-ui-express';
 
 import helmet from 'helmet';
 import config from '@/config';
-import { errorHandler, morganLogger, requestContextMiddleware } from '@/middlewares';
+import { errorHandler, morganLogger, requestContextMiddleware, requestMetrics } from '@/middlewares';
 import appRoutes from '@/routes';
 import { NotFoundError } from '@/exceptions';
 import { swaggerSpec } from '@/docs/swagger';
@@ -66,6 +66,7 @@ const createServer = () => {
     });
   });
 
+  app.use(requestMetrics);
   app.use(requestContextMiddleware);
 
   app.use('/api', appRoutes);

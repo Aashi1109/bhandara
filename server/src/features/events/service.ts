@@ -27,7 +27,7 @@ import { getDistanceInMeters } from '@/helpers';
 import { Event } from './model';
 import MessageService from '@/features/messages/service';
 import EntityStatsService from '@/features/stats/service';
-import { buildActiveEventStatusPredicate, deriveEventStatus, resolveEventStatus } from './status';
+import { buildActiveEventStatusPredicate, deriveEventStatus, resolvePersistedEventState } from './status';
 import ngeohash from 'ngeohash';
 
 export interface IEventListFilters {
@@ -44,11 +44,21 @@ export interface IEventListFilters {
 
 export type IEventSummary = Pick<
   IEvent,
-  'id' | 'name' | 'status' | 'type' | 'createdBy' | 'location' | 'timings' | 'createdAt' | 'updatedAt' | 'media'
+  | 'id'
+  | 'name'
+  | 'status'
+  | 'type'
+  | 'createdBy'
+  | 'location'
+  | 'startTime'
+  | 'endTime'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'media'
 >;
 
 export function toEventSummary(event: IEvent): IEventSummary {
-  const status = event.status === EEventStatus.Cancelled ? event.status : deriveEventStatus(event.timings);
+  const status = deriveEventStatus(event);
   return {
     id: event.id,
     name: event.name,
@@ -56,7 +66,8 @@ export function toEventSummary(event: IEvent): IEventSummary {
     type: event.type,
     createdBy: event.createdBy,
     location: event.location,
-    timings: event.timings,
+    startTime: event.startTime,
+    endTime: event.endTime,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
     media: event.media,
@@ -106,13 +117,13 @@ class EventService {
   }
 
   private withResolvedStatus<T extends IEvent | null>(event: T): T {
-    if (!event || event.status === EEventStatus.Cancelled) {
+    if (!event) {
       return event;
     }
 
     return {
       ...event,
-      status: deriveEventStatus(event.timings),
+      status: deriveEventStatus(event),
     } as T;
   }
 
@@ -125,28 +136,30 @@ class EventService {
       type: resolved.type,
       createdBy: resolved.createdBy,
       location: resolved.location,
-      timings: resolved.timings,
+      startTime: resolved.startTime,
+      endTime: resolved.endTime,
       createdAt: resolved.createdAt,
       updatedAt: resolved.updatedAt,
       media: resolved.media,
     };
   }
 
-  private jsonTimestampExpression(field: 'start' | 'end') {
-    return `CAST("timings"->>'${field}' AS TIMESTAMPTZ)`;
+  private timestampColumnExpression(field: 'start' | 'end') {
+    return field === 'start' ? '"startTime"' : '"endTime"';
   }
 
   private buildDerivedStatusClause(status: EEventStatus) {
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
     const now = escape(new Date().toISOString());
-    const startExpr = this.jsonTimestampExpression('start');
-    const endExpr = this.jsonTimestampExpression('end');
-    const activeStatuses = buildActiveEventStatusPredicate({ escape });
+    const startExpr = this.timestampColumnExpression('start');
+    const endExpr = this.timestampColumnExpression('end');
+    const activeStatuses = buildActiveEventStatusPredicate();
 
     switch (status) {
       case EEventStatus.Draft:
+        return { isDraft: true, cancelledAt: null };
       case EEventStatus.Cancelled:
-        return { status };
+        return Sequelize.literal('"cancelledAt" IS NOT NULL');
       case EEventStatus.Upcoming:
         return Sequelize.literal(`(${activeStatuses} AND ${startExpr} > ${now})`);
       case EEventStatus.Ongoing:
@@ -185,7 +198,7 @@ class EventService {
     if (filters.startDate && filters.endDate) {
       clauses.push(
         Sequelize.literal(
-          `(${this.jsonTimestampExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.jsonTimestampExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
         ),
       );
     }
@@ -237,7 +250,7 @@ class EventService {
     if (filters.startDate && filters.endDate) {
       clauses.push(
         Sequelize.literal(
-          `(${this.jsonTimestampExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.jsonTimestampExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
         ),
       );
     }
@@ -327,7 +340,18 @@ class EventService {
 
     const event = (await Event.findByPk(id, {
       raw: true,
-      attributes: ['id', 'name', 'status', 'type', 'createdBy', 'timings', 'media', 'tags'],
+      attributes: [
+        'id',
+        'name',
+        'isDraft',
+        'cancelledAt',
+        'type',
+        'createdBy',
+        'startTime',
+        'endTime',
+        'media',
+        'tags',
+      ],
     })) as unknown as IEvent | null;
     if (!event) {
       return null;
@@ -343,15 +367,14 @@ class EventService {
   }
 
   async createEvent(body: Partial<IEvent>) {
-    if (!body.timings) {
-      throw new BadRequestError('Event timings are required');
+    if (!body.startTime || !body.endTime) {
+      throw new BadRequestError('Event startTime and endTime are required');
     }
-
-    body.status = resolveEventStatus(body.timings);
     const result = await validateEventCreate(body, async (data) => {
-      const { location, ...rest } = data;
+      const { location, status, ...rest } = data;
+      const persistedState = resolvePersistedEventState(status);
       const row = await Event.sequelize!.transaction(async (transaction) => {
-        const created = await Event.create(rest as any, { transaction });
+        const created = await Event.create({ ...rest, ...persistedState } as any, { transaction });
         await this.addressService.replaceAddress(EAddressEntityType.Event, created.id, location, transaction);
         return created;
       });
@@ -374,22 +397,20 @@ class EventService {
     data: U;
     populate?: boolean | string[];
   }) {
-    if (existing && existing.status === EEventStatus.Cancelled) {
+    if (existing && existing.cancelledAt) {
       throw new BadRequestError('Cannot update a cancelled event');
     }
-    const nextTimings = data.timings ?? existing.timings;
-    const nextStatus =
-      data.status === EEventStatus.Cancelled ? EEventStatus.Cancelled : resolveEventStatus(nextTimings);
 
     const result = await validateEventUpdate(data, async (d) => {
-      const { location, ...rest } = d;
+      const { location, status, ...rest } = d;
+      const persistedState = resolvePersistedEventState(status, existing);
       await Event.sequelize!.transaction(async (transaction) => {
         const row = await Event.findByPk(existing.id, { transaction });
         if (!row) throw new NotFoundError('Event not found');
         await row.update(
           {
             ...(rest as Partial<IEvent>),
-            status: nextStatus,
+            ...persistedState,
           } as Partial<IEvent>,
           { transaction },
         );
@@ -667,7 +688,7 @@ class EventService {
       Event,
       { where },
       pagination,
-      'id,name,status,type,createdBy,timings,createdAt,updatedAt,media',
+      'id,name,isDraft,cancelledAt,type,createdBy,startTime,endTime,createdAt,updatedAt,media',
     )) as unknown as PaginatedResult<IEvent>;
 
     const hydratedItems = await this.hydrateEventLocations(data.items ?? []);
@@ -681,7 +702,7 @@ class EventService {
   async cancel(id: string): Promise<IEvent | null> {
     const row = await Event.findByPk(id);
     if (!row) return null;
-    await row.update({ status: EEventStatus.Cancelled } as Partial<IEvent>);
+    await row.update({ isDraft: false, cancelledAt: new Date() } as Partial<IEvent>);
     await this.deleteCache(id);
     return this.getById(id);
   }
@@ -760,8 +781,7 @@ class EventService {
     const eventData = event;
     const userData = user;
 
-    const resolvedEventStatus =
-      eventData.status === EEventStatus.Cancelled ? EEventStatus.Cancelled : deriveEventStatus(eventData.timings);
+    const resolvedEventStatus = deriveEventStatus(eventData);
     if (resolvedEventStatus !== EEventStatus.Ongoing) {
       throw new BadRequestError(`Event is ${resolvedEventStatus}`);
     }

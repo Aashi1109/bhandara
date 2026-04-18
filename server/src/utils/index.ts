@@ -113,3 +113,5 @@ const normalizeComparableValue = (value: any): any => {
 export const hasMeaningfulChange = (previousValue: any, nextValue: any) => {
   return !isDeepStrictEqual(normalizeComparableValue(previousValue), normalizeComparableValue(nextValue));
 };
+
+export * from './encryption';

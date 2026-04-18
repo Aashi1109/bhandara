@@ -3,16 +3,24 @@ import { DataTypes, Model } from 'sequelize';
 import { getUUIDv7 } from '@/helpers';
 import { USER_TABLE_NAME } from './constants';
 import type { IBaseUser } from '@/definitions/types';
+import { decryptRecordFields, encryptedTextAttribute } from '@/utils';
 
 const sequelize = getDBConnection()!;
 type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'media' | 'profilePic'> & {
+  emailLookupHash: string | null;
   profilePic: Record<string, any> | null;
 };
+
+export const USER_ENCRYPTED_FIELDS = ['email', '__sid'] as const;
+export const decryptUserRow = <T extends Record<string, any>>(row: T) => decryptRecordFields(row, USER_ENCRYPTED_FIELDS);
+export const decryptUserRows = <T extends Record<string, any>>(rows: T[]) => rows.map((row) => decryptUserRow(row));
 
 export class User extends Model<UserAttributes, UserAttributes> {
   declare id: string;
   declare name: string;
   declare email: string;
+  declare __sid: string | null;
+  declare emailLookupHash: string | null;
   declare gender: string;
   declare isVerified: boolean;
   declare profilePic: Record<string, any> | null;
@@ -34,7 +42,17 @@ User.init(
       defaultValue: () => getUUIDv7(),
     },
     name: { type: DataTypes.TEXT, allowNull: false },
-    email: { type: DataTypes.TEXT, allowNull: false, unique: true },
+    email: encryptedTextAttribute('email', {
+      allowNull: false,
+      lookupHashField: 'emailLookupHash',
+    }),
+    emailLookupHash: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    __sid: encryptedTextAttribute('__sid', {
+      allowNull: true,
+    }),
     gender: { type: DataTypes.TEXT, allowNull: false },
     isVerified: {
       type: DataTypes.BOOLEAN,
@@ -56,6 +74,11 @@ User.init(
     sequelize,
     timestamps: true,
     indexes: [
+      {
+        name: 'users_emailLookupHash_key',
+        unique: true,
+        fields: ['emailLookupHash'],
+      },
       {
         name: 'users_updatedAt_idx',
         fields: ['updatedAt'],

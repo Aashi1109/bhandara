@@ -374,30 +374,24 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
       children: [
-        if (_updates.isNotEmpty)
+        if (_updates.isNotEmpty && unreadCount > 0)
           Align(
             alignment: Alignment.centerLeft,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: unreadCount > 0 ? AppColors.primary : AppColors.muted,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(50),
               ),
               child: Text(
-                unreadCount > 0
-                    ? '$unreadCount UNREAD'
-                    : 'You are all caught up.',
-                style: unreadCount > 0
-                    ? context.appTypography.labelSM.copyWith(
-                        color: AppColors.surface,
-                      )
-                    : context.appTypography.bodySM.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
+                '$unreadCount UNREAD',
+                style: context.appTypography.labelSM.copyWith(
+                  color: AppColors.surface,
+                ),
               ),
             ),
           ),
-        if (_updates.isNotEmpty) const SizedBox(height: 24),
+        if (_updates.isNotEmpty && unreadCount > 0) const SizedBox(height: 24),
         if (today.isNotEmpty) ...[
           _sectionLabel('TODAY'),
           const SizedBox(height: 12),
@@ -513,6 +507,9 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   @override
   Widget build(BuildContext context) {
     final typography = context.appTypography;
+    final unreadCount = _updates.where((update) => update.isUnread).length;
+    final showCaughtUpInHeader = _updates.isNotEmpty && unreadCount == 0;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -523,16 +520,24 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                 title: 'Updates',
                 showBack: false,
                 rightElement: GestureDetector(
-                  onTap: _updates.isEmpty || _isMarkingAll
+                  onTap: _updates.isEmpty || _isMarkingAll || showCaughtUpInHeader
                       ? null
                       : _markAllRead,
                   child: Text(
-                    _isMarkingAll ? 'Marking...' : 'Mark all as read',
+                    _isMarkingAll
+                        ? 'Marking...'
+                        : showCaughtUpInHeader
+                        ? 'You are all caught up.'
+                        : 'Mark all as read',
                     style: typography.bodySM.copyWith(
                       color: _updates.isEmpty || _isMarkingAll
                           ? AppColors.mutedForeground
+                          : showCaughtUpInHeader
+                          ? AppColors.mutedForeground
                           : AppColors.primary,
-                      decoration: TextDecoration.underline,
+                      decoration: showCaughtUpInHeader
+                          ? TextDecoration.none
+                          : TextDecoration.underline,
                     ),
                   ),
                 ),

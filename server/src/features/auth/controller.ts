@@ -291,9 +291,11 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
   const user = await userService.getUserByEmail(email);
   if (!user) throw new NotFoundError('User not found');
-  const { data: sbUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserById(
-    user.meta.auth.supabaseId,
-  );
+  const supabaseUserId = user.__sid;
+  if (!supabaseUserId) {
+    throw new NotFoundError('Auth account not found');
+  }
+  const { data: sbUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserById(supabaseUserId);
   const sbUser = sbUserData?.user;
   if (lookupError || !sbUser) throw new NotFoundError('Auth account not found');
 

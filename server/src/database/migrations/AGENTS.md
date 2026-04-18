@@ -8,7 +8,7 @@ Migrations are plain SQL or JS/TS files inside numbered folders. The runner (`sc
 pnpm migrate --folder=<folder_name>
 ```
 
-- Folders are numbered for ordering clarity (`000_init`, `010_...`, `080_...`)
+- Folders are numbered for ordering clarity (`000_init`, `011_...`, `080_...`)
 - Files inside a folder run in **lexical order** (`01_*.sql`, `02_*.sql`, ...)
 - All files in a folder run inside a **single transaction** — if any file fails, the entire folder rolls back
 - SQL files are executed directly; JS/TS files are dynamically imported and called with a `MigrationContext`
@@ -21,7 +21,7 @@ pnpm migrate --folder=<folder_name>
 <number>_<short_description>/
 ```
 
-- Use 3-digit increments of 10 (`010`, `020`, `080`) to leave room for future insertions
+- Use 3-digit increments of 1 (`011`, `021`, `081`) to leave room for future insertions
 - Use snake_case for the description
 - Examples: `080_user_settings`, `090_add_event_tags`
 

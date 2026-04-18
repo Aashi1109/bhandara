@@ -3,6 +3,7 @@ import { RequestContext } from '@/contexts';
 import type { ICustomRequest } from '@/definitions/types';
 import { UnauthorizedError } from '@/exceptions';
 import { AuthService, getUserSessionCache, updateUserSessionCache } from '@/features';
+import logger from '@/logger';
 import type { NextFunction, Request, Response } from 'express';
 
 const authService = new AuthService();
@@ -18,14 +19,18 @@ const sessionParser = async (req: Request, res: Response, next: NextFunction) =>
 
   // check if session is expired if expired then refresh the token
   if (new Date(session.expiresAt) < new Date()) {
-    const newSession = await authService.refreshSession(session.refreshToken);
-    session.accessToken = newSession.session!.access_token;
-    session.refreshToken = newSession.session!.refresh_token;
-    session.expiresAt = new Date(new Date(0).setUTCSeconds(newSession.session!.expires_at ?? 0)).toISOString();
-    session.expiresIn = newSession.session!.expires_in;
-
-    const cacheUpdateResult = await updateUserSessionCache(jwtCookie, session);
-    if (cacheUpdateResult !== 'OK') throw new UnauthorizedError(`Failed to refresh session, please login again`);
+    try {
+      const newSession = await authService.refreshSession(session.refreshToken);
+      session.accessToken = newSession.session!.access_token;
+      session.refreshToken = newSession.session!.refresh_token;
+      session.expiresAt = new Date(new Date(0).setUTCSeconds(newSession.session!.expires_at ?? 0)).toISOString();
+      session.expiresIn = newSession.session!.expires_in;
+      const cacheUpdateResult = await updateUserSessionCache(jwtCookie, session);
+      if (cacheUpdateResult !== 'OK') throw new Error(`Failed to update session`);
+    } catch (error) {
+      logger.error(error);
+      throw new UnauthorizedError(`Failed to refresh session, please login again`, { cause: error });
+    }
   }
 
   (req as ICustomRequest).session = session;

@@ -57,6 +57,11 @@ export const mockSupabase = {
   auth: mockSupabaseAuth,
 };
 
+export const mockSupabaseAdminAuth = {
+  getUserById: vi.fn(),
+  updateUserById: vi.fn(),
+};
+
 export const defaultSession = {
   accessToken: "access-token",
   createdAt: "2024-01-01T00:00:00.000Z",
@@ -99,6 +104,10 @@ export const resetExternalMocks = () => {
     mockValue.mockReset();
   });
 
+  Object.values(mockSupabaseAdminAuth).forEach((mockValue) => {
+    mockValue.mockReset();
+  });
+
   mockRedis.incr.mockResolvedValue(1);
   mockRedis.expire.mockResolvedValue(1);
   mockRedis.get.mockResolvedValue(null);
@@ -130,4 +139,9 @@ export const resetExternalMocks = () => {
   mockSupabaseAuth.signOut.mockResolvedValue({ error: null });
   mockSupabaseAuth.signUp.mockResolvedValue({ data: {}, error: null });
   mockSupabaseAuth.updateUser.mockResolvedValue({ error: null });
+  mockSupabaseAdminAuth.getUserById.mockResolvedValue({
+    data: { user: { id: 'supabase-user-1' } },
+    error: null,
+  });
+  mockSupabaseAdminAuth.updateUserById.mockResolvedValue({ error: null });
 };

@@ -1,16 +1,26 @@
 import { BadRequestError } from '@/exceptions';
 import { EEventStatus } from '@/definitions/enums';
 
-type EventTimingInput = {
-  start: string | Date;
-  end: string | Date;
+type EventStatusInput = {
+  startTime: string | Date;
+  endTime: string | Date;
+  isDraft?: boolean;
+  cancelledAt?: string | Date | null;
 };
 
 export const asDate = (value: string | Date) => (value instanceof Date ? value : new Date(value));
 
-export const deriveEventStatus = (timings: EventTimingInput, now: Date = new Date()): EEventStatus => {
-  const start = asDate(timings.start);
-  const end = asDate(timings.end);
+export const deriveEventStatus = (event: EventStatusInput, now: Date = new Date()): EEventStatus => {
+  if (event.cancelledAt) {
+    return EEventStatus.Cancelled;
+  }
+
+  if (event.isDraft) {
+    return EEventStatus.Draft;
+  }
+
+  const start = asDate(event.startTime);
+  const end = asDate(event.endTime);
 
   if (now >= end) {
     return EEventStatus.Completed;
@@ -24,16 +34,15 @@ export const deriveEventStatus = (timings: EventTimingInput, now: Date = new Dat
 };
 
 export const buildActiveEventStatusPredicate = ({
-  escape,
-  statusColumn = '"status"',
+  draftColumn = '"isDraft"',
+  cancelledAtColumn = '"cancelledAt"',
 }: {
-  escape: (value: string | number | Date) => string;
-  statusColumn?: string;
-}) =>
-  `(${statusColumn} IS NULL OR ${statusColumn} NOT IN (${escape(EEventStatus.Cancelled)}, ${escape(EEventStatus.Draft)}))`;
+  draftColumn?: string;
+  cancelledAtColumn?: string;
+} = {}) => `(${cancelledAtColumn} IS NULL AND COALESCE(${draftColumn}, false) = false)`;
 
 export const validateEventTimings = (
-  timings: EventTimingInput,
+  event: Pick<EventStatusInput, 'startTime' | 'endTime'>,
   {
     now = new Date(),
     allowCompleted = false,
@@ -44,12 +53,12 @@ export const validateEventTimings = (
     maxDurationMs?: number;
   } = {},
 ) => {
-  if (!timings?.start || !timings?.end) {
+  if (!event?.startTime || !event?.endTime) {
     throw new BadRequestError('Start time and end time are required');
   }
 
-  const startTime = asDate(timings.start);
-  const endTime = asDate(timings.end);
+  const startTime = asDate(event.startTime);
+  const endTime = asDate(event.endTime);
 
   if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
     throw new BadRequestError('Start time and end time must be valid dates');
@@ -68,11 +77,36 @@ export const validateEventTimings = (
   }
 };
 
-export const resolveEventStatus = (timings: EventTimingInput, status?: string | null, now: Date = new Date()) => {
+export const resolvePersistedEventState = (
+  status: string | null | undefined,
+  existing?: {
+    isDraft?: boolean;
+    cancelledAt?: string | Date | null;
+  },
+) => {
   if (status === EEventStatus.Cancelled) {
-    return EEventStatus.Cancelled;
+    return {
+      isDraft: false,
+      cancelledAt: existing?.cancelledAt ? asDate(existing.cancelledAt) : new Date(),
+    };
   }
 
-  validateEventTimings(timings, { now, allowCompleted: false });
-  return deriveEventStatus(timings, now);
+  if (status === EEventStatus.Draft) {
+    return {
+      isDraft: true,
+      cancelledAt: null,
+    };
+  }
+
+  if (status === EEventStatus.Upcoming || status === EEventStatus.Ongoing || status === EEventStatus.Completed) {
+    return {
+      isDraft: false,
+      cancelledAt: null,
+    };
+  }
+
+  return {
+    isDraft: existing?.isDraft ?? false,
+    cancelledAt: existing?.cancelledAt ? asDate(existing.cancelledAt) : null,
+  };
 };

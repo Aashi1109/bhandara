@@ -4,7 +4,7 @@ import { EEventStatus } from '@/definitions/enums';
 import {
   buildActiveEventStatusPredicate,
   deriveEventStatus,
-  resolveEventStatus,
+  resolvePersistedEventState,
   validateEventTimings,
 } from '@/features/events/status';
 
@@ -15,8 +15,8 @@ describe('event status helpers', () => {
     expect(
       deriveEventStatus(
         {
-          start: '2026-03-21T13:00:00.000Z',
-          end: '2026-03-21T15:00:00.000Z',
+          startTime: '2026-03-21T13:00:00.000Z',
+          endTime: '2026-03-21T15:00:00.000Z',
         },
         now,
       ),
@@ -25,48 +25,64 @@ describe('event status helpers', () => {
     expect(
       deriveEventStatus(
         {
-          start: '2026-03-21T11:00:00.000Z',
-          end: '2026-03-21T15:00:00.000Z',
+          startTime: '2026-03-21T11:00:00.000Z',
+          endTime: '2026-03-21T15:00:00.000Z',
         },
         now,
       ),
     ).toBe(EEventStatus.Ongoing);
   });
 
-  it('resolves completed events as invalid for create/update timing flow', () => {
+  it('rejects completed events in create/update timing validation flow', () => {
     const now = new Date('2026-03-21T12:00:00.000Z');
-
-    expect(() =>
-      resolveEventStatus(
-        {
-          start: '2026-03-21T08:00:00.000Z',
-          end: '2026-03-21T11:00:00.000Z',
-        },
-        null,
-        now,
-      ),
-    ).toThrow('Event end time must be in the future');
-  });
-
-  it('preserves cancelled status and validates max duration', () => {
-    const now = new Date('2026-03-21T12:00:00.000Z');
-
-    expect(
-      resolveEventStatus(
-        {
-          start: '2026-03-21T08:00:00.000Z',
-          end: '2026-03-21T13:00:00.000Z',
-        },
-        EEventStatus.Cancelled,
-        now,
-      ),
-    ).toBe(EEventStatus.Cancelled);
 
     expect(() =>
       validateEventTimings(
         {
-          start: '2026-03-21T08:00:00.000Z',
-          end: '2026-03-29T08:00:00.000Z',
+          startTime: '2026-03-21T08:00:00.000Z',
+          endTime: '2026-03-21T11:00:00.000Z',
+        },
+        { now },
+      ),
+    ).toThrow('Event end time must be in the future');
+  });
+
+  it('resolves persisted draft/cancelled state separately from derived time status', () => {
+    const now = new Date('2026-03-21T12:00:00.000Z');
+
+    expect(
+      deriveEventStatus({
+        startTime: '2026-03-21T08:00:00.000Z',
+        endTime: '2026-03-21T13:00:00.000Z',
+        isDraft: true,
+      }),
+    ).toBe(EEventStatus.Draft);
+
+    expect(
+      deriveEventStatus({
+        startTime: '2026-03-21T08:00:00.000Z',
+        endTime: '2026-03-21T13:00:00.000Z',
+        cancelledAt: '2026-03-21T10:00:00.000Z',
+      }),
+    ).toBe(EEventStatus.Cancelled);
+
+    expect(resolvePersistedEventState(EEventStatus.Cancelled)).toMatchObject({
+      isDraft: false,
+    });
+    expect(resolvePersistedEventState(EEventStatus.Draft)).toEqual({
+      isDraft: true,
+      cancelledAt: null,
+    });
+    expect(resolvePersistedEventState(EEventStatus.Upcoming)).toEqual({
+      isDraft: false,
+      cancelledAt: null,
+    });
+
+    expect(() =>
+      validateEventTimings(
+        {
+          startTime: '2026-03-21T08:00:00.000Z',
+          endTime: '2026-03-29T08:00:00.000Z',
         },
         { now },
       ),
@@ -74,14 +90,9 @@ describe('event status helpers', () => {
   });
 
   it('builds a db-safe active status predicate for enum-backed queries', () => {
-    const predicate = buildActiveEventStatusPredicate({
-      escape: (value) => `'${String(value)}'`,
-    });
+    const predicate = buildActiveEventStatusPredicate();
 
-    expect(predicate).toContain('"status" IS NULL');
-    expect(predicate).toContain(`'${EEventStatus.Cancelled}'`);
-    expect(predicate).toContain(`'${EEventStatus.Draft}'`);
-    expect(predicate).not.toContain("''");
-    expect(predicate).not.toContain('COALESCE');
+    expect(predicate).toContain('"cancelledAt" IS NULL');
+    expect(predicate).toContain('COALESCE("isDraft", false) = false');
   });
 });

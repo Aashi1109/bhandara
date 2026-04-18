@@ -7,6 +7,7 @@ class ExploreSearchBar extends StatelessWidget {
   const ExploreSearchBar({
     super.key,
     this.onOpenFilters,
+    this.showFilterIndicator = false,
     this.controller,
     this.placeholder = 'Find food events...',
     this.onChanged,
@@ -16,6 +17,7 @@ class ExploreSearchBar extends StatelessWidget {
   });
 
   final VoidCallback? onOpenFilters;
+  final bool showFilterIndicator;
   final TextEditingController? controller;
   final String placeholder;
   final ValueChanged<String>? onChanged;
@@ -88,18 +90,40 @@ class ExploreSearchBar extends StatelessWidget {
           if (onOpenFilters != null)
             GestureDetector(
               onTap: onOpenFilters,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  LucideIcons.slidersHorizontal,
-                  size: AppIconSizes.defaultSize,
-                  color: AppColors.surface,
-                ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      LucideIcons.slidersHorizontal,
+                      size: AppIconSizes.defaultSize,
+                      color: AppColors.surface,
+                    ),
+                  ),
+                  if (showFilterIndicator)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
         ],

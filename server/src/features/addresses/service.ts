@@ -3,7 +3,7 @@ import type { ILocation } from '@/definitions/types';
 import { getUUIDv7 } from '@/helpers';
 import { Op, Sequelize, type Transaction } from 'sequelize';
 
-import { Address, type AddressAttributes } from './model';
+import { Address, decryptAddressRow, decryptAddressRows, type AddressAttributes } from './model';
 
 type LocationLike = Record<string, any> | null | undefined;
 
@@ -87,10 +87,12 @@ class AddressService {
   }
 
   async getByEntity(entityType: EAddressEntityType, entityId: string) {
-    return Address.findOne({
+    const row = (await Address.findOne({
       where: { entityType, entityId },
       raw: true,
-    }) as Promise<AddressAttributes | null>;
+    })) as AddressAttributes | null;
+
+    return row ? decryptAddressRow(row) : null;
   }
 
   async getByEntities(entityType: EAddressEntityType, entityIds: string[]) {
@@ -98,13 +100,13 @@ class AddressService {
       return {};
     }
 
-    const rows = (await Address.findAll({
+    const rows = decryptAddressRows((await Address.findAll({
       where: {
         entityType,
         entityId: { [Op.in]: entityIds },
       },
       raw: true,
-    })) as AddressAttributes[];
+    })) as AddressAttributes[]);
 
     return rows.reduce(
       (acc, row) => {
@@ -129,7 +131,7 @@ class AddressService {
     }
 
     const created = await Address.create(row, { transaction });
-    return created.toJSON() as AddressAttributes;
+    return decryptAddressRow(created.toJSON() as AddressAttributes);
   }
 
   buildEntityDistanceClause({

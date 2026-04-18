@@ -223,12 +223,12 @@ export function buildEventLocation() {
 }
 
 export function buildTimings() {
-  const start = faker.date.soon({ days: 30 });
-  const end = new Date(start.getTime() + faker.number.int({ min: 60, max: 240 }) * 60 * 1000);
+  const startTime = faker.date.soon({ days: 30 });
+  const endTime = new Date(startTime.getTime() + faker.number.int({ min: 60, max: 240 }) * 60 * 1000);
 
   return {
-    start,
-    end,
+    startTime,
+    endTime,
   };
 }
 

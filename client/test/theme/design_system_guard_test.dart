@@ -5,15 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('shared UI layer avoids raw text metrics outside the theme', () {
     const guardedFiles = [
-      'lib/widgets/button.dart',
-      'lib/widgets/input.dart',
-      'lib/widgets/app_dialog.dart',
-      'lib/widgets/header.dart',
-      'lib/widgets/password_requirements.dart',
-      'lib/widgets/snackbar.dart',
-      'lib/screens/splash.dart',
-      'lib/screens/login.dart',
-      'lib/screens/auth.dart',
+      'lib/shared/widgets/button.dart',
+      'lib/shared/widgets/input.dart',
+      'lib/shared/widgets/app_dialog.dart',
+      'lib/shared/widgets/header.dart',
+      'lib/shared/widgets/password_requirements.dart',
+      'lib/shared/widgets/snackbar.dart',
+      'lib/features/auth/screens/splash.dart',
+      'lib/features/auth/screens/login.dart',
+      'lib/features/auth/screens/auth.dart',
     ];
 
     final fontMetricPattern = RegExp(

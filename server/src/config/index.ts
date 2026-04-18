@@ -6,6 +6,19 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config({});
 }
 
+const getRequiredSecret = (envName: string) => {
+  const value = process.env[envName];
+  if (!value) {
+    throw new Error(`${envName} is required`);
+  }
+
+  if (!/^[^\s]{5,64}$/.test(value)) {
+    throw new Error(`${envName} must be 5-64 characters with no whitespace`);
+  }
+
+  return value;
+};
+
 const getRedisBaseConnectionConfig = (): RedisConnectionConfig => {
   return {
     host: process.env.REDIS_HOST || '127.0.0.1',
@@ -40,6 +53,10 @@ const redisConnections = {
 const config: AppConfig = {
   baseUrl: process.env.CLOUD_RUN_SERVICE_URL || `http://localhost:${process.env.PORT || 3001}`,
   port: process.env.PORT || 3001,
+  encryption: {
+    dataKey: getRequiredSecret('DATA_ENCRYPTION_KEY'),
+    hashKey: getRequiredSecret('DATA_HASH_KEY'),
+  },
   jwt: {
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '30d',
@@ -104,6 +121,9 @@ const config: AppConfig = {
   otel: {
     url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '',
     apiKey: process.env.HYPERDX_API_KEY || '',
+    enableDbClientSpans: process.env.OTEL_TRACE_DB_CLIENTS === 'true',
+    enableRedisClientSpans: process.env.OTEL_TRACE_REDIS_CLIENTS === 'true',
+    enableMetrics: process.env.OTEL_DISABLE_METRICS !== 'true',
   },
 };
 

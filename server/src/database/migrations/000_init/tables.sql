@@ -2,7 +2,6 @@
 CREATE TYPE "AccessLevel" AS ENUM ('public', 'private', 'restricted');
 CREATE TYPE "MediaType" AS ENUM ('image', 'video', 'audio', 'document');
 CREATE TYPE "EventType" AS ENUM ('organized', 'custom');
-CREATE TYPE "EventStatus" AS ENUM ('draft', 'upcoming', 'ongoing', 'completed', 'cancelled');
 CREATE TYPE "ActivityVisibility" AS ENUM ('public', 'private');
 CREATE TYPE "ActivityEntityType" AS ENUM ('event', 'message', 'thread', 'reaction', 'achievement', 'user', 'system');
 
@@ -84,12 +83,14 @@ CREATE TABLE "Events" (
     "verifiers" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "type" "EventType" NOT NULL,
     "createdBy" UUID NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
-    "status" "EventStatus" NOT NULL,
+    "isDraft" BOOLEAN NOT NULL DEFAULT FALSE,
+    "cancelledAt" TIMESTAMPTZ NULL,
     "capacity" INTEGER NULL,
     "tags" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "media" JSONB NOT NULL DEFAULT '[]'::JSONB,
     "stats" JSONB NOT NULL DEFAULT '{}'::JSONB,
-    "timings" JSONB NOT NULL,
+    "startTime" TIMESTAMPTZ NOT NULL,
+    "endTime" TIMESTAMPTZ NOT NULL,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
     "deletedAt" TIMESTAMPTZ NULL -- Soft delete column
@@ -218,6 +219,12 @@ CREATE INDEX "reactions_contentId_idx" ON "Reactions"("contentId");
 CREATE INDEX "users_updatedAt_idx" ON "Users"("updatedAt");
 CREATE INDEX "threads_updatedAt_idx" ON "Threads"("updatedAt");
 CREATE INDEX "events_updatedAt_idx" ON "Events"("updatedAt");
+CREATE INDEX "events_startTime_idx" ON "Events"("startTime");
+CREATE INDEX "events_endTime_idx" ON "Events"("endTime");
+CREATE INDEX "events_isDraft_idx" ON "Events"("isDraft");
+CREATE INDEX "events_cancelledAt_idx" ON "Events"("cancelledAt");
+CREATE INDEX "events_active_startTime_idx" ON "Events"("startTime") WHERE "cancelledAt" IS NULL AND "isDraft" = FALSE;
+CREATE INDEX "events_active_endTime_idx" ON "Events"("endTime") WHERE "cancelledAt" IS NULL AND "isDraft" = FALSE;
 CREATE INDEX "messages_updatedAt_idx" ON "Messages"("updatedAt");
 CREATE INDEX "tags_updatedAt_idx" ON "Tags"("updatedAt");
 CREATE INDEX "tags_parentId_idx" ON "Tags"("parentId");

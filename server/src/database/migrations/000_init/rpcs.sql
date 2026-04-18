@@ -16,11 +16,13 @@ BEGIN
     "verifiers",
     "type",
     "createdBy",
-    "status",
+    "isDraft",
+    "cancelledAt",
     "capacity",
     "tags",
     "media",
-    "timings"
+    "startTime",
+    "endTime"
   )
   VALUES (
     event_data->>'name',
@@ -30,11 +32,13 @@ BEGIN
     COALESCE(event_data->'verifiers', '[]'::JSONB),
     (event_data->>'type')::"EventType",
     (event_data->>'createdBy')::UUID,
-    (event_data->>'status')::"EventStatus",
+    COALESCE((event_data->>'isDraft')::BOOLEAN, FALSE),
+    NULLIF(event_data->>'cancelledAt', '')::TIMESTAMPTZ,
     NULLIF(event_data->>'capacity', '')::INTEGER,
     COALESCE(to_jsonb(tag_ids), '[]'::JSONB),
     COALESCE(to_jsonb(media_ids), '[]'::JSONB),
-    event_data->'timings'
+    CAST(event_data->>'startTime' AS TIMESTAMPTZ),
+    CAST(event_data->>'endTime' AS TIMESTAMPTZ)
   )
   RETURNING * INTO new_event;
 

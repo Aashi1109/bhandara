@@ -4,6 +4,7 @@ export { default as asyncHandler } from './asyncHandler';
 export { default as errorHandler } from './errorHandler';
 export { default as paginationParser } from './paginationParser';
 export { default as requestContextMiddleware } from './contexts/request';
+export { default as requestMetrics } from './requestMetrics';
 export { default as morganLogger } from './morganLogger';
 export { default as rateLimit } from './rateLimit';
 export { default as validateParams } from './validateParams';

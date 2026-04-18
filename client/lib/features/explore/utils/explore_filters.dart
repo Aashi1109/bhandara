@@ -52,6 +52,25 @@ class ExploreFilterState {
   }
 }
 
+bool hasAppliedExploreDrawerFilters(ExploreFilterState filters) {
+  return filters.radiusKm != 5 ||
+      filters.tagIds.isNotEmpty ||
+      filters.eventType != null ||
+      filters.datePreset != ExploreDatePresetValues.anytime;
+}
+
+String buildExploreStatusQuery(ExploreFilterState filters) {
+  return switch (filters.quickStatus) {
+    EventStatusValue.ongoing => EventStatusValue.ongoing,
+    EventStatusValue.upcoming => EventStatusValue.upcoming,
+    EventStatusValue.completed => EventStatusValue.completed,
+    EventStatusValue.cancelled => EventStatusValue.cancelled,
+    EventStatusValue.all =>
+      '${EventStatusValue.upcoming},${EventStatusValue.ongoing}',
+    _ => '${EventStatusValue.upcoming},${EventStatusValue.ongoing}',
+  };
+}
+
 bool matchesExploreFilters(
   Event event, {
   required ExploreFilterState filters,

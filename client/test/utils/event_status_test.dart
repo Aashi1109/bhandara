@@ -106,4 +106,65 @@ void main() {
 
     expect(results.map((event) => event.id), ['ongoing-nearby']);
   });
+
+  test('filterExploreEvents can target completed events explicitly', () {
+    final now = DateTime(2026, 3, 21, 12);
+    final events = [
+      Event(
+        id: 'completed-nearby',
+        name: 'Completed Nearby',
+        status: 'ongoing',
+        type: 'custom',
+        startTime: now.subtract(const Duration(hours: 3)),
+        endTime: now.subtract(const Duration(minutes: 30)),
+        createdBy: 'user-1',
+        location: const Location(
+          address: 'Nearby',
+          latitude: 21.1458,
+          longitude: 79.0882,
+        ),
+      ),
+      Event(
+        id: 'ongoing-nearby',
+        name: 'Ongoing Nearby',
+        status: 'ongoing',
+        type: 'custom',
+        startTime: now.subtract(const Duration(hours: 1)),
+        endTime: now.add(const Duration(hours: 1)),
+        createdBy: 'user-1',
+        location: const Location(
+          address: 'Nearby',
+          latitude: 21.1458,
+          longitude: 79.0882,
+        ),
+      ),
+    ];
+
+    final results = filterExploreEvents(
+      events,
+      filters: const ExploreFilterState(quickStatus: EventStatusValue.completed),
+      effectiveLocation: const LatLng(21.1458, 79.0882),
+      now: now,
+    );
+
+    expect(results.map((event) => event.id), ['completed-nearby']);
+  });
+
+  test('buildExploreStatusQuery includes completed when requested', () {
+    expect(
+      buildExploreStatusQuery(
+        const ExploreFilterState(quickStatus: EventStatusValue.completed),
+      ),
+      EventStatusValue.completed,
+    );
+  });
+
+  test('buildExploreStatusQuery keeps all scoped to discoverable events', () {
+    expect(
+      buildExploreStatusQuery(
+        const ExploreFilterState(quickStatus: EventStatusValue.all),
+      ),
+      '${EventStatusValue.upcoming},${EventStatusValue.ongoing}',
+    );
+  });
 }

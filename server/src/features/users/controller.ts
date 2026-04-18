@@ -156,7 +156,7 @@ export const getUserImpact = async (req: ICustomRequest, res: Response) => {
 
   const events = await Event.findAll({
     where: { createdBy: id },
-    attributes: ['id', 'name', 'timings', 'createdAt'],
+    attributes: ['id', 'name', 'startTime', 'createdAt'],
     order: [['createdAt', 'ASC']],
     limit: 50,
     raw: true,
@@ -178,7 +178,7 @@ export const getUserImpact = async (req: ICustomRequest, res: Response) => {
       return {
         id: event.id,
         name: event.name,
-        startTime: (event as any).timings?.start ?? event.createdAt,
+        startTime: event.startTime ?? event.createdAt,
         viewCount: stats.viewCount,
         ratingAverage: stats.ratingAverage,
         ratingCount: stats.ratingCount,

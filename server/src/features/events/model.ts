@@ -1,5 +1,5 @@
 import { getDBConnection } from '@/connections/db';
-import { EEventStatus, EEventType } from '@/definitions/enums';
+import { EEventType } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
 import { DataTypes, Model } from 'sequelize';
 import {
@@ -14,7 +14,7 @@ import {
 
 const sequelize = getDBConnection()!;
 
-type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt' | 'location' | 'creator' | 'reactions'>;
+type EventAttributes = Omit<IEvent, 'createdAt' | 'updatedAt' | 'location' | 'creator' | 'reactions' | 'status'>;
 
 /**
  * Sequelize model representing an event. Complex fields like participants are
@@ -28,14 +28,17 @@ export class Event extends Model<EventAttributes, EventAttributes> {
   declare verifiers: IVerifier[];
   declare type: EEventType;
   declare createdBy: string;
-  declare status: EEventStatus;
+  declare isDraft: boolean;
+  declare cancelledAt: IEvent['cancelledAt'];
   declare capacity: number;
   declare tags: IEvent['tags'];
   declare media: IMedia[];
   declare stats: IEventStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare timings: IEvent['timings'];
+  declare startTime: IEvent['startTime'];
+  declare endTime: IEvent['endTime'];
+  declare status: IEvent['status'];
 
   declare creator?: IBaseUser;
   declare reactions?: IReaction[];
@@ -81,10 +84,14 @@ Event.init(
       },
       onDelete: 'CASCADE',
     },
-    status: {
-      type: DataTypes.ENUM(...Object.values(EEventStatus)),
+    isDraft: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: EEventStatus.Draft,
+      defaultValue: false,
+    },
+    cancelledAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     capacity: {
       type: DataTypes.INTEGER,
@@ -105,8 +112,12 @@ Event.init(
       allowNull: false,
       defaultValue: {},
     },
-    timings: {
-      type: DataTypes.JSONB,
+    startTime: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endTime: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
   },
@@ -119,6 +130,22 @@ Event.init(
       {
         name: 'events_updatedAt_idx',
         fields: ['updatedAt'],
+      },
+      {
+        name: 'events_startTime_idx',
+        fields: ['startTime'],
+      },
+      {
+        name: 'events_endTime_idx',
+        fields: ['endTime'],
+      },
+      {
+        name: 'events_isDraft_idx',
+        fields: ['isDraft'],
+      },
+      {
+        name: 'events_cancelledAt_idx',
+        fields: ['cancelledAt'],
       },
     ],
   },

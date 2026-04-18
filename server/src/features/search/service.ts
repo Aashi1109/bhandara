@@ -54,21 +54,22 @@ class SearchService {
     return Number.isFinite(decoded) && decoded >= 0 ? decoded : 0;
   }
 
-  private jsonTimestampExpression(field: 'start' | 'end') {
-    return `CAST("timings"->>'${field}' AS TIMESTAMPTZ)`;
+  private timestampColumnExpression(field: 'start' | 'end') {
+    return field === 'start' ? '"startTime"' : '"endTime"';
   }
 
   private buildDerivedStatusClause(status: EEventStatus) {
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
     const now = escape(new Date().toISOString());
-    const startExpr = this.jsonTimestampExpression('start');
-    const endExpr = this.jsonTimestampExpression('end');
-    const activeStatuses = buildActiveEventStatusPredicate({ escape });
+    const startExpr = this.timestampColumnExpression('start');
+    const endExpr = this.timestampColumnExpression('end');
+    const activeStatuses = buildActiveEventStatusPredicate();
 
     switch (status) {
       case 'draft':
+        return { isDraft: true, cancelledAt: null };
       case 'cancelled':
-        return { status };
+        return Sequelize.literal('"cancelledAt" IS NOT NULL');
       case 'upcoming':
         return Sequelize.literal(`(${activeStatuses} AND ${startExpr} > ${now})`);
       case 'ongoing':
@@ -112,7 +113,7 @@ class SearchService {
       const escape = Event.sequelize!.escape.bind(Event.sequelize);
       clauses.push(
         Sequelize.literal(
-          `(${this.jsonTimestampExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.jsonTimestampExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
         ),
       );
     }
@@ -177,9 +178,10 @@ class SearchService {
         'id',
         'name',
         'type',
-        'status',
-        'timings',
-        'location',
+        'isDraft',
+        'cancelledAt',
+        'startTime',
+        'endTime',
         'media',
         'tags',
         'description',
@@ -212,7 +214,7 @@ class SearchService {
         event.media?.find((item: any) => item.type === 'image')?.publicUrl ||
         event.media?.find((item: any) => item.type === 'image')?.url ||
         null;
-      const resolvedStatus = event.status === 'cancelled' ? event.status : deriveEventStatus(event.timings);
+      const resolvedStatus = deriveEventStatus(event as any);
       const location = this.addressService.toLocation(addressMap[event.id]);
 
       return {
@@ -228,7 +230,8 @@ class SearchService {
           status: resolvedStatus,
           type: event.type,
           location,
-          timings: event.timings,
+          startTime: event.startTime,
+          endTime: event.endTime,
           createdAt: event.createdAt.toISOString(),
         },
         relevanceScore: this.calculateEventRelevance(event, query),

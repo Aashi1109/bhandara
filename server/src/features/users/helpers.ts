@@ -1,6 +1,7 @@
 import type { ITag, IUserSession, IBaseUser } from '@/definitions/types';
 import { RedisCache } from '@/features/cache';
-import { jnparse, jnstringify } from '@/utils';
+import { cacheKeys } from '@/features/cache/keys';
+import { decryptRecordFields, encryptRecordFields, jnparse, jnstringify } from '@/utils';
 import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
 import logger from '@/logger';
 
@@ -19,12 +20,32 @@ const sessionCache = new RedisCache({
   defaultTTLSeconds: CACHE_NAMESPACE_CONFIG.Sessions.ttl,
 });
 
+const SESSION_SECRET_FIELDS = ['accessToken', 'refreshToken'] as const;
+const USER_CACHE_ENCRYPTED_FIELDS = ['email', '__sid'] as const;
+
+const encryptCachedUser = (user: IBaseUser) => encryptRecordFields(user, USER_CACHE_ENCRYPTED_FIELDS);
+const decryptCachedUser = (user: IBaseUser | null): IBaseUser | null => {
+  if (!user) {
+    return null;
+  }
+
+  return decryptRecordFields(user, USER_CACHE_ENCRYPTED_FIELDS);
+};
+
+const decryptSessionSecrets = (session: IUserSession | null): IUserSession | null => {
+  if (!session) {
+    return null;
+  }
+
+  return decryptRecordFields(session, SESSION_SECRET_FIELDS);
+};
+
 export const getUserCache = async (userId: string) => {
-  return userCache.getItem<IBaseUser>(userId);
+  return decryptCachedUser(await userCache.getItem<IBaseUser>(userId));
 };
 
 export const setUserCache = async (userId: string, user: IBaseUser, ttl = userCacheTTL) => {
-  return userCache.setItem(userId, user, ttl);
+  return userCache.setItem(userId, encryptCachedUser(user), ttl);
 };
 
 export const deleteUserCache = async (userId: string) => {
@@ -41,8 +62,8 @@ export const deleteAllUserCache = async (userId: string, user?: IBaseUser) => {
 
   // Email and username keys are stored independently — delete them explicitly
   const pipeline = userCache.getPipeline();
-  if (user?.email) pipeline.del(`${userCacheNamespace}:${user.email}`);
-  if (user?.username) pipeline.del(`${userCacheNamespace}:${user.username}`);
+  if (user?.email) pipeline.del(`${userCacheNamespace}:${cacheKeys.userEmailLookup(user.email)}`);
+  if (user?.username) pipeline.del(`${userCacheNamespace}:${cacheKeys.userUsernameLookup(user.username)}`);
 
   // Delete individual session entries from the sessions cache
   sessionIds.forEach((sessionId) => {
@@ -53,23 +74,23 @@ export const deleteAllUserCache = async (userId: string, user?: IBaseUser) => {
 };
 
 export const getUserCacheByEmail = async (email: string) => {
-  const id = await userCache.getItem<string>(email);
+  const id = await userCache.getItem<string>(cacheKeys.userEmailLookup(email));
   if (!id) return null;
-  return userCache.getItem<IBaseUser>(id);
+  return decryptCachedUser(await userCache.getItem<IBaseUser>(id));
 };
 
 export const setUserCacheByEmail = async (email: string, user: IBaseUser, ttl = userCacheTTL) => {
-  return userCache.setItem(email, user.id, ttl);
+  return userCache.setItem(cacheKeys.userEmailLookup(email), user.id, ttl);
 };
 
 export const getUserCacheByUsername = async (username: string) => {
-  const id = await userCache.getItem<string>(username);
+  const id = await userCache.getItem<string>(cacheKeys.userUsernameLookup(username));
   if (!id) return null;
-  return userCache.getItem<IBaseUser>(id);
+  return decryptCachedUser(await userCache.getItem<IBaseUser>(id));
 };
 
 export const setUserCacheByUsername = async (username: string, user: IBaseUser, ttl = userCacheTTL) => {
-  return userCache.setItem(username, user.id, ttl);
+  return userCache.setItem(cacheKeys.userUsernameLookup(username), user.id, ttl);
 };
 
 export const getUserSessionCacheList = async (userId: string) => {
@@ -137,15 +158,15 @@ export const setUserSessionCache = async ({
   const expiration = new Date(Date.now() + ttl * 1000);
   // sliding expiration for the main session hash
   await userCache.setHKey(`${userId}:sessions`, sessionId, expiration.toISOString(), ttl);
-  return sessionCache.setItem(sessionId, data, ttl);
+  return sessionCache.setItem(sessionId, encryptRecordFields(data, SESSION_SECRET_FIELDS), ttl);
 };
 
 export const getUserSessionCache = async (sessionId: string): Promise<IUserSession | null> => {
-  return sessionCache.getItem(sessionId);
+  return decryptSessionSecrets(await sessionCache.getItem(sessionId));
 };
 
 export const updateUserSessionCache = async (sessionId: string, data: IUserSession) => {
-  return sessionCache.updateValue(sessionId, data);
+  return sessionCache.updateValue(sessionId, encryptRecordFields(data, SESSION_SECRET_FIELDS));
 };
 
 export const deleteUserSessionCache = async (userId: string, sessionId: string) => {
@@ -155,6 +176,7 @@ export const deleteUserSessionCache = async (userId: string, sessionId: string) 
 export const getSafeUser = (user: IBaseUser): IBaseUser & { isSocialLogin: boolean } => {
   const _user = { ...user } as Record<string, any>;
   const provider = _user.meta?.auth?.provider;
+  delete _user.__sid;
   delete _user.password;
   delete _user.meta?.auth?.accessToken;
   delete _user.meta?.auth?.refreshToken;
@@ -200,9 +222,11 @@ export const setUserSettingsCache = <T>(userId: string, settings: T) => {
 export const bulkSetUserCache = async (users: IBaseUser[]): Promise<'OK'> => {
   const pipeline = userCache.getPipeline();
   users.forEach((user) => {
-    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(user), 'EX', userCacheTTL);
-    pipeline.set(`${userCacheNamespace}:${user.email}`, user.id, 'EX', userCacheTTL);
-    if (user.username) pipeline.set(`${userCacheNamespace}:${user.username}`, user.id, 'EX', userCacheTTL);
+    pipeline.set(`${userCacheNamespace}:${user.id}`, jnstringify(encryptCachedUser(user)), 'EX', userCacheTTL);
+    pipeline.set(`${userCacheNamespace}:${cacheKeys.userEmailLookup(user.email)}`, user.id, 'EX', userCacheTTL);
+    if (user.username) {
+      pipeline.set(`${userCacheNamespace}:${cacheKeys.userUsernameLookup(user.username)}`, user.id, 'EX', userCacheTTL);
+    }
   });
   await pipeline.exec();
   return 'OK';
@@ -218,7 +242,7 @@ export const bulkGetUserCache = async (ids: string[]): Promise<IBaseUser[]> => {
   const users = (results || []).reduce((acc, [, result]) => {
     const user = typeof result === 'string' ? (jnparse(result) as IBaseUser) : null;
     if (!user) return acc;
-    acc.push(user);
+    acc.push(decryptCachedUser(user)!);
     return acc;
   }, [] as IBaseUser[]);
 

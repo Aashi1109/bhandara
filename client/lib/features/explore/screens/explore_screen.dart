@@ -157,6 +157,11 @@ class _ExploreScreenState extends State<ExploreScreen>
     _QuickFilter(EventStatusValue.all, 'All', LucideIcons.sparkles),
     _QuickFilter(EventStatusValue.ongoing, 'Ongoing', LucideIcons.timer),
     _QuickFilter(EventStatusValue.upcoming, 'Upcoming', LucideIcons.calendar),
+    _QuickFilter(
+      EventStatusValue.completed,
+      'Completed',
+      LucideIcons.checkCircle2,
+    ),
   ];
 
   @override
@@ -520,12 +525,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   String _statusQueryForFilters(ExploreFilterState filters) {
-    return switch (filters.quickStatus) {
-      EventStatusValue.ongoing => EventStatusValue.ongoing,
-      EventStatusValue.upcoming => EventStatusValue.upcoming,
-      // "All" tab should only show discoverable (active) events — not completed or cancelled.
-      _ => '${EventStatusValue.upcoming},${EventStatusValue.ongoing}',
-    };
+    return buildExploreStatusQuery(filters);
   }
 
   bool _eventMatchesActiveFilters(Event event) {
@@ -948,6 +948,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       // different filter set and should not linger while the new fetch runs.
       _visibleMarkers = [];
       _pinnedSelectedMarker = null;
+      _selectedEvent = null;
+      _showDetails = false;
+      _selectedEventPageIndex = 0;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
     _refreshMarkersForCurrentState();
@@ -977,6 +980,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       // set don't remain visible while the new fetch is in flight.
       _visibleMarkers = [];
       _pinnedSelectedMarker = null;
+      _selectedEvent = null;
+      _showDetails = false;
+      _selectedEventPageIndex = 0;
     });
     unawaited(_refreshEventsForCurrentFilters(force: true));
     _refreshMarkersForCurrentState();
@@ -1497,78 +1503,86 @@ class _ExploreScreenState extends State<ExploreScreen>
             top: 0,
             left: 0,
             right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                key: _topOverlayKey,
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+            child: PointerInterceptor(
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  key: _topOverlayKey,
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     ExploreSearchBar(
                       onOpenFilters: _openFilters,
+                      showFilterIndicator: hasAppliedExploreDrawerFilters(
+                        _appliedFilters,
+                      ),
                       readOnly: true,
                       onTap: () => context.push(SearchScreen.routePath),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 40,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _quickFilters.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final filter = _quickFilters[index];
-                          final isSelected =
-                              _appliedFilters.quickStatus == filter.id;
-                          return GestureDetector(
-                            onTap: () => _applyQuickFilter(filter.id),
-                            child: _buildQuickFilterChip(filter, isSelected),
-                          );
-                        },
-                      ),
-                    ),
-                    if (_shouldShowLocationNudge) ...[
-                      const SizedBox(height: 10),
-                      _buildInfoBanner(
-                        icon: LucideIcons.locateFixed,
-                        message:
-                            'Add your current location to see nearby events around you.',
-                        ctaLabel: 'Use current location',
-                        onTap: _requestCurrentLocationFromNudge,
-                      ),
-                    ] else if (_shouldShowRadiusExpansionBanner) ...[
-                      const SizedBox(height: 10),
-                      _buildInfoBanner(
-                        icon: LucideIcons.search,
-                        message:
-                            'No events found within ${_appliedFilters.radiusKm.toStringAsFixed(0)} km. Expand the radius to discover more nearby events.',
-                        ctaLabel: 'Expand radius',
-                        onTap: _expandRadius,
-                      ),
-                    ] else if (!_isLocationEnabled) ...[
-                      const SizedBox(height: 10),
-                      _buildInfoBanner(
-                        icon: LucideIcons.alertTriangle,
-                        message:
-                            'Location is disabled. Nearby results may be incomplete.',
-                        ctaLabel: 'Enable location',
-                        onTap: _requestCurrentLocationFromNudge,
-                      ),
-                    ],
-                    if (_isFetchingMoreEvents) ...[
-                      const SizedBox(height: 10),
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: AppColors.primary,
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 40,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _quickFilters.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            final filter = _quickFilters[index];
+                            final isSelected =
+                                _appliedFilters.quickStatus == filter.id;
+                            return GestureDetector(
+                              onTap: () => _applyQuickFilter(filter.id),
+                              child: _buildQuickFilterChip(
+                                filter,
+                                isSelected,
+                              ),
+                            );
+                          },
                         ),
                       ),
+                      if (_shouldShowLocationNudge) ...[
+                        const SizedBox(height: 10),
+                        _buildInfoBanner(
+                          icon: LucideIcons.locateFixed,
+                          message:
+                              'Add your current location to see nearby events around you.',
+                          ctaLabel: 'Use current location',
+                          onTap: _requestCurrentLocationFromNudge,
+                        ),
+                      ] else if (_shouldShowRadiusExpansionBanner) ...[
+                        const SizedBox(height: 10),
+                        _buildInfoBanner(
+                          icon: LucideIcons.search,
+                          message:
+                              'No events found within ${_appliedFilters.radiusKm.toStringAsFixed(0)} km. Expand the radius to discover more nearby events.',
+                          ctaLabel: 'Expand radius',
+                          onTap: _expandRadius,
+                        ),
+                      ] else if (!_isLocationEnabled) ...[
+                        const SizedBox(height: 10),
+                        _buildInfoBanner(
+                          icon: LucideIcons.alertTriangle,
+                          message:
+                              'Location is disabled. Nearby results may be incomplete.',
+                          ctaLabel: 'Enable location',
+                          onTap: _requestCurrentLocationFromNudge,
+                        ),
+                      ],
+                      if (_isFetchingMoreEvents) ...[
+                        const SizedBox(height: 10),
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
                     ],
-                    const SizedBox(height: 8),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -2173,205 +2187,213 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildFilterDrawer() {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _isFilterOpen = false),
-          child: Container(color: AppColors.primary.withValues(alpha: 0.4)),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.78,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                Container(
-                  width: 48,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppColors.muted,
-                    borderRadius: BorderRadius.circular(3),
+    return PointerInterceptor(
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _isFilterOpen = false),
+            child: Container(color: AppColors.primary.withValues(alpha: 0.4)),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 48,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppColors.muted,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Filter Events',
-                        style: context.appTypography.titleLG,
-                      ),
-                      GestureDetector(
-                        onTap: () => setState(() => _isFilterOpen = false),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.muted,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            LucideIcons.x,
-                            size: AppIconSizes.m,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(color: AppColors.border, height: 1),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _sectionLabel('DISTANCE'),
-                        const SizedBox(height: 16),
                         Text(
-                          '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
-                          style: context.appTypography.bodyMDStrong,
+                          'Filter Events',
+                          style: context.appTypography.titleLG,
                         ),
-                        Slider(
-                          value: _draftFilters.radiusKm.clamp(1, 500),
-                          min: 1,
-                          max: 500,
-                          activeColor: AppColors.primary,
-                          inactiveColor: AppColors.muted,
-                          onChanged: (value) {
-                            setState(() {
-                              _draftFilters = _draftFilters.copyWith(
-                                radiusKm: value.roundToDouble(),
-                              );
-                            });
-                          },
+                        GestureDetector(
+                          onTap: () => setState(() => _isFilterOpen = false),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: AppColors.muted,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              LucideIcons.x,
+                              size: AppIconSizes.m,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 24),
-                        _sectionLabel('EVENT TYPE'),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _eventTypeOptions.map((option) {
-                            final selected =
-                                _draftFilters.eventType == option.value ||
-                                (_draftFilters.eventType == null &&
-                                    option.value == null);
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _draftFilters = _draftFilters.copyWith(
-                                    eventType: option.value,
-                                  );
-                                });
-                              },
-                              child: _chipButton(
-                                option.label,
-                                selected: selected,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 24),
-                        _sectionLabel('TIME'),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _datePresetOptions.map((option) {
-                            final selected =
-                                _draftFilters.datePreset == option.value;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _draftFilters = _draftFilters.copyWith(
-                                    datePreset: option.value,
-                                  );
-                                });
-                              },
-                              child: _chipButton(
-                                option.label,
-                                selected: selected,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 24),
-                        _sectionLabel('CATEGORIES'),
-                        const SizedBox(height: 12),
-                        if (_rootTags.isEmpty)
+                      ],
+                    ),
+                  ),
+                  const Divider(color: AppColors.border, height: 1),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionLabel('DISTANCE'),
+                          const SizedBox(height: 16),
                           Text(
-                            'Categories are unavailable right now.',
-                            style: context.appTypography.bodyBase,
-                          )
-                        else
+                            '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
+                            style: context.appTypography.bodyMDStrong,
+                          ),
+                          Slider(
+                            value: _draftFilters.radiusKm.clamp(1, 500),
+                            min: 1,
+                            max: 500,
+                            activeColor: AppColors.primary,
+                            inactiveColor: AppColors.muted,
+                            onChanged: (value) {
+                              setState(() {
+                                _draftFilters = _draftFilters.copyWith(
+                                  radiusKm: value.roundToDouble(),
+                                );
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          _sectionLabel('EVENT TYPE'),
+                          const SizedBox(height: 12),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: _rootTags.map((tag) {
-                              final selected = _draftFilters.tagIds.contains(
-                                tag.id,
-                              );
+                            children: _eventTypeOptions.map((option) {
+                              final selected =
+                                  _draftFilters.eventType == option.value ||
+                                  (_draftFilters.eventType == null &&
+                                      option.value == null);
                               return GestureDetector(
-                                onTap: () => _toggleDraftTag(tag.id),
+                                onTap: () {
+                                  setState(() {
+                                    _draftFilters = _draftFilters.copyWith(
+                                      eventType: option.value,
+                                    );
+                                  });
+                                },
                                 child: _chipButton(
-                                  tag.name,
+                                  option.label,
                                   selected: selected,
                                 ),
                               );
                             }).toList(),
                           ),
+                          const SizedBox(height: 24),
+                          _sectionLabel('TIME'),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _datePresetOptions.map((option) {
+                              final selected =
+                                  _draftFilters.datePreset == option.value;
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _draftFilters = _draftFilters.copyWith(
+                                      datePreset: option.value,
+                                    );
+                                  });
+                                },
+                                child: _chipButton(
+                                  option.label,
+                                  selected: selected,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 24),
+                          _sectionLabel('CATEGORIES'),
+                          const SizedBox(height: 12),
+                          if (_rootTags.isEmpty)
+                            Text(
+                              'Categories are unavailable right now.',
+                              style: context.appTypography.bodyBase,
+                            )
+                          else
+                            SizedBox(
+                              height: 40,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: _rootTags.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 8),
+                                itemBuilder: (_, index) {
+                                  final tag = _rootTags[index];
+                                  final selected = _draftFilters.tagIds
+                                      .contains(tag.id);
+                                  return GestureDetector(
+                                    onTap: () => _toggleDraftTag(tag.id),
+                                    child: _chipButton(
+                                      tag.name,
+                                      selected: selected,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.8),
+                      border: const Border(
+                        top: BorderSide(color: AppColors.border),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            variant: AppButtonVariant.outline,
+                            size: AppButtonSize.lg,
+                            label: 'Reset',
+                            onPressed: _resetDrawerFilters,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: AppButton(
+                            size: AppButtonSize.lg,
+                            label: 'Apply Filters',
+                            onPressed: _applyDrawerFilters,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.8),
-                    border: const Border(
-                      top: BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          variant: AppButtonVariant.outline,
-                          size: AppButtonSize.lg,
-                          label: 'Reset',
-                          onPressed: _resetDrawerFilters,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: AppButton(
-                          size: AppButtonSize.lg,
-                          label: 'Apply Filters',
-                          onPressed: _applyDrawerFilters,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

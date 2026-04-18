@@ -56,11 +56,18 @@ vi.mock('socket.io', () => ({
   },
 }));
 
-vi.mock('@/config', () => ({
-  default: {
-    corsOptions: {},
-  },
-}));
+vi.mock('@/config', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('@/config');
+  const actualDefault = actual.default as Record<string, unknown>;
+
+  return {
+    ...actual,
+    default: {
+      ...actualDefault,
+      corsOptions: {},
+    },
+  };
+});
 
 vi.mock('@/middlewares', () => ({
   requestContextMiddleware: vi.fn((_req, _res, next) => next()),

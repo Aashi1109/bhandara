@@ -2,6 +2,7 @@ import { getDBConnection } from '@/connections/db';
 import { EAddressEntityType } from '@/definitions/enums';
 import { getUUIDv7 } from '@/helpers';
 import { DataTypes, Model } from 'sequelize';
+import { decryptRecordFields, encryptedTextAttribute } from '@/utils';
 
 import { ADDRESS_TABLE_NAME } from './constants';
 
@@ -21,6 +22,11 @@ export interface AddressAttributes {
 
 type AddressRecord = Omit<AddressAttributes, 'createdAt' | 'updatedAt'>;
 type AddressCreationAttributes = AddressRecord;
+
+export const ADDRESS_ENCRYPTED_FIELDS = ['address'] as const;
+export const decryptAddressRow = <T extends Record<string, any>>(row: T) =>
+  decryptRecordFields(row, ADDRESS_ENCRYPTED_FIELDS);
+export const decryptAddressRows = <T extends Record<string, any>>(rows: T[]) => rows.map((row) => decryptAddressRow(row));
 
 export class Address extends Model<AddressRecord, AddressCreationAttributes> {
   declare id: string;
@@ -49,10 +55,7 @@ Address.init(
       type: DataTypes.UUID,
       allowNull: false,
     },
-    address: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
+    address: encryptedTextAttribute('address', { allowNull: true }),
     latitude: {
       type: DataTypes.DOUBLE,
       allowNull: true,
