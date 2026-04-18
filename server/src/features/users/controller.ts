@@ -1,17 +1,17 @@
-import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/definitions/types';
+import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/src/common/definitions/types';
 import { bulkSetUserCache, getPublicUser, getSafeUser } from './helpers';
 import UserService from './service';
 import UserSettingsService from './settings.service';
 import type { Request, Response } from 'express';
-import { hasMeaningfulChange, isEmpty, omit } from '@/utils';
-import { NotFoundError } from '@/exceptions';
+import { hasMeaningfulChange, isEmpty, omit } from '@/src/common/utils';
+import { NotFoundError } from '@/src/common/exceptions';
 import { Op } from 'sequelize';
-import EntityEngagementService from '@/features/engagement/service';
-import { emitSocketEvent } from '@/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/constants';
-import { Event } from '@/features/events/model';
-import { cacheKeys } from '@/features/cache/keys';
-import { getRedisConnection } from '@/connections/redis';
+import EntityEngagementService from '@/src/features/engagement/service';
+import { emitSocketEvent } from '@/src/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import { Event } from '@/src/features/events/model';
+import { cacheKeys } from '@/src/features/cache/keys';
+import { getRedisConnection } from '@/src/common/connections/redis';
 
 const userService = new UserService();
 const userSettingsService = new UserSettingsService();

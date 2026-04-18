@@ -1,8 +1,8 @@
-import { getDBConnection } from '@/connections/db';
+import { getDBConnection } from '@/src/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/helpers';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { MESSAGE_TABLE_NAME } from './constants';
-import type { IMessage, IMessageStats } from '@/definitions/types';
+import type { IMessage, IMessageStats } from '@/src/common/definitions/types';
 type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'user' | 'reactions'>;
 
 export class Message extends Model<MessageAttributes, MessageAttributes> {

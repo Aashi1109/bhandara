@@ -1,4 +1,4 @@
-import { validateSchema } from '@/helpers';
+import { validateSchema } from '@/src/common/helpers';
 import { MEDIA_BUCKET_CONFIG, MEDIA_TABLE_NAME } from './constants';
 const mediaStorageSchema = {
   type: 'object',

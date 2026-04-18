@@ -30,7 +30,7 @@ describe('search routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/features/search/service',
+          path: '@/src/features/search/service',
           factory: () => ({
             default: {
               getSuggestions: getSuggestionsMock,
@@ -39,7 +39,7 @@ describe('search routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/routes/search.route'],
+      activeRoutes: ['@/app/server/routes/search.route'],
     });
 
     const response = await invokeApp(app, {
@@ -83,7 +83,7 @@ describe('search routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/features/search/service',
+          path: '@/src/features/search/service',
           factory: () => ({
             default: {
               getSuggestions: getSuggestionsMock,
@@ -92,7 +92,7 @@ describe('search routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/routes/search.route'],
+      activeRoutes: ['@/app/server/routes/search.route'],
     });
 
     const response = await invokeApp(app, {
@@ -113,7 +113,7 @@ describe('search routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/features/search/service',
+          path: '@/src/features/search/service',
           factory: () => ({
             default: {
               getSuggestions: getSuggestionsMock,
@@ -122,7 +122,7 @@ describe('search routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/routes/search.route'],
+      activeRoutes: ['@/app/server/routes/search.route'],
     });
 
     const response = await invokeApp(app, {
@@ -138,7 +138,7 @@ describe('search routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/features/search/service',
+          path: '@/src/features/search/service',
           factory: () => ({
             default: {
               getSuggestions: getSuggestionsMock,
@@ -147,7 +147,7 @@ describe('search routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/routes/search.route'],
+      activeRoutes: ['@/app/server/routes/search.route'],
     });
 
     const response = await invokeApp(app, {

@@ -1,4 +1,4 @@
-import type { ICustomRequest } from '@/definitions/types';
+import type { ICustomRequest } from '@/src/common/definitions/types';
 import type { Response } from 'express';
 import AchievementService from './service';
 

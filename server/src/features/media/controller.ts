@@ -1,11 +1,11 @@
-import type { ICustomRequest } from '@/definitions/types';
+import type { ICustomRequest } from '@/src/common/definitions/types';
 import type { Response } from 'express';
 import MediaService, { toMediaPublic } from './service';
-import { BadRequestError, NotFoundError } from '@/exceptions';
-import { isEmpty, pick } from '@/utils';
-import { EMediaProvider } from '@/definitions/enums';
-import logger from '@/logger';
-import { addVideoJob } from '@/queues/video';
+import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
+import { isEmpty, pick } from '@/src/common/utils';
+import { EMediaProvider } from '@/src/common/definitions/enums';
+import logger from '@/src/common/logger';
+import { addVideoJob } from '@/src/common/queues/video';
 
 const mediaService = new MediaService();
 const asString = (value: unknown): string | undefined => {

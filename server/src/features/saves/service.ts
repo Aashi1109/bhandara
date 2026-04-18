@@ -8,14 +8,14 @@ import type {
   ISavedEntity,
   ISavedEntityListItem,
   PaginatedResult,
-} from '@/definitions/types';
-import { BadRequestError, NotFoundError } from '@/exceptions';
-import EventService from '@/features/events/service';
-import MessageService from '@/features/messages/service';
-import ThreadService from '@/features/threads/service';
-import UserService from '@/features/users/service';
-import { getSafeUser } from '@/features/users/helpers';
-import { decodePaginationCursor, encodePaginationCursor, findAllWithPagination } from '@/utils/dbUtils';
+} from '@/src/common/definitions/types';
+import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
+import EventService from '@/src/features/events/service';
+import MessageService from '@/src/features/messages/service';
+import ThreadService from '@/src/features/threads/service';
+import UserService from '@/src/features/users/service';
+import { getSafeUser } from '@/src/features/users/helpers';
+import { decodePaginationCursor, encodePaginationCursor, findAllWithPagination } from '@/src/common/utils/dbUtils';
 
 import { SUPPORTED_SAVED_ENTITY_TYPES, type SupportedSavedEntityType } from './constants';
 import { SavedEntity } from './model';

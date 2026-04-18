@@ -1,7 +1,7 @@
 import { Op, Sequelize, type WhereOptions } from 'sequelize';
 
-import { EAddressEntityType, type EEventStatus, type EEventType } from '@/definitions/enums';
-import type { IPaginationParams, PaginatedResult } from '@/definitions/types';
+import { EAddressEntityType, type EEventStatus, type EEventType } from '@/src/common/definitions/enums';
+import type { IPaginationParams, PaginatedResult } from '@/src/common/definitions/types';
 
 import AddressService from '../addresses/service';
 import { Event } from '../events/model';

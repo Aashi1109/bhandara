@@ -1,33 +1,30 @@
 import { type Namespace, type Socket, Server, type DefaultEventsMap } from 'socket.io';
-import config from '@/config';
-import logger from '@/logger';
-import { requestContextMiddleware, socketUserParser } from '@/middlewares';
-import type { IncomingMessage } from 'http';
-import type { IBaseUser } from '@/definitions/types';
-import { PLATFORM_SOCKET_EVENTS } from '@/constants';
-import type http from 'http';
 import {
-  EventService,
-  MessageService,
-  ReactionService,
-  ThreadService,
-  getExploreCursor,
-  setExploreCursor,
-  deleteExploreCursor,
-  buildExploreSections,
-} from '@/features';
-import { toUserMini } from '@/features/users/service';
-import { BadRequestError, NotFoundError, ForbiddenError } from '@/exceptions';
-import { hasMeaningfulChange, isEmpty } from '@/utils';
-import { getDistanceInMeters } from '@/helpers';
+  config,
+  logger,
+  type IBaseUser,
+  PLATFORM_SOCKET_EVENTS,
+  BadRequestError,
+  NotFoundError,
+  ForbiddenError,
+  hasMeaningfulChange,
+  isEmpty,
+  EAccessLevel,
+} from '@/src/common';
+import type { IncomingMessage } from 'http';
+import type http from 'http';
+
+import { toUserMini } from '@/src/features/users/service';
+
 import { setPlatformNamespace, emitSocketEvent } from './emitter';
-import { EAllowedReactionTables } from '@/features/reactions/constants';
-import { EAccessLevel, EEventStatus } from '@/definitions/enums';
-import ActivityService from '@/features/activity/service';
-import { EActivityType } from '@/features/activity/constants';
-import AchievementService from '@/features/achievements/service';
-import { buildMessageActivities } from '@/features/activity/chat';
+import { EAllowedReactionTables } from '@/src/features/reactions/constants';
+import ActivityService from '@/src/features/activity/service';
+import { EActivityType } from '@/src/features/activity/constants';
+import AchievementService from '@/src/features/achievements/service';
+import { buildMessageActivities } from '@/src/features/activity/chat';
 import { getThreadRoom, getUserRoom } from './rooms';
+import { EventService, MessageService, ReactionService, ThreadService } from '../features';
+import { requestContextMiddleware, socketUserParser } from '@/app/server/middlewares';
 
 interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, IBaseUser> {
   request: IncomingMessage & {
@@ -334,6 +331,7 @@ export function initializeSocket(server: http.Server) {
         });
       }
     });
+
     socket.on(PLATFORM_SOCKET_EVENTS.REACTION_UPDATE, async (request, cb) => {
       try {
         const { contentId, contentPath, reaction, parentId } = request;
@@ -422,6 +420,7 @@ export function initializeSocket(server: http.Server) {
         });
       }
     });
+
     socket.on(PLATFORM_SOCKET_EVENTS.REACTION_DELETE, async (request, cb) => {
       try {
         const { contentId, contentPath, id, reaction, parentId } = request;
@@ -504,61 +503,6 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.EXPLORE, async (request, cb) => {
-      const { filter: { location } = {} } = request || {};
-      const { latitude, longitude } = location || {};
-      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-        return cb?.({ error: 'Invalid location' });
-      }
-
-      const abortController = new AbortController();
-      (socket as any).exploreAbort = abortController;
-
-      try {
-        let nextCursor = (await getExploreCursor(socketUserId)) || null;
-
-        while (!abortController.signal.aborted) {
-          const { items, pagination } = await eventService.getAll(
-            { statuses: [EEventStatus.Ongoing, EEventStatus.Upcoming] },
-            { limit: 10, next: nextCursor },
-          );
-
-          let radius = 100;
-          let nearby = items;
-
-          while (nearby.length === 0 && radius <= 1000 && !abortController.signal.aborted) {
-            nearby = items.filter((ev: (typeof items)[number]) => {
-              const { latitude: elat, longitude: elon } = ev.location || {};
-              if (typeof elat !== 'number' || typeof elon !== 'number') return false;
-              return getDistanceInMeters(latitude, longitude, elat, elon) <= radius;
-            });
-            if (nearby.length === 0) radius += 100;
-          }
-
-          if (nearby.length === 0) break;
-
-          const sections = buildExploreSections(nearby);
-
-          for (const section of sections) {
-            if (abortController.signal.aborted) break;
-            emitSocketEvent(PLATFORM_SOCKET_EVENTS.EXPLORE, {
-              data: section,
-            });
-          }
-
-          await setExploreCursor(socketUserId, pagination.next ?? null);
-          nextCursor = pagination.next ?? null;
-
-          if (!pagination.hasNext) break;
-        }
-        cb?.({ data: true });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
-        logger.error('Explore event failed', err);
-        cb?.({ error: errorMessage });
-      }
-    });
-
     socket.on(PLATFORM_SOCKET_EVENTS.THREAD_CREATE, async (request, cb) => {
       try {
         const { eventId, ...messageData } = request || {};
@@ -598,11 +542,7 @@ export function initializeSocket(server: http.Server) {
       }
     });
 
-    socket.on(PLATFORM_SOCKET_EVENTS.DISCONNECT, async () => {
-      const ctrl = (socket as any).exploreAbort;
-      if (ctrl) ctrl.abort();
-      await deleteExploreCursor(socketUserId);
-    });
+    socket.on(PLATFORM_SOCKET_EVENTS.DISCONNECT, async () => {});
   });
 
   return io;

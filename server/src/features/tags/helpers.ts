@@ -1,8 +1,8 @@
-import type { ITag } from '@/definitions/types';
-import { RedisCache } from '@/features/cache';
-import { CACHE_NAMESPACE_CONFIG } from '@/constants';
-import logger from '@/logger';
-import { jnparse, jnstringify } from '@/utils';
+import type { ITag } from '@/src/common/definitions/types';
+import { RedisCache } from '@/src/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/src/common/constants';
+import logger from '@/src/common/logger';
+import { jnparse, jnstringify } from '@/src/common/utils';
 
 const tagCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Tags.namespace,

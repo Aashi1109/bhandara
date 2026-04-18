@@ -52,11 +52,11 @@ describe('events routes', () => {
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
-        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
-        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
+        { factory: () => buildEventsModuleMock(), path: '@/src/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/src/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/src/features/messages/controller' },
       ],
-      activeRoutes: ['@/routes/events.route'],
+      activeRoutes: ['@/app/server/routes/events.route'],
     });
 
     const response = await invokeApp(app, {
@@ -84,11 +84,11 @@ describe('events routes', () => {
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
-        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
-        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
+        { factory: () => buildEventsModuleMock(), path: '@/src/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/src/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/src/features/messages/controller' },
       ],
-      activeRoutes: ['@/routes/events.route'],
+      activeRoutes: ['@/app/server/routes/events.route'],
     });
 
     const response = await invokeApp(app, {
@@ -105,11 +105,11 @@ describe('events routes', () => {
   it('rejects unauthenticated access', async () => {
     const app = await createTestApp({
       moduleMocks: [
-        { factory: () => buildEventsModuleMock(), path: '@/features/events/controller' },
-        { factory: () => buildThreadsModuleMock(), path: '@/features/threads/controller' },
-        { factory: () => buildMessagesModuleMock(), path: '@/features/messages/controller' },
+        { factory: () => buildEventsModuleMock(), path: '@/src/features/events/controller' },
+        { factory: () => buildThreadsModuleMock(), path: '@/src/features/threads/controller' },
+        { factory: () => buildMessagesModuleMock(), path: '@/src/features/messages/controller' },
       ],
-      activeRoutes: ['@/routes/events.route'],
+      activeRoutes: ['@/app/server/routes/events.route'],
     });
 
     const response = await invokeApp(app, {

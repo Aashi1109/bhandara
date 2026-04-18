@@ -1,6 +1,6 @@
-import type { Express, RequestHandler } from "express";
-import { vi } from "vitest";
-import { createAuthenticatedSession, createAuthenticatedUser } from "./http";
+import type { Express, RequestHandler } from 'express';
+import { vi } from 'vitest';
+import { createAuthenticatedSession, createAuthenticatedUser } from './http';
 
 type ModuleMock = {
   factory: () => unknown | Promise<unknown>;
@@ -14,16 +14,16 @@ type CreateTestAppOptions = {
 };
 
 const ROUTE_MODULES = [
-  "@/routes/auth.route",
-  "@/routes/engagement.route",
-  "@/routes/events.route",
-  "@/routes/media.route",
-  "@/routes/saves.route",
-  "@/routes/search.route",
-  "@/routes/tags.route",
-  "@/routes/threads.route",
-  "@/routes/users.route",
-  "@/routes/webhooks.route",
+  '@/app/server/routes/auth.route',
+  '@/app/server/routes/engagement.route',
+  '@/app/server/routes/events.route',
+  '@/app/server/routes/media.route',
+  '@/app/server/routes/saves.route',
+  '@/app/server/routes/search.route',
+  '@/app/server/routes/tags.route',
+  '@/app/server/routes/threads.route',
+  '@/app/server/routes/users.route',
+  '@/app/server/routes/webhooks.route',
 ];
 
 export const createTestApp = async ({
@@ -33,13 +33,13 @@ export const createTestApp = async ({
 }: CreateTestAppOptions = {}): Promise<Express> => {
   vi.resetModules();
 
-  vi.doMock("@/middlewares", async () => {
-    const actual = await vi.importActual<Record<string, unknown>>("@/middlewares");
+  vi.doMock('@/app/server/middlewares', async () => {
+    const actual = await vi.importActual<Record<string, unknown>>('@/app/server/middlewares');
 
     const sessionParser: RequestHandler = authenticated
       ? (req, _res, next) => {
           (req as any).session = createAuthenticatedSession();
-          (req as any).signedCookies = { bh_session: "test-session" };
+          (req as any).signedCookies = { bh_session: 'test-session' };
           next();
         }
       : (actual.sessionParser as RequestHandler);
@@ -65,13 +65,13 @@ export const createTestApp = async ({
   for (const routeModule of ROUTE_MODULES) {
     if (activeRoutes.includes(routeModule)) continue;
     vi.doMock(routeModule, async () => {
-      const express = await import("express");
+      const express = await import('express');
       return {
         default: express.Router(),
       };
     });
   }
 
-  const { default: createServer } = await import("@/app");
+  const { createServer } = await import('../../app/server');
   return createServer();
 };

@@ -1,6 +1,6 @@
-import type { EAddressEntityType } from '@/definitions/enums';
-import type { ILocation } from '@/definitions/types';
-import { getUUIDv7 } from '@/helpers';
+import type { EAddressEntityType } from '@/src/common/definitions/enums';
+import type { ILocation } from '@/src/common/definitions/types';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { Op, Sequelize, type Transaction } from 'sequelize';
 
 import { Address, decryptAddressRow, decryptAddressRows, type AddressAttributes } from './model';
@@ -100,13 +100,15 @@ class AddressService {
       return {};
     }
 
-    const rows = decryptAddressRows((await Address.findAll({
-      where: {
-        entityType,
-        entityId: { [Op.in]: entityIds },
-      },
-      raw: true,
-    })) as AddressAttributes[]);
+    const rows = decryptAddressRows(
+      (await Address.findAll({
+        where: {
+          entityType,
+          entityId: { [Op.in]: entityIds },
+        },
+        raw: true,
+      })) as AddressAttributes[],
+    );
 
     return rows.reduce(
       (acc, row) => {

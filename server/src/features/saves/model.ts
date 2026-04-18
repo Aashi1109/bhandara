@@ -1,6 +1,6 @@
-import { getDBConnection } from '@/connections/db';
-import type { ISavedEntity } from '@/definitions/types';
-import { getUUIDv7 } from '@/helpers';
+import { getDBConnection } from '@/src/common/connections/db';
+import type { ISavedEntity } from '@/src/common/definitions/types';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { DataTypes, Model } from 'sequelize';
 
 import { SAVED_ENTITY_TABLE_NAME } from './constants';

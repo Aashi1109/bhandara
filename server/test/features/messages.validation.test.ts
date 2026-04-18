@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateMessageCreate } from '@/features/messages/validation';
+import { validateMessageCreate } from '@/src/features/messages/validation';
 
 const basePayload = {
   userId: '019d196e-530f-76ba-a118-ec3806519832',

@@ -6,17 +6,16 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "sourceMap": false,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "*": ["node_modules/*"],
       "@/*": ["./*"]
     },
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "jsx": "react-jsx"
   },
-  "include": ["types.d.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "include": ["types.d.ts", "src/**/*.ts", "src/**/*.tsx", "app/**/*.ts", "index.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,8 +1,8 @@
-import { getDBConnection } from '@/connections/db';
+import { getDBConnection } from '@/src/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/helpers';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { TAG_TABLE_NAME } from './constants';
-import type { ITag } from '@/definitions/types';
+import type { ITag } from '@/src/common/definitions/types';
 type TagAttributes = Omit<ITag, 'createdAt' | 'updatedAt'>;
 
 export class Tag extends Model<TagAttributes, TagAttributes> {

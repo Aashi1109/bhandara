@@ -38,10 +38,10 @@ describe("threads routes", () => {
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildThreadsModuleMock(), path: "@/src/features/threads/controller" },
+        { factory: () => buildMessagesModuleMock(), path: "@/src/features/messages/controller" },
       ],
-      activeRoutes: ["@/routes/threads.route"],
+      activeRoutes: ["@/app/server/routes/threads.route"],
     });
 
     const response = await invokeApp(app, {
@@ -68,10 +68,10 @@ describe("threads routes", () => {
     const app = await createTestApp({
       authenticated: true,
       moduleMocks: [
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildThreadsModuleMock(), path: "@/src/features/threads/controller" },
+        { factory: () => buildMessagesModuleMock(), path: "@/src/features/messages/controller" },
       ],
-      activeRoutes: ["@/routes/threads.route"],
+      activeRoutes: ["@/app/server/routes/threads.route"],
     });
 
     const response = await invokeApp(app, {
@@ -91,10 +91,10 @@ describe("threads routes", () => {
   it("requires authentication", async () => {
     const app = await createTestApp({
       moduleMocks: [
-        { factory: () => buildThreadsModuleMock(), path: "@/features/threads/controller" },
-        { factory: () => buildMessagesModuleMock(), path: "@/features/messages/controller" },
+        { factory: () => buildThreadsModuleMock(), path: "@/src/features/threads/controller" },
+        { factory: () => buildMessagesModuleMock(), path: "@/src/features/messages/controller" },
       ],
-      activeRoutes: ["@/routes/threads.route"],
+      activeRoutes: ["@/app/server/routes/threads.route"],
     });
 
     const response = await invokeApp(app, {

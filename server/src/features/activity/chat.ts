@@ -1,5 +1,5 @@
-import type { IActivity, IMessage } from '@/definitions/types';
-import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import type { IActivity, IMessage } from '@/src/common/definitions/types';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/src/features/activity/constants';
 
 type BuildMessageActivitiesInput = {
   actorId: string;

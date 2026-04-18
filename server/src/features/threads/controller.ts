@@ -1,15 +1,15 @@
-import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
+import type { ICustomRequest, IRequestPagination } from '@/src/common/definitions/types';
 import type { Response } from 'express';
 import ThreadsService from './service';
-import { NotFoundError } from '@/exceptions';
-import { hasMeaningfulChange, isEmpty } from '@/utils';
+import { NotFoundError } from '@/src/common/exceptions';
+import { hasMeaningfulChange, isEmpty } from '@/src/common/utils';
 
-import { emitSocketEvent } from '@/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS } from '@/constants';
-import EventService from '@/features/events/service';
-import MessageService from '@/features/messages/service';
-import EntityEngagementService from '@/features/engagement/service';
-import { getThreadRoom } from '@/socket/rooms';
+import { emitSocketEvent } from '@/src/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS } from '@/src/common/constants';
+import EventService from '@/src/features/events/service';
+import MessageService from '@/src/features/messages/service';
+import EntityEngagementService from '@/src/features/engagement/service';
+import { getThreadRoom } from '@/src/socket/rooms';
 
 const threadsService = new ThreadsService();
 const eventService = new EventService();

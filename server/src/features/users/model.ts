@@ -1,9 +1,9 @@
-import { getDBConnection } from '@/connections/db';
+import { getDBConnection } from '@/src/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/helpers';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { USER_TABLE_NAME } from './constants';
-import type { IBaseUser } from '@/definitions/types';
-import { decryptRecordFields, encryptedTextAttribute } from '@/utils';
+import type { IBaseUser } from '@/src/common/definitions/types';
+import { decryptRecordFields, encryptedTextAttribute } from '@/src/common/utils';
 
 const sequelize = getDBConnection()!;
 type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'media' | 'profilePic'> & {
@@ -12,7 +12,8 @@ type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'm
 };
 
 export const USER_ENCRYPTED_FIELDS = ['email', '__sid'] as const;
-export const decryptUserRow = <T extends Record<string, any>>(row: T) => decryptRecordFields(row, USER_ENCRYPTED_FIELDS);
+export const decryptUserRow = <T extends Record<string, any>>(row: T) =>
+  decryptRecordFields(row, USER_ENCRYPTED_FIELDS);
 export const decryptUserRows = <T extends Record<string, any>>(rows: T[]) => rows.map((row) => decryptUserRow(row));
 
 export class User extends Model<UserAttributes, UserAttributes> {

@@ -27,7 +27,7 @@ const {
   verifyEventMock: vi.fn(),
 }));
 
-vi.mock('@/features/events/service', () => ({
+vi.mock('@/src/features/events/service', () => ({
   default: class {
     getAll = getAllMock;
     getById = getByIdMock;
@@ -40,27 +40,27 @@ vi.mock('@/features/events/service', () => ({
   toEventSummary: toEventSummaryMock,
 }));
 
-vi.mock('@/features/tags/service', () => ({
+vi.mock('@/src/features/tags/service', () => ({
   default: class {},
 }));
 
-vi.mock('@/features/activity/service', () => ({
+vi.mock('@/src/features/activity/service', () => ({
   default: class {
     create = activityCreateMock;
   },
 }));
 
-vi.mock('@/features/achievements/service', () => ({
+vi.mock('@/src/features/achievements/service', () => ({
   default: class {
     trackActivity = trackActivityMock;
   },
 }));
 
-vi.mock('@/features/engagement/service', () => ({
+vi.mock('@/src/features/engagement/service', () => ({
   default: class {},
 }));
 
-vi.mock('@/socket/emitter', () => ({
+vi.mock('@/src/socket/emitter', () => ({
   emitSocketEvent: emitSocketEventMock,
 }));
 
@@ -89,7 +89,7 @@ describe('events controller', () => {
       pagination: { hasNext: false, limit: 20, next: null, total: 0 },
     });
 
-    const { getEvents } = await import('@/features/events/controller');
+    const { getEvents } = await import('@/src/features/events/controller');
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -133,7 +133,7 @@ describe('events controller', () => {
   });
 
   it('rejects invalid filter values', async () => {
-    const { getEvents } = await import('@/features/events/controller');
+    const { getEvents } = await import('@/src/features/events/controller');
     const req = {
       pagination: { limit: 20, next: null, sortBy: 'createdAt', sortOrder: 'desc' },
       query: { type: 'conference' },
@@ -154,7 +154,7 @@ describe('events controller', () => {
       items: [{ id: 'event-1', name: 'Community Dinner', latitude: 18.52, longitude: 73.85 }],
     });
 
-    const { getEventMarkers } = await import('@/features/events/controller');
+    const { getEventMarkers } = await import('@/src/features/events/controller');
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -208,7 +208,7 @@ describe('events controller', () => {
       .mockResolvedValueOnce(previousEvent)
       .mockResolvedValueOnce(updatedEvent);
 
-    const { eventJoinLeaveHandler } = await import('@/features/events/controller');
+    const { eventJoinLeaveHandler } = await import('@/src/features/events/controller');
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -241,7 +241,7 @@ describe('events controller', () => {
       .mockResolvedValueOnce(previousEvent)
       .mockResolvedValueOnce(updatedEvent);
 
-    const { verifyEvent } = await import('@/features/events/controller');
+    const { verifyEvent } = await import('@/src/features/events/controller');
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -284,7 +284,7 @@ describe('events controller', () => {
     getEventDataMock.mockResolvedValue(hydratedEvent);
     updateMock.mockResolvedValue(updatedEvent);
 
-    const { updateEvent } = await import('@/features/events/controller');
+    const { updateEvent } = await import('@/src/features/events/controller');
     const req = {
       body: { name: 'Community Dinner' },
       params: { eventId: 'event-1' },

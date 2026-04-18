@@ -1,4 +1,4 @@
-import { ajv, validateSchema } from '@/helpers';
+import { ajv, validateSchema } from '@/src/common/helpers';
 import { REACTION_TABLE_NAME, EAllowedReactionTables } from './constants';
 
 ajv.addFormat('emoji', {

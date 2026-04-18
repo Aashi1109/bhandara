@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockRedis } from '../mocks/external';
-import { REDIS_CONNECTION_NAMES } from '@/constants';
+import { REDIS_CONNECTION_NAMES } from '@/src/common/constants';
 
 describe('rateLimit middleware', () => {
   beforeEach(() => {
@@ -11,8 +11,8 @@ describe('rateLimit middleware', () => {
   });
 
   it('sets rate-limit headers on the first hit', async () => {
-    const { default: rateLimit } = await import('@/middlewares/rateLimit');
-    const { getRedisConnection } = await import('@/connections/redis');
+    const { default: rateLimit } = await import('@/app/server/middlewares/rateLimit');
+    const { getRedisConnection } = await import('@/src/common/connections/redis');
     const middleware = rateLimit({
       keyPrefix: 'public-user-query',
       limit: 10,
@@ -46,7 +46,7 @@ describe('rateLimit middleware', () => {
   it('returns 429 when the limit is exceeded', async () => {
     mockRedis.incr.mockResolvedValue(11);
 
-    const { default: rateLimit } = await import('@/middlewares/rateLimit');
+    const { default: rateLimit } = await import('@/app/server/middlewares/rateLimit');
     const middleware = rateLimit({
       keyPrefix: 'public-user-query',
       limit: 10,
@@ -78,7 +78,7 @@ describe('rateLimit middleware', () => {
     const redisError = new Error('redis unavailable');
     mockRedis.incr.mockRejectedValue(redisError);
 
-    const { default: rateLimit } = await import('@/middlewares/rateLimit');
+    const { default: rateLimit } = await import('@/app/server/middlewares/rateLimit');
     const middleware = rateLimit({
       keyPrefix: 'public-user-query',
       limit: 10,

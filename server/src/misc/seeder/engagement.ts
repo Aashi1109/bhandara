@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { getUUIDv7 } from '@/helpers';
-import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import { getUUIDv7 } from '@/src/common/helpers';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/src/features/activity/constants';
 import { REACTION_EMOJIS } from './constants';
 import type { SeededUserRow, UserMetrics } from './types';
 import { getEngagementViewCount, getOrCreateMetrics } from './utils';

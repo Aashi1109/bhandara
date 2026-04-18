@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decryptRecordFields, decryptValue, encryptRecordFields, encryptValue, hashForLookup } from '@/utils';
+import { decryptRecordFields, decryptValue, encryptRecordFields, encryptValue, hashForLookup } from '@/src/common/utils';
 
 describe('encryption utils', () => {
   it('round-trips encrypted strings', () => {

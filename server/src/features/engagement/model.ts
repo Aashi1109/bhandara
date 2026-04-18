@@ -1,6 +1,6 @@
-import { getDBConnection } from '@/connections/db';
-import { getUUIDv7 } from '@/helpers';
-import type { IEntityEngagement, IEntityEngagementStats, IEntityRating } from '@/definitions/types';
+import { getDBConnection } from '@/src/common/connections/db';
+import { getUUIDv7 } from '@/src/common/helpers';
+import type { IEntityEngagement, IEntityEngagementStats, IEntityRating } from '@/src/common/definitions/types';
 import { DataTypes, Model } from 'sequelize';
 
 import { ENTITY_ENGAGEMENT_TABLE_NAME, ENTITY_RATING_TABLE_NAME } from './constants';

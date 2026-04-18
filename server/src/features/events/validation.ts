@@ -1,6 +1,6 @@
-import { validateSchema } from '@/helpers';
+import { validateSchema } from '@/src/common/helpers';
 import { EVENT_TABLE_NAME } from './constants';
-import { EEventParticipantStatus, EEventStatus, EEventType } from '@/definitions/enums';
+import { EEventParticipantStatus, EEventStatus, EEventType } from '@/src/common/definitions/enums';
 import { validateEventTimings } from './status';
 
 const locationSchema = {

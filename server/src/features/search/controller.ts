@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 
-import { EEventStatus, EEventType } from '@/definitions/enums';
-import { BadRequestError } from '@/exceptions';
-import logger from '@/logger';
+import { EEventStatus, EEventType } from '@/src/common/definitions/enums';
+import { BadRequestError } from '@/src/common/exceptions';
+import logger from '@/src/common/logger';
 
 import SearchService, { type ISearchFilters } from './service';
 import { validateSearchRequest } from './validation';

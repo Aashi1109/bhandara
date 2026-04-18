@@ -3,8 +3,8 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import { decode } from 'base64-arraybuffer';
-import { supabase } from '../connections';
-import { SupabaseCustomError } from '@/exceptions';
+import { supabase } from '../common/connections';
+import { SupabaseCustomError } from '@/src/common';
 
 const throwSupabaseError = (res: any) => {
   throw new SupabaseCustomError(res.message || res.error?.message, res?.status, res.name || res?.statusText);

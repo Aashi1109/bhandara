@@ -1,5 +1,5 @@
-import { BadRequestError } from '@/exceptions';
-import { EEventStatus } from '@/definitions/enums';
+import { BadRequestError } from '@/src/common/exceptions';
+import { EEventStatus } from '@/src/common/definitions/enums';
 
 type EventStatusInput = {
   startTime: string | Date;

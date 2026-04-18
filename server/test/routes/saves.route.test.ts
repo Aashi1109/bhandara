@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BadRequestError } from "@/exceptions";
+import { BadRequestError } from "@/src/common/exceptions";
 import { createTestApp } from "../helpers/app";
 import { authHeaders, invokeApp } from "../helpers/http";
 
@@ -46,7 +46,7 @@ describe("saves routes", () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: "@/features/saves/service",
+          path: "@/src/features/saves/service",
           factory: () => ({
             default: class {
               getSaveState = getSaveStateMock;
@@ -63,7 +63,7 @@ describe("saves routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/routes/saves.route"],
+      activeRoutes: ["@/app/server/routes/saves.route"],
     });
 
     const response = await invokeApp(app, {
@@ -100,7 +100,7 @@ describe("saves routes", () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: "@/features/saves/service",
+          path: "@/src/features/saves/service",
           factory: () => ({
             default: class {
               getSaveState = getSaveStateMock;
@@ -117,7 +117,7 @@ describe("saves routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/routes/saves.route"],
+      activeRoutes: ["@/app/server/routes/saves.route"],
     });
 
     const response = await invokeApp(app, {
@@ -143,7 +143,7 @@ describe("saves routes", () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: "@/features/saves/service",
+          path: "@/src/features/saves/service",
           factory: () => ({
             default: class {
               getSaveState = getSaveStateMock;
@@ -160,7 +160,7 @@ describe("saves routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/routes/saves.route"],
+      activeRoutes: ["@/app/server/routes/saves.route"],
     });
 
     const response = await invokeApp(app, {

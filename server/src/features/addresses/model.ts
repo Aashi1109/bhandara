@@ -1,8 +1,8 @@
-import { getDBConnection } from '@/connections/db';
-import { EAddressEntityType } from '@/definitions/enums';
-import { getUUIDv7 } from '@/helpers';
+import { getDBConnection } from '@/src/common/connections/db';
+import { EAddressEntityType } from '@/src/common/definitions/enums';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { DataTypes, Model } from 'sequelize';
-import { decryptRecordFields, encryptedTextAttribute } from '@/utils';
+import { decryptRecordFields, encryptedTextAttribute } from '@/src/common/utils';
 
 import { ADDRESS_TABLE_NAME } from './constants';
 
@@ -26,7 +26,8 @@ type AddressCreationAttributes = AddressRecord;
 export const ADDRESS_ENCRYPTED_FIELDS = ['address'] as const;
 export const decryptAddressRow = <T extends Record<string, any>>(row: T) =>
   decryptRecordFields(row, ADDRESS_ENCRYPTED_FIELDS);
-export const decryptAddressRows = <T extends Record<string, any>>(rows: T[]) => rows.map((row) => decryptAddressRow(row));
+export const decryptAddressRows = <T extends Record<string, any>>(rows: T[]) =>
+  rows.map((row) => decryptAddressRow(row));
 
 export class Address extends Model<AddressRecord, AddressCreationAttributes> {
   declare id: string;

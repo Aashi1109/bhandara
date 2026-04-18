@@ -1,6 +1,6 @@
-import { CACHE_NAMESPACE_CONFIG } from '@/constants';
-import type { IBaseThread, ILockHistory } from '@/definitions/types';
-import { RedisCache } from '@/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/src/common/constants';
+import type { IBaseThread, ILockHistory } from '@/src/common/definitions/types';
+import { RedisCache } from '@/src/features/cache';
 
 const threadsCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Threads.namespace,

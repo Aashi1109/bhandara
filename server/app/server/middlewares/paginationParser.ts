@@ -1,0 +1,38 @@
+import { type IRequestPagination, logger } from '@/src/common';
+import type { NextFunction, Request, Response } from 'express';
+
+const paginationParser = (req: Request, res: Response, next: NextFunction) => {
+  const _req = req as IRequestPagination;
+  const { limit, sortBy, sortOrder, next: _next, startDate, endDate } = req.query;
+  const parsedLimit = +(limit ?? 10);
+  const parsedSortBy = sortBy !== 'createdAt' && sortBy !== 'updatedAt' ? 'createdAt' : sortBy;
+
+  const parsedSortOrder = sortOrder !== 'asc' && sortOrder !== 'desc' ? 'desc' : sortOrder;
+
+  let parsedStartDate = startDate ? new Date(startDate as string) : null;
+  let parsedEndDate = endDate ? new Date(endDate as string) : null;
+
+  // Set invalid dates to null
+  if (startDate && parsedStartDate?.toString() === 'Invalid Date') {
+    logger.warn(`Invalid startDate format: ${startDate}, setting to null`);
+    parsedStartDate = null;
+  }
+  if (endDate && parsedEndDate?.toString() === 'Invalid Date') {
+    logger.warn(`Invalid endDate format: ${endDate}, setting to null`);
+    parsedEndDate = null;
+  }
+
+  // add parsed pagination parameters to request object
+  _req.pagination = {
+    limit: parsedLimit,
+    sortBy: parsedSortBy,
+    sortOrder: parsedSortOrder,
+    startDate: parsedStartDate ?? undefined,
+    endDate: parsedEndDate ?? undefined,
+    next: _next as string | null,
+  };
+
+  return next();
+};
+
+export default paginationParser;

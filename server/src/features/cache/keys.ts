@@ -1,4 +1,4 @@
-import { hashForCacheKey, hashForLookup } from '@/utils';
+import { hashForCacheKey, hashForLookup } from '@/src/common/utils';
 
 type CacheEntityType = 'events' | 'threads' | 'messages' | 'users';
 

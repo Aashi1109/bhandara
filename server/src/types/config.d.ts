@@ -73,6 +73,8 @@ export interface AppConfig {
     fromName: string;
   };
   supabaseServiceRole: string | undefined;
+  appType: 'server' | 'worker';
+  appName: string;
 }
 
 export interface SentryConfig {

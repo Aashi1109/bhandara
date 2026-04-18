@@ -10,8 +10,8 @@ const { consumeResetTokenMock, createPlatformUserMock, getUserByEmailMock, sendP
     sendPasswordResetSuccessEmailMock: vi.fn(),
   }));
 
-vi.mock("@/features", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@/features");
+vi.mock("@/src/features", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/src/features");
   return {
     ...actual,
     AuthService: class {
@@ -20,14 +20,14 @@ vi.mock("@/features", async () => {
   };
 });
 
-vi.mock("@/features/users/service", () => ({
+vi.mock("@/src/features/users/service", () => ({
   default: class {
     getUserByEmail = getUserByEmailMock;
   },
 }));
 
-vi.mock("@/features/auth/otp-helpers", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@/features/auth/otp-helpers");
+vi.mock("@/src/features/auth/otp-helpers", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/src/features/auth/otp-helpers");
   return {
     ...actual,
     consumeResetToken: consumeResetTokenMock,
@@ -56,7 +56,7 @@ describe("auth controller", () => {
       }),
     );
 
-    const { signInWithIdToken } = await import("@/features/auth/controller");
+    const { signInWithIdToken } = await import("@/src/features/auth/controller");
     const req = {
       body: {
         code: "oauth-code",
@@ -90,7 +90,7 @@ describe("auth controller", () => {
       user: { email: "user@example.com", id: "user-1" },
     });
 
-    const { login } = await import("@/features/auth/controller");
+    const { login } = await import("@/src/features/auth/controller");
     const cookie = vi.fn();
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
@@ -136,7 +136,7 @@ describe("auth controller", () => {
     });
     mockSupabaseAdminAuth.updateUserById.mockResolvedValue({ error: null });
 
-    const { resetPassword } = await import("@/features/auth/controller");
+    const { resetPassword } = await import("@/src/features/auth/controller");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {

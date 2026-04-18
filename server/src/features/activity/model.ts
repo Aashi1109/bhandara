@@ -1,7 +1,7 @@
-import { getDBConnection } from '@/connections/db';
+import { getDBConnection } from '@/src/common/connections/db';
+import type { IActivity } from '@/src/common/definitions/types';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/helpers';
-import type { IActivity } from '@/definitions/types';
 import { ACTIVITY_TABLE_NAME, EActivityEntityType, EActivityVisibility } from './constants';
 
 type ActivityAttributes = Omit<IActivity, 'createdAt' | 'updatedAt'>;

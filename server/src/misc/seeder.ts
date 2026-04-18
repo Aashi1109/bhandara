@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { disconnect, getDBConnection } from '@/connections/db';
+import { disconnect, getDBConnection } from '@/src/common/connections/db';
 import { seedFreshDatabase } from './seeder/core';
 import { parseOptions, logSeedProgress, formatRange } from './seeder/utils';
 import { AUTH_SIGNUP_BATCH_SIZE, DB_BULK_INSERT_CHUNK_SIZE } from './seeder/constants';

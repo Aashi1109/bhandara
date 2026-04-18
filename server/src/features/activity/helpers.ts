@@ -1,7 +1,7 @@
-import { RedisCache } from '@/features/cache';
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
-import type { IActivity } from '@/definitions/types';
-import { cacheKeys } from '@/features/cache/keys';
+import { RedisCache } from '@/src/features/cache';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import type { IActivity } from '@/src/common/definitions/types';
+import { cacheKeys } from '@/src/features/cache/keys';
 
 const activityCache = new RedisCache({
   connectionName: REDIS_CONNECTION_NAMES.Activity,

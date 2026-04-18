@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cacheKeys } from '@/features/cache/keys';
+import { cacheKeys } from '@/src/features/cache/keys';
 
 describe('cache key compaction', () => {
   it('builds compact engagement keys', () => {

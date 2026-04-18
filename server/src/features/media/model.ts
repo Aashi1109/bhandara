@@ -1,9 +1,9 @@
-import { getDBConnection } from '@/connections/db';
+import { getDBConnection } from '@/src/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/helpers';
+import { getUUIDv7 } from '@/src/common/helpers';
 import { MEDIA_TABLE_NAME } from './constants';
-import { EMediaType, EAccessLevel } from '@/definitions/enums';
-import type { IMedia } from '@/definitions/types';
+import { EMediaType, EAccessLevel } from '@/src/common/definitions/enums';
+import type { IMedia } from '@/src/common/definitions/types';
 
 type MediaAttributes = Omit<IMedia, 'createdAt' | 'updatedAt' | 'path' | 'publicUrl' | 'publicUrlExpiresAt'>;
 

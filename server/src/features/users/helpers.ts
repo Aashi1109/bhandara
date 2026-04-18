@@ -1,9 +1,9 @@
-import type { ITag, IUserSession, IBaseUser } from '@/definitions/types';
-import { RedisCache } from '@/features/cache';
-import { cacheKeys } from '@/features/cache/keys';
-import { decryptRecordFields, encryptRecordFields, jnparse, jnstringify } from '@/utils';
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/constants';
-import logger from '@/logger';
+import type { ITag, IUserSession, IBaseUser } from '@/src/common/definitions/types';
+import { RedisCache } from '@/src/features/cache';
+import { cacheKeys } from '@/src/features/cache/keys';
+import { decryptRecordFields, encryptRecordFields, jnparse, jnstringify } from '@/src/common/utils';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import logger from '@/src/common/logger';
 
 const userCacheNamespace = CACHE_NAMESPACE_CONFIG.Users.namespace;
 const userCacheTTL = CACHE_NAMESPACE_CONFIG.Users.ttl;

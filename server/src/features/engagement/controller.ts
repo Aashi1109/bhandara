@@ -1,5 +1,5 @@
-import type { ICustomRequest } from '@/definitions/types';
-import { BadRequestError, NotFoundError } from '@/exceptions';
+import type { ICustomRequest } from '@/src/common/definitions/types';
+import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
 import type { Response } from 'express';
 
 import EntityEngagementService from './service';

@@ -1,5 +1,5 @@
-import { validateSchema } from '@/helpers';
-import { EAccessLevel } from '@/definitions/enums';
+import { validateSchema } from '@/src/common/helpers';
+import { EAccessLevel } from '@/src/common/definitions/enums';
 import { THREAD_TABLE_NAME } from './constants';
 const threadSchema = {
   type: 'object',

@@ -1,7 +1,7 @@
-import type { ICustomRequest, IRequestPagination } from '@/definitions/types';
+import type { ICustomRequest, IRequestPagination } from '@/src/common/definitions/types';
 import type { Response } from 'express';
 import ActivityService from './service';
-import { NotFoundError } from '@/exceptions';
+import { NotFoundError } from '@/src/common/exceptions';
 
 const activityService = new ActivityService();
 

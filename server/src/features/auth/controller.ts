@@ -1,13 +1,13 @@
-import config from '@/config';
-import { supabase } from '@/connections';
-import supabaseAdmin from '@/connections/supabase/admin';
-import { EAuthProvider } from '@/definitions/enums';
-import type { ICustomRequest } from '@/definitions/types';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '@/exceptions';
-import { AuthService } from '@/features';
-import { deleteUserSessionCache, getUserSessionCacheList } from '@/features/users/helpers';
-import UserService from '@/features/users/service';
-import { isEmpty, merge } from '@/utils';
+import config from '@/src/common/config';
+import { supabase } from '@/src/common/connections';
+import supabaseAdmin from '@/src/common/connections/supabase/admin';
+import { EAuthProvider } from '@/src/common/definitions/enums';
+import type { ICustomRequest } from '@/src/common/definitions/types';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '@/src/common/exceptions';
+import { isEmpty, merge } from '@/src/common/utils';
+import { AuthService } from '@/src/features';
+import { deleteUserSessionCache, getUserSessionCacheList } from '@/src/features/users/helpers';
+import UserService from '@/src/features/users/service';
 import type { Request, Response } from 'express';
 import {
   generateOTP,
@@ -17,7 +17,7 @@ import {
   verifyOTP,
   consumeResetToken,
 } from './otp-helpers';
-import { sendPasswordResetOTPEmail, sendPasswordResetSuccessEmail } from '@/services/email';
+import { sendPasswordResetOTPEmail, sendPasswordResetSuccessEmail } from '@/src/features/email/service';
 
 const authService = new AuthService();
 const userService = new UserService();

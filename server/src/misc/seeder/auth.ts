@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import AuthService from '@/features/auth/service';
+import AuthService from '@/src/features/auth/service';
 import { AUTH_SIGNUP_BATCH_SIZE } from './constants';
 import type { SeedOptions, SeededAuthUser } from './types';
 import { chunkArray, logSeedProgress, resolveRange } from './utils';

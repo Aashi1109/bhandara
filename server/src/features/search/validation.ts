@@ -1,5 +1,6 @@
 import Joi from 'joi';
-import { validateRequest } from '@/middlewares/validation';
+import type { NextFunction, Request, Response } from 'express';
+import { BadRequestError } from '@/src/common/exceptions';
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),
@@ -21,5 +22,19 @@ export const suggestionsQuerySchema = Joi.object({
 
 export const validateSearchRequest = (data: any) => searchQuerySchema.validate(data, { abortEarly: false });
 
-export const validateSearchQuery = validateRequest(searchQuerySchema);
-export const validateSuggestionsQuery = validateRequest(suggestionsQuerySchema);
+const validateQuery = (schema: Joi.ObjectSchema) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(req.query, { abortEarly: false });
+
+    if (error) {
+      const errorMessage = error.details.map((detail) => detail.message).join(', ');
+      throw new BadRequestError(`Validation error: ${errorMessage}`);
+    }
+
+    req.query = value as Request['query'];
+    next();
+  };
+};
+
+export const validateSearchQuery = validateQuery(searchQuerySchema);
+export const validateSuggestionsQuery = validateQuery(suggestionsQuerySchema);
