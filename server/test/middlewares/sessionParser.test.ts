@@ -26,11 +26,15 @@ vi.mock("@/src/features", async () => {
   };
 });
 
-vi.mock("@/src/common/contexts", () => ({
-  RequestContext: {
-    setContextValue: setContextValueMock,
-  },
-}));
+vi.mock("@/src/common", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/src/common");
+  return {
+    ...actual,
+    RequestContext: {
+      setContextValue: setContextValueMock,
+    },
+  };
+});
 
 describe("sessionParser", () => {
   beforeEach(() => {

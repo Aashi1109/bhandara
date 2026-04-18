@@ -10,7 +10,7 @@ import {
   parseOptions,
   resolveRangeForKey,
   shardSeedUsers,
-} from "@/misc/seeder/utils";
+} from "@/src/misc/seeder/utils";
 
 describe("seeder utils", () => {
   it("chunks rows into fixed-size batches", () => {

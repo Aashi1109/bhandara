@@ -34,7 +34,7 @@ vi.mock("@/src/features/auth/otp-helpers", async () => {
   };
 });
 
-vi.mock("@/services/email", () => ({
+vi.mock("@/src/features/email/service", () => ({
   sendPasswordResetOTPEmail: vi.fn(),
   sendPasswordResetSuccessEmail: sendPasswordResetSuccessEmailMock,
 }));

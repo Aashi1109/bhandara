@@ -12,7 +12,7 @@ describe('rateLimit middleware', () => {
 
   it('sets rate-limit headers on the first hit', async () => {
     const { default: rateLimit } = await import('@/app/server/middlewares/rateLimit');
-    const { getRedisConnection } = await import('@/src/common/connections/redis');
+    const { getRedisConnection } = await import('@/src/common/connections');
     const middleware = rateLimit({
       keyPrefix: 'public-user-query',
       limit: 10,

@@ -11,10 +11,10 @@ import { render } from '@react-email/render';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import * as React from 'react';
-import { PasswordResetOTPEmail } from '../src/transactional/PasswordResetOTPEmail';
-import { PasswordResetSuccessEmail } from '../src/transactional/PasswordResetSuccessEmail';
+import { PasswordResetOTPEmail } from '../src/features/email/templates/PasswordResetOTPEmail';
+import { PasswordResetSuccessEmail } from '../src/features/email/templates/PasswordResetSuccessEmail';
 
-const OUT_DIR = join(__dirname, '../src/transactional/generated');
+const OUT_DIR = join(__dirname, '../src/features/email/templates/generated');
 
 const P = {
   APP_NAME: '__APP_NAME__',
