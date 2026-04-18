@@ -53,12 +53,12 @@ class _AppSessionCoordinatorState extends ConsumerState<AppSessionCoordinator> {
 
     _socketSubscription = socketService.messages.listen((event) {
       final eventName = event['event'];
-      if (eventName != SocketEvents.userUpdate) {
+      if (eventName == SocketEvents.activityNew) {
+        ref.read(unreadNotificationCountProvider.notifier).increment();
         return;
       }
 
-      if (eventName == SocketEvents.activityNew) {
-        ref.read(unreadNotificationCountProvider.notifier).state++;
+      if (eventName != SocketEvents.userUpdate) {
         return;
       }
 

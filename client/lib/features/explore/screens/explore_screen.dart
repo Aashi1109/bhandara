@@ -3,7 +3,6 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:geolocator/geolocator.dart';
@@ -36,7 +35,6 @@ import '../../events/widgets/event_status_badge.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../widgets/explore_event_map.dart';
 import '../widgets/explore_search_bar.dart';
-import '../../../shared/utils/maps.dart';
 import '../../events/screens/event_detail.dart';
 import '../../search/screens/search.dart';
 
@@ -120,10 +118,12 @@ class _ExploreScreenState extends State<ExploreScreen>
   // Marker tile cache state
   Map<String, List<EventMarker>> _tileCache = {};
   List<EventMarker> _visibleMarkers = [];
+  // ignore: unused_field
   List<EventCluster> _serverClusters = [];
   final Map<String, Event> _markerPreviewCache = {};
   // Cluster mode is legacy — the current pipeline uses flat marker fetch +
   // client-side clustering. Kept false so the UI never hits that path.
+  // ignore: unused_field
   bool _isClusterMode = false;
   int _markerRequestVersion = 0;
 
@@ -1108,6 +1108,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   /// Whether the current viewport is covered by ANY previously fetched
   /// cluster region at the same zoom. Panning back to a visited area is
   /// therefore a cache hit and never triggers a refetch-and-wipe.
+  // ignore: unused_element
   bool _isViewportCoveredByAnyFetch(ExploreViewportQuery viewport) {
     final zoomFloor = viewport.zoom.floor();
     final regions = _fetchedClusterRegionsByZoom[zoomFloor];
@@ -1128,6 +1129,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return false;
   }
 
+  // ignore: unused_element
   Future<void> _loadClusterMarkers(ExploreViewportQuery viewport) async {
     final zoomFloor = viewport.zoom.floor();
     final bucket = _clusterAccumulatorByZoom[zoomFloor];
@@ -1208,6 +1210,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  // ignore: unused_element
   Future<void> _loadTileMarkers(ExploreViewportQuery viewport) async {
     final sw = LatLng(
       viewport.center.latitude - (viewport.radiusKm / 111.0),

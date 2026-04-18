@@ -49,7 +49,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
 
     // Reset unread badge when updates screen opens.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(unreadNotificationCountProvider.notifier).state = 0;
+      ref.read(unreadNotificationCountProvider.notifier).clear();
     });
 
     // Listen for real-time activity:new events and prepend to list.
@@ -129,7 +129,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
 
   Future<void> _markAllRead() async {
     setState(() => _isMarkingAll = true);
-    ref.read(unreadNotificationCountProvider.notifier).state = 0;
+    ref.read(unreadNotificationCountProvider.notifier).clear();
     try {
       await activityService.markAllRead();
       if (!mounted) return;

@@ -8,6 +8,29 @@ cd "$repo_root"
 run_client=false
 run_server=false
 
+resolve_bin() {
+  local name="$1"
+  shift
+
+  if command -v "$name" >/dev/null 2>&1; then
+    command -v "$name"
+    return 0
+  fi
+
+  for candidate in "$@"; do
+    if [[ -n "$candidate" && -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+flutter_bin="$(resolve_bin flutter /opt/homebrew/bin/flutter "$HOME/fvm/default/bin/flutter" "$HOME/flutter/bin/flutter")"
+pnpm_bin="$(resolve_bin pnpm /opt/homebrew/bin/pnpm "$HOME/Library/pnpm/pnpm")"
+shell_bin="${SHELL:-/bin/zsh}"
+
 client_test_jobs() {
   local cpu_count=2
   local target_jobs=2
@@ -65,18 +88,16 @@ run_client_checks() {
   (
     cd client
 
-    flutter analyze &
+    "$shell_bin" -lc "'$flutter_bin' --no-version-check analyze" &
     local analyze_pid=$!
 
-    flutter test --concurrency="$test_jobs" &
+    "$shell_bin" -lc "'$flutter_bin' --no-version-check test --concurrency='$test_jobs'" &
     local test_pid=$!
 
     wait "$analyze_pid" || analyze_status=$?
     wait "$test_pid" || test_status=$?
 
-    if [[ "$analyze_status" -ne 0 || "$test_status" -ne 0 ]]; then
-      return 1
-    fi
+    [[ "$analyze_status" -eq 0 && "$test_status" -eq 0 ]]
   )
 }
 
@@ -84,9 +105,9 @@ run_server_checks() {
   echo "Running server lint and tests..."
   (
     cd server
-    pnpm email:build
-    pnpm lint
-    pnpm test
+    "$shell_bin" -lc "'$pnpm_bin' email:build"
+    "$shell_bin" -lc "'$pnpm_bin' lint"
+    "$shell_bin" -lc "'$pnpm_bin' test"
   )
 }
 
@@ -114,10 +135,17 @@ if [[ "$run_client" == false && "$run_server" == false ]]; then
   exit 0
 fi
 
+client_status=0
+server_status=0
+
 if [[ "$run_client" == true ]]; then
-  run_client_checks
+  run_client_checks || client_status=$?
 fi
 
 if [[ "$run_server" == true ]]; then
-  run_server_checks
+  run_server_checks || server_status=$?
+fi
+
+if [[ "$client_status" -ne 0 || "$server_status" -ne 0 ]]; then
+  exit 1
 fi

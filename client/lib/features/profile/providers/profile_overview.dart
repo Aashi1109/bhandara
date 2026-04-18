@@ -26,10 +26,28 @@ Future<ProfileOverview> profileOverview(Ref ref, {required String userId}) async
     userService.getUserImpact(userId),
   ]);
 
-  final allEvents = results[0] as PaginatedResponse<Event>;
-  final achievements = results[1] as List<Achievement>;
-  final activity = results[2] as PaginatedResponse<AppUpdate>;
-  final impactStats = results[3] as Map<String, dynamic>?;
+  final allEventsResult = results[0];
+  final achievementsResult = results[1];
+  final activityResult = results[2];
+  final impactStatsResult = results[3];
+
+  if (allEventsResult is! PaginatedResponse<Event>) {
+    throw StateError('Expected paginated events response.');
+  }
+  if (achievementsResult is! List<Achievement>) {
+    throw StateError('Expected achievements list response.');
+  }
+  if (activityResult is! PaginatedResponse<AppUpdate>) {
+    throw StateError('Expected paginated activity response.');
+  }
+  if (impactStatsResult is! Map<String, dynamic>?) {
+    throw StateError('Expected nullable impact stats map response.');
+  }
+
+  final allEvents = allEventsResult;
+  final achievements = achievementsResult;
+  final activity = activityResult;
+  final impactStats = impactStatsResult;
 
   final myEvents =
       await Future.wait(
