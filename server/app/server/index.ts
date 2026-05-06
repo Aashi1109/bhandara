@@ -67,10 +67,7 @@ export function createServer(): Express {
     });
   });
 
-  app.use(requestMetrics);
-  app.use(requestContextMiddleware);
-
-  app.use('/api', appRoutes);
+  app.use('/api', requestMetrics, requestContextMiddleware, appRoutes);
 
   Sentry.setupExpressErrorHandler(app);
   HyperDX.setupExpressErrorHandler(app);

@@ -54,7 +54,7 @@ Prefer running `pnpm build` and `pnpm test` after backend changes unless the tas
   - Redis Commander
 - Mono image runtime paths are based on copied build output, not source layout.
 - If runtime code reads non-TS assets, copy them explicitly into the final image.
-  - Current known requirement: `src/database/bootstrap` must be copied to `/app/database/bootstrap`.
+  - Current known requirement: `src/migrations` must be copied so bootstrap SQL exists at `/app/src/migrations/bootstrap`.
 - Mono deploys must pin a target platform to avoid local arm64 builds being reused on amd64 hosts.
   - Current default: `linux/amd64`
   - Override with `SERVER_MONO_PLATFORM` only when the host architecture is intentionally different.

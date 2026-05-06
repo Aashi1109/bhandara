@@ -6,6 +6,18 @@ const isOtelEndpointConfigured = () => {
   return typeof u === 'string' && u.length > 0 && (u.startsWith('http://') || u.startsWith('https://'));
 };
 
+const isApiPath = (url?: string) => {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    return new URL(url, 'http://localhost').pathname.startsWith('/api');
+  } catch {
+    return url.startsWith('/api');
+  }
+};
+
 export const initializeTracing = () => {
   if (!isOtelEndpointConfigured()) {
     return;
@@ -19,6 +31,7 @@ export const initializeTracing = () => {
     instrumentations: {
       '@opentelemetry/instrumentation-http': {
         enabled: true,
+        ignoreIncomingRequestHook: (req: { url?: string }) => !isApiPath(req.url),
       },
       '@opentelemetry/instrumentation-express': {
         enabled: true,

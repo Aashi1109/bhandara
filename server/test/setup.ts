@@ -21,11 +21,13 @@ vi.mock('@sentry/node', () => ({
 }));
 
 vi.mock('@/src/common/config/metrics.config', () => ({
-  httpErrorCounter: { add: vi.fn() },
-  httpRequestCounter: { add: vi.fn() },
-  responseTimeHistogram: {
-    record: vi.fn(),
-  },
+  getHttpServerMetrics: () => ({
+    httpErrorCounter: { add: vi.fn() },
+    httpRequestCounter: { add: vi.fn() },
+    responseTimeHistogram: {
+      record: vi.fn(),
+    },
+  }),
 }));
 
 vi.mock('@/app/server/docs/swagger', () => ({

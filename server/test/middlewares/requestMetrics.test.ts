@@ -11,9 +11,11 @@ vi.mock('@/src/common/config/metrics.config', async () => {
   const actual = await vi.importActual<Record<string, unknown>>('@/src/common/config/metrics.config').catch(() => ({}));
   return {
     ...actual,
-    httpErrorCounter: { add: addErrorMock },
-    httpRequestCounter: { add: addRequestMock },
-    responseTimeHistogram: { record: recordMock },
+    getHttpServerMetrics: () => ({
+      httpErrorCounter: { add: addErrorMock },
+      httpRequestCounter: { add: addRequestMock },
+      responseTimeHistogram: { record: recordMock },
+    }),
   };
 });
 

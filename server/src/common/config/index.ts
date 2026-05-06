@@ -40,6 +40,21 @@ const configuredCorsOrigins = process.env.CORS_ORIGIN?.split(',')
   .filter(Boolean);
 const defaultCorsOrigins: string[] = [];
 const corsOrigins = [localhostOriginPattern, ...(configuredCorsOrigins || defaultCorsOrigins)];
+const appType = (process.env.APP_TYPE as 'server' | 'worker') || 'server';
+const appName = process.env.APP_NAME?.trim() || '';
+const otelServiceName = process.env.OTEL_SERVICE_NAME?.trim();
+const derivedServiceName = (() => {
+  if (otelServiceName) {
+    return otelServiceName;
+  }
+
+  const serviceParts = ['zentry', appType];
+  if (appName && appName !== appType) {
+    serviceParts.push(appName);
+  }
+
+  return serviceParts.join('-');
+})();
 const redisConnections = {
   [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),
   [REDIS_CONNECTION_NAMES.Cache]: withRedisDb(redisBaseConnection, 5),
@@ -105,7 +120,7 @@ const config: AppConfig = {
   },
   infrastructure: {
     appName: 'zentry',
-    serviceName: 'zentry-main-server',
+    serviceName: derivedServiceName,
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
@@ -125,8 +140,8 @@ const config: AppConfig = {
     enableRedisClientSpans: process.env.OTEL_TRACE_REDIS_CLIENTS === 'true',
     enableMetrics: process.env.OTEL_DISABLE_METRICS !== 'true',
   },
-  appType: (process.env.APP_TYPE as 'server' | 'worker') || 'server',
-  appName: process.env.APP_NAME || '',
+  appType,
+  appName,
 };
 
 export const WORKER_CONNECTION_CONFIG = {

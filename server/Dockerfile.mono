@@ -51,7 +51,7 @@ RUN npm install -g redis-commander
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist/ ./
-COPY src/database ./database
+COPY src/migrations ./src/migrations
 COPY scripts/docker-mono-entrypoint.sh /usr/local/bin/docker-mono-entrypoint.sh
 COPY scripts/nginx-mono.conf.template /etc/nginx/nginx.conf.template
 

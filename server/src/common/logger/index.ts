@@ -43,7 +43,7 @@ const errorLogsTransport = new transports.DailyRotateFile({
 
 const logger = createLogger({
   level: 'http',
-  defaultMeta: { service: 'Backend Server' },
+  defaultMeta: { service: config.infrastructure.serviceName },
   format: format.combine(format.splat(), errors({ stack: true }), format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })),
   transports: [
     allLogsTransport,
@@ -56,7 +56,10 @@ const logger = createLogger({
         }),
       ),
     }),
-    HyperDX.getWinstonTransport('info', { detectResources: true }),
+    HyperDX.getWinstonTransport('info', {
+      detectResources: true,
+      service: config.infrastructure.serviceName,
+    }),
   ],
   exitOnError: false,
 });

@@ -1,4 +1,4 @@
-import { httpErrorCounter, httpRequestCounter, responseTimeHistogram } from '@/src/common';
+import { getHttpServerMetrics } from '@/src/common';
 import type { NextFunction, Request, Response } from 'express';
 
 const resolveRoutePath = (req: Request) => {
@@ -26,6 +26,7 @@ const requestMetrics = (req: Request, res: Response, next: NextFunction) => {
   const start = process.hrtime.bigint();
 
   res.on('finish', () => {
+    const { httpErrorCounter, httpRequestCounter, responseTimeHistogram } = getHttpServerMetrics();
     const route = resolveRoutePath(req);
     const statusCode = res.statusCode;
     const statusClass = resolveStatusClass(statusCode);

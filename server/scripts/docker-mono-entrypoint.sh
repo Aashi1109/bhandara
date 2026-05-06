@@ -203,9 +203,20 @@ start_process \
   --trust-proxy \
   --no-open
 
-start_process "api-server" node index.js
+start_process \
+  "api-server" \
+  env \
+  APP_TYPE="server" \
+  APP_NAME="server" \
+  PORT="${APP_PORT}" \
+  node index.js
 probe_api_server &
-start_process "worker" node workers/index.js
+start_process \
+  "worker" \
+  env \
+  APP_TYPE="worker" \
+  APP_NAME="${WORKER_TYPE}" \
+  node index.js
 start_process "nginx" nginx -g "daemon off;"
 
 monitor_processes() {
