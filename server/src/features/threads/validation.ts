@@ -1,6 +1,25 @@
 import { validateSchema } from '@/common/helpers';
 import { EAccessLevel } from '@/common/definitions/enums';
 import { THREAD_TABLE_NAME } from './constants';
+
+const lockHistoryItemSchema = {
+  type: 'object',
+  properties: {
+    lockedBy: {
+      type: 'string',
+      format: 'uuid',
+      errorMessage: 'LockedBy must be a valid UUID',
+    },
+    lockedAt: {
+      type: 'string',
+      format: 'date-time',
+      errorMessage: 'LockedAt must be a valid date-time',
+    },
+  },
+  required: ['lockedBy', 'lockedAt'],
+  additionalProperties: false,
+};
+
 const threadSchema = {
   type: 'object',
   properties: {
@@ -22,23 +41,7 @@ const threadSchema = {
     },
     lockHistory: {
       type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          lockedBy: {
-            type: 'string',
-            format: 'uuid',
-            errorMessage: 'LockedBy must be a valid UUID',
-          },
-          lockedAt: {
-            type: 'string',
-            format: 'date-time',
-            errorMessage: 'LockedAt must be a valid date-time',
-          },
-        },
-        required: ['lockedBy', 'lockedAt'],
-        additionalProperties: false,
-      },
+      items: lockHistoryItemSchema,
       errorMessage: 'Lock history must be an array of lock entries',
     },
   },
@@ -62,29 +65,7 @@ const updateSchema = {
       errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
     },
     lockHistory: {
-      oneOf: [
-        {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              lockedBy: {
-                type: 'string',
-                format: 'uuid',
-                errorMessage: 'LockedBy must be a valid UUID',
-              },
-              lockedAt: {
-                type: 'string',
-                format: 'date-time',
-                errorMessage: 'LockedAt must be a valid date-time',
-              },
-            },
-            required: ['lockedBy', 'lockedAt'],
-            additionalProperties: false,
-          },
-        },
-        { type: 'null' },
-      ],
+      oneOf: [{ type: 'array', items: lockHistoryItemSchema }, { type: 'null' }],
       errorMessage: 'Lock history must be an array or null',
     },
   },

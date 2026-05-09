@@ -40,21 +40,31 @@ class SuccessScreen extends StatelessWidget {
   String get _timeRange {
     final currentEvent = event;
     if (currentEvent == null) return 'Time unavailable';
-    final timeFormatter = DateFormat('h:mm a');
     final start = currentEvent.startTime.toLocal();
     final end = currentEvent.endTime.toLocal();
-    return '${timeFormatter.format(start)} - ${timeFormatter.format(end)}';
+    final dateFormatter = DateFormat('EEE, d MMM');
+    final timeFormatter = DateFormat('h:mm a');
+    final startDate = dateFormatter.format(start);
+    final endDate = dateFormatter.format(end);
+    final startTime = timeFormatter.format(start);
+    final endTime = timeFormatter.format(end);
+    if (startDate == endDate) {
+      // Fri, 9 May  ·  8:15 AM – 10:15 AM
+      return '$startDate  ·  $startTime – $endTime';
+    }
+    // Fri, 9 May 8:15 AM  –  Sat, 10 May 10:15 AM
+    return '$startDate $startTime  –  $endDate $endTime';
   }
 
-  String get _participantLabel {
-    final currentEvent = event;
-    if (currentEvent == null) return '0';
-    final count =
-        currentEvent.stats?.participantCount ??
-        currentEvent.participants?.length ??
-        0;
-    return '$count';
-  }
+  // String get _participantLabel {
+  //   final currentEvent = event;
+  //   if (currentEvent == null) return '0';
+  //   final count =
+  //       currentEvent.stats?.participantCount ??
+  //       currentEvent.participants?.length ??
+  //       0;
+  //   return '$count';
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -206,59 +216,40 @@ class SuccessScreen extends StatelessWidget {
                               ),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      LucideIcons.clock,
-                                      size: AppIconSizes.m,
-                                      color: AppColors.mutedForeground,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _timeRange,
-                                      style: typography.bodySMStrong.copyWith(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
+                                const Icon(
+                                  LucideIcons.clock,
+                                  size: AppIconSizes.m,
+                                  color: AppColors.mutedForeground,
                                 ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.muted,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: AppColors.surface,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          _participantLabel,
-                                          style: typography.labelXSStrong
-                                              .copyWith(
-                                                color:
-                                                    AppColors.mutedForeground,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Icon(
-                                      LucideIcons.users,
-                                      size: AppIconSizes.s,
-                                      color: AppColors.mutedForeground
-                                          .withValues(alpha: 0.4),
-                                    ),
-                                  ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  _timeRange,
+                                  style: typography.bodySMStrong.copyWith(
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ],
                             ),
+                            // TODO: show participant count when data is available
+                            // Row(
+                            //   children: [
+                            //     Container(
+                            //       width: 24,
+                            //       height: 24,
+                            //       decoration: BoxDecoration(
+                            //         color: AppColors.muted,
+                            //         shape: BoxShape.circle,
+                            //         border: Border.all(color: AppColors.surface, width: 2),
+                            //       ),
+                            //       child: Center(
+                            //         child: Text(_participantLabel, style: ...),
+                            //       ),
+                            //     ),
+                            //     const SizedBox(width: 6),
+                            //     Icon(LucideIcons.users, size: AppIconSizes.s, ...),
+                            //   ],
+                            // ),
                           ),
                         ],
                       ),

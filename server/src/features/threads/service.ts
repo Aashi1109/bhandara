@@ -61,12 +61,19 @@ class ThreadsService {
     return res as any;
   }
 
+  private async assertValidParent(parentId: string): Promise<void> {
+    const parent = (await Thread.findByPk(parentId, {
+      attributes: ['id', 'parentId'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!parent) throw new BadRequestError('Parent thread not found');
+    if (parent.parentId) throw new BadRequestError('Nested threads beyond one level are not allowed');
+  }
+
   async create<U extends Partial<Omit<IBaseThread, 'id' | 'updatedAt'>>>(data: U, populate?: boolean | string[]) {
     const created = await validateThreadCreate(data, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError('Parent thread not found');
-        if (parent.parentId) throw new BadRequestError('Nested threads beyond one level are not allowed');
+        await this.assertValidParent(validData.parentId);
       }
       const row = await Thread.create(validData as any);
       return row.toJSON() as any;
@@ -96,9 +103,7 @@ class ThreadsService {
   async update<U extends Partial<IBaseThread>>(id: string, data: U, populate?: boolean | string[]) {
     const updated = await validateThreadUpdate(data, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError('Parent thread not found');
-        if (parent.parentId) throw new BadRequestError('Nested threads beyond one level are not allowed');
+        await this.assertValidParent(validData.parentId);
       }
       const row = await Thread.findByPk(id);
       if (!row) throw new NotFoundError('Thread not found');
@@ -138,27 +143,21 @@ class ThreadsService {
    * @returns Promise<IBaseThread> - The updated thread
    */
   async lockThread(threadId: string, userId: string): Promise<IBaseThread> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      throw new BadRequestError('Thread not found');
-    }
-
-    if (isThreadLocked(thread)) {
-      throw new BadRequestError('Thread is already locked');
-    }
-
-    // Only allow thread author to lock the thread
-    if (thread.createdBy !== userId) {
-      throw new ForbiddenError('Only the thread author can lock this thread');
-    }
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'createdBy', 'lockHistory'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) throw new BadRequestError('Thread not found');
+    if (isThreadLocked(thread)) throw new BadRequestError('Thread is already locked');
+    if (thread.createdBy !== userId) throw new ForbiddenError('Only the thread author can lock this thread');
 
     const lockedThread = lockThread(thread, userId);
-
-    const updated = await this.update(threadId, {
-      lockHistory: lockedThread.lockHistory,
+    const [, rows] = await Thread.update({ lockHistory: lockedThread.lockHistory } as any, {
+      where: { id: threadId },
+      returning: true,
     });
-
-    return updated;
+    await this.deleteCache(threadId);
+    return rows[0].toJSON() as IBaseThread;
   }
 
   /**
@@ -168,27 +167,21 @@ class ThreadsService {
    * @returns Promise<IBaseThread> - The updated thread
    */
   async unlockThread(threadId: string, userId: string): Promise<IBaseThread> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      throw new BadRequestError('Thread not found');
-    }
-
-    if (!isThreadLocked(thread)) {
-      throw new BadRequestError('Thread is not locked');
-    }
-
-    // Only allow thread author to unlock the thread
-    if (thread.createdBy !== userId) {
-      throw new ForbiddenError('Only the thread author can unlock this thread');
-    }
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'createdBy', 'lockHistory'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) throw new BadRequestError('Thread not found');
+    if (!isThreadLocked(thread)) throw new BadRequestError('Thread is not locked');
+    if (thread.createdBy !== userId) throw new ForbiddenError('Only the thread author can unlock this thread');
 
     const unlockedThread = unlockThread(thread);
-
-    const updated = await this.update(threadId, {
-      lockHistory: unlockedThread.lockHistory,
+    const [, rows] = await Thread.update({ lockHistory: unlockedThread.lockHistory } as any, {
+      where: { id: threadId },
+      returning: true,
     });
-
-    return updated;
+    await this.deleteCache(threadId);
+    return rows[0].toJSON() as IBaseThread;
   }
 
   /**
@@ -197,21 +190,13 @@ class ThreadsService {
    * @returns Promise<{isLocked: boolean, lockedThreadId?: string}> - Lock status and which thread is locked
    */
   async isThreadChainLocked(threadId: string): Promise<{ isLocked: boolean; lockedThreadId?: string }> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      return { isLocked: false };
-    }
-
-    // Check if current thread is locked
-    if (isThreadLocked(thread)) {
-      return { isLocked: true, lockedThreadId: thread.id };
-    }
-
-    // Check if parent thread is locked (recursively)
-    if (thread.parentId) {
-      return await this.isThreadChainLocked(thread.parentId);
-    }
-
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'lockHistory', 'parentId'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) return { isLocked: false };
+    if (isThreadLocked(thread)) return { isLocked: true, lockedThreadId: thread.id };
+    if (thread.parentId) return this.isThreadChainLocked(thread.parentId);
     return { isLocked: false };
   }
 }

@@ -2,7 +2,7 @@ import { EAddressEntityType } from '@/common/definitions/enums';
 import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from '@/common/definitions/types';
 import AddressService from '@/features/addresses/service';
 import { findAllWithPagination } from '@/common/utils/dbUtils';
-import { validateUserCreate, validateUserUpdate } from './validation';
+import { validateUserCreate } from './validation';
 import { decryptUserRows, User } from './model';
 import UserSettingsService from './settings.service';
 import {
@@ -131,64 +131,49 @@ class UserService {
   }
 
   async setSupabaseSid(id: string, sid: string): Promise<IBaseUser | null> {
-    const existing = await this._getByIdNoCache(id);
-    if (!existing) {
-      return null;
-    }
-
-    const row = await User.findByPk(id);
-    if (!row) {
-      return null;
-    }
-
-    await row.update({ __sid: sid } as Partial<IBaseUser>);
-    await deleteAllUserCache(id, existing);
+    const [count] = await User.update({ __sid: sid } as Partial<IBaseUser>, { where: { id } });
+    if (count === 0) return null;
+    await deleteUserCache(id);
     return this._getByIdNoCache(id);
   }
 
   async update(id: string, data: Partial<IBaseUser>) {
-    const updated = await validateUserUpdate(data, async (validData) => {
-      const userData = await this._getByIdNoCache(id);
+    const userData = await this._getByIdNoCache(id);
+    if (!userData) throw new NotFoundError('User not found');
 
-      if (!userData) throw new NotFoundError('User not found');
+    const { username, address, ...rest } = data;
+    const newMeta = { ...userData.meta };
+    const isUsernameChanged = username && username !== userData.username;
+    if (isUsernameChanged) {
+      const usernameData = await this.getUserByUsername(username);
+      if (!isEmpty(usernameData.items)) throw new BadRequestError('Username already exists');
+    }
 
-      const { username, address, ...rest } = validData;
+    await User.sequelize!.transaction(async (transaction) => {
+      const row = await User.findByPk(id, { transaction });
+      if (!row) throw new NotFoundError('User not found');
+      await row.update(
+        {
+          ...rest,
+          meta: newMeta,
+          username: isUsernameChanged ? username : row.username,
+          mediaId: rest.mediaId ?? row.mediaId,
+        } as Partial<IBaseUser>,
+        { transaction },
+      );
 
-      const newMeta = { ...userData.meta };
-
-      const isUsernameChanged = username && username !== userData.username;
-      if (isUsernameChanged) {
-        const usernameData = await this.getUserByUsername(username);
-        if (!isEmpty(usernameData.items)) throw new BadRequestError('Username already exists');
+      if (address !== undefined) {
+        await this.addressService.replaceAddress(EAddressEntityType.User, id, address, transaction);
       }
-
-      await User.sequelize!.transaction(async (transaction) => {
-        const row = await User.findByPk(id, { transaction });
-        if (!row) throw new NotFoundError('User not found');
-        await row.update(
-          {
-            ...rest,
-            meta: newMeta,
-            username: isUsernameChanged ? username : row.username,
-            mediaId: rest.mediaId ?? row.mediaId,
-          } as Partial<IBaseUser>,
-          { transaction },
-        );
-
-        if (address !== undefined) {
-          await this.addressService.replaceAddress(EAddressEntityType.User, id, address, transaction);
-        }
-      });
-
-      const updatedUser = (await this._getByIdNoCache(id)) as IBaseUser;
-      if (rest.mediaId) {
-        updatedUser.media = (await this.mediaService.getById(rest.mediaId as string)) ?? undefined;
-      }
-
-      await this.deleteCache(id);
-      return updatedUser;
     });
-    return updated;
+
+    const updatedUser = (await this._getByIdNoCache(id)) as IBaseUser;
+    if (rest.mediaId) {
+      updatedUser.media = (await this.mediaService.getById(rest.mediaId as string)) ?? undefined;
+    }
+
+    await this.deleteCache(id);
+    return updatedUser;
   }
 
   async getById(id: string): Promise<IBaseUser | null> {

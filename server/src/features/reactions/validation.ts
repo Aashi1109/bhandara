@@ -14,28 +14,28 @@ ajv.addFormat('emoji', {
 const allowedContentPaths = Object.values(EAllowedReactionTables);
 const basePattern = `^(${allowedContentPaths.join('|')})\\/[0-9a-fA-F-]{36}$`;
 
+const reactionFields = {
+  contentId: {
+    type: 'string',
+    pattern: basePattern,
+    errorMessage: `contentId must be of the form '<table>/<uuid>' where table is one of ${allowedContentPaths.join(', ')}`,
+  },
+  emoji: {
+    type: 'string',
+    format: 'emoji',
+    minLength: 1,
+    errorMessage: 'emoji must be a valid emoji',
+  },
+  userId: {
+    type: 'string',
+    format: 'uuid',
+    errorMessage: 'userId must be a valid UUID',
+  },
+};
+
 const reactionSchema = {
   type: 'object',
-  properties: {
-    contentId: {
-      type: 'string',
-      pattern: basePattern,
-      errorMessage: `contentId must be of the form '<table>/<uuid>' where table is one of ${allowedContentPaths.join(
-        ', ',
-      )}`,
-    },
-    emoji: {
-      type: 'string',
-      format: 'emoji',
-      minLength: 1,
-      errorMessage: 'emoji must be a valid emoji',
-    },
-    userId: {
-      type: 'string',
-      format: 'uuid',
-      errorMessage: 'userId must be a valid UUID',
-    },
-  },
+  properties: reactionFields,
   required: ['contentId', 'emoji', 'userId'],
   additionalProperties: false,
   errorMessage: {
@@ -50,26 +50,7 @@ const reactionSchema = {
 
 const updateSchema = {
   type: 'object',
-  properties: {
-    contentId: {
-      type: 'string',
-      pattern: basePattern,
-      errorMessage: `contentId must be of the form '<table>/<uuid>' where table is one of ${allowedContentPaths.join(
-        ', ',
-      )}`,
-    },
-    emoji: {
-      type: 'string',
-      format: 'emoji',
-      minLength: 1,
-      errorMessage: 'emoji must be a valid emoji',
-    },
-    userId: {
-      type: 'string',
-      format: 'uuid',
-      errorMessage: 'userId must be a valid UUID',
-    },
-  },
+  properties: reactionFields,
   additionalProperties: false,
   errorMessage: {
     type: 'Reaction data must be an object',

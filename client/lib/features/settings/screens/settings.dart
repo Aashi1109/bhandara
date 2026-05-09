@@ -5,8 +5,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/button.dart';
-import '../../profile/services/user.dart';
 import '../../../shared/providers/auth.dart';
+import '../../../shared/providers/tag.dart';
 import '../../../shared/providers/user.dart';
 import '../../../shared/providers/user_settings.dart';
 import '../../profile/screens/profile.dart';
@@ -196,18 +196,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _sectionLabel('PREFERENCES'),
                   const SizedBox(height: 12),
                   _settingContainer([
-                    FutureBuilder(
-                      future: user != null
-                          ? userService.getUserInterests(user.id)
-                          : Future.value(const []),
-                      builder: (context, snapshot) {
-                        final interests = snapshot.data ?? const [];
-                        final label = interests.isEmpty
+                    Builder(
+                      builder: (context) {
+                        final interestIds =
+                            ref.watch(userSettingsProvider).value?.interests ??
+                            const [];
+                        final allTags =
+                            ref.watch(tagsProvider(rootOnly: true)).value ??
+                            const [];
+                        final matched = allTags
+                            .where((t) => interestIds.contains(t.id))
+                            .take(2)
+                            .map((t) => t.name)
+                            .join(', ');
+                        final label = matched.isEmpty
                             ? 'No cuisines selected'
-                            : interests
-                                  .map((tag) => tag.name)
-                                  .take(2)
-                                  .join(', ');
+                            : matched;
                         return _settingItem(
                           LucideIcons.utensils,
                           'Cuisine Interests',

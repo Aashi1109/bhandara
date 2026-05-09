@@ -1,6 +1,5 @@
 import type { IEvent, IPaginationParams, ITag } from '@/common/definitions/types';
-import { findAllWithPagination } from '@/common/utils/dbUtils';
-import { validateTagCreate, validateTagUpdate } from './validation';
+import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
 import { Tag } from './model';
 import { Event } from '../events/model';
 import {
@@ -80,26 +79,18 @@ class TagService {
   }
 
   async create<U extends Partial<Omit<ITag, 'id' | 'updatedAt'>>>(data: U) {
-    const res = await validateTagCreate(data, async (validatedData: U) => {
-      const row = await Tag.create(validatedData as any);
-      return row.toJSON() as ITag;
-    });
-    const created = res as ITag;
-    if (created) {
-      await this.setCache(created.id, created);
-    }
-    return res;
+    const row = await Tag.create(data as any);
+    const created = row.toJSON() as ITag;
+    await this.setCache(created.id, created);
+    return created;
   }
 
   async update<U extends Partial<ITag>>(id: string, data: U): Promise<ITag> {
-    const res = await validateTagUpdate(data, async (validatedData: U) => {
-      const row = await Tag.findByPk(id);
-      if (!row) throw new NotFoundError('Tag not found');
-      await row.update(validatedData as Partial<ITag>);
-      return row.toJSON() as ITag;
-    });
+    const row = await findByPkOrThrow(Tag, id, 'Tag');
+    await row.update(data as Partial<ITag>);
+    const updated = row.toJSON() as ITag;
     await this.deleteCache(id);
-    return res as ITag;
+    return updated;
   }
 
   async delete(id: string): Promise<ITag | null> {

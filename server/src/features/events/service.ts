@@ -843,12 +843,11 @@ class EventService {
     const threads = items;
     if (!isEmpty(threads)) {
       await this.entityStatsService.hydrateThreads(threads as IBaseThread[]);
-      await Promise.all(
-        threads.map(async (t) => {
-          const messages = await this.messageService.getAll({ threadId: t.id }, { limit: 1 });
-          t.messages = messages.items || [];
-        }),
-      );
+      const threadIds = (threads as IBaseThread[]).map((t) => t.id);
+      const messagesByThread = await this.messageService.getMessagesByThreadIds(threadIds, { limit: 1 });
+      (threads as IBaseThread[]).forEach((t) => {
+        t.messages = messagesByThread[t.id] ?? [];
+      });
     }
     return { items: threads, pagination: threadPagination };
   }

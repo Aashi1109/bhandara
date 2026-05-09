@@ -1,11 +1,10 @@
 import type { IReaction, IPaginationParams } from '@/common/definitions/types';
-import { findAllWithPagination } from '@/common/utils/dbUtils';
+import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
 import { Reaction } from './model';
 import { validateReactionCreate, validateReactionUpdate } from './validation';
 
 import UserService, { toUserMini } from '@/features/users/service';
 import { isEmpty } from '@/common/utils';
-import { NotFoundError } from '@/common/exceptions';
 import logger from '@/common/logger';
 import EntityStatsService from '@/features/stats/service';
 import { EAllowedReactionTables } from './constants';
@@ -60,8 +59,7 @@ class ReactionService {
 
   async update<U extends Partial<IReaction>>(id: string, data: U): Promise<IReaction> {
     const res = await validateReactionUpdate(data, async (validData) => {
-      const row = await Reaction.findByPk(id);
-      if (!row) throw new NotFoundError('Reaction not found');
+      const row = await findByPkOrThrow(Reaction, id, 'Reaction');
       await row.update(validData as Partial<IReaction>);
       return row.toJSON() as IReaction;
     });
@@ -100,6 +98,36 @@ class ReactionService {
       });
     }
     return reactions;
+  }
+
+  async getReactionsBatch(contentIds: string[]): Promise<Record<string, IReaction[]>> {
+    if (!contentIds.length) return {};
+
+    const rows = (await Reaction.findAll({
+      where: { contentId: contentIds },
+      raw: true,
+    })) as IReaction[];
+
+    const grouped: Record<string, IReaction[]> = {};
+    contentIds.forEach((id) => {
+      grouped[id] = [];
+    });
+
+    if (!isEmpty(rows)) {
+      const withUsers = await this.userService.getAndPopulateUserProfiles({
+        data: rows,
+        searchKey: 'userId',
+        populateKey: 'user',
+        transformerFunction: toUserMini,
+      });
+      withUsers.forEach((r) => {
+        if (grouped[r.contentId]) {
+          grouped[r.contentId].push(r);
+        }
+      });
+    }
+
+    return grouped;
   }
 
   async deleteByQuery(where: Partial<IReaction>) {

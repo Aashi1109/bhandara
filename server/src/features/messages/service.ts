@@ -28,6 +28,15 @@ class MessageService {
     this.entityStatsService = new EntityStatsService();
   }
 
+  private async assertValidParent(parentId: string): Promise<void> {
+    const parent = (await Message.findByPk(parentId, {
+      attributes: ['id', 'parentId'],
+      raw: true,
+    })) as IMessage | null;
+    if (!parent) throw new BadRequestError('Parent message not found');
+    if (parent.parentId) throw new BadRequestError('Nested messages beyond one level are not allowed');
+  }
+
   private normalizeMessageContent(content: IMessage['content'] | string | undefined): IMessageContent {
     if (typeof content === 'string') {
       return { text: content };
@@ -192,12 +201,10 @@ class MessageService {
         transformerFunction: toUserMini,
       });
 
-      const reactionPromises = userPopulatedMessages.map((msg) =>
-        this.reactionService.getReactions(`messages/${msg.id}`),
-      );
-      const reactionResults = await Promise.all(reactionPromises);
-      userPopulatedMessages.forEach((msg, idx) => {
-        msg.reactions = reactionResults[idx];
+      const contentIds = userPopulatedMessages.map((msg) => `messages/${msg.id}`);
+      const reactionsMap = await this.reactionService.getReactionsBatch(contentIds);
+      userPopulatedMessages.forEach((msg) => {
+        msg.reactions = reactionsMap[`messages/${msg.id}`] ?? [];
       });
 
       await this.entityStatsService.hydrateMessages(userPopulatedMessages);
@@ -214,9 +221,7 @@ class MessageService {
 
     const created = await validateMessageCreate(normalizedData, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError('Parent message not found');
-        if (parent.parentId) throw new BadRequestError('Nested messages beyond one level are not allowed');
+        await this.assertValidParent(validData.parentId);
       }
       const row = await Message.create(validData as any);
       return row.toJSON() as any;
@@ -250,9 +255,7 @@ class MessageService {
 
     const updated = await validateMessageUpdate(normalizedData, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError('Parent message not found');
-        if (parent.parentId) throw new BadRequestError('Nested messages beyond one level are not allowed');
+        await this.assertValidParent(validData.parentId);
       }
       const [count, rows] = await Message.update(validData as any, {
         where: { id },
@@ -277,6 +280,38 @@ class MessageService {
       return this.entityStatsService.hydrateMessage(populated);
     }
     return data ? this.entityStatsService.hydrateMessage(data as IMessage) : (data as any);
+  }
+
+  async getByIds(ids: string[]): Promise<IMessage[]> {
+    if (!ids.length) return [];
+    return (await Message.findAll({ where: { id: ids }, raw: true })) as IMessage[];
+  }
+
+  async getMessagesByThreadIds(
+    threadIds: string[],
+    pagination: Partial<IPaginationParams> = {},
+  ): Promise<Record<string, IMessage[]>> {
+    if (!threadIds.length) return {};
+    const { limit = 1 } = pagination;
+
+    const rows = (await Message.findAll({
+      where: { threadId: threadIds, parentId: { [Op.eq]: null } },
+      order: [['createdAt', 'DESC']],
+      raw: true,
+    })) as IMessage[];
+
+    const grouped: Record<string, IMessage[]> = {};
+    threadIds.forEach((id) => {
+      grouped[id] = [];
+    });
+    rows.forEach((msg) => {
+      const bucket = grouped[msg.threadId];
+      if (bucket && bucket.length < limit) {
+        bucket.push(msg);
+      }
+    });
+
+    return grouped;
   }
 
   async delete(id: string) {

@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../events/models/event.dart';
 import '../../../shared/providers/tag.dart';
 import '../../../shared/providers/user.dart';
+import '../../../shared/providers/user_settings.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/input.dart';
@@ -48,9 +49,9 @@ class _CuisineInterestsScreenState
   }
 
   void _hydrateFromUser() {
-    final user = ref.read(userProfileProvider).value;
-    if (_didHydrate || user == null) return;
-    _selectedIds.addAll(user.meta?.interests ?? const <String>[]);
+    final settings = ref.read(userSettingsProvider).value;
+    if (_didHydrate || settings == null) return;
+    _selectedIds.addAll(settings.interests);
     _initialSelectedIds = {..._selectedIds};
     _didHydrate = true;
   }
@@ -123,6 +124,7 @@ class _CuisineInterestsScreenState
   Widget build(BuildContext context) {
     _hydrateFromUser();
     final user = ref.watch(userProfileProvider).value;
+    ref.watch(userSettingsProvider);
     final tagsAsync = ref.watch(tagsProvider(rootOnly: true));
     final query = _searchController.text.trim().toLowerCase();
     final typography = context.appTypography;
@@ -294,16 +296,11 @@ class _CuisineInterestsScreenState
             onPressed: user == null || !_isDirty
                 ? null
                 : () async {
-                    final previous = user.meta?.interests.toSet() ?? <String>{};
                     final current = _selectedIds.toSet();
 
-                    await ref.read(userProfileProvider.notifier).updateUserData(
-                      {
-                        'interests': {
-                          'added': current.difference(previous).toList(),
-                          'deleted': previous.difference(current).toList(),
-                        },
-                      },
+                    await ref.read(userSettingsProvider.notifier).updateSettings(
+                      user.id,
+                      {'interests': current.toList()},
                     );
                     if (!mounted) return;
                     setState(() {

@@ -1,5 +1,6 @@
 import { type FindOptions, type Model, type ModelStatic, Op, type WhereOptions } from 'sequelize';
 import type { IPaginationParams, PaginatedResult } from '@/common/definitions/types';
+import { NotFoundError } from '@/common/exceptions';
 
 /**
  * Retrieve records with cursor-based pagination only.
@@ -124,4 +125,23 @@ export async function findAllWithPagination<T extends Model>(
   const items = normalizedRows;
 
   return { items, pagination: paginationResult };
+}
+
+export async function findByPkOrThrow<T>(
+  model: { findByPk: (id: string, opts?: any) => Promise<T | null> },
+  id: string,
+  label: string,
+  opts?: object,
+): Promise<T> {
+  const row = await model.findByPk(id, opts);
+  if (!row) throw new NotFoundError(`${label} not found`);
+  return row;
+}
+
+export async function findByPkOrNull<T>(
+  model: { findByPk: (id: string, opts?: any) => Promise<T | null> },
+  id: string,
+  opts?: object,
+): Promise<T | null> {
+  return model.findByPk(id, opts);
 }

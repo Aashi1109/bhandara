@@ -114,6 +114,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   bool _mapSettled = false;
   bool _isProgrammaticCameraMove = false;
   bool _didUserMoveCamera = false;
+  bool _hasAutoFittedInitially = false;
 
   /// When > 0, _handleCameraIdle is suppressed entirely. Used by
   /// _animateCameraAndEmitViewport to prevent mid-animation idle
@@ -194,6 +195,18 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
     if ((eventsChanged || locationChanged || safeAreaChanged) &&
         widget.shouldAutoFitOnContentChange) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_fitCameraToVisibleContent());
+      });
+    }
+
+    // Auto-fit once when first content arrives after map is ready.
+    if (!_hasAutoFittedInitially &&
+        (eventsChanged || markersChanged || clustersChanged) &&
+        _mapController != null &&
+        _contentPoints().isNotEmpty) {
+      _hasAutoFittedInitially = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         unawaited(_fitCameraToVisibleContent());
@@ -864,6 +877,11 @@ class _ExploreEventMapState extends State<ExploreEventMap>
                               if (!mounted) return;
                               if (widget.shouldAutoFitOnContentChange) {
                                 await _fitCameraToVisibleContent();
+                              }
+                              // Mark initial fit done if content was already
+                              // present at map-ready time.
+                              if (_contentPoints().isNotEmpty) {
+                                _hasAutoFittedInitially = true;
                               }
                               // Always emit the initial viewport so the parent
                               // can load data for the actual visible map area.

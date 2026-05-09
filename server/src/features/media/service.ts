@@ -1,9 +1,9 @@
 import type { IEvent, IMedia } from '@/common/definitions/types';
 import { EMediaProvider } from '@/common/definitions/enums';
-import { findAllWithPagination } from '@/common/utils/dbUtils';
+import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
 import SupabaseService from '@/supabase';
 import { StorageFactory } from '@/common/storage';
-import { validateMediaCreate, validateMediaUpdate } from './validation';
+import { validateMediaCreate } from './validation';
 import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from './constants';
 import { Media } from './model';
 import { Event } from '../events/model';
@@ -74,14 +74,10 @@ class MediaService {
   }
 
   async update<U extends Partial<IMedia>>(id: string, data: U) {
-    const res = await validateMediaUpdate(data, async (validatedData) => {
-      const row = await Media.findByPk(id);
-      if (!row) throw new NotFoundError('Media not found');
-      await row.update(validatedData as any);
-      return row.toJSON() as any;
-    });
+    const row = await findByPkOrThrow(Media, id, 'Media');
+    await row.update(data as any);
     await this.deleteCache(id);
-    return res;
+    return row.toJSON() as any;
   }
 
   async getSignedUrlForUpload(insertData: {

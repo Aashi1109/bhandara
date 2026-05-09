@@ -98,12 +98,63 @@ class SavedEntityService {
   }
 
   private async hydrateSavedItems(items: SavedEntityRecord[]): Promise<ISavedEntityListItem[]> {
-    return Promise.all(
-      items.map(async (item) => ({
-        ...(item as unknown as ISavedEntity),
-        entity: await this.findEntity(item.entityType as SupportedSavedEntityType, item.entityId),
-      })),
+    if (!items.length) return [];
+
+    const byType: Partial<Record<SupportedSavedEntityType, string[]>> = {};
+    items.forEach((item) => {
+      const type = item.entityType as SupportedSavedEntityType;
+      if (!byType[type]) byType[type] = [];
+      byType[type]!.push(item.entityId);
+    });
+
+    const entityMap: Record<string, SavedEntityPayload> = {};
+
+    await Promise.all(
+      (Object.entries(byType) as [SupportedSavedEntityType, string[]][]).map(async ([type, ids]) => {
+        switch (type) {
+          case 'event': {
+            await Promise.all(
+              ids.map(async (id) => {
+                entityMap[id] = await this.eventService.getEventPreview(id);
+              }),
+            );
+            break;
+          }
+          case 'thread': {
+            const { items: threads } = await this.threadService.getAll({ id: ids }, { limit: ids.length });
+            (threads as IBaseThread[]).forEach((t) => {
+              entityMap[t.id] = t;
+            });
+            break;
+          }
+          case 'message': {
+            const msgs = await this.messageService.getByIds(ids);
+            msgs.forEach((m) => {
+              entityMap[m.id] = m;
+            });
+            break;
+          }
+          case 'user': {
+            const usersMap = await this.userService.getUserProfiles(
+              ids,
+              (u) =>
+                ({
+                  id: u.id,
+                  name: u.name,
+                  avatarUrl: (u.media as any)?.publicUrl ?? (u.media as any)?.url ?? (u as any).profilePic ?? null,
+                }) as unknown as IBaseUser,
+            );
+            Object.assign(entityMap, usersMap);
+            break;
+          }
+        }
+      }),
     );
+
+    return items.map((item) => ({
+      ...(item as ISavedEntity),
+      entity: entityMap[item.entityId] ?? null,
+    }));
   }
 
   private async listSavedEntitiesByQuery(
