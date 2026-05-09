@@ -1,17 +1,17 @@
-import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/src/common/definitions/types';
+import type { IRequestPagination, ICustomRequest, IBaseUser } from '@/common/definitions/types';
 import { bulkSetUserCache, getPublicUser, getSafeUser } from './helpers';
 import UserService from './service';
 import UserSettingsService from './settings.service';
 import type { Request, Response } from 'express';
-import { hasMeaningfulChange, isEmpty, omit } from '@/src/common/utils';
-import { NotFoundError } from '@/src/common/exceptions';
+import { hasMeaningfulChange, isEmpty, omit } from '@/common/utils';
+import { NotFoundError } from '@/common/exceptions';
 import { Op } from 'sequelize';
-import EntityEngagementService from '@/src/features/engagement/service';
-import { emitSocketEvent } from '@/src/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
-import { Event } from '@/src/features/events/model';
-import { cacheKeys } from '@/src/features/cache/keys';
-import { getRedisConnection } from '@/src/common/connections/redis';
+import EntityEngagementService from '@/features/engagement/service';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/common/constants';
+import { Event } from '@/features/events/model';
+import { cacheKeys } from '@/features/cache/keys';
+import { getRedisConnection } from '@/common/connections/redis';
 
 const userService = new UserService();
 const userSettingsService = new UserSettingsService();
@@ -148,6 +148,12 @@ export const updateUserSettings = async (req: ICustomRequest, res: Response) => 
     onboarding,
     interests,
   });
+
+  // Keep user.meta.hasOnboarded in sync so getSession() reflects onboarding state.
+  if (onboarding?.hasOnboarded !== undefined) {
+    await userService.updateMeta(id as string, { hasOnboarded: onboarding.hasOnboarded });
+  }
+
   return res.status(200).json({ data: settings });
 };
 

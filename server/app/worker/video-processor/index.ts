@@ -1,12 +1,13 @@
 import { type Job, Worker } from 'bullmq';
-import MediaService from '@/src/features/media/service';
+import MediaService from '@/features/media/service';
 import { spawn } from 'child_process';
-import { MEDIA_PUBLIC_BUCKET_NAME } from '@/src/features/media/constants';
+import { MEDIA_PUBLIC_BUCKET_NAME, VIDEO_THUMBNAIL_SIZES } from '@/features/media/constants';
 import crypto from 'crypto';
 import fs from 'fs/promises';
+import os from 'os';
 import axios from 'axios';
-import { WORKER_CONNECTION_CONFIG, EMediaProvider, logger } from '@/src/common';
-import { VIDEO_QUEUE_NAME } from '@/src/common/queues/video';
+import { WORKER_CONNECTION_CONFIG, EMediaProvider, logger } from '@/common';
+import { VIDEO_QUEUE_NAME } from '@/common/queues/video';
 
 const mediaService = new MediaService();
 
@@ -26,9 +27,13 @@ const convertToWebP = async (inputPath: string, outputPath: string, size: number
       outputPath,
     ]);
 
-    ffmpeg.stderr.on('data', (data) => console.error(`ffmpeg stderr: ${data}`));
+    ffmpeg.stderr.on('data', (data) => logger.debug(`ffmpeg stderr: ${data}`));
     ffmpeg.on('close', async (code) => {
-      if (code !== 0) return reject(new Error(`FFmpeg exited with ${code}`));
+      if (code !== 0) {
+        // clean up partial output file on failure
+        await fs.unlink(outputPath).catch(() => {});
+        return reject(new Error(`FFmpeg exited with ${code}`));
+      }
       try {
         const result = await fs.readFile(outputPath);
         await fs.unlink(outputPath);
@@ -42,11 +47,14 @@ const convertToWebP = async (inputPath: string, outputPath: string, size: number
 
 export const processor = async (job: Job) => {
   const { mediaId, eventId } = job.data as { mediaId: string; eventId: string };
+  const tempPath = `${os.tmpdir()}/${crypto.randomUUID()}.tmp`;
+  let tempWritten = false;
+
   try {
     const media = await mediaService.getById(mediaId);
     if (!media) return;
 
-    const { signedUrl } = await mediaService.getPublicUrl(media.url, media.storage.bucket, media.storage.provider, {
+    const { signedUrl } = await mediaService.getPublicUrl(media.url, media.storage.bucket, media.provider, {
       download: true,
     });
 
@@ -54,29 +62,36 @@ export const processor = async (job: Job) => {
     if (!res.status || !res.data) throw new Error('Failed to fetch media stream');
     const buffer = Buffer.from(res.data);
 
-    const tempPath = `./tmp/${crypto.randomUUID()}.${media.metadata?.format}`;
     await fs.writeFile(tempPath, buffer);
+    tempWritten = true;
 
-    const sizes = { '@/1x': 160, '@/2x': 320, '@/3x': 480 };
+    const sizes = VIDEO_THUMBNAIL_SIZES;
     const thumbBuffers: Record<string, Buffer> = {};
 
     for (const [suffix, size] of Object.entries(sizes)) {
-      const outPath = `/tmp/${crypto.randomUUID()}.webp`;
+      const outPath = `${os.tmpdir()}/${crypto.randomUUID()}.webp`;
       try {
         const output = await convertToWebP(tempPath, outPath, size);
         if (output.length) {
           thumbBuffers[suffix] = output;
         }
       } catch (err) {
-        console.error('WebP conversion failed', { suffix, err });
-        delete (sizes as Record<string, number>)[suffix];
+        logger.warn('WebP conversion failed', { suffix, err });
       }
     }
 
     await fs.unlink(tempPath);
+    tempWritten = false;
+
+    const thumbEntries = Object.entries(thumbBuffers);
+
+    if (thumbEntries.length === 0) {
+      logger.error('No thumbnails generated', { mediaId, eventId });
+      throw new Error('No thumbnails generated');
+    }
 
     const uploaded = await Promise.all(
-      Object.entries(thumbBuffers).map(([suffix, thumbBuffer]) =>
+      thumbEntries.map(([suffix, thumbBuffer]) =>
         mediaService.uploadFile({
           bucket: MEDIA_PUBLIC_BUCKET_NAME,
           path: `${eventId}/${mediaId}${suffix}.webp`,
@@ -88,18 +103,13 @@ export const processor = async (job: Job) => {
       ),
     );
 
-    const mappedThumbs = Object.keys(sizes).reduce(
-      (acc, suffix, i) => {
+    const mappedThumbs = thumbEntries.reduce(
+      (acc, [suffix], i) => {
         acc[suffix] = uploaded[i];
         return acc;
       },
       {} as Record<string, any>,
     );
-
-    if (Object.keys(mappedThumbs).length === 0) {
-      logger.error('No thumbnails generated', { mediaId, eventId });
-      return true;
-    }
 
     await mediaService.update(mediaId, {
       thumbnail: '@/2x' in mappedThumbs ? mappedThumbs['@/2x'].path : Object.values(mappedThumbs)[0]?.path,
@@ -114,7 +124,8 @@ export const processor = async (job: Job) => {
     return true;
   } catch (err) {
     logger.error('Video worker error', { mediaId, eventId, err });
-    return false;
+    if (tempWritten) await fs.unlink(tempPath).catch(() => {});
+    throw err;
   }
 };
 

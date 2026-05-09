@@ -1,4 +1,4 @@
-import { validateSchema } from '@/src/common/helpers';
+import { validateSchema } from '@/common/helpers';
 import { TAG_TABLE_NAME } from './constants';
 
 const tagSchema = {

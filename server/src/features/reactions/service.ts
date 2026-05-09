@@ -1,13 +1,13 @@
-import type { IReaction, IPaginationParams } from '@/src/common/definitions/types';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import type { IReaction, IPaginationParams } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { Reaction } from './model';
 import { validateReactionCreate, validateReactionUpdate } from './validation';
 
-import UserService, { toUserMini } from '@/src/features/users/service';
-import { isEmpty } from '@/src/common/utils';
-import { NotFoundError } from '@/src/common/exceptions';
-import logger from '@/src/common/logger';
-import EntityStatsService from '@/src/features/stats/service';
+import UserService, { toUserMini } from '@/features/users/service';
+import { isEmpty } from '@/common/utils';
+import { NotFoundError } from '@/common/exceptions';
+import logger from '@/common/logger';
+import EntityStatsService from '@/features/stats/service';
 import { EAllowedReactionTables } from './constants';
 
 class ReactionService {

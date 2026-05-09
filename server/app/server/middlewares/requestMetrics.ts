@@ -1,4 +1,4 @@
-import { getHttpServerMetrics } from '@/src/common';
+import { getHttpServerMetrics } from '@/common';
 import type { NextFunction, Request, Response } from 'express';
 
 const resolveRoutePath = (req: Request) => {

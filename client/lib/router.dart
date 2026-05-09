@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import './globals.dart';
 
 import './features/auth/screens/splash.dart';
 import './features/onboarding/screens/onboarding.dart';
@@ -37,7 +37,6 @@ import './features/events/screens/my_events.dart';
 import './features/events/models/event.dart';
 import './shared/models/location_picker.dart';
 
-final rootNavigatorKey = GlobalKey<NavigatorState>();
 Map<String, dynamic>? _extraAsMap(Object? extra) =>
     extra is Map<String, dynamic> ? extra : null;
 

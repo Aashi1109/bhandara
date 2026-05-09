@@ -1,4 +1,4 @@
-import { validateSchema } from '@/src/common/helpers';
+import { validateSchema } from '@/common/helpers';
 import { MESSAGE_TABLE_NAME } from './constants';
 
 const dynamicMediaSchema = {

@@ -10,10 +10,10 @@ import {
   getUserSettings,
   updateUserSettings,
   getUserImpact,
-} from '@/src/features/users/controller';
-import { validateUserUpdate, validateUserSettings } from '@/src/features/users/validation';
-import { getMyUpdates, getUserActivity, markAllUpdatesAsRead, markUpdateAsRead } from '@/src/features/activity/controller';
-import { getUserAchievementProgress, getUserAchievements } from '@/src/features/achievements/controller';
+} from '@/features/users/controller';
+import { validateUserUpdate, validateUserSettings } from '@/features/users/validation';
+import { getMyUpdates, getUserActivity, markAllUpdatesAsRead, markUpdateAsRead } from '@/features/activity/controller';
+import { getUserAchievementProgress, getUserAchievements } from '@/features/achievements/controller';
 
 const router = Router();
 

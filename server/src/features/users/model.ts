@@ -1,9 +1,9 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import { USER_TABLE_NAME } from './constants';
-import type { IBaseUser } from '@/src/common/definitions/types';
-import { decryptRecordFields, encryptedTextAttribute } from '@/src/common/utils';
+import type { IBaseUser } from '@/common/definitions/types';
+import { decryptRecordFields, encryptedTextAttribute } from '@/common/utils';
 
 const sequelize = getDBConnection()!;
 type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'media' | 'profilePic'> & {

@@ -5,8 +5,8 @@ import {
   setUserCache,
   setUserCacheByEmail,
   setUserCacheByUsername,
-} from '@/src/features/users/helpers';
-import { consumeResetToken, storeOTP, storeResetToken, verifyOTP } from '@/src/features/auth/otp-helpers';
+} from '@/features/users/helpers';
+import { consumeResetToken, storeOTP, storeResetToken, verifyOTP } from '@/features/auth/otp-helpers';
 import { defaultUser, mockRedis } from '../mocks/external';
 
 describe('cache privacy', () => {

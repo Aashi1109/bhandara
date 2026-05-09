@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
 
-import { disconnect, getDBConnection } from '../src/connections/db';
+import { disconnect, getDBConnection } from '../src/common';
 import type { Sequelize, Transaction } from 'sequelize';
 
 export interface MigrationContext {
@@ -71,7 +71,7 @@ async function getSortedMigrationFiles(directory: string) {
 
 async function main() {
   const folderName = parseMigrationFolderName(process.argv.slice(2));
-  const migrationsRoot = path.resolve(__dirname, '../src/database');
+  const migrationsRoot = path.resolve(__dirname, '../src/migrations');
   const migrationDirectory = await findMigrationFolder(migrationsRoot, folderName);
   const migrationFiles = await getSortedMigrationFiles(migrationDirectory);
 

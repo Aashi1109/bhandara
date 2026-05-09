@@ -32,7 +32,7 @@ describe('ClickStack OpenTelemetry environment bootstrapping', () => {
 
   it('loads the ClickStack OTLP endpoint before HyperDX computes metric exporter URLs', async () => {
     vi.resetModules();
-    vi.doUnmock('@/src/common/logger');
+    vi.doUnmock('@/common/logger');
 
     process.env.NODE_ENV = 'test';
     delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -48,7 +48,7 @@ describe('ClickStack OpenTelemetry environment bootstrapping', () => {
       config: dotenvConfigMock,
     }));
 
-    await vi.importActual('@/src/common/logger');
+    await vi.importActual('@/common/logger');
     const constants = await import('@hyperdx/node-opentelemetry/build/src/constants');
 
     expect(dotenvConfigMock).toHaveBeenCalled();

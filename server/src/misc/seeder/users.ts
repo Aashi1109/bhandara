@@ -1,8 +1,8 @@
 import { Op, type Transaction } from 'sequelize';
-import { EAddressEntityType, EAuthProvider } from '@/src/common/definitions/enums';
-import { getUUIDv7 } from '@/src/common/helpers';
-import { Address } from '@/src/features/addresses/model';
-import { User } from '@/src/features/users/model';
+import { EAddressEntityType, EAuthProvider } from '@/common/definitions/enums';
+import { getUUIDv7 } from '@/common/helpers';
+import { Address } from '@/features/addresses/model';
+import { User } from '@/features/users/model';
 import type { SeedCoordinatorUser, SeedOptions, SeededAuthUser } from './types';
 import { buildAddress, buildSeedUserEmailLikePattern, bulkCreateInChunks, logSeedProgress } from './utils';
 

@@ -8,7 +8,7 @@ import {
   updateMessage,
   deleteMessage,
   getChildMessages,
-} from '@/src/features/messages/controller';
+} from '@/features/messages/controller';
 import {
   createThread,
   deleteThread,
@@ -17,7 +17,7 @@ import {
   updateThread,
   lockThread,
   unlockThread,
-} from '@/src/features/threads/controller';
+} from '@/features/threads/controller';
 
 const router = Router();
 

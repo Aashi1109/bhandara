@@ -21,6 +21,8 @@ import '../../../shared/services/maps/map_provider_type.dart';
 
 import '../../auth/screens/auth.dart';
 import '../../explore/screens/explore_screen.dart';
+import '../../settings/screens/location.dart';
+import '../../../shared/models/location_picker.dart';
 
 class PreferencesScreen extends ConsumerStatefulWidget {
   const PreferencesScreen({super.key});
@@ -281,8 +283,34 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     );
   }
 
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.of(context).push<LocationPickerResult>(
+      MaterialPageRoute(
+        builder: (_) => LocationSettingsScreen(
+          mode: LocationSelectionMode.picker,
+          initialLocation: null,
+          initialCameraLatitude: _selectedLocation.latitude,
+          initialCameraLongitude: _selectedLocation.longitude,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _selectedLocation = LatLng(
+          result.cameraLatitude,
+          result.cameraLongitude,
+        );
+        _locationLabel = result.location.label.isNotEmpty
+            ? result.location.label
+            : _locationLabel;
+      });
+      await _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(_selectedLocation, result.zoom),
+      );
+    }
+  }
+
   Widget _buildLocationSection() {
-    final locationBadges = _locationBadgeLabels();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,40 +394,47 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              LucideIcons.edit2,
-                              size: AppIconSizes.m,
-                              color: AppColors.primary,
+                          GestureDetector(
+                            onTap: _openLocationPicker,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: AppColors.muted,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                LucideIcons.edit2,
+                                size: AppIconSizes.m,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          return Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              for (var i = 0; i < locationBadges.length; i++)
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: constraints.maxWidth,
-                                  ),
-                                  child: _locationBadge(
-                                    label: locationBadges[i],
-                                    isPrimary: i == 0,
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
+                      Row(
+                        children: [
+                          const Icon(
+                            LucideIcons.mapPin,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _isLocating
+                                  ? 'Detecting location...'
+                                  : _locationLabel.isNotEmpty
+                                      ? _locationLabel
+                                      : 'Location unavailable',
+                              style: context.appTypography.bodySM.copyWith(
+                                color: AppColors.primary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -419,75 +454,6 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  List<String> _locationBadgeLabels() {
-    if (_isLocating) {
-      return const ['Detecting location...'];
-    }
-
-    final badges = _locationLabel
-        .split(',')
-        .map((part) => part.trim())
-        .where((part) => part.isNotEmpty)
-        .toList();
-
-    if (badges.isNotEmpty) {
-      return badges;
-    }
-
-    return const ['Location unavailable'];
-  }
-
-  Widget _locationBadge({required String label, required bool isPrimary}) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isPrimary ? 14 : 12,
-        vertical: isPrimary ? 12 : 10,
-      ),
-      decoration: BoxDecoration(
-        color: isPrimary ? AppColors.primary : AppColors.muted,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: isPrimary ? AppColors.primary : AppColors.border,
-        ),
-        boxShadow: isPrimary
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isPrimary ? LucideIcons.mapPin : LucideIcons.navigation,
-            size: isPrimary ? 14 : 12,
-            color: isPrimary ? AppColors.surface : AppColors.mutedForeground,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              softWrap: true,
-              style:
-                  (isPrimary
-                          ? context.appTypography.labelMD
-                          : context.appTypography.bodySM)
-                      .copyWith(
-                        color: isPrimary
-                            ? AppColors.surface
-                            : AppColors.primary,
-                      ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -535,6 +501,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
 
                   if (!mounted) return;
                   context.go(ExploreScreen.routePath);
+                } catch (_) {
+                  // Error snackbar already shown by BaseService.throwError.
+                  // Catch here only to block navigation on failure.
                 } finally {
                   if (mounted) {
                     setState(() => _isSaving = false);

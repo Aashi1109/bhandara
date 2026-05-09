@@ -1,22 +1,22 @@
 import { faker } from '@faker-js/faker';
 import { type Sequelize } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import {
   EAccessLevel,
   EAddressEntityType,
   EEventParticipantStatus,
   EEventStatus,
   EEventType,
-} from '@/src/common/definitions/enums';
-import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/src/features/activity/constants';
-import { Activity } from '@/src/features/activity/model';
-import { Address } from '@/src/features/addresses/model';
-import { EntityEngagement, EntityRating } from '@/src/features/engagement/model';
-import { Event } from '@/src/features/events/model';
-import { Message } from '@/src/features/messages/model';
-import { Reaction } from '@/src/features/reactions/model';
-import { SavedEntity } from '@/src/features/saves/model';
-import { Thread } from '@/src/features/threads/model';
+} from '@/common/definitions/enums';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import { Activity } from '@/features/activity/model';
+import { Address } from '@/features/addresses/model';
+import { EntityEngagement, EntityRating } from '@/features/engagement/model';
+import { Event } from '@/features/events/model';
+import { Message } from '@/features/messages/model';
+import { Reaction } from '@/features/reactions/model';
+import { SavedEntity } from '@/features/saves/model';
+import { Thread } from '@/features/threads/model';
 import { persistAchievementDataForUsers } from './achievements';
 import { queueEngagementForContent, queueReactionsForContent, queueSavesForContent } from './engagement';
 import type { SeedCoordinatorUser, SeedOptions, UserMetrics } from './types';

@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type { Transaction } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import type { NumberRange, SeedCoordinatorUser, SeedOptions, SeedStats, UserMetrics } from './types';
 import { DEFAULT_OPTIONS, DEFAULT_MAX_PRIMARY_ROWS, DB_BULK_INSERT_CHUNK_SIZE } from './constants';
 

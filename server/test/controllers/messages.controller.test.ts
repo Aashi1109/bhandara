@@ -23,7 +23,7 @@ const {
   trackViewMock: vi.fn(),
 }));
 
-vi.mock("@/src/features/messages/service", () => ({
+vi.mock("@/features/messages/service", () => ({
   default: class {
     create = messageCreateMock;
     delete = messageDeleteMock;
@@ -34,32 +34,32 @@ vi.mock("@/src/features/messages/service", () => ({
   },
 }));
 
-vi.mock("@/src/features/threads/service", () => ({
+vi.mock("@/features/threads/service", () => ({
   default: class {
     getById = threadGetByIdMock;
     isThreadChainLocked = vi.fn().mockResolvedValue({ isLocked: false });
   },
 }));
 
-vi.mock("@/src/features/activity/service", () => ({
+vi.mock("@/features/activity/service", () => ({
   default: class {
     create = activityCreateMock;
   },
 }));
 
-vi.mock("@/src/features/achievements/service", () => ({
+vi.mock("@/features/achievements/service", () => ({
   default: class {
     trackActivity = trackActivityMock;
   },
 }));
 
-vi.mock("@/src/features/engagement/service", () => ({
+vi.mock("@/features/engagement/service", () => ({
   default: class {
     trackView = trackViewMock;
   },
 }));
 
-vi.mock("@/src/socket/emitter", () => ({
+vi.mock("@/socket/emitter", () => ({
   emitSocketEvent: emitSocketEventMock,
 }));
 
@@ -89,7 +89,7 @@ describe("messages controller", () => {
       userId: "actor-1",
     });
 
-    const { createMessage } = await import("@/src/features/messages/controller");
+    const { createMessage } = await import("@/features/messages/controller");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -135,7 +135,7 @@ describe("messages controller", () => {
       userId: "author-1",
     });
 
-    const { updateMessage } = await import("@/src/features/messages/controller");
+    const { updateMessage } = await import("@/features/messages/controller");
     const req = {
       body: { content: { text: "edited" } },
       params: { messageId: "message-1" },
@@ -160,7 +160,7 @@ describe("messages controller", () => {
       userId: "author-1",
     });
 
-    const { deleteMessage } = await import("@/src/features/messages/controller");
+    const { deleteMessage } = await import("@/features/messages/controller");
     const req = {
       params: { messageId: "message-1" },
       user: { id: "intruder-1" },
@@ -194,7 +194,7 @@ describe("messages controller", () => {
       userId: "author-1",
     });
 
-    const { updateMessage } = await import("@/src/features/messages/controller");
+    const { updateMessage } = await import("@/features/messages/controller");
     const req = {
       body: { content: { text: "same text" } },
       params: { messageId: "message-1" },

@@ -1,6 +1,6 @@
-import { getDBConnection } from '@/src/common/connections/db';
-import { EEventType } from '@/src/common/definitions/enums';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getDBConnection } from '@/common/connections/db';
+import { EEventType } from '@/common/definitions/enums';
+import { getUUIDv7 } from '@/common/helpers';
 import { DataTypes, Model } from 'sequelize';
 import {
   type IEvent,
@@ -10,7 +10,7 @@ import {
   type IVerifier,
   type IBaseUser,
   type IReaction,
-} from '@/src/common/definitions/types';
+} from '@/common/definitions/types';
 
 const sequelize = getDBConnection()!;
 

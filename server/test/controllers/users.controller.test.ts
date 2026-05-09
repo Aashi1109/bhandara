@@ -17,7 +17,7 @@ const {
   updateMock: vi.fn(),
 }));
 
-vi.mock("@/src/features/users/service", () => ({
+vi.mock("@/features/users/service", () => ({
   default: class {
     getAll = vi.fn();
     getById = getByIdMock;
@@ -28,13 +28,13 @@ vi.mock("@/src/features/users/service", () => ({
   },
 }));
 
-vi.mock("@/src/features/engagement/service", () => ({
+vi.mock("@/features/engagement/service", () => ({
   default: class {
     trackView = trackViewMock;
   },
 }));
 
-vi.mock("@/src/socket/emitter", () => ({
+vi.mock("@/socket/emitter", () => ({
   emitSocketEvent: emitSocketEventMock,
 }));
 
@@ -65,7 +65,7 @@ describe("users controller", () => {
       pagination: null,
     });
 
-    const { getUserByQuery } = await import("@/src/features/users/controller");
+    const { getUserByQuery } = await import("@/features/users/controller");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -101,7 +101,7 @@ describe("users controller", () => {
       username: "private-user",
     });
 
-    const { getUserById } = await import("@/src/features/users/controller");
+    const { getUserById } = await import("@/features/users/controller");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -148,7 +148,7 @@ describe("users controller", () => {
       username: "updated-user",
     });
 
-    const { updateUser } = await import("@/src/features/users/controller");
+    const { updateUser } = await import("@/features/users/controller");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
     const req = {
@@ -204,7 +204,7 @@ describe("users controller", () => {
       username: "updated-user",
     });
 
-    const { updateUser } = await import("@/src/features/users/controller");
+    const { updateUser } = await import("@/features/users/controller");
     const req = {
       body: { name: "Updated User" },
       params: { id: "user-3" },

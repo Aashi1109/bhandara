@@ -1,5 +1,6 @@
 import { type UploadApiResponse, type UploadApiOptions, v2 as cloudinary } from 'cloudinary';
 import config from '../config';
+import { IMAGE_EAGER_STRING } from '../storage/eager-transforms';
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloudName,
@@ -63,12 +64,19 @@ class CloudinaryService {
     rid: string;
   }) {
     const timestamp = Math.floor(Date.now() / 1000);
+    const isImage = resourceType === 'image';
     const paramsToSign: Record<string, any> = {
       timestamp,
       folder: `${this.baseFolderPath}${bucket}`,
       public_id: path,
       upload_preset: 'zentry',
       context: `rid=${rid}`,
+      // Include eager transforms for images so variants are generated during client upload.
+      // Videos are processed asynchronously via the video job queue.
+      ...(isImage && {
+        eager: IMAGE_EAGER_STRING,
+        eager_async: '0',
+      }),
     };
     const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret as string);
 

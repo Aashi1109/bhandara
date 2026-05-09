@@ -1,27 +1,28 @@
-import type { IEvent, IMedia } from '@/src/common/definitions/types';
-import { EMediaProvider } from '@/src/common/definitions/enums';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
-import SupabaseService from '@/src/supabase';
-import CloudinaryService from '@/src/common/ccloudinary';
+import type { IEvent, IMedia } from '@/common/definitions/types';
+import { EMediaProvider } from '@/common/definitions/enums';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
+import SupabaseService from '@/supabase';
+import { StorageFactory } from '@/common/storage';
 import { validateMediaCreate, validateMediaUpdate } from './validation';
 import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from './constants';
 import { Media } from './model';
 import { Event } from '../events/model';
-import { isEmpty, omit } from '@/src/common/utils';
+import { isEmpty, omit } from '@/common/utils';
 import { deleteMediaCache, getEventMediaCache, setEventMediaCache, setMediaCache, getMediaCache } from './helpers';
-import logger from '@/src/common/logger';
+import logger from '@/common/logger';
 import { getUniqueFilename as getUniqueFilename } from './utils';
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
-import { CACHE_NAMESPACE_CONFIG } from '@/src/common/constants';
-import EntityStatsService from '@/src/features/stats/service';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import EntityStatsService from '@/features/stats/service';
 
 class MediaService {
   private readonly getCache = getMediaCache;
   private readonly setCache = setMediaCache;
   private readonly deleteCache = deleteMediaCache;
-  private readonly _supabaseService = new SupabaseService();
-  private readonly _cloudinaryService = new CloudinaryService();
   private readonly entityStatsService = new EntityStatsService();
+
+  // Retained for Supabase-specific signed upload completion flow
+  private readonly _supabaseService = new SupabaseService();
 
   async _getByIdNoCache(id: string) {
     const res = await Media.findByPk(id, { raw: true });
@@ -58,42 +59,17 @@ class MediaService {
     provider?: EMediaProvider;
     options?: Record<string, any>;
   }) {
-    if (provider === EMediaProvider.Cloudinary) {
-      const data = await this._cloudinaryService.uploadFile({
-        bucket,
-        base64FileData: file,
-        mimeType,
-        path: getUniqueFilename(path),
-        options,
-      });
-
-      return data;
-    }
-
-    const { data, error } = await this._supabaseService.uploadFile({
+    return StorageFactory.get(provider).uploadFile({
       bucket,
       base64FileData: file,
       mimeType,
       path: getUniqueFilename(path),
       options,
     });
-
-    if (error) throw error;
-    return data;
   }
 
   async deleteFile(bucket: string, path: string, provider: EMediaProvider = EMediaProvider.Supabase) {
-    if (provider === EMediaProvider.Cloudinary) {
-      const { error } = await this._cloudinaryService.deleteFile(path);
-      if (error) throw error;
-      return { path, deleted: true };
-    }
-
-    const { error } = await this._supabaseService.deleteFile({
-      bucket,
-      paths: [path],
-    });
-    if (error) throw error;
+    await StorageFactory.get(provider).deleteFile({ bucket, path });
     return { path, deleted: true };
   }
 
@@ -137,13 +113,12 @@ class MediaService {
         validatedData = omit(validatedData, ['path', 'bucket', 'options']);
         restOptions = omit(restOptions, ['path']);
 
-        // create media record
         const createData = {
           url: path,
+          provider: dataWithProvider.provider,
           storage: {
             metadata: {},
             bucket,
-            provider: dataWithProvider.provider,
           },
           metadata: { ...metadata, format },
           mimeType: insertData.mimeType,
@@ -157,21 +132,12 @@ class MediaService {
           raw: true,
         });
 
-        let signedUrl: any;
-        if (dataWithProvider.provider === EMediaProvider.Cloudinary) {
-          signedUrl = this._cloudinaryService.getSignedUploadParams({
-            bucket,
-            path,
-            resourceType: restOptions.type,
-            rid: creationData.id,
-          });
-        } else {
-          const res = await this._supabaseService.getSignedUrlForUpload({
-            path,
-            bucket,
-          });
-          signedUrl = res.data;
-        }
+        const signedUrl = await StorageFactory.get(dataWithProvider.provider).getClientUploadParams({
+          bucket,
+          path,
+          resourceType: restOptions.type,
+          rid: creationData.id,
+        });
 
         if (signedUrl) delete (signedUrl as any).token;
         return {
@@ -184,12 +150,12 @@ class MediaService {
 
   async getSignedUrlForPublicUpload({ path }: { path: string }) {
     const uniquePath = getUniqueFilename(path);
-    const signedUrl = await this._supabaseService.getSignedUrlForUpload({
+    const res = await this._supabaseService.getSignedUrlForUpload({
       bucket: MEDIA_PUBLIC_BUCKET_NAME,
       path: uniquePath,
     });
-    if (signedUrl.data) delete (signedUrl.data as any).token;
-    return { path: uniquePath, ...signedUrl.data };
+    if (res.data) delete (res.data as any).token;
+    return { path: uniquePath, ...res.data };
   }
 
   async uploadFileToSignedUrl({
@@ -236,7 +202,7 @@ class MediaService {
 
     const res = (await Media.findByPk(id, { raw: true })) as IMedia | null;
     if (res) {
-      const publicUrl = await this.getPublicUrl(res.url, res.storage.bucket, res.storage.provider);
+      const publicUrl = await this.getPublicUrl(res.url, res.storage.bucket, res.provider);
       (res as any).publicUrl = publicUrl.signedUrl;
       (res as any).publicUrlExpiresAt = publicUrl.expiresAt;
       await this.setCache(id, res);
@@ -250,25 +216,7 @@ class MediaService {
     provider: EMediaProvider = EMediaProvider.Supabase,
     options?: Record<string, any>,
   ) {
-    if (provider === EMediaProvider.Cloudinary) {
-      const signedUrl = this._cloudinaryService.getPublicUrl(path);
-      return {
-        signedUrl,
-        expiresAt: -1,
-      };
-    }
-
-    const publicUrl = await this._supabaseService.getPublicUrl({
-      bucket,
-      path,
-      expiresIn: 3600 * 24,
-      options,
-    });
-
-    return {
-      signedUrl: publicUrl.data!.signedUrl,
-      expiresAt: new Date(Date.now() + 3600 * 24 * 1000),
-    };
+    return StorageFactory.get(provider).getPublicUrl({ bucket, path, options });
   }
 
   async getBulkPublicUrls(
@@ -277,45 +225,7 @@ class MediaService {
     expiresIn: number = CACHE_NAMESPACE_CONFIG.Media.ttl,
     provider: EMediaProvider = EMediaProvider.Supabase,
   ) {
-    if (provider === EMediaProvider.Cloudinary) {
-      const urls = paths.map((p) => {
-        const signedUrl = this._cloudinaryService.getPublicUrl(p);
-        return { path: p, signedUrl, expiresAt: -1 };
-      });
-
-      return urls.reduce(
-        (acc, url) => {
-          acc[url.path] = url;
-          return acc;
-        },
-        {} as Record<string, { signedUrl: string; expiresAt: Date | number }>,
-      );
-    }
-
-    const { data: publicUrls, error } = await this._supabaseService.getBulkPublicUrls({
-      bucket,
-      paths,
-      expiresIn,
-    });
-
-    if (error) throw error;
-
-    const publicUrlsWithExpiresAt = publicUrls.map((url) => {
-      return {
-        ...url,
-        expiresAt: new Date(Date.now() + expiresIn * 1000),
-      };
-    });
-
-    const mediaWithPublicUrls = publicUrlsWithExpiresAt.reduce(
-      (acc, url) => {
-        if (url.path) acc[url.path] = url;
-        return acc;
-      },
-      {} as Record<string, { signedUrl: string; expiresAt: Date }>,
-    );
-
-    return mediaWithPublicUrls;
+    return StorageFactory.get(provider).getBulkPublicUrls({ bucket, paths, expiresIn });
   }
 
   async delete(id: string) {
@@ -323,7 +233,7 @@ class MediaService {
       const media = await Media.findByPk(id, { transaction: tx });
       if (!media) return null;
       await media.destroy({ transaction: tx });
-      const deletionResult = await this.deleteFile(media.storage.bucket, media.url, media.storage.provider);
+      const deletionResult = await this.deleteFile(media.storage.bucket, media.url, media.provider);
       await this.deleteCache(id);
       logger.debug(`Deleted media ${id}`, { deletionResult });
       return media;
@@ -342,13 +252,10 @@ class MediaService {
     );
     const mediaData = { data: res.items } as { data: IMedia[] };
     if (!isEmpty(mediaData.data)) {
-      // split according to buckets
       const bucketPathsMapping = (mediaData.data as IMedia[]).reduce(
         (acc, media) => {
-          const key = `${media.storage.provider}:${media.storage.bucket}`;
-          if (!acc[key]) {
-            acc[key] = [];
-          }
+          const key = `${media.provider}:${media.storage.bucket}`;
+          if (!acc[key]) acc[key] = [];
           acc[key].push(media.url);
           return acc;
         },
@@ -363,17 +270,11 @@ class MediaService {
       );
 
       const publicUrls = bucketGroupedPublicUrls.reduce(
-        (acc, bucketPublicUrls) => {
-          return {
-            ...acc,
-            ...bucketPublicUrls,
-          };
-        },
-        {} as Record<string, { signedUrl: string; expiresAt: Date; error?: any }>,
+        (acc, bucketPublicUrls) => ({ ...acc, ...bucketPublicUrls }),
+        {} as Record<string, { signedUrl: string; expiresAt: Date | number; error?: any }>,
       );
 
-      // Create a map of media data with their public URLs
-      const mediaWithUrls = (mediaData.data as IMedia[]).reduce(
+      return (mediaData.data as IMedia[]).reduce(
         (acc, media) => {
           const publicUrl = publicUrls[media.url];
 
@@ -383,10 +284,7 @@ class MediaService {
           }
 
           if ('error' in publicUrl && publicUrl.error) {
-            logger.error('Error getting public url for media', {
-              mediaId: media.id,
-              error: publicUrl.error,
-            });
+            logger.error('Error getting public url for media', { mediaId: media.id, error: publicUrl.error });
             return acc;
           }
 
@@ -399,11 +297,6 @@ class MediaService {
         },
         {} as Record<string, any>,
       );
-
-      // TODO: Need to be validated if this is required
-      // await setMediaBulkCache(Object.values(mediaWithUrls));
-
-      return mediaWithUrls;
     }
     return {};
   }
@@ -437,6 +330,9 @@ export function toMediaPublic(media: IMedia): {
   publicUrl: string | undefined;
   publicUrlExpiresAt: Date | number | undefined;
   thumbnail: string | null | undefined;
+  thumbnails: IMedia['thumbnails'];
+  variants: IMedia['variants'];
+  streamUrl: string | null | undefined;
   caption: string | null | undefined;
   name: string;
 } {
@@ -447,6 +343,9 @@ export function toMediaPublic(media: IMedia): {
     publicUrl: media.publicUrl,
     publicUrlExpiresAt: media.publicUrlExpiresAt,
     thumbnail: media.thumbnail,
+    thumbnails: media.thumbnails,
+    variants: media.variants,
+    streamUrl: media.streamUrl,
     caption: media.caption,
     name: media.name,
   };

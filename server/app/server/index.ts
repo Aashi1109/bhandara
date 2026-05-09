@@ -11,10 +11,10 @@ import appRoutes from './routes';
 import { swaggerSpec } from './docs/swagger';
 
 import * as Sentry from '@sentry/node';
-import { config, logger, NotFoundError } from '@/src/common';
+import { config, logger, NotFoundError } from '@/common';
 import * as HyperDX from '@hyperdx/node-opentelemetry';
-import { initializeSocket } from '@/src/socket';
-import { initializeMediaRealtime } from '@/src/supabase/realtime';
+import { initializeSocket } from '@/socket';
+import { initializeMediaRealtime } from '@/supabase/realtime';
 
 export function createServer(): Express {
   const app = express();

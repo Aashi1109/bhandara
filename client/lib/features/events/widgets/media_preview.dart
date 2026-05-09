@@ -11,6 +11,18 @@ import '../../../shared/theme/theme.dart';
 import '../../../shared/utils/file_size.dart';
 import '../../chat/widgets/message_reactions.dart';
 
+class MediaItemThumbnails {
+  const MediaItemThumbnails({
+    required this.sm,
+    required this.md,
+    required this.xl,
+  });
+
+  final String sm;
+  final String md;
+  final String xl;
+}
+
 class MediaItem {
   MediaItem({
     required this.id,
@@ -19,6 +31,9 @@ class MediaItem {
     required this.type,
     required this.name,
     this.sizeBytes,
+    this.thumbnails,
+    this.variants,
+    this.streamUrl,
   });
 
   final String id;
@@ -27,6 +42,19 @@ class MediaItem {
   final String type; // 'image' or 'video'
   final String name;
   final int? sizeBytes;
+  final MediaItemThumbnails? thumbnails;
+  final MediaItemThumbnails? variants;
+  final String? streamUrl;
+
+  // Resolves the best URL for full-screen display.
+  // Images use the xl variant; videos use the HLS stream.
+  String get displayUrl {
+    if (type == 'video') return streamUrl ?? url;
+    return variants?.md ?? url;
+  }
+
+  // Resolves the best URL for the thumbnail strip (64×64 container).
+  String get stripThumbnailUrl => thumbnails?.sm ?? thumbnail;
 }
 
 class AppMediaPreview extends StatefulWidget {
@@ -328,10 +356,10 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: item.type == 'image'
-                              ? Image.network(item.url, fit: BoxFit.contain)
+                              ? Image.network(item.displayUrl, fit: BoxFit.contain)
                               : _VideoPreviewCard(
                                   key: ValueKey(item.id),
-                                  url: item.url,
+                                  url: item.displayUrl,
                                 ),
                         ),
                       ),
@@ -482,7 +510,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
                                 child: Image.network(
-                                  item.thumbnail,
+                                  item.stripThumbnailUrl,
                                   fit: BoxFit.cover,
                                 ),
                               ),

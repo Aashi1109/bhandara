@@ -1,7 +1,7 @@
-import { EAddressEntityType } from '@/src/common/definitions/enums';
-import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from '@/src/common/definitions/types';
-import AddressService from '@/src/features/addresses/service';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import { EAddressEntityType } from '@/common/definitions/enums';
+import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from '@/common/definitions/types';
+import AddressService from '@/features/addresses/service';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { validateUserCreate, validateUserUpdate } from './validation';
 import { decryptUserRows, User } from './model';
 import UserSettingsService from './settings.service';
@@ -20,10 +20,10 @@ import {
   setUserCacheByUsername,
   setUserInterestsCache,
 } from './helpers';
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
-import { hashForLookup, isEmpty } from '@/src/common/utils';
-import TagService from '@/src/features/tags/service';
-import MediaService from '@/src/features/media/service';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { hashForLookup, isEmpty } from '@/common/utils';
+import TagService from '@/features/tags/service';
+import MediaService from '@/features/media/service';
 import type { FindOptions } from 'sequelize';
 
 export interface IUserMini {
@@ -169,8 +169,8 @@ class UserService {
           {
             ...rest,
             meta: newMeta,
-            username,
-            mediaId: rest.mediaId as string,
+            username: isUsernameChanged ? username : row.username,
+            mediaId: rest.mediaId ?? row.mediaId,
           } as Partial<IBaseUser>,
           { transaction },
         );
@@ -254,6 +254,14 @@ class UserService {
     });
     await deleteAllUserCache(id, existing);
     return existing;
+  }
+
+  async updateMeta(id: string, metaUpdate: Record<string, any>): Promise<void> {
+    const row = await User.findByPk(id);
+    if (!row) return;
+    const currentMeta = (row.meta as Record<string, any>) || {};
+    await row.update({ meta: { ...currentMeta, ...metaUpdate } });
+    await deleteUserCache(id);
   }
 
   async getUserMini(id: string): Promise<IUserMini | null> {

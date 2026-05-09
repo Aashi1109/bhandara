@@ -1,4 +1,4 @@
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/common/constants';
 import type {
   IBaseThread,
   IEvent,
@@ -6,15 +6,15 @@ import type {
   IMessage,
   IMessageStats,
   IThreadStats,
-} from '@/src/common/definitions/types';
-import RedisCache from '@/src/features/cache/redis';
-import { EEventParticipantStatus } from '@/src/common/definitions/enums';
-import { Event } from '@/src/features/events/model';
-import { Thread } from '@/src/features/threads/model';
-import { Message } from '@/src/features/messages/model';
-import { Reaction } from '@/src/features/reactions/model';
-import EntityEngagementService from '@/src/features/engagement/service';
-import { cacheKeys } from '@/src/features/cache/keys';
+} from '@/common/definitions/types';
+import RedisCache from '@/features/cache/redis';
+import { EEventParticipantStatus } from '@/common/definitions/enums';
+import { Event } from '@/features/events/model';
+import { Thread } from '@/features/threads/model';
+import { Message } from '@/features/messages/model';
+import { Reaction } from '@/features/reactions/model';
+import EntityEngagementService from '@/features/engagement/service';
+import { cacheKeys } from '@/features/cache/keys';
 
 type EntityType = 'events' | 'threads' | 'messages';
 

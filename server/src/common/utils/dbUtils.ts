@@ -1,5 +1,5 @@
 import { type FindOptions, type Model, type ModelStatic, Op, type WhereOptions } from 'sequelize';
-import type { IPaginationParams, PaginatedResult } from '@/src/common/definitions/types';
+import type { IPaginationParams, PaginatedResult } from '@/common/definitions/types';
 
 /**
  * Retrieve records with cursor-based pagination only.

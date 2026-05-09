@@ -11,7 +11,7 @@ const {
   updateMock: vi.fn(),
 }));
 
-vi.mock('@/src/features/threads/service', () => ({
+vi.mock('@/features/threads/service', () => ({
   default: class {
     create = vi.fn();
     delete = vi.fn();
@@ -24,19 +24,19 @@ vi.mock('@/src/features/threads/service', () => ({
   },
 }));
 
-vi.mock('@/src/features/events/service', () => ({
+vi.mock('@/features/events/service', () => ({
   default: class {},
 }));
 
-vi.mock('@/src/features/messages/service', () => ({
+vi.mock('@/features/messages/service', () => ({
   default: class {},
 }));
 
-vi.mock('@/src/features/engagement/service', () => ({
+vi.mock('@/features/engagement/service', () => ({
   default: class {},
 }));
 
-vi.mock('@/src/socket/emitter', () => ({
+vi.mock('@/socket/emitter', () => ({
   emitSocketEvent: emitSocketEventMock,
 }));
 
@@ -59,7 +59,7 @@ describe('threads controller', () => {
       updatedAt: '2026-04-05T10:05:00.000Z',
     });
 
-    const { updateThread } = await import('@/src/features/threads/controller');
+    const { updateThread } = await import('@/features/threads/controller');
     const req = {
       body: { title: 'General' },
       params: { threadId: 'thread-1' },

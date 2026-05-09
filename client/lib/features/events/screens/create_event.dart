@@ -879,10 +879,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         'description': _descriptionController.text.trim(),
         'type': widget.initialEvent?.type ?? 'custom',
         'createdBy': widget.initialEvent?.createdBy ?? user.id,
-        'timings': {
-          'start': _startAt.toUtc().toIso8601String(),
-          'end': _endAt.toUtc().toIso8601String(),
-        },
+        'startTime': _startAt.toUtc().toIso8601String(),
+        'endTime': _endAt.toUtc().toIso8601String(),
         if (uploadedMediaIds.isNotEmpty) 'media': uploadedMediaIds,
         'tags': tagIds,
         'location': {

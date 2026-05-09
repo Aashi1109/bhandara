@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { Op, type Transaction } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
-import { ACHIEVEMENT_DEFINITIONS } from '@/src/features/achievements/constants';
-import { AchievementProgress, UserAchievement } from '@/src/features/achievements/model';
+import { getUUIDv7 } from '@/common/helpers';
+import { ACHIEVEMENT_DEFINITIONS } from '@/features/achievements/constants';
+import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
 import type { SeedCoordinatorUser, SeededUserRow, UserMetrics } from './types';
 import { getOrCreateMetrics } from './utils';
 

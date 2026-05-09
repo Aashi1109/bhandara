@@ -1,19 +1,23 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import { MEDIA_TABLE_NAME } from './constants';
-import { EMediaType, EAccessLevel } from '@/src/common/definitions/enums';
-import type { IMedia } from '@/src/common/definitions/types';
+import { EMediaType, EAccessLevel, EMediaProvider } from '@/common/definitions/enums';
+import type { IMedia } from '@/common/definitions/types';
 
 type MediaAttributes = Omit<IMedia, 'createdAt' | 'updatedAt' | 'path' | 'publicUrl' | 'publicUrlExpiresAt'>;
 
 export class Media extends Model<MediaAttributes, MediaAttributes> {
   declare id: string;
   declare type: EMediaType;
+  declare provider: EMediaProvider;
   declare url: string;
   declare name: string;
   declare caption?: string | null;
   declare thumbnail?: string | null;
+  declare thumbnails?: IMedia['thumbnails'];
+  declare variants?: IMedia['variants'];
+  declare streamUrl?: string | null;
   declare size?: number | null;
   declare mimeType?: string | null;
   declare duration?: number | null;
@@ -39,10 +43,18 @@ Media.init(
       type: DataTypes.ENUM(...Object.values(EMediaType)),
       allowNull: false,
     },
+    provider: {
+      type: DataTypes.ENUM(...Object.values(EMediaProvider)),
+      allowNull: false,
+      defaultValue: EMediaProvider.Supabase,
+    },
     url: { type: DataTypes.TEXT, allowNull: false },
     name: { type: DataTypes.TEXT, allowNull: false },
     caption: { type: DataTypes.TEXT },
     thumbnail: { type: DataTypes.TEXT },
+    thumbnails: { type: DataTypes.JSONB },
+    variants: { type: DataTypes.JSONB },
+    streamUrl: { type: DataTypes.TEXT },
     size: { type: DataTypes.INTEGER },
     mimeType: { type: DataTypes.TEXT },
     duration: { type: DataTypes.INTEGER },

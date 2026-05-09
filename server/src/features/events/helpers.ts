@@ -1,6 +1,6 @@
-import { RedisCache } from '@/src/features/cache';
-import { CACHE_NAMESPACE_CONFIG } from '@/src/common/constants';
-import type { IBaseUser, IEvent } from '@/src/common/definitions/types';
+import { RedisCache } from '@/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import type { IBaseUser, IEvent } from '@/common/definitions/types';
 import { createHash } from 'crypto';
 import type { IEventListFilters } from './service';
 

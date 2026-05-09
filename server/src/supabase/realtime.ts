@@ -1,9 +1,9 @@
-import { Event } from '@/src/features/events/model';
-import EventService from '@/src/features/events/service';
-import { emitSocketEvent } from '@/src/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS } from '@/src/common/constants';
-import { logger, supabase, type IMedia } from '@/src/common';
-import { MEDIA_TABLE_NAME } from '@/src/features/media/constants';
+import { Event } from '@/features/events/model';
+import EventService from '@/features/events/service';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS } from '@/common/constants';
+import { logger, supabase, type IMedia } from '@/common';
+import { MEDIA_TABLE_NAME } from '@/features/media/constants';
 
 const eventService = new EventService();
 export function initializeMediaRealtime() {

@@ -10,7 +10,8 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"],
+      "@app/*": ["./app/*"]
     },
     "experimentalDecorators": true,
     "skipLibCheck": true,

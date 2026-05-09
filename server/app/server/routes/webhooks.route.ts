@@ -1,8 +1,8 @@
-import { onUploadComplete } from '@/src/features/media/controller';
+import { onUploadComplete } from '@/features/media/controller';
 import { asyncHandler } from '../middlewares';
 import { type Request, type Response, type NextFunction, Router } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
-import { config } from '@/src/common';
+import { config } from '@/common';
 
 cloudinary.config({
   cloud_name: config.cloudinary.cloudName,

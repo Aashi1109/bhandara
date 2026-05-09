@@ -157,9 +157,8 @@ void main() {
     expect(payload!['description'], 'Chef tasting menu.');
     expect(payload!.containsKey('status'), isFalse);
 
-    final timings = payload!['timings'] as Map<String, dynamic>;
-    final start = DateTime.parse(timings['start'] as String);
-    final end = DateTime.parse(timings['end'] as String);
+    final start = DateTime.parse(payload!['startTime'] as String);
+    final end = DateTime.parse(payload!['endTime'] as String);
 
     expect(end.isAfter(start), isTrue);
     expect(end.difference(start), lessThanOrEqualTo(const Duration(days: 7)));
@@ -242,9 +241,8 @@ void main() {
     await _settle(tester);
 
     expect(payload, isNotNull);
-    final timings = payload!['timings'] as Map<String, dynamic>;
-    final start = DateTime.parse(timings['start'] as String);
-    final end = DateTime.parse(timings['end'] as String);
+    final start = DateTime.parse(payload!['startTime'] as String);
+    final end = DateTime.parse(payload!['endTime'] as String);
     expect(start.isBefore(DateTime.now()), isTrue);
     expect(end.isAfter(DateTime.now()), isTrue);
   });

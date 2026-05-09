@@ -1,9 +1,9 @@
-import AddressService from '@/src/features/addresses/service';
-import { Address } from '@/src/features/addresses/model';
-import { EAddressEntityType, EEventParticipantStatus, EEventStatus, type EEventType } from '@/src/common/definitions/enums';
-import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/src/common/definitions/types';
+import AddressService from '@/features/addresses/service';
+import { Address } from '@/features/addresses/model';
+import { EAddressEntityType, EEventParticipantStatus, EEventStatus, type EEventType } from '@/common/definitions/enums';
+import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/common/definitions/types';
 import ThreadsService from '../threads/service';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { Op, QueryTypes, Sequelize, type WhereOptions } from 'sequelize';
 import TagService from '../tags/service';
 import MediaService from '../media/service';
@@ -21,12 +21,12 @@ import {
   getMarkerCache,
   setMarkerCache,
 } from './helpers';
-import { isEmpty } from '@/src/common/utils';
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
-import { getDistanceInMeters } from '@/src/common/helpers';
+import { isEmpty } from '@/common/utils';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { getDistanceInMeters } from '@/common/helpers';
 import { Event } from './model';
-import MessageService from '@/src/features/messages/service';
-import EntityStatsService from '@/src/features/stats/service';
+import MessageService from '@/features/messages/service';
+import EntityStatsService from '@/features/stats/service';
 import { buildActiveEventStatusPredicate, deriveEventStatus, resolvePersistedEventState } from './status';
 import ngeohash from 'ngeohash';
 

@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { disconnect, getDBConnection } from '@/src/common/connections/db';
+import { disconnect, getDBConnection } from '@/common/connections/db';
 import { seedContentForUsers } from './content';
 import type { SeederWorkerPayload } from './types';
 import { formatSeedStep, isTransientDatabaseError, logSeedProgress } from './utils';

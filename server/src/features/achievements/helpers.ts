@@ -1,7 +1,7 @@
-import { RedisCache } from '@/src/features/cache';
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
-import type { IAchievementProgress } from '@/src/common';
-import { cacheKeys } from '@/src/features/cache/keys';
+import { RedisCache } from '@/features/cache';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/common/constants';
+import type { IAchievementProgress } from '@/common';
+import { cacheKeys } from '@/features/cache/keys';
 
 const achievementCache = new RedisCache({
   connectionName: REDIS_CONNECTION_NAMES.Activity,

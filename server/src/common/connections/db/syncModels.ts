@@ -1,19 +1,19 @@
 import { QueryTypes } from 'sequelize';
-import { Activity } from '@/src/features/activity/model';
-import { Address } from '@/src/features/addresses/model';
-import { AchievementProgress, UserAchievement } from '@/src/features/achievements/model';
-import { EntityEngagement, EntityRating } from '@/src/features/engagement/model';
-import { Event } from '@/src/features/events/model';
-import { Media } from '@/src/features/media/model';
-import { MEDIA_TABLE_NAME } from '@/src/features/media/constants';
-import { Message } from '@/src/features/messages/model';
-import { Reaction } from '@/src/features/reactions/model';
-import { SavedEntity } from '@/src/features/saves/model';
-import { SearchResult } from '@/src/features/search/model';
-import { Tag } from '@/src/features/tags/model';
-import { Thread } from '@/src/features/threads/model';
-import { USER_TABLE_NAME } from '@/src/features/users/constants';
-import { User } from '@/src/features/users/model';
+import { Activity } from '@/features/activity/model';
+import { Address } from '@/features/addresses/model';
+import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
+import { EntityEngagement, EntityRating } from '@/features/engagement/model';
+import { Event } from '@/features/events/model';
+import { Media } from '@/features/media/model';
+import { MEDIA_TABLE_NAME } from '@/features/media/constants';
+import { Message } from '@/features/messages/model';
+import { Reaction } from '@/features/reactions/model';
+import { SavedEntity } from '@/features/saves/model';
+import { SearchResult } from '@/features/search/model';
+import { Tag } from '@/features/tags/model';
+import { Thread } from '@/features/threads/model';
+import { USER_TABLE_NAME } from '@/features/users/constants';
+import { User } from '@/features/users/model';
 
 const REGISTERED_MODELS = [
   SearchResult,

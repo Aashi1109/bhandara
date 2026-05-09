@@ -1,5 +1,5 @@
 import { type Sequelize, type Transaction, QueryTypes } from 'sequelize';
-import { encryptRecordFields, hashForLookup } from '@/src/common/utils';
+import { encryptRecordFields, hashForLookup } from '@/common/utils';
 
 interface MigrationContext {
   sequelize: Sequelize;

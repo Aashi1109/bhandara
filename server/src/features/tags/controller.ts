@@ -1,7 +1,7 @@
-import { type ICustomRequest, type IRequestPagination } from '@/src/common/definitions/types';
+import { type ICustomRequest, type IRequestPagination } from '@/common/definitions/types';
 import type { Response } from 'express';
 import TagsService from './service';
-import { pick } from '@/src/common/utils';
+import { pick } from '@/common/utils';
 
 const tagsService = new TagsService();
 

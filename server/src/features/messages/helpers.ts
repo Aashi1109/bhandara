@@ -1,6 +1,6 @@
-import { CACHE_NAMESPACE_CONFIG } from '@/src/common/constants';
-import type { IMessage } from '@/src/common/definitions/types';
-import { RedisCache } from '@/src/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import type { IMessage } from '@/common/definitions/types';
+import { RedisCache } from '@/features/cache';
 
 const messagesCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Messages.namespace,

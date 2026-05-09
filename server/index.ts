@@ -8,7 +8,7 @@ import {
   getRedisConnection,
   initializeTracing,
   shutdownTracing,
-} from '@/src/common';
+} from '@/common';
 
 const apptype = config.appType;
 const appname = config.appName;

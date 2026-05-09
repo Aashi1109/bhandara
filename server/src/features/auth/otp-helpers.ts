@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { RedisCache } from '@/src/features/cache';
-import { cacheKeys } from '@/src/features/cache/keys';
-import { REDIS_CONNECTION_NAMES, PASSWORD_RESET_CONFIG } from '@/src/common/constants';
-import { decryptRecordFields, encryptRecordFields } from '@/src/common/utils';
+import { RedisCache } from '@/features/cache';
+import { cacheKeys } from '@/features/cache/keys';
+import { REDIS_CONNECTION_NAMES, PASSWORD_RESET_CONFIG } from '@/common/constants';
+import { decryptRecordFields, encryptRecordFields } from '@/common/utils';
 
 const otpCache = new RedisCache({
   connectionName: REDIS_CONNECTION_NAMES.Cache,

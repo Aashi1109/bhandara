@@ -1,11 +1,12 @@
-import type { ICustomRequest } from '@/src/common/definitions/types';
+import type { ICustomRequest } from '@/common/definitions/types';
 import type { Response } from 'express';
 import MediaService, { toMediaPublic } from './service';
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
-import { isEmpty, pick } from '@/src/common/utils';
-import { EMediaProvider } from '@/src/common/definitions/enums';
-import logger from '@/src/common/logger';
-import { addVideoJob } from '@/src/common/queues/video';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { isEmpty, pick } from '@/common/utils';
+import { EMediaProvider } from '@/common/definitions/enums';
+import logger from '@/common/logger';
+import { addVideoJob } from '@/common/queues/video';
+import { parseImageEagerResults } from '@/common/storage/eager-transforms';
 
 const mediaService = new MediaService();
 const asString = (value: unknown): string | undefined => {
@@ -151,7 +152,7 @@ export const getMediaPublicUrls = async (req: ICustomRequest, res: Response) => 
 };
 
 export const onUploadComplete = async (req: ICustomRequest, res: Response) => {
-  const { id, mediaId, context, secure_url, public_id, asset_id, eventId } = req.body;
+  const { id, mediaId, context, secure_url, public_id, asset_id, eventId, eager, resource_type } = req.body;
 
   const queuedId = id || mediaId;
   if (queuedId) {
@@ -167,9 +168,13 @@ export const onUploadComplete = async (req: ICustomRequest, res: Response) => {
 
   if (!rid) throw new BadRequestError(`Missing context id`);
 
+  const isImage = resource_type === 'image' || !resource_type?.startsWith('video');
+  const eagerVariants = isImage && Array.isArray(eager) && eager.length >= 6 ? parseImageEagerResults(eager) : {};
+
   const updatedMedia = await mediaService.update(rid, {
     url: public_id,
     metadata: { publicUrl: secure_url, asset_id },
+    ...eagerVariants,
   });
 
   logger.debug(`Updated media ${updatedMedia.id}`);

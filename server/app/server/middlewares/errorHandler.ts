@@ -1,4 +1,4 @@
-import { logger, CustomError } from '@/src/common';
+import { logger, CustomError } from '@/common';
 import type { NextFunction, Request, Response } from 'express';
 
 /**

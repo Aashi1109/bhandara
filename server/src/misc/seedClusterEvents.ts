@@ -2,13 +2,12 @@ import dotenv from 'dotenv';
 import { faker } from '@faker-js/faker';
 import { QueryTypes, type CreationAttributes } from 'sequelize';
 
-import { disconnect, getDBConnection } from '@/src/common/connections/db';
-import { EAddressEntityType, EEventParticipantStatus, EEventType } from '@/src/common/definitions/enums';
-import { getUUIDv7 } from '@/src/common/helpers';
-import { Address } from '@/src/features/addresses/model';
-import { Event } from '@/src/features/events/model';
-import { Tag } from '@/src/features/tags/model';
-import { User } from '@/src/features/users/model';
+import { disconnect, getDBConnection, getUUIDv7 } from '@/common';
+import { EAddressEntityType, EEventParticipantStatus, EEventType } from '@/common/definitions/enums';
+import { Address } from '@/features/addresses/model';
+import { Event } from '@/features/events/model';
+import { Tag } from '@/features/tags/model';
+import { User } from '@/features/users/model';
 import { clusterSeedConfigs, fallbackTagSeeds } from './clusterSeedConfig';
 
 dotenv.config();

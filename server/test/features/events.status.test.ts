@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildActiveEventStatusPredicate } from '@/src/features/events/status';
+import { buildActiveEventStatusPredicate } from '@/features/events/status';
 
 describe('event status helpers', () => {
   it('builds a null-safe predicate for active statuses', () => {

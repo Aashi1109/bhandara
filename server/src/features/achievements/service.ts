@@ -1,4 +1,4 @@
-import type { IAchievementProgress, IUserAchievement } from '@/src/common';
+import type { IAchievementProgress, IUserAchievement } from '@/common';
 import { AchievementProgress, UserAchievement } from './model';
 import { ACHIEVEMENT_DEFINITIONS, type IAchievementDefinition } from './constants';
 import {
@@ -6,8 +6,8 @@ import {
   getUserAchievementProgressCache,
   setUserAchievementProgressCache,
 } from './helpers';
-import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/src/features/activity/constants';
-import ActivityService from '@/src/features/activity/service';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import ActivityService from '@/features/activity/service';
 
 class AchievementService {
   private readonly activityService: ActivityService;

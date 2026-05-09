@@ -4,6 +4,12 @@ export const MEDIA_PROFILES_BUCKET_NAME = 'avatars';
 export const MEDIA_FILE_BUCKET_NAME = 'event-files';
 export const MEDIA_PUBLIC_BUCKET_NAME = 'thumbnails';
 
+export const VIDEO_THUMBNAIL_SIZES: Record<string, number> = {
+  sm: 160,
+  md: 320,
+  xl: 480,
+};
+
 export const MEDIA_BUCKET_CONFIG = {
   [MEDIA_FILE_BUCKET_NAME]: {
     accept: ['image/*', 'video/*'],

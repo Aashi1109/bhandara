@@ -56,8 +56,8 @@ vi.mock('socket.io', () => ({
   },
 }));
 
-vi.mock('@/src/common/config', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/src/common/config');
+vi.mock('@/common/config', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('@/common/config');
   const actualDefault = actual.default as Record<string, unknown>;
 
   return {
@@ -69,17 +69,17 @@ vi.mock('@/src/common/config', async () => {
   };
 });
 
-vi.mock('@/app/server/middlewares', () => ({
+vi.mock('@app/server/middlewares', () => ({
   requestContextMiddleware: vi.fn((_req, _res, next) => next()),
   socketUserParser: vi.fn((_socket, next) => next()),
 }));
 
-vi.mock('@/src/socket/emitter', () => ({
+vi.mock('@/socket/emitter', () => ({
   emitSocketEvent: emitSocketEventMock,
   setPlatformNamespace: setPlatformNamespaceMock,
 }));
 
-vi.mock('@/src/features/reactions/constants', () => ({
+vi.mock('@/features/reactions/constants', () => ({
   EAllowedReactionTables: {
     Event: 'events',
     Message: 'messages',
@@ -87,12 +87,12 @@ vi.mock('@/src/features/reactions/constants', () => ({
   },
 }));
 
-vi.mock('@/src/features/users/service', () => ({
+vi.mock('@/features/users/service', () => ({
   default: class {},
   toUserMini: vi.fn((user) => user),
 }));
 
-vi.mock('@/src/features', () => ({
+vi.mock('@/features', () => ({
   EventService: class {
     getAll = vi.fn();
     getById = vi.fn();
@@ -124,20 +124,20 @@ vi.mock('@/src/features', () => ({
   setExploreCursor: setExploreCursorMock,
 }));
 
-vi.mock('@/src/features/activity/service', () => ({
+vi.mock('@/features/activity/service', () => ({
   default: class {
     create = vi.fn();
   },
 }));
 
-vi.mock('@/src/features/achievements/service', () => ({
+vi.mock('@/features/achievements/service', () => ({
   default: class {
     trackActivity = vi.fn();
   },
 }));
 
 const getRegisteredSocketHandler = async (eventName: string) => {
-  const { initializeSocket } = await import('@/src/socket/index');
+  const { initializeSocket } = await import('@/socket/index');
 
   ofMock.mockReturnValue(namespaceMock);
   initializeSocket({} as any);

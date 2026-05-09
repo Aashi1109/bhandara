@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sessionParser, userParser, asyncHandler } from '../middlewares';
-import { createTag, deleteTag, getSubTags, getTagById, getTags, updateTag } from '@/src/features/tags/controller';
-import { validateTagCreate, validateTagUpdate } from '@/src/features/tags/validation';
+import { createTag, deleteTag, getSubTags, getTagById, getTags, updateTag } from '@/features/tags/controller';
+import { validateTagCreate, validateTagUpdate } from '@/features/tags/validation';
 
 const router = Router();
 

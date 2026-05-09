@@ -12,7 +12,7 @@ import {
   forgotPassword,
   verifyForgotPasswordOTP,
   resetPassword,
-} from '@/src/features/auth/controller';
+} from '@/features/auth/controller';
 import { sessionParser, userParser, asyncHandler, rateLimit } from '../middlewares';
 
 import {
@@ -22,7 +22,7 @@ import {
   validateForgotPassword,
   validateVerifyOTP,
   validateResetPassword,
-} from '@/src/features/auth/validation';
+} from '@/features/auth/validation';
 
 const router = Router();
 

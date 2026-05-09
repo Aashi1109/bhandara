@@ -1,4 +1,4 @@
-import { validateSchema } from '@/src/common/helpers/validation';
+import { validateSchema } from '@/common/helpers/validation';
 
 const loginSchema = {
   type: 'object',

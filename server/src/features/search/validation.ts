@@ -1,6 +1,6 @@
 import Joi from 'joi';
 import type { NextFunction, Request, Response } from 'express';
-import { BadRequestError } from '@/src/common/exceptions';
+import { BadRequestError } from '@/common/exceptions';
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),

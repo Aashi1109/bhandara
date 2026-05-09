@@ -6,6 +6,6 @@ if (process.env.NODE_ENV !== 'development')
   Sentry.init({
     ...config.sentry,
     // Prevent Sentry from initializing OpenTelemetry to avoid duplicate registration
-    // OpenTelemetry is initialized separately in @/src/common/config/tracing.config
+    // OpenTelemetry is initialized separately in @/common/config/tracing.config
     skipOpenTelemetrySetup: true,
   });

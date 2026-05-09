@@ -1,5 +1,5 @@
-import type { ICustomRequest, IRequestPagination } from '@/src/common/definitions/types';
-import { BadRequestError } from '@/src/common/exceptions';
+import type { ICustomRequest, IRequestPagination } from '@/common/definitions/types';
+import { BadRequestError } from '@/common/exceptions';
 import type { Response } from 'express';
 
 import SavedEntityService from './service';

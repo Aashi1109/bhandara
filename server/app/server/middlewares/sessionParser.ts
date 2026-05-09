@@ -1,5 +1,5 @@
-import { config, type ICustomRequest, logger, RequestContext, UnauthorizedError } from '@/src/common';
-import { AuthService, getUserSessionCache, updateUserSessionCache } from '@/src/features';
+import { config, type ICustomRequest, logger, RequestContext, UnauthorizedError } from '@/common';
+import { AuthService, getUserSessionCache, updateUserSessionCache } from '@/features';
 import type { NextFunction, Request, Response } from 'express';
 
 const authService = new AuthService();

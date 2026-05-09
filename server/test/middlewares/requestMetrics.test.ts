@@ -7,8 +7,8 @@ const { addErrorMock, addRequestMock, recordMock } = vi.hoisted(() => ({
   recordMock: vi.fn(),
 }));
 
-vi.mock('@/src/common/config/metrics.config', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('@/src/common/config/metrics.config').catch(() => ({}));
+vi.mock('@/common/config/metrics.config', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('@/common/config/metrics.config').catch(() => ({}));
   return {
     ...actual,
     getHttpServerMetrics: () => ({
@@ -27,7 +27,7 @@ describe('request metrics middleware', () => {
   });
 
   it('records request counts and latency using the resolved route path', async () => {
-    const { default: requestMetrics } = await import('@/app/server/middlewares/requestMetrics');
+    const { default: requestMetrics } = await import('@app/server/middlewares/requestMetrics');
     const listeners: Record<string, () => void> = {};
     const req = {
       baseUrl: '/api/auth',
@@ -64,7 +64,7 @@ describe('request metrics middleware', () => {
   });
 
   it('records error counts for non-success responses', async () => {
-    const { default: requestMetrics } = await import('@/app/server/middlewares/requestMetrics');
+    const { default: requestMetrics } = await import('@app/server/middlewares/requestMetrics');
     const listeners: Record<string, () => void> = {};
     const req = {
       baseUrl: '/api/events',

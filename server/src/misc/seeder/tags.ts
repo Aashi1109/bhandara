@@ -1,5 +1,5 @@
 import type { Sequelize, Transaction } from 'sequelize';
-import { Tag } from '@/src/features/tags/model';
+import { Tag } from '@/features/tags/model';
 import { fallbackTagSeeds } from '../clusterSeedConfig';
 
 export async function ensureTags(transaction: Transaction) {

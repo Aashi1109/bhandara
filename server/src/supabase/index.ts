@@ -4,7 +4,7 @@ import type { PostgrestError } from '@supabase/supabase-js';
 
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../common/connections';
-import { SupabaseCustomError } from '@/src/common';
+import { SupabaseCustomError } from '@/common';
 
 const throwSupabaseError = (res: any) => {
   throw new SupabaseCustomError(res.message || res.error?.message, res?.status, res.name || res?.statusText);

@@ -1,4 +1,4 @@
-import { validateSchema } from '@/src/common/helpers';
+import { validateSchema } from '@/common/helpers';
 import { USER_TABLE_NAME } from './constants';
 import { USER_SETTINGS_TABLE_NAME } from './settings.model';
 const createSchema = {

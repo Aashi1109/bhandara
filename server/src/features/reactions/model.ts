@@ -1,8 +1,8 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import { REACTION_TABLE_NAME } from './constants';
-import type { IBaseUser, IReaction } from '@/src/common/definitions/types';
+import type { IBaseUser, IReaction } from '@/common/definitions/types';
 type ReactionAttributes = Omit<IReaction, 'createdAt' | 'updatedAt'>;
 
 export class Reaction extends Model<ReactionAttributes, ReactionAttributes> {

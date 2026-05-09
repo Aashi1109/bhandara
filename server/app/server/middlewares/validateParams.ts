@@ -1,4 +1,4 @@
-import { BadRequestError } from '@/src/common';
+import { BadRequestError } from '@/common';
 import type { NextFunction, Request, Response } from 'express';
 
 const validateParams = (paramNames: string[]) => {

@@ -13,8 +13,8 @@ import {
   deleteEventMedia,
   getEventThreads,
   deleteEvent,
-} from '@/src/features/events/controller';
-import { validateEventCreateBody, validateEventUpdateBody } from '@/src/features/events/validation';
+} from '@/features/events/controller';
+import { validateEventCreateBody, validateEventUpdateBody } from '@/features/events/validation';
 import {
   createThread,
   deleteThread,
@@ -22,7 +22,7 @@ import {
   updateThread,
   lockThread,
   unlockThread,
-} from '@/src/features/threads/controller';
+} from '@/features/threads/controller';
 import {
   getMessages,
   createMessage,
@@ -30,8 +30,8 @@ import {
   updateMessage,
   deleteMessage,
   getChildMessages,
-} from '@/src/features/messages/controller';
-import { BadRequestError } from '@/src/common';
+} from '@/features/messages/controller';
+import { BadRequestError } from '@/common';
 const router = Router();
 
 router.use([sessionParser, userParser]);

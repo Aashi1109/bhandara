@@ -1,4 +1,4 @@
-import { type IRequestContext, RequestContext, getAlphaNumericId, logger } from '@/src/common';
+import { type IRequestContext, RequestContext, getAlphaNumericId, logger } from '@/common';
 import { AsyncLocalStorage } from 'async_hooks';
 import type { Request, Response, NextFunction } from 'express';
 

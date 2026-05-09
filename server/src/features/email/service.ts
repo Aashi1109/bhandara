@@ -1,8 +1,8 @@
 import { Resend } from 'resend';
-import config from '@/src/common/config';
-import logger from '@/src/common/logger';
-import { renderPasswordResetOTPEmail } from '@/src/features/email/templates/generated/passwordResetOTPEmail';
-import { renderPasswordResetSuccessEmail } from '@/src/features/email/templates/generated/passwordResetSuccessEmail';
+import config from '@/common/config';
+import logger from '@/common/logger';
+import { renderPasswordResetOTPEmail } from '@/features/email/templates/generated/passwordResetOTPEmail';
+import { renderPasswordResetSuccessEmail } from '@/features/email/templates/generated/passwordResetSuccessEmail';
 
 const resend = new Resend(config.resend.apiKey);
 

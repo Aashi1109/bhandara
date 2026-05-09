@@ -35,13 +35,21 @@ class UserProfile extends _$UserProfile {
     final currentUser = state.value;
     if (currentUser == null) return;
 
+    final previousState = state;
     state = const AsyncLoading();
 
-    state = await AsyncValue.guard(() =>
+    final result = await AsyncValue.guard(() =>
         userService.updateUser(
           currentUser.id,
           data,
         ));
+
+    if (result.hasError) {
+      // Restore previous user so the profile screen stays functional.
+      state = previousState;
+      Error.throwWithStackTrace(result.error!, result.stackTrace!);
+    }
+    state = result;
   }
 
   Future<void> updateAvatar({ImageSource source = ImageSource.gallery}) async {

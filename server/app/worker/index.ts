@@ -1,4 +1,4 @@
-import { logger } from '@/src/common';
+import { logger } from '@/common';
 
 export default async function run(appName: string) {
   try {

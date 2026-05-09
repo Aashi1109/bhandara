@@ -1,8 +1,8 @@
-import { getDBConnection } from '@/src/common/connections/db';
-import { EAddressEntityType } from '@/src/common/definitions/enums';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getDBConnection } from '@/common/connections/db';
+import { EAddressEntityType } from '@/common/definitions/enums';
+import { getUUIDv7 } from '@/common/helpers';
 import { DataTypes, Model } from 'sequelize';
-import { decryptRecordFields, encryptedTextAttribute } from '@/src/common/utils';
+import { decryptRecordFields, encryptedTextAttribute } from '@/common/utils';
 
 import { ADDRESS_TABLE_NAME } from './constants';
 

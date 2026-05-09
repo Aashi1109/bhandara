@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { SearchController } from '@/src/features/search';
-import { validateSuggestionsQuery } from '@/src/features/search/validation';
+import { SearchController } from '@/features/search';
+import { validateSuggestionsQuery } from '@/features/search/validation';
 
 const router = Router();
 

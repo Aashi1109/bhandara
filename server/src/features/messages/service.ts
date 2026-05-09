@@ -1,14 +1,14 @@
-import type { IMessage, IMessageContent, IPaginationParams } from '@/src/common/definitions/types';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import type { IMessage, IMessageContent, IPaginationParams } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { validateMessageCreate, validateMessageUpdate } from './validation';
 import { Message } from './model';
-import MediaService from '@/src/features/media/service';
-import { isEmpty } from '@/src/common/utils';
-import UserService, { toUserMini } from '@/src/features/users/service';
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
-import ReactionService from '@/src/features/reactions/service';
+import MediaService from '@/features/media/service';
+import { isEmpty } from '@/common/utils';
+import UserService, { toUserMini } from '@/features/users/service';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import ReactionService from '@/features/reactions/service';
 import { Op } from 'sequelize';
-import EntityStatsService from '@/src/features/stats/service';
+import EntityStatsService from '@/features/stats/service';
 
 // Note: Thread data is intentionally not populated here to avoid
 // circular dependencies between services. Controllers should fetch

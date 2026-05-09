@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/theme.dart';
+import '../../globals.dart';
 
 enum SnackBarType { info, error, warning, success }
 
@@ -69,6 +70,56 @@ class AppSnackBar {
 
   static void info(BuildContext context, String message) {
     show(context, message: message, type: SnackBarType.info);
+  }
+
+  /// Show snackbar without a BuildContext — inserts directly into the root navigator's overlay.
+  static void showGlobal({
+    required String message,
+    SnackBarType type = SnackBarType.error,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    final overlay = rootNavigatorKey.currentState?.overlay;
+    if (overlay == null) return;
+
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    Color backgroundColor;
+    IconData icon;
+
+    switch (type) {
+      case SnackBarType.error:
+        backgroundColor = AppColors.error;
+        icon = LucideIcons.alertCircle;
+        break;
+      case SnackBarType.warning:
+        backgroundColor = AppColors.warning;
+        icon = LucideIcons.alertTriangle;
+        break;
+      case SnackBarType.success:
+        backgroundColor = AppColors.success;
+        icon = LucideIcons.checkCircle;
+        break;
+      case SnackBarType.info:
+        backgroundColor = AppColors.primary;
+        icon = LucideIcons.info;
+        break;
+    }
+
+    _currentEntry = OverlayEntry(
+      builder: (context) => _TopSnackBar(
+        message: message,
+        backgroundColor: backgroundColor,
+        icon: icon,
+        duration: duration,
+        onDismiss: () {
+          _currentEntry?.remove();
+          _currentEntry = null;
+        },
+      ),
+    );
+
+    overlay.insert(_currentEntry!);
   }
 }
 

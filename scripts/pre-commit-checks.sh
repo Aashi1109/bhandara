@@ -142,10 +142,14 @@ if [[ "$run_client" == true ]]; then
   run_client_checks || client_status=$?
 fi
 
+if [[ "$client_status" -ne 0 ]]; then
+  exit 1
+fi
+
 if [[ "$run_server" == true ]]; then
   run_server_checks || server_status=$?
 fi
 
-if [[ "$client_status" -ne 0 || "$server_status" -ne 0 ]]; then
+if [[ "$server_status" -ne 0 ]]; then
   exit 1
 fi

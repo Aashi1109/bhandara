@@ -1,9 +1,9 @@
-import { type ICustomRequest, NotFoundError, isEmpty } from '@/src/common';
+import { type ICustomRequest, NotFoundError, isEmpty } from '@/common';
 import type { NextFunction, Response } from 'express';
 import * as HyperDX from '@hyperdx/node-opentelemetry';
 import asyncHandler from './asyncHandler';
 
-import { getSafeUser, getUserCache, MediaService, setUserCache, UserService } from '@/src/features';
+import { getSafeUser, getUserCache, MediaService, setUserCache, UserService } from '@/features';
 
 const userService = new UserService();
 

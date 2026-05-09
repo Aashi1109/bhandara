@@ -1,5 +1,5 @@
-import { getRedisConnection } from '@/src/common/connections';
-import { REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import { getRedisConnection } from '@/common/connections';
+import { REDIS_CONNECTION_NAMES } from '@/common/constants';
 import type { Request, Response, NextFunction } from 'express';
 
 type RateLimitOptions = {

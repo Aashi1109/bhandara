@@ -1,5 +1,5 @@
 import { type NextFunction, type Request, type Response } from 'express';
-import { validateSchema } from '@/src/common';
+import { validateSchema } from '@/common';
 
 /**
  * Middleware to validate request body against an AJV schema.

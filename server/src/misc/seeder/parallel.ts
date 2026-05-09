@@ -5,7 +5,7 @@ import { fork, type ChildProcess } from 'child_process';
 import { seedContentForUsers } from './content';
 import type { SeedCoordinatorUser, SeedOptions, SeederWorkerPayload } from './types';
 import { computeWorkerCount, formatSeedStep, logSeedProgress } from './utils';
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 
 function resolveWorkerModulePath() {
   const tsPath = path.resolve(__dirname, 'worker.ts');

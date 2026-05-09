@@ -24,9 +24,13 @@ class UserSettings extends _$UserSettings {
     String userId,
     Map<String, dynamic> data,
   ) async {
-    state = await AsyncValue.guard(
+    final result = await AsyncValue.guard(
       () => userService.updateSettings(userId, data),
     );
+    state = result;
+    if (result.hasError) {
+      Error.throwWithStackTrace(result.error!, result.stackTrace!);
+    }
   }
 
   void setSettings(user_models.UserSettings? settings) {

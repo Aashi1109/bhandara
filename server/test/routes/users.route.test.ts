@@ -33,7 +33,7 @@ describe("users routes", () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: "@/src/features/users/service",
+          path: "@/features/users/service",
           factory: () => ({
             default: class {
               getAll = vi.fn();
@@ -46,7 +46,7 @@ describe("users routes", () => {
           }),
         },
         {
-          path: "@/src/features/engagement/service",
+          path: "@/features/engagement/service",
           factory: () => ({
             default: class {
               trackView = trackViewMock;
@@ -54,7 +54,7 @@ describe("users routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/app/server/routes/users.route"],
+      activeRoutes: ["@app/server/routes/users.route"],
     });
 
     const response = await invokeApp(app, {
@@ -81,7 +81,7 @@ describe("users routes", () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: "@/src/features/users/service",
+          path: "@/features/users/service",
           factory: () => ({
             default: class {
               getAll = vi.fn();
@@ -94,7 +94,7 @@ describe("users routes", () => {
           }),
         },
         {
-          path: "@/src/features/engagement/service",
+          path: "@/features/engagement/service",
           factory: () => ({
             default: class {
               trackView = trackViewMock;
@@ -102,7 +102,7 @@ describe("users routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/app/server/routes/users.route"],
+      activeRoutes: ["@app/server/routes/users.route"],
     });
 
     mockRedis.incr.mockResolvedValueOnce(1).mockResolvedValueOnce(11);
@@ -138,7 +138,7 @@ describe("users routes", () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: "@/src/features/users/service",
+          path: "@/features/users/service",
           factory: () => ({
             default: class {
               getAll = vi.fn();
@@ -151,7 +151,7 @@ describe("users routes", () => {
           }),
         },
         {
-          path: "@/src/features/engagement/service",
+          path: "@/features/engagement/service",
           factory: () => ({
             default: class {
               trackView = trackViewMock;
@@ -159,7 +159,7 @@ describe("users routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/app/server/routes/users.route"],
+      activeRoutes: ["@app/server/routes/users.route"],
     });
 
     const response = await invokeApp(app, {
@@ -186,7 +186,7 @@ describe("users routes", () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: "@/src/features/users/service",
+          path: "@/features/users/service",
           factory: () => ({
             default: class {
               getAll = vi.fn();
@@ -199,7 +199,7 @@ describe("users routes", () => {
           }),
         },
         {
-          path: "@/src/features/engagement/service",
+          path: "@/features/engagement/service",
           factory: () => ({
             default: class {
               trackView = trackViewMock;
@@ -207,7 +207,7 @@ describe("users routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/app/server/routes/users.route"],
+      activeRoutes: ["@app/server/routes/users.route"],
     });
 
     const response = await invokeApp(app, {
@@ -223,7 +223,7 @@ describe("users routes", () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: "@/src/features/users/service",
+          path: "@/features/users/service",
           factory: () => ({
             default: class {
               getAll = vi.fn();
@@ -236,7 +236,7 @@ describe("users routes", () => {
           }),
         },
         {
-          path: "@/src/features/engagement/service",
+          path: "@/features/engagement/service",
           factory: () => ({
             default: class {
               trackView = trackViewMock;
@@ -244,7 +244,7 @@ describe("users routes", () => {
           }),
         },
       ],
-      activeRoutes: ["@/app/server/routes/users.route"],
+      activeRoutes: ["@app/server/routes/users.route"],
     });
 
     const response = await invokeApp(app, {

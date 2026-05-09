@@ -7,10 +7,10 @@ import {
   getMediaPublicUrl,
   getMediaPublicUrls,
   getPublicSignedUploadUrl,
-} from '@/src/features/media/controller';
+} from '@/features/media/controller';
 import { asyncHandler, sessionParser, userParser } from '../middlewares';
 import { Router } from 'express';
-import { validateMediaUpdate } from '@/src/features/media/validation';
+import { validateMediaUpdate } from '@/features/media/validation';
 
 const router = Router({ mergeParams: true });
 

@@ -1,4 +1,4 @@
-import { type IRequestPagination, logger } from '@/src/common';
+import { type IRequestPagination, logger } from '@/common';
 import type { NextFunction, Request, Response } from 'express';
 
 const paginationParser = (req: Request, res: Response, next: NextFunction) => {

@@ -1,7 +1,7 @@
 import type IORedis from 'ioredis';
-import { jnstringify, safeJsonParse } from '@/src/common/utils';
-import { getRedisConnection } from '@/src/common/connections';
-import { REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import { jnstringify, safeJsonParse } from '@/common/utils';
+import { getRedisConnection } from '@/common/connections';
+import { REDIS_CONNECTION_NAMES } from '@/common/constants';
 
 interface RedisCacheConfig {
   redisClient?: IORedis;

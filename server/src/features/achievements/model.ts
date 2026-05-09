@@ -1,7 +1,7 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
-import type { IAchievementProgress, IUserAchievement } from '@/src/common/definitions/types';
+import { getUUIDv7 } from '@/common/helpers';
+import type { IAchievementProgress, IUserAchievement } from '@/common/definitions/types';
 import { ACHIEVEMENT_PROGRESS_TABLE_NAME, USER_ACHIEVEMENT_TABLE_NAME } from './constants';
 
 type UserAchievementAttributes = Omit<IUserAchievement, 'createdAt' | 'updatedAt'>;

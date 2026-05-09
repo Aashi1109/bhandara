@@ -14,8 +14,8 @@ const {
   updateUserSessionCacheMock: vi.fn(),
 }));
 
-vi.mock("@/src/features", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@/src/features");
+vi.mock("@/features", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/features");
   return {
     ...actual,
     AuthService: class {
@@ -26,8 +26,8 @@ vi.mock("@/src/features", async () => {
   };
 });
 
-vi.mock("@/src/common", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("@/src/common");
+vi.mock("@/common", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/common");
   return {
     ...actual,
     RequestContext: {
@@ -45,7 +45,7 @@ describe("sessionParser", () => {
   });
 
   it("rejects requests without a session cookie", async () => {
-    const { default: sessionParser } = await import("@/app/server/middlewares/sessionParser");
+    const { default: sessionParser } = await import("@app/server/middlewares/sessionParser");
     const req = { cookies: {} } as Request;
     const res = {} as Response;
     const next = vi.fn() as unknown as NextFunction;
@@ -59,7 +59,7 @@ describe("sessionParser", () => {
   it("rejects requests with missing cached sessions", async () => {
     getUserSessionCacheMock.mockResolvedValue(null);
 
-    const { default: sessionParser } = await import("@/app/server/middlewares/sessionParser");
+    const { default: sessionParser } = await import("@app/server/middlewares/sessionParser");
     const req = { cookies: { bh_session: "missing-session" } } as Request;
     const res = {} as Response;
     const next = vi.fn() as unknown as NextFunction;
@@ -86,7 +86,7 @@ describe("sessionParser", () => {
     });
     updateUserSessionCacheMock.mockResolvedValue("OK");
 
-    const { default: sessionParser } = await import("@/app/server/middlewares/sessionParser");
+    const { default: sessionParser } = await import("@app/server/middlewares/sessionParser");
     const req = { cookies: { bh_session: "expired-session" } } as Request;
     const res = {} as Response;
     const next = vi.fn() as unknown as NextFunction;
@@ -107,7 +107,7 @@ describe("sessionParser", () => {
   it("attaches a valid session to the request context", async () => {
     getUserSessionCacheMock.mockResolvedValue(defaultSession);
 
-    const { default: sessionParser } = await import("@/app/server/middlewares/sessionParser");
+    const { default: sessionParser } = await import("@app/server/middlewares/sessionParser");
     const req = { cookies: { bh_session: "active-session" } } as Request;
     const res = {} as Response;
     const next = vi.fn() as unknown as NextFunction;

@@ -10,21 +10,21 @@ import {
   hasMeaningfulChange,
   isEmpty,
   EAccessLevel,
-} from '@/src/common';
+} from '@/common';
 import type { IncomingMessage } from 'http';
 import type http from 'http';
 
-import { toUserMini } from '@/src/features/users/service';
+import { toUserMini } from '@/features/users/service';
 
 import { setPlatformNamespace, emitSocketEvent } from './emitter';
-import { EAllowedReactionTables } from '@/src/features/reactions/constants';
-import ActivityService from '@/src/features/activity/service';
-import { EActivityType } from '@/src/features/activity/constants';
-import AchievementService from '@/src/features/achievements/service';
-import { buildMessageActivities } from '@/src/features/activity/chat';
+import { EAllowedReactionTables } from '@/features/reactions/constants';
+import ActivityService from '@/features/activity/service';
+import { EActivityType } from '@/features/activity/constants';
+import AchievementService from '@/features/achievements/service';
+import { buildMessageActivities } from '@/features/activity/chat';
 import { getThreadRoom, getUserRoom } from './rooms';
 import { EventService, MessageService, ReactionService, ThreadService } from '../features';
-import { requestContextMiddleware, socketUserParser } from '@/app/server/middlewares';
+import { requestContextMiddleware, socketUserParser } from '@app/server/middlewares';
 
 interface CustomSocket extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, IBaseUser> {
   request: IncomingMessage & {

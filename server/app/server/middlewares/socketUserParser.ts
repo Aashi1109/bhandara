@@ -1,4 +1,4 @@
-import { BadRequestError, config, UnauthorizedError } from '@/src/common';
+import { BadRequestError, config, UnauthorizedError } from '@/common';
 import sessionParser from './sessionParser';
 import userParser from './userParser';
 

@@ -1,8 +1,8 @@
-import type { IActivity, IPaginationParams } from '@/src/common/definitions/types';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import type { IActivity, IPaginationParams } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { Activity } from './model';
 import { Op } from 'sequelize';
-import UserService, { toUserMini } from '@/src/features/users/service';
+import UserService, { toUserMini } from '@/features/users/service';
 import { EActivityVisibility } from './constants';
 import {
   deleteActivityCache,

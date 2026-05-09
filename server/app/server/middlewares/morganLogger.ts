@@ -1,4 +1,4 @@
-import { logger } from '@/src/common';
+import { logger } from '@/common';
 import morgan from 'morgan';
 
 const stream = {

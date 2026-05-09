@@ -40,8 +40,10 @@ class SuccessScreen extends StatelessWidget {
   String get _timeRange {
     final currentEvent = event;
     if (currentEvent == null) return 'Time unavailable';
-    final formatter = DateFormat('h:mm a');
-    return '${formatter.format(currentEvent.startTime)} - ${formatter.format(currentEvent.endTime)}';
+    final timeFormatter = DateFormat('h:mm a');
+    final start = currentEvent.startTime.toLocal();
+    final end = currentEvent.endTime.toLocal();
+    return '${timeFormatter.format(start)} - ${timeFormatter.format(end)}';
   }
 
   String get _participantLabel {

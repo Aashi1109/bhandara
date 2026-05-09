@@ -37,9 +37,9 @@ describe('auth routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -49,7 +49,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -57,9 +57,9 @@ describe('auth routes', () => {
           }),
         },
         {
-          path: '@/src/features/users/helpers',
+          path: '@/features/users/helpers',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features/users/helpers');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features/users/helpers');
             return {
               ...actual,
               deleteUserSessionCache: deleteUserSessionCacheMock,
@@ -68,7 +68,7 @@ describe('auth routes', () => {
           },
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const response = await invokeApp(app, {
@@ -105,9 +105,9 @@ describe('auth routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -117,7 +117,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -125,7 +125,7 @@ describe('auth routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const response = await invokeApp(app, {
@@ -151,9 +151,9 @@ describe('auth routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -163,7 +163,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -171,7 +171,7 @@ describe('auth routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const response = await invokeApp(app, {
@@ -195,9 +195,9 @@ describe('auth routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -207,7 +207,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -215,7 +215,7 @@ describe('auth routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const response = await invokeApp(app, {
@@ -240,9 +240,9 @@ describe('auth routes', () => {
     const app = await createTestApp({
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -252,7 +252,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -260,7 +260,7 @@ describe('auth routes', () => {
           }),
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const response = await invokeApp(app, {
@@ -282,9 +282,9 @@ describe('auth routes', () => {
       authenticated: true,
       moduleMocks: [
         {
-          path: '@/src/features',
+          path: '@/features',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features');
             return {
               ...actual,
               AuthService: class {
@@ -294,7 +294,7 @@ describe('auth routes', () => {
           },
         },
         {
-          path: '@/src/features/users/service',
+          path: '@/features/users/service',
           factory: () => ({
             default: class {
               getUserByEmail = getUserByEmailMock;
@@ -302,9 +302,9 @@ describe('auth routes', () => {
           }),
         },
         {
-          path: '@/src/features/users/helpers',
+          path: '@/features/users/helpers',
           factory: async () => {
-            const actual = await vi.importActual<Record<string, unknown>>('@/src/features/users/helpers');
+            const actual = await vi.importActual<Record<string, unknown>>('@/features/users/helpers');
             return {
               ...actual,
               deleteUserSessionCache: deleteUserSessionCacheMock,
@@ -313,7 +313,7 @@ describe('auth routes', () => {
           },
         },
       ],
-      activeRoutes: ['@/app/server/routes/auth.route'],
+      activeRoutes: ['@app/server/routes/auth.route'],
     });
 
     const sessionResponse = await invokeApp(app, {

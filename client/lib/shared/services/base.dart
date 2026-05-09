@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../widgets/snackbar.dart';
 
 abstract class BaseService {
   Never throwError(DioException e, String defaultMessage) {
@@ -14,6 +15,7 @@ abstract class BaseService {
       }
     }
 
+    AppSnackBar.showGlobal(message: message, type: SnackBarType.error);
     throw Exception(message);
   }
 }

@@ -1,6 +1,6 @@
-import type { EAddressEntityType } from '@/src/common/definitions/enums';
-import type { ILocation } from '@/src/common/definitions/types';
-import { getUUIDv7 } from '@/src/common/helpers';
+import type { EAddressEntityType } from '@/common/definitions/enums';
+import type { ILocation } from '@/common/definitions/types';
+import { getUUIDv7 } from '@/common/helpers';
 import { Op, Sequelize, type Transaction } from 'sequelize';
 
 import { Address, decryptAddressRow, decryptAddressRows, type AddressAttributes } from './model';
@@ -133,7 +133,9 @@ class AddressService {
     }
 
     const created = await Address.create(row, { transaction });
-    return decryptAddressRow(created.toJSON() as AddressAttributes);
+    // toJSON() invokes the encryptedTextAttribute getter which already decrypts —
+    // do NOT call decryptAddressRow here or it double-decrypts and throws.
+    return created.toJSON() as AddressAttributes;
   }
 
   buildEntityDistanceClause({

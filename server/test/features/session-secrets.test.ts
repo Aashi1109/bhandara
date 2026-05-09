@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { cacheKeys } from '@/src/features/cache/keys';
-import { storeResetToken, consumeResetToken } from '@/src/features/auth/otp-helpers';
-import { getUserSessionCache, setUserSessionCache, updateUserSessionCache } from '@/src/features/users/helpers';
+import { cacheKeys } from '@/features/cache/keys';
+import { storeResetToken, consumeResetToken } from '@/features/auth/otp-helpers';
+import { getUserSessionCache, setUserSessionCache, updateUserSessionCache } from '@/features/users/helpers';
 import { defaultSession, mockRedis } from '../mocks/external';
 
 describe('session and reset-token secret storage', () => {

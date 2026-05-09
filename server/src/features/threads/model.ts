@@ -1,9 +1,9 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import { THREAD_TABLE_NAME } from './constants';
-import { EAccessLevel } from '@/src/common/definitions/enums';
-import type { IBaseThread, ILockHistory, IThreadStats } from '@/src/common/definitions/types';
+import { EAccessLevel } from '@/common/definitions/enums';
+import type { IBaseThread, ILockHistory, IThreadStats } from '@/common/definitions/types';
 
 type ThreadAttributes = Omit<IBaseThread, 'createdAt' | 'updatedAt' | 'messages' | 'creator'>;
 

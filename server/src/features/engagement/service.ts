@@ -1,22 +1,22 @@
-import { getRedisConnection } from '@/src/common/connections/redis';
-import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/src/common/constants';
+import { getRedisConnection } from '@/common/connections/redis';
+import { CACHE_NAMESPACE_CONFIG, REDIS_CONNECTION_NAMES } from '@/common/constants';
 import type {
   IEntityEngagement,
   IEntityEngagementSummary,
   IEntityEngagementStats,
   IEntityRating,
   IEntityRatingHistogram,
-} from '@/src/common/definitions/types';
-import { get32BitMD5Hash } from '@/src/common/helpers';
-import { Event } from '@/src/features/events/model';
-import { Message } from '@/src/features/messages/model';
-import { Thread } from '@/src/features/threads/model';
-import { User } from '@/src/features/users/model';
+} from '@/common/definitions/types';
+import { get32BitMD5Hash } from '@/common/helpers';
+import { Event } from '@/features/events/model';
+import { Message } from '@/features/messages/model';
+import { Thread } from '@/features/threads/model';
+import { User } from '@/features/users/model';
 
-import { BadRequestError, NotFoundError } from '@/src/common/exceptions';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
 import { SUPPORTED_ENGAGEMENT_ENTITY_TYPES, type SupportedEngagementEntityType } from './constants';
 import { EntityEngagement, EntityRating } from './model';
-import { cacheKeys } from '@/src/features/cache/keys';
+import { cacheKeys } from '@/features/cache/keys';
 
 const DEFAULT_HISTOGRAM: IEntityRatingHistogram = {
   '1': 0,

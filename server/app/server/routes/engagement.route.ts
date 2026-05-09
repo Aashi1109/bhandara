@@ -7,7 +7,7 @@ import {
   getEntityRatings,
   rateEntity,
   trackEntityView,
-} from '@/src/features/engagement/controller';
+} from '@/features/engagement/controller';
 
 const router = Router();
 

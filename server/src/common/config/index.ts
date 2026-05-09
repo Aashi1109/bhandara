@@ -1,5 +1,5 @@
 import { DB_CONNECTION_NAMES, REDIS_CONNECTION_NAMES } from '../constants';
-import type { AppConfig, RedisConnectionConfig } from '@/src/types/config';
+import type { AppConfig, RedisConnectionConfig } from '@/types/config';
 import dotenv from 'dotenv';
 
 if (process.env.NODE_ENV !== 'production') {

@@ -14,16 +14,16 @@ type CreateTestAppOptions = {
 };
 
 const ROUTE_MODULES = [
-  '@/app/server/routes/auth.route',
-  '@/app/server/routes/engagement.route',
-  '@/app/server/routes/events.route',
-  '@/app/server/routes/media.route',
-  '@/app/server/routes/saves.route',
-  '@/app/server/routes/search.route',
-  '@/app/server/routes/tags.route',
-  '@/app/server/routes/threads.route',
-  '@/app/server/routes/users.route',
-  '@/app/server/routes/webhooks.route',
+  '@app/server/routes/auth.route',
+  '@app/server/routes/engagement.route',
+  '@app/server/routes/events.route',
+  '@app/server/routes/media.route',
+  '@app/server/routes/saves.route',
+  '@app/server/routes/search.route',
+  '@app/server/routes/tags.route',
+  '@app/server/routes/threads.route',
+  '@app/server/routes/users.route',
+  '@app/server/routes/webhooks.route',
 ];
 
 export const createTestApp = async ({
@@ -33,8 +33,8 @@ export const createTestApp = async ({
 }: CreateTestAppOptions = {}): Promise<Express> => {
   vi.resetModules();
 
-  vi.doMock('@/app/server/middlewares', async () => {
-    const actual = await vi.importActual<Record<string, unknown>>('@/app/server/middlewares');
+  vi.doMock('@app/server/middlewares', async () => {
+    const actual = await vi.importActual<Record<string, unknown>>('@app/server/middlewares');
 
     const sessionParser: RequestHandler = authenticated
       ? (req, _res, next) => {

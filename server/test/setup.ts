@@ -20,7 +20,7 @@ vi.mock('@sentry/node', () => ({
   setupExpressErrorHandler: vi.fn(),
 }));
 
-vi.mock('@/src/common/config/metrics.config', () => ({
+vi.mock('@/common/config/metrics.config', () => ({
   getHttpServerMetrics: () => ({
     httpErrorCounter: { add: vi.fn() },
     httpRequestCounter: { add: vi.fn() },
@@ -30,11 +30,11 @@ vi.mock('@/src/common/config/metrics.config', () => ({
   }),
 }));
 
-vi.mock('@/app/server/docs/swagger', () => ({
+vi.mock('@app/server/docs/swagger', () => ({
   swaggerSpec: {},
 }));
 
-vi.mock('@/src/common/logger', () => ({
+vi.mock('@/common/logger', () => ({
   default: {
     debug: vi.fn(),
     error: vi.fn(),
@@ -43,24 +43,24 @@ vi.mock('@/src/common/logger', () => ({
   },
 }));
 
-vi.mock('@/src/socket/emitter', () => ({
+vi.mock('@/socket/emitter', () => ({
   emitSocketEvent: vi.fn(),
 }));
 
-vi.mock('@/src/common/connections/redis', () => ({
+vi.mock('@/common/connections/redis', () => ({
   disconnectRedisConnections: vi.fn(),
   getRedisConnection: vi.fn(() => mockRedis),
   getRedisConnections: vi.fn(() => ({ default: mockRedis })),
 }));
 
-vi.mock('@/src/common/connections', () => ({
+vi.mock('@/common/connections', () => ({
   disconnectRedisConnections: vi.fn(),
   getRedisConnection: vi.fn(() => mockRedis),
   getRedisConnections: vi.fn(() => ({ default: mockRedis })),
   supabase: mockSupabase,
 }));
 
-vi.mock('@/src/common/connections/supabase/admin', () => ({
+vi.mock('@/common/connections/supabase/admin', () => ({
   default: {
     auth: {
       admin: mockSupabaseAdminAuth,

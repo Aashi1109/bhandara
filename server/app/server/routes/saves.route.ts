@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { asyncHandler, paginationParser, sessionParser, userParser } from '../middlewares';
-import { getSavedEntityState, listSavedEntities, saveEntity, unsaveEntity } from '@/src/features/saves/controller';
+import { getSavedEntityState, listSavedEntities, saveEntity, unsaveEntity } from '@/features/saves/controller';
 
 const router = Router();
 

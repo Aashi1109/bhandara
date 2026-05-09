@@ -6,7 +6,7 @@ import type {
   EEventType,
   EMediaProvider,
   EMediaType,
-} from '@/src/common/definitions/enums';
+} from '@/common/definitions/enums';
 
 // Base Interface for Timestamps
 export interface PaginatedResult<T> {
@@ -223,25 +223,34 @@ export interface ITag extends ITimeStamp {
 
 // Media Storage Interface
 interface IMediaStorage {
-  provider: EMediaProvider;
   bucket: string;
   metadata: Record<string, any>;
+}
+
+export interface IMediaThumbnails {
+  sm: string;
+  md: string;
+  xl: string;
 }
 
 // Media Interface
 export interface IMedia extends ITimeStamp {
   id: string;
   type: EMediaType;
+  provider: EMediaProvider;
   url: string;
   publicUrl?: string;
   publicUrlExpiresAt?: Date | number;
   caption?: string | null;
   thumbnail?: string | null;
+  thumbnails?: IMediaThumbnails | null;
+  variants?: IMediaThumbnails | null;
+  streamUrl?: string | null;
   size?: number | null;
   mimeType?: string | null;
   duration?: number | null;
   uploader: string; // References "User" table
-  storage: IMediaStorage; // JSONB field
+  storage: IMediaStorage;
   access: EAccessLevel;
   metadata: Record<string, any>;
 

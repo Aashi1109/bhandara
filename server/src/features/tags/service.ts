@@ -1,5 +1,5 @@
-import type { IEvent, IPaginationParams, ITag } from '@/src/common/definitions/types';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import type { IEvent, IPaginationParams, ITag } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import { validateTagCreate, validateTagUpdate } from './validation';
 import { Tag } from './model';
 import { Event } from '../events/model';
@@ -14,9 +14,9 @@ import {
   setSubTagsCache,
   deleteSubTagsCache,
 } from './helpers';
-import { NotFoundError } from '@/src/common/exceptions';
+import { NotFoundError } from '@/common/exceptions';
 import type { FindOptions } from 'sequelize';
-import EntityStatsService from '@/src/features/stats/service';
+import EntityStatsService from '@/features/stats/service';
 
 class TagService {
   private readonly getCache = getTagCache;

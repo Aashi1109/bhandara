@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { EEventStatus } from '@/src/common/definitions/enums';
+import { EEventStatus } from '@/common/definitions/enums';
 import {
   buildActiveEventStatusPredicate,
   deriveEventStatus,
   resolvePersistedEventState,
   validateEventTimings,
-} from '@/src/features/events/status';
+} from '@/features/events/status';
 
 describe('event status helpers', () => {
   it('derives upcoming and ongoing from event timings', () => {

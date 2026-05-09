@@ -1,8 +1,8 @@
 import { validateThreadCreate, validateThreadUpdate } from './validation';
 import { Thread } from './model';
 
-import { type IPaginationParams, type IBaseThread, IMessage } from '@/src/common/definitions/types';
-import { findAllWithPagination } from '@/src/common/utils/dbUtils';
+import { type IPaginationParams, type IBaseThread, IMessage } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import {
   getThreadCache,
   setThreadCache,
@@ -12,10 +12,10 @@ import {
   lockThread,
   unlockThread,
 } from './helpers';
-import { BadRequestError, ForbiddenError, NotFoundError } from '@/src/common/exceptions';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/exceptions';
 
-import MessageService from '@/src/features/messages/service';
-import EntityStatsService from '@/src/features/stats/service';
+import MessageService from '@/features/messages/service';
+import EntityStatsService from '@/features/stats/service';
 
 class ThreadsService {
   private readonly getCache = getThreadCache;

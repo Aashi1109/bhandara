@@ -1,6 +1,6 @@
-import { getDBConnection } from '@/src/common/connections/db';
+import { getDBConnection } from '@/common/connections/db';
 import { DataTypes, Model } from 'sequelize';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getUUIDv7 } from '@/common/helpers';
 import { USER_TABLE_NAME } from './constants';
 
 export const USER_SETTINGS_TABLE_NAME = 'UserSettings';

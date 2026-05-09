@@ -122,7 +122,8 @@ class FileService {
       if (signedUrlResponse.statusCode != 200) return null;
 
       final data = signedUrlResponse.data['data'] as Map<String, dynamic>;
-      final signedUrl = (data['signedUrl'] ?? data['url']) as String?;
+      final signedUrl =
+          (data['signedUrl'] ?? data["signedURL"] ?? data['url']) as String?;
       final row = data['row'] as Map<String, dynamic>?;
 
       if (signedUrl == null || row == null) {

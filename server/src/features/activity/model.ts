@@ -1,6 +1,6 @@
-import { getDBConnection } from '@/src/common/connections/db';
-import type { IActivity } from '@/src/common/definitions/types';
-import { getUUIDv7 } from '@/src/common/helpers';
+import { getDBConnection } from '@/common/connections/db';
+import type { IActivity } from '@/common/definitions/types';
+import { getUUIDv7 } from '@/common/helpers';
 import { DataTypes, Model } from 'sequelize';
 import { ACTIVITY_TABLE_NAME, EActivityEntityType, EActivityVisibility } from './constants';
 
