@@ -1,6 +1,6 @@
 // Import with `import * as Sentry from "@sentry/node"` if you are using ESM
 import * as Sentry from '@sentry/node';
-import { config } from '@/src/common';
+import config from './common/config';
 
 if (process.env.NODE_ENV !== 'development')
   Sentry.init({

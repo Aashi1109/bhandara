@@ -1,7 +1,7 @@
 import { createLogger, format, transports } from 'winston';
 import 'winston-daily-rotate-file';
-import * as HyperDX from '@hyperdx/node-opentelemetry';
 import config from '../config';
+import * as HyperDX from '@hyperdx/node-opentelemetry';
 import errors = format.errors;
 
 const customFormat = format.printf(({ level, message, timestamp, service, stack }) => {

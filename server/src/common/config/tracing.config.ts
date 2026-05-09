@@ -28,6 +28,7 @@ export const initializeTracing = () => {
     apiKey: config.otel.apiKey,
     service: config.infrastructure.serviceName,
     disableMetrics: !config.otel.enableMetrics,
+    stopOnTerminationSignals: false,
     instrumentations: {
       '@opentelemetry/instrumentation-http': {
         enabled: true,
@@ -55,9 +56,5 @@ export const initializeTracing = () => {
 };
 
 export const shutdownTracing = async (): Promise<void> => {
-  // HyperDX SDK handles shutdown internally
+  await HyperDX.shutdown();
 };
-
-process.on('SIGTERM', () => {
-  process.exit(0);
-});
