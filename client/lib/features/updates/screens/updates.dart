@@ -418,16 +418,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
         if (_isFetchingMore)
           const Padding(
             padding: EdgeInsets.only(top: 8),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
+            child: Center(child: AppSkeletonLine(width: 80, height: 8)),
           ),
         if (_updates.isNotEmpty && !_hasNext)
           Padding(

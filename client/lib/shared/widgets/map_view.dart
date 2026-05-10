@@ -10,6 +10,7 @@ import '../services/maps/map_manager.dart';
 import '../services/maps/google_map_view_options.dart';
 import '../services/maps/google_maps_web_loader.dart';
 import '../theme/theme.dart';
+import 'skeleton.dart';
 
 /// Shared map widget for consistent map usage across screens.
 ///
@@ -139,16 +140,7 @@ class _AppMapViewState extends State<AppMapView> {
           }
 
           if (snapshot.connectionState != ConnectionState.done) {
-            return const ColoredBox(
-              color: AppColors.muted,
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2.2),
-                ),
-              ),
-            );
+            return const AppSkeleton();
           }
 
           return _buildGoogleMap();

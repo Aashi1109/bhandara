@@ -31,6 +31,7 @@ import '../../../shared/widgets/textarea.dart';
 import '../../../shared/widgets/action_sheet.dart';
 import '../../../shared/widgets/attachment_pill.dart';
 import '../../../shared/widgets/map_view.dart';
+import '../../../shared/widgets/skeleton.dart';
 import '../widgets/media_preview.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../explore/screens/explore_screen.dart';
@@ -1030,7 +1031,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailsSection(categoriesAsync.value ?? const []),
+                        _buildDetailsSection(
+                          categoriesAsync.value ?? const [],
+                          isLoadingCategories: categoriesAsync.isLoading,
+                        ),
                         const SizedBox(height: 24),
                         _buildLocationCard(),
                         const SizedBox(height: 24),
@@ -1385,7 +1389,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _buildDetailsSection(List<Tag> categories) {
+  Widget _buildDetailsSection(
+    List<Tag> categories, {
+    bool isLoadingCategories = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1439,17 +1446,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      _selectedCategory?.name ??
-                          (categories.isEmpty
-                              ? 'Loading categories...'
-                              : 'Select Category'),
-                      style: context.appTypography.labelMD.copyWith(
-                        color: _selectedCategory != null
-                            ? AppColors.primary
-                            : AppColors.mutedForeground,
-                      ),
-                    ),
+                    child: _selectedCategory == null && isLoadingCategories
+                        ? const AppSkeletonLine(height: 14)
+                        : Text(
+                            _selectedCategory?.name ?? 'Select Category',
+                            style: context.appTypography.labelMD.copyWith(
+                              color: _selectedCategory != null
+                                  ? AppColors.primary
+                                  : AppColors.mutedForeground,
+                            ),
+                          ),
                   ),
                   const Icon(
                     LucideIcons.chevronDown,

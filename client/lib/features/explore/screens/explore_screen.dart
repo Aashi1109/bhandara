@@ -1574,14 +1574,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       ],
                       if (_isFetchingMoreEvents) ...[
                         const SizedBox(height: 10),
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                        const AppSkeletonLine(width: 80, height: 8),
                       ],
                       const SizedBox(height: 8),
                     ],
@@ -1956,13 +1949,10 @@ class _ExploreScreenState extends State<ExploreScreen>
               if (isSelected && _isSelectedEventLoading)
                 const Padding(
                   padding: EdgeInsets.only(left: 8),
-                  child: SizedBox(
+                  child: AppSkeleton(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
+                    shape: BoxShape.circle,
                   ),
                 ),
             ],

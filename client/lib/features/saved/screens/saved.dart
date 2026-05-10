@@ -212,16 +212,7 @@ class _SavedScreenState extends State<SavedScreen> {
             if (_isFetchingMore) {
               return const Padding(
                 padding: EdgeInsets.only(top: 8, bottom: 8),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+                child: Center(child: AppSkeletonLine(width: 80, height: 8)),
               );
             }
             return const SizedBox(height: 12);

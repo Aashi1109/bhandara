@@ -496,16 +496,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             if (_isFetchingMore) {
               return const Padding(
                 padding: EdgeInsets.only(top: 12, bottom: 12),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+                child: Center(child: AppSkeletonLine(width: 80, height: 8)),
               );
             }
             return const SizedBox(height: 12);

@@ -975,13 +975,16 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('HOSTED BY', style: typography.overline),
-                                  Text(
-                                    _event?.creator?.name ??
-                                        (_isHydratingFullEvent
-                                            ? 'Loading host...'
-                                            : 'Host'),
-                                    style: typography.titleSM,
-                                  ),
+                                  _isHydratingFullEvent &&
+                                          _event?.creator == null
+                                      ? const AppSkeletonLine(
+                                          width: 120,
+                                          height: 14,
+                                        )
+                                      : Text(
+                                          _event?.creator?.name ?? 'Host',
+                                          style: typography.titleSM,
+                                        ),
                                 ],
                               ),
                             ),
@@ -1043,7 +1046,20 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(_eventDescription, style: typography.bodyLG),
+                        if (_isHydratingFullEvent &&
+                            (_event?.description?.trim() ?? '').isEmpty)
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppSkeletonLine(height: 14),
+                              SizedBox(height: 6),
+                              AppSkeletonLine(height: 14),
+                              SizedBox(height: 6),
+                              AppSkeletonLine(width: 180, height: 14),
+                            ],
+                          )
+                        else
+                          Text(_eventDescription, style: typography.bodyLG),
                         const SizedBox(height: 40),
                         Row(
                           children: [
@@ -1172,36 +1188,41 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               onTap: _participantUsers.isEmpty
                                   ? null
                                   : _openAttendees,
-                              child: Text(
-                                _isHydratingFullEvent &&
-                                        !_canShowFullEventDetails
-                                    ? 'Loading attendees...'
-                                    : '$_participantCount Attending',
-                                textAlign: TextAlign.right,
-                                style: typography.bodySMStrong.copyWith(
-                                  color: _participantUsers.isEmpty
-                                      ? AppColors.mutedForeground
-                                      : AppColors.primary,
-                                  decoration: _participantUsers.isEmpty
-                                      ? TextDecoration.none
-                                      : TextDecoration.underline,
-                                ),
-                              ),
+                              child: _isHydratingFullEvent &&
+                                      !_canShowFullEventDetails
+                                  ? const AppSkeletonLine(
+                                      width: 80,
+                                      height: 12,
+                                    )
+                                  : Text(
+                                      '$_participantCount Attending',
+                                      textAlign: TextAlign.right,
+                                      style: typography.bodySMStrong.copyWith(
+                                        color: _participantUsers.isEmpty
+                                            ? AppColors.mutedForeground
+                                            : AppColors.primary,
+                                        decoration: _participantUsers.isEmpty
+                                            ? TextDecoration.none
+                                            : TextDecoration.underline,
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         if (_participantUsers.isEmpty && _isHydratingFullEvent)
-                          const SizedBox(
-                            height: 40,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
+                          SizedBox(
+                            height: 52,
+                            child: Stack(
+                              children: List.generate(
+                                4,
+                                (i) => Positioned(
+                                  left: i * 34.0,
+                                  child: const AppSkeleton(
+                                    width: 52,
+                                    height: 52,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1798,13 +1819,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         ),
                                       ),
                                       if (_isLoadingEngagement)
-                                        const SizedBox(
+                                        AppSkeleton(
                                           width: 16,
                                           height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.surface,
-                                          ),
+                                          shape: BoxShape.circle,
+                                          baseColor: AppColors.surface.withValues(alpha: 0.15),
+                                          highlightColor: AppColors.surface.withValues(alpha: 0.4),
                                         ),
                                     ],
                                   ),

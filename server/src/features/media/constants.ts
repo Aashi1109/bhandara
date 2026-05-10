@@ -1,3 +1,7 @@
+import { EMediaProvider } from '@/common/definitions/enums';
+
+export const DEFAULT_MEDIA_PROVIDER = EMediaProvider.Cloudinary;
+
 export const MEDIA_TABLE_NAME = 'Media';
 export const MEDIA_EVENT_JUNCTION_TABLE_NAME = 'EventMedia';
 export const MEDIA_PROFILES_BUCKET_NAME = 'avatars';

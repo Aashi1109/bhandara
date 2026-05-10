@@ -225,6 +225,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
 
     if (status == EventStatusValue.upcoming) {
       final diff = event.startTime.difference(now);
+      if (diff.inDays >= 1) {
+        final hours = diff.inHours % 24;
+        return hours > 0
+            ? 'Starts in ${diff.inDays}d ${hours}h'
+            : 'Starts in ${diff.inDays}d';
+      }
       if (diff.inHours > 0) {
         return 'Starts in ${diff.inHours}h ${diff.inMinutes % 60}m';
       }
@@ -233,6 +239,12 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     }
 
     final diff = event.endTime.difference(now);
+    if (diff.inDays >= 1) {
+      final hours = diff.inHours % 24;
+      return hours > 0
+          ? '${diff.inDays}d ${hours}h remaining'
+          : '${diff.inDays}d remaining';
+    }
     if (diff.inHours > 0) {
       return '${diff.inHours}h ${diff.inMinutes % 60}m remaining';
     }
@@ -283,16 +295,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     if (_isFetchingMore) {
       return const Padding(
         padding: EdgeInsets.only(top: 4, bottom: 12),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
+        child: Center(child: AppSkeletonLine(width: 80, height: 8)),
       );
     }
 

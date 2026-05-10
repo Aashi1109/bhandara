@@ -1,10 +1,10 @@
 import type { IEvent, IMedia } from '@/common/definitions/types';
-import { EMediaProvider } from '@/common/definitions/enums';
+import type { EMediaProvider } from '@/common/definitions/enums';
 import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
 import SupabaseService from '@/supabase';
 import { StorageFactory } from '@/common/storage';
 import { validateMediaCreate } from './validation';
-import { MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from './constants';
+import { DEFAULT_MEDIA_PROVIDER, MEDIA_BUCKET_CONFIG, MEDIA_PUBLIC_BUCKET_NAME } from './constants';
 import { Media } from './model';
 import { Event } from '../events/model';
 import { isEmpty, omit } from '@/common/utils';
@@ -49,7 +49,7 @@ class MediaService {
     bucket,
     file,
     mimeType,
-    provider = EMediaProvider.Supabase,
+    provider = DEFAULT_MEDIA_PROVIDER,
     options,
   }: {
     file: string;
@@ -68,7 +68,7 @@ class MediaService {
     });
   }
 
-  async deleteFile(bucket: string, path: string, provider: EMediaProvider = EMediaProvider.Supabase) {
+  async deleteFile(bucket: string, path: string, provider: EMediaProvider = DEFAULT_MEDIA_PROVIDER) {
     await StorageFactory.get(provider).deleteFile({ bucket, path });
     return { path, deleted: true };
   }
@@ -88,7 +88,7 @@ class MediaService {
     provider?: EMediaProvider;
   }) {
     const dataWithProvider = {
-      provider: insertData.provider || EMediaProvider.Supabase,
+      provider: insertData.provider || DEFAULT_MEDIA_PROVIDER,
       ...insertData,
     };
     return validateMediaCreate(dataWithProvider, (validatedData) =>
@@ -209,7 +209,7 @@ class MediaService {
   async getPublicUrl(
     path: string,
     bucket: string,
-    provider: EMediaProvider = EMediaProvider.Supabase,
+    provider: EMediaProvider = DEFAULT_MEDIA_PROVIDER,
     options?: Record<string, any>,
   ) {
     return StorageFactory.get(provider).getPublicUrl({ bucket, path, options });
@@ -219,7 +219,7 @@ class MediaService {
     paths: string[],
     bucket: string,
     expiresIn: number = CACHE_NAMESPACE_CONFIG.Media.ttl,
-    provider: EMediaProvider = EMediaProvider.Supabase,
+    provider: EMediaProvider = DEFAULT_MEDIA_PROVIDER,
   ) {
     return StorageFactory.get(provider).getBulkPublicUrls({ bucket, paths, expiresIn });
   }

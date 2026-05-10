@@ -3,10 +3,11 @@ import type { Response } from 'express';
 import MediaService, { toMediaPublic } from './service';
 import { BadRequestError, NotFoundError } from '@/common/exceptions';
 import { isEmpty, pick } from '@/common/utils';
-import { EMediaProvider } from '@/common/definitions/enums';
+import type { EMediaProvider } from '@/common/definitions/enums';
 import logger from '@/common/logger';
 import { addVideoJob } from '@/common/queues/video';
 import { parseImageEagerResults } from '@/common/storage/eager-transforms';
+import { DEFAULT_MEDIA_PROVIDER } from './constants';
 
 const mediaService = new MediaService();
 const asString = (value: unknown): string | undefined => {
@@ -47,7 +48,7 @@ const sanitizeParentPath = (parentPath: unknown, fallback: string): string => {
 export const getSignedUploadUrl = async (req: ICustomRequest, res: Response) => {
   const { path, bucket, mimeType, parentPath, format, ...rest } = req.body;
   let provider = req.body.provider as string | undefined;
-  provider ??= EMediaProvider.Supabase;
+  provider ??= DEFAULT_MEDIA_PROVIDER;
 
   const uploadPath = `${sanitizeParentPath(parentPath, req.user.id)}/${path}`;
   const insertData = {
