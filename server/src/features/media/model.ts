@@ -46,7 +46,7 @@ Media.init(
     provider: {
       type: DataTypes.ENUM(...Object.values(EMediaProvider)),
       allowNull: false,
-      defaultValue: EMediaProvider.Supabase,
+      defaultValue: EMediaProvider.Cloudinary,
     },
     url: { type: DataTypes.TEXT, allowNull: false },
     name: { type: DataTypes.TEXT, allowNull: false },

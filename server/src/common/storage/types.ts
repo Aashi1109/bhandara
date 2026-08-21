@@ -22,6 +22,7 @@ export interface IUploadResult {
 export interface IDeleteFileParams {
   bucket: string;
   path: string;
+  resourceType?: string | null;
 }
 
 export interface IGetPublicUrlParams {
@@ -45,6 +46,7 @@ export interface IGetClientUploadParamsInput {
 
 export interface IGetClientUploadParamsResult {
   signedURL: string;
+  uploadParams?: Record<string, string>;
   path: string;
   token?: string;
 }

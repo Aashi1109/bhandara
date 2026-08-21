@@ -1,5 +1,5 @@
 import type { IEvent, IMedia } from '@/common/definitions/types';
-import type { EMediaProvider } from '@/common/definitions/enums';
+import type { EMediaProvider, EMediaType } from '@/common/definitions/enums';
 import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
 import SupabaseService from '@/supabase';
 import { StorageFactory } from '@/common/storage';
@@ -11,6 +11,7 @@ import { isEmpty, omit } from '@/common/utils';
 import { deleteMediaCache, getEventMediaCache, setEventMediaCache, setMediaCache, getMediaCache } from './helpers';
 import logger from '@/common/logger';
 import { getUniqueFilename as getUniqueFilename } from './utils';
+import { getUUIDv7 } from '@/common/helpers';
 import { BadRequestError, NotFoundError } from '@/common/exceptions';
 import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
 import EntityStatsService from '@/features/stats/service';
@@ -68,8 +69,13 @@ class MediaService {
     });
   }
 
-  async deleteFile(bucket: string, path: string, provider: EMediaProvider = DEFAULT_MEDIA_PROVIDER) {
-    await StorageFactory.get(provider).deleteFile({ bucket, path });
+  async deleteFile(
+    bucket: string,
+    path: string,
+    provider: EMediaProvider = DEFAULT_MEDIA_PROVIDER,
+    resourceType?: EMediaType | string | null,
+  ) {
+    await StorageFactory.get(provider).deleteFile({ bucket, path, resourceType });
     return { path, deleted: true };
   }
 
@@ -109,8 +115,20 @@ class MediaService {
         validatedData = omit(validatedData, ['path', 'bucket', 'options']);
         restOptions = omit(restOptions, ['path']);
 
+        // Generate ID upfront so it can be used as `rid` in signed params before DB insert
+        const rid = getUUIDv7();
+
+        // Get signed URL first — this gives us the full provider path (e.g. Zentry/bucket/path)
+        const signedUrl = await StorageFactory.get(dataWithProvider.provider).getClientUploadParams({
+          bucket,
+          path,
+          resourceType: restOptions.type,
+          rid,
+        });
+
         const createData = {
-          url: path,
+          id: rid,
+          url: signedUrl.path, // full provider path from the start, no interim mismatch
           provider: dataWithProvider.provider,
           storage: {
             metadata: {},
@@ -126,13 +144,6 @@ class MediaService {
         const creationData = await Media.create(createData as any, {
           transaction: tx,
           raw: true,
-        });
-
-        const signedUrl = await StorageFactory.get(dataWithProvider.provider).getClientUploadParams({
-          bucket,
-          path,
-          resourceType: restOptions.type,
-          rid: creationData.id,
         });
 
         if (signedUrl) delete (signedUrl as any).token;
@@ -229,7 +240,7 @@ class MediaService {
       const media = await Media.findByPk(id, { transaction: tx });
       if (!media) return null;
       await media.destroy({ transaction: tx });
-      const deletionResult = await this.deleteFile(media.storage.bucket, media.url, media.provider);
+      const deletionResult = await this.deleteFile(media.storage.bucket, media.url, media.provider, media.type);
       await this.deleteCache(id);
       logger.debug(`Deleted media ${id}`, { deletionResult });
       return media;

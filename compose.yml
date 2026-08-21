@@ -63,15 +63,36 @@ services:
     container_name: zentry-video-worker
     environment:
       - NODE_ENV=production
-      - WORKER_TYPE=video-processor
+      - APP_TYPE=worker
+      - APP_NAME=video-processor
     env_file:
       - ./server/.env
     restart: unless-stopped
-    command: ["node", "workers/index.js"]
+    command: ["node", "index.js"]
     networks:
       - zentry-network
     volumes:
       - video-temp:/app/tmp
+    depends_on:
+      - server
+
+  event-cleanup-worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: zentry-server
+    platform: linux/amd64
+    container_name: zentry-event-cleanup-worker
+    environment:
+      - NODE_ENV=production
+      - APP_TYPE=worker
+      - APP_NAME=event-cleanup
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    command: ["node", "index.js"]
+    networks:
+      - zentry-network
     depends_on:
       - server
 

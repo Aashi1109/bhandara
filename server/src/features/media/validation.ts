@@ -135,10 +135,6 @@ const updateSchema = {
       type: ['string', 'null'],
       errorMessage: 'Thumbnail must be a string or null',
     },
-    mimeType: {
-      type: ['string', 'null'],
-      errorMessage: 'MIME type must be a string or null',
-    },
     access: {
       type: 'string',
       enum: ['public', 'private', 'restricted'],
@@ -152,10 +148,6 @@ const updateSchema = {
     name: {
       type: ['string', 'null'],
       errorMessage: 'Name must be a string or null',
-    },
-    url: {
-      type: ['string', 'null'],
-      errorMessage: 'URL must be a string or null',
     },
   },
   additionalProperties: false,

@@ -5,19 +5,44 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/excepti
 import { hasMeaningfulChange, isEmpty } from '@/common/utils';
 import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
-import { PLATFORM_SOCKET_EVENTS } from '@/common/constants';
+import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/common/constants';
 import { getUserRoom } from '@/socket/rooms';
 import { EEventStatus, EEventType } from '@/common/definitions/enums';
+import { v4 as uuidv4 } from 'uuid';
+import { getRedisConnection } from '@/common/connections/redis';
+import { RESERVED_TID_KEY_PREFIX, RESERVED_TID_SET_KEY, RESERVED_TID_TTL_SECONDS } from '@/common/queues/cleanup';
 import ActivityService from '@/features/activity/service';
 import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
 import AchievementService from '@/features/achievements/service';
 import EntityEngagementService from '@/features/engagement/service';
+import MediaService from '@/features/media/service';
 
 const eventService = new EventService();
+const mediaService = new MediaService();
 const tagService = new TagService();
 const activityService = new ActivityService();
 const achievementService = new AchievementService();
 const entityEngagementService = new EntityEngagementService();
+const reservationRedis = getRedisConnection(REDIS_CONNECTION_NAMES.Cache);
+
+export const reserveEventId = async (_req: ICustomRequest, res: Response) => {
+  const tid = uuidv4();
+  const expiresAt = Date.now() + RESERVED_TID_TTL_SECONDS * 1000;
+  await Promise.all([
+    reservationRedis.set(`${RESERVED_TID_KEY_PREFIX}${tid}`, '1', 'EX', RESERVED_TID_TTL_SECONDS),
+    reservationRedis.zadd(RESERVED_TID_SET_KEY, expiresAt, tid),
+  ]);
+  return res.status(200).json({ data: { tid } });
+};
+
+export const releaseEventReservation = async (req: ICustomRequest, res: Response) => {
+  const tid = req.params.tid as string;
+  await Promise.all([
+    reservationRedis.del(`${RESERVED_TID_KEY_PREFIX}${tid}`),
+    reservationRedis.zrem(RESERVED_TID_SET_KEY, tid),
+  ]);
+  return res.status(200).json({ data: null });
+};
 
 const getViewerIp = (req: ICustomRequest) => {
   const forwardedFor = req.headers['x-forwarded-for'];
@@ -318,8 +343,9 @@ export const disassociateMediaFromEvent = async (req: ICustomRequest, res: Respo
 export const deleteEventMedia = async (req: ICustomRequest, res: Response) => {
   const { eventId, mediaId } = req.params;
 
-  const event = await eventService.disassociateMediaFromEvent(eventId as string, mediaId as string);
-  return res.status(200).json({ data: event });
+  await eventService.disassociateMediaFromEvent(eventId as string, mediaId as string);
+  await mediaService.delete(mediaId as string);
+  return res.status(200).json({ data: { id: mediaId, deleted: true } });
 };
 
 export const getEventThreads = async (req: ICustomRequest & IRequestPagination, res: Response) => {

@@ -15,20 +15,26 @@ const verifyCloudinarySignature = (req: Request & { rawBody?: string }, res: Res
   const signature = req.headers['x-cld-signature'] as string | undefined;
 
   if (!timestamp || !signature) {
-    return res.status(401).json({ error: 'Missing webhook signature' });
+    return res.status(401).json({ error: 'Missing Cloudinary webhook signature' });
   }
 
   try {
     const isValid = cloudinary.utils.verifyNotificationSignature(req.rawBody ?? '', parseInt(timestamp, 10), signature);
-
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid webhook signature' });
-    }
+    if (!isValid) return res.status(401).json({ error: 'Invalid Cloudinary webhook signature' });
   } catch {
-    return res.status(401).json({ error: 'Invalid webhook signature' });
+    return res.status(401).json({ error: 'Invalid Cloudinary webhook signature' });
   }
 
   return next();
+};
+
+// Provider-agnostic verification: detects provider from headers and applies appropriate check.
+// Add new cases here as new storage providers are integrated.
+const verifyWebhookSignature = (req: Request & { rawBody?: string }, res: Response, next: NextFunction) => {
+  if (req.headers['x-cld-timestamp'] && req.headers['x-cld-signature']) {
+    return verifyCloudinarySignature(req, res, next);
+  }
+  return res.status(401).json({ error: 'Unknown webhook source' });
 };
 
 const router = Router();
@@ -113,6 +119,6 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ApiEnvelope'
  */
-router.post('/on-upload-complete', verifyCloudinarySignature, asyncHandler(onUploadComplete));
+router.post('/on-upload-complete', verifyWebhookSignature, asyncHandler(onUploadComplete));
 
 export default router;

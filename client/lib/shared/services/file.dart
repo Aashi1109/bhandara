@@ -130,13 +130,19 @@ class FileService {
         throw Exception('Missing signed upload payload');
       }
 
-      // 2. Upload file to signed URL
+      final uploadParams = data['uploadParams'] as Map<String, dynamic>?;
+
+      // 2. Upload file directly to Cloudinary (POST multipart, all signed params in form body)
       final uploadDio = Dio();
-      final uploadResponse = await uploadDio.put(
+      final formFields = <String, dynamic>{
+        if (uploadParams != null)
+          ...uploadParams.map((k, v) => MapEntry(k, v.toString())),
+        'file': MultipartFile.fromBytes(fileBytes, filename: file.name),
+      };
+      final uploadResponse = await uploadDio.post(
         signedUrl,
-        data: fileBytes,
+        data: FormData.fromMap(formFields),
         options: Options(
-          headers: {'Content-Type': mimeType, 'Content-Length': fileSize},
           validateStatus: (status) =>
               status != null && status >= 200 && status < 300,
         ),
@@ -174,6 +180,15 @@ class FileService {
   Future<bool> deleteMedia(String mediaId) async {
     try {
       final response = await _dio.delete(Api.media(mediaId));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteEventMedia(String eventId, String mediaId) async {
+    try {
+      final response = await _dio.delete(Api.eventMedia(eventId, mediaId));
       return response.statusCode == 200;
     } catch (e) {
       return false;

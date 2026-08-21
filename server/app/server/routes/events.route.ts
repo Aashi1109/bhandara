@@ -13,6 +13,8 @@ import {
   deleteEventMedia,
   getEventThreads,
   deleteEvent,
+  reserveEventId,
+  releaseEventReservation,
 } from '@/features/events/controller';
 import { validateEventCreateBody, validateEventUpdateBody } from '@/features/events/validation';
 import {
@@ -76,6 +78,9 @@ router.use([sessionParser, userParser]);
  *                 error:
  *                   nullable: true
  */
+router.get('/reserve', asyncHandler(reserveEventId));
+router.delete('/reserve/:tid', [validateParams(['tid'])], asyncHandler(releaseEventReservation));
+
 router
   .route('/')
   .get([paginationParser], asyncHandler(getEvents))

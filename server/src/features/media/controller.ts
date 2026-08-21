@@ -165,20 +165,31 @@ export const onUploadComplete = async (req: ICustomRequest, res: Response) => {
     return res.status(200).json({ data: { queued: true } });
   }
 
-  const { custom: { rid } = {} } = context || {};
+  const { custom: { rid, provider = DEFAULT_MEDIA_PROVIDER } = {} } = context || {};
 
   if (!rid) throw new BadRequestError(`Missing context id`);
 
-  const isImage = resource_type === 'image' || !resource_type?.startsWith('video');
-  const eagerVariants = isImage && Array.isArray(eager) && eager.length >= 6 ? parseImageEagerResults(eager) : {};
+  let updatePayload: Record<string, any>;
 
-  const updatedMedia = await mediaService.update(rid, {
-    url: public_id,
-    metadata: { publicUrl: secure_url, asset_id },
-    ...eagerVariants,
-  });
+  if (provider === 'cloudinary') {
+    const isImage = resource_type === 'image' || !resource_type?.startsWith('video');
+    const eagerVariants = isImage && Array.isArray(eager) && eager.length >= 6 ? parseImageEagerResults(eager) : {};
+    updatePayload = {
+      url: public_id,
+      metadata: { publicUrl: secure_url, asset_id },
+      ...eagerVariants,
+    };
+  } else {
+    // Generic fallback for future providers: update storage path and public URL
+    updatePayload = {
+      ...(public_id && { url: public_id }),
+      ...(secure_url && { metadata: { publicUrl: secure_url } }),
+    };
+  }
 
-  logger.debug(`Updated media ${updatedMedia.id}`);
+  const updatedMedia = await mediaService.update(rid, updatePayload);
+
+  logger.debug(`Updated media ${updatedMedia.id} via ${provider} webhook`);
 
   return res.status(200).json({ data: { updated: true } });
 };

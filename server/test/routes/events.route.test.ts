@@ -16,6 +16,8 @@ const buildEventsModuleMock = () => ({
   getEventMarkers: vi.fn(),
   getEvents: getEventsMock,
   getEventThreads: vi.fn(),
+  releaseEventReservation: vi.fn(),
+  reserveEventId: vi.fn(),
   updateEvent: vi.fn(),
   verifyEvent: vi.fn(),
 });

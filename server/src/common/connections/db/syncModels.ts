@@ -14,11 +14,13 @@ import { Tag } from '@/features/tags/model';
 import { Thread } from '@/features/threads/model';
 import { USER_TABLE_NAME } from '@/features/users/constants';
 import { User } from '@/features/users/model';
+import { UserSettings } from '@/features/users/settings.model';
 
 const REGISTERED_MODELS = [
   SearchResult,
   Address,
   User,
+  UserSettings,
   Media,
   Tag,
   Event,

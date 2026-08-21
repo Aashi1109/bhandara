@@ -212,10 +212,16 @@ start_process \
   node index.js
 probe_api_server &
 start_process \
-  "worker" \
+  "video-worker" \
   env \
   APP_TYPE="worker" \
   APP_NAME="${WORKER_TYPE}" \
+  node index.js
+start_process \
+  "event-cleanup-worker" \
+  env \
+  APP_TYPE="worker" \
+  APP_NAME="event-cleanup" \
   node index.js
 start_process "nginx" nginx -g "daemon off;"
 

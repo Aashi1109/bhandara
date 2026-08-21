@@ -46,8 +46,8 @@ export class CloudinaryStorageProvider implements IStorageProvider {
     return { path: res.public_id, ...parseImageEagerResults(eagerResults) };
   }
 
-  async deleteFile({ path }: IDeleteFileParams): Promise<void> {
-    const { error } = await this.client.deleteFile(path);
+  async deleteFile({ path, resourceType }: IDeleteFileParams): Promise<void> {
+    const { error } = await this.client.deleteFile(path, resourceType);
     if (error) throw error;
   }
 
