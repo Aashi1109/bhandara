@@ -9,6 +9,7 @@ import {
   initializeTracing,
   shutdownTracing,
 } from '@/common';
+import { stopBoss } from '@/common/queues/boss';
 
 const apptype = config.appType;
 const appname = config.appName;
@@ -35,9 +36,7 @@ startServer();
 
 process.on('SIGTERM', () => {
   Sentry.flush(2000)
-    .then(() => {
-      return shutdownTracing();
-    })
+    .then(() => Promise.all([stopBoss(), shutdownTracing()]))
     .finally(() => {
       process.exit(0);
     });

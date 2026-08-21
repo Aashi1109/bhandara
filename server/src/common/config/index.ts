@@ -59,7 +59,6 @@ const redisConnections = {
   [REDIS_CONNECTION_NAMES.Default]: withRedisDb(redisBaseConnection, 5),
   [REDIS_CONNECTION_NAMES.Cache]: withRedisDb(redisBaseConnection, 5),
   [REDIS_CONNECTION_NAMES.Sessions]: withRedisDb(redisBaseConnection, 1),
-  [REDIS_CONNECTION_NAMES.Bull]: withRedisDb(redisBaseConnection, 2),
   [REDIS_CONNECTION_NAMES.Analytics]: withRedisDb(redisBaseConnection, 3),
   [REDIS_CONNECTION_NAMES.RateLimit]: withRedisDb(redisBaseConnection, 4),
   [REDIS_CONNECTION_NAMES.Activity]: withRedisDb(redisBaseConnection, 6),
@@ -142,15 +141,6 @@ const config: AppConfig = {
   },
   appType,
   appName,
-};
-
-export const WORKER_CONNECTION_CONFIG = {
-  host: redisConnections[REDIS_CONNECTION_NAMES.Bull].host,
-  port: redisConnections[REDIS_CONNECTION_NAMES.Bull].port,
-  password: redisConnections[REDIS_CONNECTION_NAMES.Bull].password,
-  db: redisConnections[REDIS_CONNECTION_NAMES.Bull].db,
-  tls: redisConnections[REDIS_CONNECTION_NAMES.Bull].tls,
-  maxRetriesPerRequest: null,
 };
 
 export default config;

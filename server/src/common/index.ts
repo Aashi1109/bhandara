@@ -23,4 +23,3 @@ export * from './connections';
 
 export * from './exceptions';
 
-export * from './queues/video';

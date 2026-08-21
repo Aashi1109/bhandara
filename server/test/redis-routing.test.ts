@@ -7,22 +7,17 @@ describe('redis connection routing', () => {
     vi.clearAllMocks();
     vi.doUnmock('@/features/cache');
     vi.doUnmock('@/features/cache/redis');
-    vi.doUnmock('bullmq');
   });
 
-  it('builds worker redis config on DB 2', async () => {
+  it('builds redis connection config per namespace', async () => {
     process.env.REDIS_HOST = '127.0.0.1';
     process.env.REDIS_PORT = '6379';
     process.env.REDIS_PASSWORD = '';
     process.env.REDIS_TLS = 'false';
 
-    const { WORKER_CONNECTION_CONFIG, default: config } = await import('@/common/config');
+    const { default: config } = await import('@/common/config');
 
-    expect(WORKER_CONNECTION_CONFIG).toMatchObject({
-      host: '127.0.0.1',
-      port: 6379,
-      db: 2,
-    });
+    expect(config.redis[REDIS_CONNECTION_NAMES.Default].db).toBe(5);
     expect(config.redis[REDIS_CONNECTION_NAMES.Sessions].db).toBe(1);
     expect(config.redis[REDIS_CONNECTION_NAMES.Analytics].db).toBe(3);
     expect(config.redis[REDIS_CONNECTION_NAMES.RateLimit].db).toBe(4);
@@ -111,11 +106,5 @@ describe('redis connection routing', () => {
     await import('@/features/explore/helpers');
 
     expect(cacheConfigs).toEqual(expect.arrayContaining([expect.objectContaining({ namespace: 'ex' })]));
-  });
-
-  it('routes bull queue connection to DB 2', async () => {
-    const { WORKER_CONNECTION_CONFIG } = await import('@/common/config');
-
-    expect(WORKER_CONNECTION_CONFIG).toEqual(expect.objectContaining({ db: 2 }));
   });
 });

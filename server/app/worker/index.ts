@@ -4,7 +4,8 @@ export default async function run(appName: string) {
   try {
     logger.info(`Starting worker: ${appName}`);
 
-    await import(`./${appName}`);
+    const worker = await import(`./${appName}`);
+    await worker.default;
 
     logger.info(`${appName} worker started and listening for jobs`);
   } catch (error) {

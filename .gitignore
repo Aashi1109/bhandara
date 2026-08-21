@@ -84,3 +84,4 @@ infra/data
 .env.*.local
 ruvector.db
 .mcp.json
+.codegraph

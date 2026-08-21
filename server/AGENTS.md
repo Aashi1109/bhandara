@@ -8,7 +8,7 @@ Apply this file together with the root [AGENTS.md](/Users/ashishpal/Desktop/codi
 - TypeScript
 - Express
 - Sequelize
-- BullMQ workers
+- pg-boss workers (Postgres-backed job queues)
 - Redis via `ioredis`
 
 ## Commands

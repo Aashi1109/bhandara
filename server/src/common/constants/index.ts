@@ -78,7 +78,6 @@ export enum DB_CONNECTION_NAMES {
 export enum REDIS_CONNECTION_NAMES {
   Default = 'default',
   Sessions = 'sessions',
-  Bull = 'bull',
   Analytics = 'analytics',
   RateLimit = 'rate_limit',
   Cache = 'cache',
