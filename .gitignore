@@ -85,3 +85,4 @@ infra/data
 ruvector.db
 .mcp.json
 .codegraph
+.tmp

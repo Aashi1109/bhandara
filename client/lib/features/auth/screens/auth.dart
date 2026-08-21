@@ -82,7 +82,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         child: Column(
           children: [
             AppHeader(
-              onBack: () => context.pop(),
+              onBack: () => context.canPop() ? context.pop() : null,
               title: '',
               showBorder: false,
               backgroundColor: AppColors.transparent,
