@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -8,18 +7,18 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../chat/models/chat.dart';
 import '../../chat/screens/chat.dart';
 import '../../events/screens/event_detail.dart';
+import '../../explore/screens/explore_screen.dart';
 import '../../profile/screens/profile.dart';
 import '../../chat/screens/thread.dart';
 import '../services/save.dart';
 import '../../search/services/search.dart';
 import '../../../shared/theme/theme.dart';
-import '../../events/utils/event_status.dart';
 import '../../../shared/widgets/app_pull_to_refresh.dart';
+import '../../../shared/widgets/app_search_bar.dart';
 import '../../../shared/widgets/bottom_nav.dart';
-import '../../../shared/widgets/card.dart';
-import '../../events/widgets/event_status_badge.dart';
 import '../../../shared/widgets/skeleton.dart';
-import '../../explore/widgets/explore_search_bar.dart';
+import '../widgets/saved_result_tile.dart';
+import '../widgets/saved_state_view.dart';
 
 class SavedScreen extends StatefulWidget {
   const SavedScreen({super.key});
@@ -32,7 +31,7 @@ class SavedScreen extends StatefulWidget {
 
 class _SavedScreenState extends State<SavedScreen> {
   static const int _pageSize = 20;
-  static const _filters = ['All', 'Events', 'Threads', 'Messages', 'Profiles'];
+  static const _filters = ['All', 'Events', 'Threads', 'Messages', 'People'];
 
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -46,6 +45,7 @@ class _SavedScreenState extends State<SavedScreen> {
   String? _errorMessage;
   String? _nextCursor;
   Timer? _debounce;
+  final Set<String> _unsavingIds = <String>{};
 
   @override
   void initState() {
@@ -99,7 +99,7 @@ class _SavedScreenState extends State<SavedScreen> {
         return 'thread';
       case 'Messages':
         return 'message';
-      case 'Profiles':
+      case 'People':
         return 'user';
       default:
         return null;
@@ -162,41 +162,7 @@ class _SavedScreenState extends State<SavedScreen> {
 
   Widget _buildResults() {
     if (_results.isEmpty) {
-      return AppPullToRefresh(
-        onRefresh: () => _loadSavedResults(refresh: true),
-        wrapInScrollView: false,
-        child: ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-          children: [
-            const SizedBox(height: 120),
-            const Icon(
-              LucideIcons.searchX,
-              size: AppIconSizes.hero,
-              color: AppColors.mutedForeground,
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'No saved items found',
-                style: context.appTypography.titleSM.copyWith(
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Try a different search or filter',
-                style: context.appTypography.bodyMD.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildSearchEmptyState();
     }
 
     return AppPullToRefresh(
@@ -205,258 +171,105 @@ class _SavedScreenState extends State<SavedScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        itemCount: _results.length + 1,
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 120),
+        itemCount: _results.length + (_hasSearched ? 2 : 1),
         itemBuilder: (context, index) {
-          if (index == _results.length) {
-            if (_isFetchingMore) {
-              return const Padding(
-                padding: EdgeInsets.only(top: 8, bottom: 8),
-                child: Center(child: AppSkeletonLine(width: 80, height: 8)),
-              );
-            }
-            return const SizedBox(height: 12);
+          if (_hasSearched && index == 0) return _buildSearchResultsHeading();
+
+          final resultIndex = index - (_hasSearched ? 1 : 0);
+          if (resultIndex == _results.length) {
+            return _isFetchingMore
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: AppSkeletonLine(width: 80, height: 8)),
+                  )
+                : const SizedBox(height: 12);
           }
 
-          final result = _results[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: GestureDetector(
-              onTap: () => _openSavedItem(result),
-              child: _buildResultCard(result),
-            ),
+          final result = _results[resultIndex];
+          return SavedResultTile(
+            result: result,
+            secondaryText: _secondaryText(result),
+            isUnsaving: _unsavingIds.contains(result.id),
+            onTap: () => _openSavedItem(result),
+            onUnsave: () => _unsaveResult(result),
           );
         },
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return ListView.separated(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-      itemCount: 5,
-      separatorBuilder: (_, index) => const SizedBox(height: 16),
-      itemBuilder: (_, index) {
-        return const AppCard(
-          padding: AppCardPadding.none,
-          borderRadius: 24,
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                AppSkeleton(
-                  width: 96,
-                  height: 96,
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          AppSkeleton(width: 72, height: 24),
-                          SizedBox(width: 8),
-                          Expanded(child: AppSkeletonLine(height: 18)),
-                        ],
-                      ),
-                      SizedBox(height: 12),
-                      AppSkeletonLine(width: 170),
-                      SizedBox(height: 10),
-                      AppSkeletonLine(width: 140),
-                      SizedBox(height: 20),
-                      AppSkeletonLine(width: 110, height: 10),
-                    ],
-                  ),
-                ),
-              ],
+  Widget _buildSearchResultsHeading() {
+    return SizedBox(
+      height: 34,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Search results', style: context.appTypography.titleMDStrong),
+          Text(
+            '${_results.length} ${_results.length == 1 ? 'item' : 'items'}',
+            style: context.appTypography.captionMD.copyWith(
+              color: AppColors.mutedForeground,
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildResultCard(SearchResult result) {
+  Widget _buildLoadingState() => const SavedLoadingList();
+
+  String? _secondaryText(SearchResult result) {
     final metadata = result.metadata ?? const <String, dynamic>{};
-    final address = metadata['address'] as String?;
     final rawStart = metadata['start'] as String?;
-    final rawEnd = metadata['end'] as String?;
-    final rawStatus = metadata['status'] as String?;
     final createdAt = metadata['createdAt'] as String?;
     final username = metadata['username'] as String?;
     final bio = metadata['bio'] as String?;
-    final startTime = rawStart != null ? DateTime.tryParse(rawStart) : null;
-    final endTime = rawEnd != null ? DateTime.tryParse(rawEnd) : null;
-    final createdAtTime = createdAt != null
-        ? DateTime.tryParse(createdAt)
-        : null;
-    final resolvedStatus =
-        result.type == 'event' && startTime != null && endTime != null
-        ? deriveEventStatus(
-            startTime: startTime,
-            endTime: endTime,
-            currentStatus: rawStatus,
-          )
-        : null;
-    final isMessage = result.type == 'message';
-    final secondaryText = startTime != null
-        ? '${_formatTime(startTime)}${address != null && address.isNotEmpty ? ' • $address' : ''}'
-        : result.type == 'user'
-        ? (username != null && username.isNotEmpty ? '@$username' : bio)
-        : result.description;
+    final address = metadata['address'] as String?;
+    final startTime = rawStart == null ? null : DateTime.tryParse(rawStart);
+    final createdAtTime = createdAt == null
+        ? null
+        : DateTime.tryParse(createdAt);
 
-    return AppCard(
-      padding: AppCardPadding.none,
-      borderRadius: 24,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          spacing: 16,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: result.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: result.imageUrl!,
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => _placeholderImage(result),
-                    )
-                  : _placeholderImage(result),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _buildBadge(
-                        label: result.type == 'user'
-                            ? 'PROFILE'
-                            : result.type.toUpperCase(),
-                        background: AppColors.primary.withValues(alpha: 0.1),
-                        foreground: AppColors.primary,
-                      ),
-                      if (resolvedStatus != null)
-                        EventStatusBadge(status: resolvedStatus),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    isMessage
-                        ? (result.description ?? 'Open message')
-                        : result.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: isMessage
-                        ? context.appTypography.titleXSRegular.copyWith(
-                            color: AppColors.primary,
-                          )
-                        : context.appTypography.titleSM.copyWith(
-                            color: AppColors.primary,
-                          ),
-                  ),
-                  if (!isMessage && secondaryText != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      secondaryText,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.appTypography.bodySM.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                  ],
-                  if (isMessage && createdAtTime != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _formatRelative(createdAtTime),
-                      style: context.appTypography.captionSM.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    if (startTime != null) {
+      return '${_formatTime(startTime)}${address?.isNotEmpty == true ? ' • $address' : ''}';
+    }
+    if (result.type == 'user') {
+      return username?.isNotEmpty == true ? '@$username' : bio;
+    }
+    if (result.type == 'message' && createdAtTime != null) {
+      return _formatRelative(createdAtTime);
+    }
+    return result.description;
   }
 
-  Widget _buildBadge({
-    required String label,
-    required Color background,
-    required Color foreground,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Text(
-        label,
-        style: context.appTypography.labelXSStrong.copyWith(color: foreground),
-      ),
-    );
-  }
+  Future<void> _unsaveResult(SearchResult result) async {
+    if (_unsavingIds.contains(result.id)) return;
+    setState(() => _unsavingIds.add(result.id));
 
-  Widget _placeholderImage(SearchResult result) {
-    return Container(
-      width: 96,
-      height: 96,
-      color: AppColors.muted,
-      child: Icon(
-        result.type == 'event'
-            ? LucideIcons.calendar
-            : result.type == 'message'
-            ? LucideIcons.messageCircle
-            : result.type == 'user'
-            ? LucideIcons.user
-            : LucideIcons.messagesSquare,
-        size: AppIconSizes.xl,
-        color: AppColors.mutedForeground,
-      ),
-    );
+    try {
+      await saveService.unsaveEntity(result.type, result.id);
+      if (!mounted) return;
+      setState(() {
+        _results = _results.where((item) => item.id != result.id).toList();
+        _unsavingIds.remove(result.id);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _unsavingIds.remove(result.id));
+    }
   }
 
   Widget _buildErrorState() {
     return AppPullToRefresh(
       onRefresh: () => _loadSavedResults(refresh: true),
-      wrapInScrollView: false,
-      child: ListView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-        children: [
-          const SizedBox(height: 120),
-          const Icon(
-            LucideIcons.cloudOff,
-            size: AppIconSizes.hero,
-            color: AppColors.mutedForeground,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _errorMessage ?? 'Unable to load saved items right now.',
-            style: context.appTypography.titleSM.copyWith(
-              color: AppColors.primary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => _loadSavedResults(refresh: true),
-            child: const Text('Retry'),
-          ),
-        ],
+      child: SavedStateView(
+        icon: LucideIcons.cloudOff,
+        title: 'Couldn’t load saved items',
+        description:
+            'Check your connection and try again. Your items are still safe.',
+        actionLabel: 'Try again',
+        onAction: () => _loadSavedResults(refresh: true),
       ),
     );
   }
@@ -464,37 +277,29 @@ class _SavedScreenState extends State<SavedScreen> {
   Widget _buildEmptyState() {
     return AppPullToRefresh(
       onRefresh: () => _loadSavedResults(refresh: true),
-      wrapInScrollView: false,
-      child: ListView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-        children: [
-          const SizedBox(height: 120),
-          const Icon(
-            LucideIcons.search,
-            size: AppIconSizes.hero,
-            color: AppColors.mutedForeground,
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'No saved items yet',
-              style: context.appTypography.titleSM.copyWith(
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Save events, threads, messages, and profiles to find them here',
-              style: context.appTypography.bodyMD.copyWith(
-                color: AppColors.mutedForeground,
-              ),
-            ),
-          ),
-        ],
+      child: SavedStateView(
+        icon: LucideIcons.bookmark,
+        title: 'Nothing saved yet',
+        description: 'Keep events, people, and conversations close for later.',
+        actionLabel: 'Explore',
+        onAction: () => context.go(ExploreScreen.routePath),
+      ),
+    );
+  }
+
+  Widget _buildSearchEmptyState() {
+    return AppPullToRefresh(
+      onRefresh: () => _loadSavedResults(refresh: true),
+      child: SavedStateView(
+        icon: LucideIcons.searchX,
+        title: 'No saved items found',
+        description: 'Try a different search or filter.',
+        actionLabel: 'Clear search',
+        onAction: () {
+          _controller.clear();
+          setState(() => _activeFilter = 'All');
+          _loadSavedResults(refresh: true);
+        },
       ),
     );
   }
@@ -549,28 +354,22 @@ class _SavedScreenState extends State<SavedScreen> {
   }
 
   Widget _chipBtn(String text, bool selected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? AppColors.primary : AppColors.surface,
-        borderRadius: BorderRadius.circular(50),
-        border: selected ? null : Border.all(color: AppColors.border),
-        boxShadow: selected
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selected ? AppColors.primary : AppColors.border,
+        ),
       ),
       child: Text(
         text,
         style: context.appTypography.bodySMStrong.copyWith(
-          color: selected
-              ? AppColors.surface
-              : AppColors.primary.withValues(alpha: 0.6),
+          color: selected ? AppColors.surface : AppColors.mutedForeground,
         ),
       ),
     );
@@ -584,54 +383,45 @@ class _SavedScreenState extends State<SavedScreen> {
         children: [
           Column(
             children: [
-              Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 16,
-                  right: 16,
-                  bottom: 0,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface.withValues(alpha: 0.9),
-                ),
-                child: Column(
-                  children: [
-                    Center(
-                      child: Text(
-                        'Saved',
-                        style: context.appTypography.heading3Strong.copyWith(
-                          color: AppColors.primary,
-                        ),
+              SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: 64,
+                  child: Center(
+                    child: Text(
+                      'Saved',
+                      style: context.appTypography.heading3Strong.copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    ExploreSearchBar(
-                      controller: _controller,
-                      placeholder: 'Search saved items...',
-                      onChanged: (_) {},
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 36,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _filters.map((filter) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _activeFilter = filter;
-                                });
-                                _loadSavedResults(refresh: true);
-                              },
-                              child: _chipBtn(filter, _activeFilter == filter),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: AppSearchBar(
+                  controller: _controller,
+                  placeholder: 'Search saved items…',
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _filters.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final filter = _filters[index];
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _activeFilter = filter);
+                        _loadSavedResults(refresh: true);
+                      },
+                      child: _chipBtn(filter, _activeFilter == filter),
+                    );
+                  },
                 ),
               ),
               Expanded(
@@ -639,7 +429,9 @@ class _SavedScreenState extends State<SavedScreen> {
                     ? _buildLoadingState()
                     : _errorMessage != null
                     ? _buildErrorState()
-                    : _hasSearched || _results.isNotEmpty
+                    : _hasSearched ||
+                          _activeFilter != 'All' ||
+                          _results.isNotEmpty
                     ? _buildResults()
                     : _buildEmptyState(),
               ),

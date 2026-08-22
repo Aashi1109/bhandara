@@ -20,7 +20,7 @@ import '../../explore/utils/explore_filters.dart';
 import '../../../shared/widgets/button.dart';
 import '../../events/widgets/event_search_result_tile.dart';
 import '../../../shared/widgets/skeleton.dart';
-import '../../explore/widgets/explore_search_bar.dart';
+import '../../../shared/widgets/app_search_bar.dart';
 import '../../events/screens/event_detail.dart';
 import '../../explore/screens/explore_screen.dart';
 
@@ -404,7 +404,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ExploreSearchBar(
+              child: AppSearchBar(
                 controller: _controller,
                 placeholder: 'Find food events...',
                 onOpenFilters: _openFilters,

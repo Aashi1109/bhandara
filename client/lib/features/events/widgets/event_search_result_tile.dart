@@ -1,10 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 
 import '../models/search_event_item.dart';
 import '../../../shared/theme/theme.dart';
 import '../utils/event_status.dart';
+import './event_avatar.dart';
 import './event_status_badge.dart';
 
 class EventSearchResultTile extends StatelessWidget {
@@ -96,36 +95,5 @@ class EventSearchResultTile extends StatelessWidget {
     );
   }
 
-  Widget _buildLeading() {
-    final imageUrl = item.imageUrl;
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorWidget: (_, _, _) => _placeholder(),
-        ),
-      );
-    }
-    return _placeholder();
-  }
-
-  Widget _placeholder() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.muted,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: const Icon(
-        LucideIcons.calendar,
-        size: AppIconSizes.defaultSize,
-        color: AppColors.mutedForeground,
-      ),
-    );
-  }
+  Widget _buildLeading() => EventAvatar(imageUrl: item.imageUrl);
 }

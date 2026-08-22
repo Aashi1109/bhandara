@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:ui';
+
+import 'package:dio/dio.dart' show CancelToken;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,6 @@ import '../../../shared/services/tag.dart';
 import '../../profile/services/user.dart';
 import '../../../shared/theme/theme.dart';
 import '../../events/utils/event_status.dart';
-import '../models/event_cluster.dart';
 import '../models/event_marker.dart';
 import '../utils/explore_event_cards.dart';
 import '../utils/explore_filters.dart';
@@ -34,7 +34,7 @@ import '../../../shared/widgets/card.dart';
 import '../../events/widgets/event_status_badge.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../widgets/explore_event_map.dart';
-import '../widgets/explore_search_bar.dart';
+import '../../../shared/widgets/app_search_bar.dart';
 import '../../events/screens/event_detail.dart';
 import '../../search/screens/search.dart';
 
@@ -49,7 +49,6 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen>
     with WidgetsBindingObserver {
-  static const bool _useSimpleMarkerFetch = false;
   static const int _eventPageSize = 100;
   static const List<double> _radiusPresets = <double>[
     5,
@@ -81,8 +80,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   final MapManager _mapManager = MapManager(type: MapProviderType.google);
   final Map<String, _ExploreEventCacheEntry> _eventCacheByFilter =
       <String, _ExploreEventCacheEntry>{};
-  final Map<String, List<EventMarker>> _markerCacheByFilter =
-      <String, List<EventMarker>>{};
   final GlobalKey _topOverlayKey = GlobalKey();
   final GlobalKey _detailsCardKey = GlobalKey();
   final GlobalKey _bottomNavKey = GlobalKey();
@@ -115,42 +112,37 @@ class _ExploreScreenState extends State<ExploreScreen>
   ExploreMapQueryMode _queryMode = ExploreMapQueryMode.followLocation;
   ExploreViewportQuery? _viewportQuery;
 
-  // Marker tile cache state
-  Map<String, List<EventMarker>> _tileCache = {};
-  List<EventMarker> _visibleMarkers = [];
-  // ignore: unused_field
-  List<EventCluster> _serverClusters = [];
-  final Map<String, Event> _markerPreviewCache = {};
-  // Cluster mode is legacy — the current pipeline uses flat marker fetch +
-  // client-side clustering. Kept false so the UI never hits that path.
-  // ignore: unused_field
-  bool _isClusterMode = false;
-  int _markerRequestVersion = 0;
+  /// Every marker from the last flat-marker fetch, keyed by id. Socket events
+  /// patch this map in place instead of forcing a full refetch.
+  final Map<String, EventMarker> _markerStore = <String, EventMarker>{};
 
-  /// Padded-bbox fetch cache (industry-standard strategy). Each entry holds
-  /// the center, the over-fetched radius, and the markers returned. On a
-  /// viewport change we refetch only if NO cached region fully contains the
-  /// current visible viewport. Otherwise we re-render instantly from cache.
-  final List<_MarkerFetchRegion> _markerFetchRegions = [];
-  static const int _maxMarkerFetchRegions = 12;
+  /// Centre and radius [_markerStore] was fetched for. A viewport fully inside
+  /// it is served from memory; anything else refetches. Exactly one region is
+  /// kept — the previous accumulator merged up to 12 regions x 5000 markers
+  /// into every single render pass.
+  _MarkerFetchRegion? _markerRegion;
+
+  /// [_markerStore] clipped to the visible viewport. Off-screen markers must
+  /// not reach the clusterer or they inflate cluster counts and centroids.
+  List<EventMarker> _visibleMarkers = <EventMarker>[];
+
+  final Map<String, Event> _markerPreviewCache = {};
+
+  CancelToken? _markerFetchCancelToken;
+  bool _markersTruncated = false;
+  bool _markerFetchFailed = false;
+
+  /// Markers are requested for a radius this much larger than the visible one
+  /// so short pans are served from memory.
   static const double _fetchPaddingMultiplier = 2.0;
 
-  /// Accumulates clusters across multiple fetches so panning doesn't discard
-  /// clusters that are still in view. Keyed per zoom floor so that zooming
-  /// in/out never destroys previously fetched data — a pan back to an
-  /// already-visited area is an instant cache hit.
-  final Map<int, Map<String, EventCluster>> _clusterAccumulatorByZoom = {};
+  /// Slack applied to the visible radius when clipping [_markerStore], so
+  /// markers just past the edge still cluster correctly.
+  static const double _renderPaddingMultiplier = 1.2;
 
-  /// Fetched cluster regions per zoom floor. Each region records the center
-  /// and the (over-fetched) radius that was requested. We treat a viewport
-  /// as "covered" if ANY region at the same zoom fully contains it. This
-  /// lets the user pan A → B → A without refetching A.
-  final Map<int, List<_ClusterFetchRegion>> _fetchedClusterRegionsByZoom = {};
-  static const int _maxFetchedRegionsPerZoom = 16;
-
-  /// The currently selected event marker, pinned on the map independently
-  /// of the cluster/tile caches. Guarantees the user's selection never
-  /// disappears mid-interaction even if a refetch is in flight.
+  /// The currently selected event marker, pinned on the map independently of
+  /// the marker store. Guarantees the user's selection never disappears
+  /// mid-interaction even if a refetch is in flight.
   EventMarker? _pinnedSelectedMarker;
 
   static const List<_QuickFilter> _quickFilters = <_QuickFilter>[
@@ -336,21 +328,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     return merged.values.toList();
   }
 
-  List<EventMarker> _normalizeMarkers(Iterable<EventMarker> markers) {
-    final normalizedMarkers = <EventMarker>[];
-    final seenIds = <String>{};
-
-    for (final marker in markers) {
-      if (marker.id.isEmpty || !seenIds.add(marker.id)) {
-        continue;
-      }
-
-      normalizedMarkers.add(marker);
-    }
-
-    return normalizedMarkers;
-  }
-
   void _cacheMarkerPreviewEvents(Iterable<Event> events) {
     _markerPreviewCache
       ..clear()
@@ -364,76 +341,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             )
             .map((event) => MapEntry(event.id, event)),
       );
-  }
-
-  void _applyFlatMarkerCacheEntry(String cacheKey, List<EventMarker> markers) {
-    final normalizedMarkers = _normalizeMarkers(markers);
-    _markerCacheByFilter[cacheKey] = List<EventMarker>.from(normalizedMarkers);
-
-    setState(() {
-      _isClusterMode = false;
-      _visibleMarkers = normalizedMarkers;
-      _serverClusters = [];
-      _tileCache = {};
-      _clusterAccumulatorByZoom.clear();
-      _fetchedClusterRegionsByZoom.clear();
-    });
-  }
-
-  Future<void> _refreshFlatMarkersForCurrentFilters({
-    bool force = false,
-    bool includeLocationFilter = true,
-  }) async {
-    if (!_useSimpleMarkerFetch) {
-      return;
-    }
-
-    final location = includeLocationFilter ? _activeFetchLocation : null;
-    final radiusKm = includeLocationFilter ? _activeRadiusKm : null;
-    final cacheKey = _buildFilterCacheKey(
-      _appliedFilters,
-      location,
-      mode: _queryMode,
-      radiusKm: radiusKm,
-      viewport: _viewportQuery,
-    );
-
-    if (!force) {
-      final cached = _markerCacheByFilter[cacheKey];
-      if (cached != null) {
-        _applyFlatMarkerCacheEntry(cacheKey, cached);
-        return;
-      }
-    }
-
-    try {
-      final markers = await _fetchFlatMarkersForFilters(
-        filters: _appliedFilters,
-        effectiveLocation: location,
-        radiusKm: radiusKm,
-      );
-      if (!mounted) return;
-      _applyFlatMarkerCacheEntry(cacheKey, markers);
-    } catch (_) {
-      // Keep the current marker state if the temporary flat-marker fetch fails.
-    }
-  }
-
-  Future<List<EventMarker>> _fetchFlatMarkersForFilters({
-    required ExploreFilterState filters,
-    required LatLng? effectiveLocation,
-    required double? radiusKm,
-  }) async {
-    final markers = await eventService.getFlatEventMarkers(
-      status: _statusQueryForFilters(filters),
-      type: filters.eventType,
-      datePreset: filters.datePreset,
-      latitude: effectiveLocation?.latitude,
-      longitude: effectiveLocation?.longitude,
-      radiusKm: effectiveLocation == null ? null : radiusKm,
-      tagIds: filters.tagIds,
-    );
-    return _normalizeMarkers(markers);
   }
 
   void _syncDetailsPageToSelection({bool animate = false}) {
@@ -536,10 +443,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
   }
 
-  void _applyCachedEntry(String cacheKey, _ExploreEventCacheEntry cached) {
-    final cachedMarkers = _useSimpleMarkerFetch
-        ? _markerCacheByFilter[cacheKey]
-        : null;
+  void _applyCachedEntry(_ExploreEventCacheEntry cached) {
     final nextSelected = reconcileSelectedExploreEvent(
       cached.events,
       _selectedEvent,
@@ -559,14 +463,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       _hasNextEvents = cached.hasNext;
       _isLoading = false;
       _isFetchingMoreEvents = false;
-      if (_useSimpleMarkerFetch && cachedMarkers != null) {
-        _isClusterMode = false;
-        _visibleMarkers = cachedMarkers;
-        _serverClusters = [];
-        _tileCache = {};
-        _clusterAccumulatorByZoom.clear();
-        _fetchedClusterRegionsByZoom.clear();
-      }
     });
 
     if (_selectedEvent != null) {
@@ -590,11 +486,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (!force) {
       final cached = _eventCacheByFilter[cacheKey];
       if (cached != null) {
-        _applyCachedEntry(cacheKey, cached);
-        if (_useSimpleMarkerFetch &&
-            !_markerCacheByFilter.containsKey(cacheKey)) {
-          unawaited(_refreshFlatMarkersForCurrentFilters());
-        }
+        _applyCachedEntry(cached);
         return;
       }
     }
@@ -857,14 +749,21 @@ class _ExploreScreenState extends State<ExploreScreen>
         setState(() {
           if (eventName == SocketEvents.eventCreate) {
             final newEvent = Event.fromJson(eventData);
-            if (_eventMatchesActiveFilters(newEvent) &&
-                !_events.any((e) => e.id == newEvent.id)) {
-              _events = [..._events, newEvent];
+            if (_eventMatchesActiveFilters(newEvent)) {
+              _patchMarkerStore(newEvent, remove: false);
+              if (!_events.any((e) => e.id == newEvent.id)) {
+                _events = [..._events, newEvent];
+              }
             }
           } else if (eventName == SocketEvents.eventUpdate) {
             final updatedEvent = Event.fromJson(eventData);
             final index = _events.indexWhere((e) => e.id == updatedEvent.id);
             final matches = _eventMatchesActiveFilters(updatedEvent);
+            if (matches) {
+              _patchMarkerStore(updatedEvent, remove: false);
+            } else {
+              _removeMarkerFromStore(updatedEvent.id);
+            }
             if (index != -1 && matches) {
               final nextEvents = [..._events];
               nextEvents[index] = nextEvents[index].merge(updatedEvent);
@@ -887,7 +786,8 @@ class _ExploreScreenState extends State<ExploreScreen>
               _events = [..._events, updatedEvent];
             }
           } else if (eventName == SocketEvents.eventDelete) {
-            final eventId = eventData['id'];
+            final eventId = eventData['id'] as String?;
+            if (eventId != null) _removeMarkerFromStore(eventId);
             _events = _events.where((e) => e.id != eventId).toList();
             if (_selectedEvent?.id == eventId) {
               _selectedEvent = null;
@@ -922,9 +822,14 @@ class _ExploreScreenState extends State<ExploreScreen>
           _syncDetailsPageToSelection();
         }
 
-        // Invalidate tile cache on any event change and refetch.
-        _invalidateTileCache();
-        _refreshMarkersForCurrentState();
+        // The store was patched in place above; just re-clip it to the
+        // current viewport. No refetch — the socket payload is authoritative.
+        final viewport = _viewportQuery;
+        if (viewport != null) {
+          _applyVisibleMarkers(viewport);
+        } else {
+          _refreshMarkersForCurrentState();
+        }
       } catch (e) {
         debugPrint('Explore socket event error: $e');
       }
@@ -941,11 +846,12 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _applyQuickFilter(String quickStatus) {
-    _invalidateTileCache();
+    _invalidateMarkerCache();
     setState(() {
       _appliedFilters = _appliedFilters.copyWith(quickStatus: quickStatus);
       // Clear markers immediately on tab switch — old markers belong to a
       // different filter set and should not linger while the new fetch runs.
+      _markerStore.clear();
       _visibleMarkers = [];
       _pinnedSelectedMarker = null;
       _selectedEvent = null;
@@ -970,7 +876,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _applyDrawerFilters() {
-    _invalidateTileCache();
+    _invalidateMarkerCache();
     setState(() {
       _appliedFilters = _draftFilters.copyWith(
         tagIds: {..._draftFilters.tagIds},
@@ -978,6 +884,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _isFilterOpen = false;
       // Clear markers immediately so stale markers from the previous filter
       // set don't remain visible while the new fetch is in flight.
+      _markerStore.clear();
       _visibleMarkers = [];
       _pinnedSelectedMarker = null;
       _selectedEvent = null;
@@ -991,326 +898,171 @@ class _ExploreScreenState extends State<ExploreScreen>
   void _handleViewportChanged(ExploreViewportQuery viewport) {
     _queryMode = ExploreMapQueryMode.viewport;
     _viewportQuery = viewport;
-    unawaited(_refreshMarkersForViewport(viewport));
+    unawaited(_loadMarkersForViewport(viewport));
   }
 
-  Future<void> _refreshMarkersForViewport(ExploreViewportQuery viewport) async {
-    // Industry-standard strategy: fetch a single padded bbox of flat markers,
-    // cluster client-side. One data source, no mode flip, no races. See
-    // Mapbox's supercluster pattern — the same approach Uber/Airbnb use.
-    debugPrint(
-      '[MARKERS] refreshMarkersForViewport (flat) zoom=${viewport.zoom.toStringAsFixed(1)} center=${viewport.center.latitude.toStringAsFixed(4)},${viewport.center.longitude.toStringAsFixed(4)} radiusKm=${viewport.radiusKm.toStringAsFixed(1)}',
+  /// Signature of the filter set markers are fetched against. A response is
+  /// applicable if and only if this still matches when it lands.
+  String get _markerFilterSignature {
+    final sortedTags = _appliedFilters.tagIds.toList()..sort();
+    return [
+      _statusQueryForFilters(_appliedFilters),
+      _appliedFilters.eventType ?? 'any-type',
+      _appliedFilters.datePreset,
+      sortedTags.join(','),
+    ].join('|');
+  }
+
+  /// True when [_markerRegion] fully contains [viewport], so the visible
+  /// markers can be re-derived from memory without a network call.
+  bool _isViewportCovered(ExploreViewportQuery viewport) {
+    final region = _markerRegion;
+    if (region == null) return false;
+
+    final driftKm =
+        distanceBetweenLatLng(region.center, viewport.center) / 1000.0;
+    return (driftKm + viewport.radiusKm) <= region.radiusKm;
+  }
+
+  /// Clips [_markerStore] to [viewport] (plus render slack) so the clusterer
+  /// only ever sees markers that can actually appear on screen.
+  List<EventMarker> _markersInViewport(ExploreViewportQuery viewport) {
+    final bounds = boundsAround(
+      viewport.center,
+      viewport.radiusKm * _renderPaddingMultiplier,
     );
-    await _loadFlatMarkersForViewport(viewport);
-  }
 
-  /// True if any previously fetched region fully contains the current
-  /// visible viewport (drift from its center + viewport radius still fits
-  /// inside the padded fetch radius).
-  bool _isViewportCoveredByFetchRegions(ExploreViewportQuery viewport) {
-    for (final region in _markerFetchRegions) {
-      final drift =
-          distanceInMetersBetween(
-            region.center.latitude,
-            region.center.longitude,
-            viewport.center.latitude,
-            viewport.center.longitude,
-          ) /
-          1000.0;
-      if ((drift + viewport.radiusKm) < region.radiusKm) {
-        return true;
+    final visible = <EventMarker>[];
+    for (final marker in _markerStore.values) {
+      if (bounds.contains(marker.latitude, marker.longitude)) {
+        visible.add(marker);
       }
     }
-    return false;
+    return visible;
   }
 
-  List<EventMarker> _collectMarkersFromFetchRegions() {
-    final seen = <String>{};
-    final out = <EventMarker>[];
-    for (final region in _markerFetchRegions) {
-      for (final marker in region.markers) {
-        if (seen.add(marker.id)) {
-          out.add(marker);
-        }
-      }
-    }
-    return out;
+  void _applyVisibleMarkers(ExploreViewportQuery viewport) {
+    final visible = _markersInViewport(viewport);
+    if (!mounted) return;
+    setState(() {
+      _visibleMarkers = visible;
+    });
   }
 
-  Future<void> _loadFlatMarkersForViewport(
-    ExploreViewportQuery viewport,
-  ) async {
-    // Cache hit — re-render from the cached union instantly, no network.
-    if (_isViewportCoveredByFetchRegions(viewport)) {
-      debugPrint('[MARKERS] flat fetch skipped — viewport covered by cache');
-      final merged = _collectMarkersFromFetchRegions();
-      if (!mounted) return;
-      setState(() {
-        _isClusterMode = false;
-        _serverClusters = const [];
-        _visibleMarkers = merged;
-      });
+  Future<void> _loadMarkersForViewport(ExploreViewportQuery viewport) async {
+    if (_isViewportCovered(viewport)) {
+      _applyVisibleMarkers(viewport);
       return;
     }
 
-    final requestVersion = ++_markerRequestVersion;
-    final fetchRadius = viewport.radiusKm * _fetchPaddingMultiplier;
-    debugPrint(
-      '[MARKERS] flat fetch version=$requestVersion radius=${fetchRadius.toStringAsFixed(1)}km',
-    );
+    final signature = _markerFilterSignature;
+    final fetchRadiusKm = viewport.radiusKm * _fetchPaddingMultiplier;
+
+    // Abort the superseded request instead of paying for a response we would
+    // only throw away.
+    _markerFetchCancelToken?.cancel('superseded viewport');
+    final cancelToken = CancelToken();
+    _markerFetchCancelToken = cancelToken;
 
     try {
-      final markers = await eventService.getFlatEventMarkers(
+      final page = await eventService.getFlatEventMarkers(
         status: _statusQueryForFilters(_appliedFilters),
         type: _appliedFilters.eventType,
         datePreset: _appliedFilters.datePreset,
         latitude: viewport.center.latitude,
         longitude: viewport.center.longitude,
-        radiusKm: fetchRadius,
+        radiusKm: fetchRadiusKm,
         tagIds: _appliedFilters.tagIds,
+        cancelToken: cancelToken,
       );
+
       if (!mounted) return;
+      // Filters changed while this was in flight — the payload describes a
+      // different question. Position drift is fine, filter drift is not.
+      if (signature != _markerFilterSignature) return;
 
-      // Drop stale responses — they were fetched with different filters (e.g.
-      // from a previous tab) and must not pollute the current region cache.
-      if (requestVersion != _markerRequestVersion) {
-        debugPrint(
-          '[MARKERS] flat response discarded (stale version=$requestVersion current=$_markerRequestVersion)',
+      _markerStore
+        ..clear()
+        ..addEntries(
+          page.markers
+              .where((marker) => marker.id.isNotEmpty)
+              .map((marker) => MapEntry(marker.id, marker)),
         );
-        return;
-      }
-
-      _markerFetchRegions.add(
-        _MarkerFetchRegion(
-          center: viewport.center,
-          radiusKm: fetchRadius,
-          markers: markers,
-        ),
+      // The server clamps and grid-snaps the request, so cache the circle it
+      // actually answered for — not the one we asked for.
+      _markerRegion = _MarkerFetchRegion(
+        center: page.center,
+        radiusKm: page.radiusKm,
       );
-      if (_markerFetchRegions.length > _maxMarkerFetchRegions) {
-        _markerFetchRegions.removeAt(0);
-      }
 
-      final merged = _collectMarkersFromFetchRegions();
-      debugPrint(
-        '[MARKERS] flat response applied: ${markers.length} new, ${merged.length} total across ${_markerFetchRegions.length} regions',
-      );
+      final visible = _markersInViewport(viewport);
       setState(() {
-        _isClusterMode = false;
-        _serverClusters = const [];
-        _visibleMarkers = merged;
+        _visibleMarkers = visible;
+        _markersTruncated = page.truncated;
+        _markerFetchFailed = false;
       });
-    } catch (e) {
-      debugPrint('[MARKERS] flat fetch FAILED: $e');
+    } catch (error) {
+      if (!mounted || cancelToken.isCancelled) return;
+      debugPrint('[MARKERS] fetch failed: $error');
+      setState(() {
+        _markerFetchFailed = true;
+      });
+    } finally {
+      if (_markerFetchCancelToken == cancelToken) {
+        _markerFetchCancelToken = null;
+      }
     }
   }
 
-  /// Whether the current viewport is covered by ANY previously fetched
-  /// cluster region at the same zoom. Panning back to a visited area is
-  /// therefore a cache hit and never triggers a refetch-and-wipe.
-  // ignore: unused_element
-  bool _isViewportCoveredByAnyFetch(ExploreViewportQuery viewport) {
-    final zoomFloor = viewport.zoom.floor();
-    final regions = _fetchedClusterRegionsByZoom[zoomFloor];
-    if (regions == null || regions.isEmpty) return false;
-    for (final region in regions) {
-      final drift =
-          distanceInMetersBetween(
-            region.center.latitude,
-            region.center.longitude,
-            viewport.center.latitude,
-            viewport.center.longitude,
-          ) /
-          1000.0;
-      if ((drift + viewport.radiusKm) < region.radiusKm) {
-        return true;
-      }
-    }
-    return false;
-  }
+  /// Applies a socket event to the marker store without a refetch. The socket
+  /// payload already carries the coordinates, so nuking the cache and
+  /// re-querying on every event was pure waste.
+  void _patchMarkerStore(Event event, {required bool remove}) {
+    if (event.id.isEmpty) return;
 
-  // ignore: unused_element
-  Future<void> _loadClusterMarkers(ExploreViewportQuery viewport) async {
-    final zoomFloor = viewport.zoom.floor();
-    final bucket = _clusterAccumulatorByZoom[zoomFloor];
-
-    if (_isViewportCoveredByAnyFetch(viewport)) {
-      debugPrint('[MARKERS] cluster fetch skipped — viewport covered');
-      setState(() {
-        _isClusterMode = true;
-        if (bucket != null) {
-          _serverClusters = bucket.values.toList();
-        }
-      });
+    if (remove) {
+      _markerStore.remove(event.id);
       return;
     }
 
-    final requestVersion = ++_markerRequestVersion;
-    // Over-fetch at 2x the viewport radius so small pans don't need a refetch.
-    final fetchRadius = viewport.radiusKm * 2;
-    debugPrint(
-      '[MARKERS] loadClusterMarkers version=$requestVersion fetchRadius=${fetchRadius.toStringAsFixed(1)}km zoomFloor=$zoomFloor',
-    );
-
-    try {
-      final clusters = await eventService.getEventClusters(
-        latitude: viewport.center.latitude,
-        longitude: viewport.center.longitude,
-        radiusKm: fetchRadius,
-        zoom: zoomFloor,
-        status: _statusQueryForFilters(_appliedFilters),
-        type: _appliedFilters.eventType,
-        datePreset: _appliedFilters.datePreset,
-        tagIds: _appliedFilters.tagIds,
-      );
-      if (!mounted) return;
-
-      // Per-zoom accumulator — NEVER wiped on zoom change. Different zoom
-      // floors coexist in their own buckets so panning + zooming never
-      // discards prior data.
-      final zoomBucket = _clusterAccumulatorByZoom.putIfAbsent(
-        zoomFloor,
-        () => <String, EventCluster>{},
-      );
-      for (final cluster in clusters) {
-        final key =
-            '${cluster.latitude.toStringAsFixed(5)}_${cluster.longitude.toStringAsFixed(5)}';
-        zoomBucket[key] = cluster;
-      }
-
-      // Track this fetched region so we can skip overlapping fetches later.
-      final regionList = _fetchedClusterRegionsByZoom.putIfAbsent(
-        zoomFloor,
-        () => <_ClusterFetchRegion>[],
-      );
-      regionList.add(
-        _ClusterFetchRegion(center: viewport.center, radiusKm: fetchRadius),
-      );
-      if (regionList.length > _maxFetchedRegionsPerZoom) {
-        regionList.removeAt(0);
-      }
-
-      // Only update the UI if this is still the latest request.
-      if (requestVersion != _markerRequestVersion) {
-        debugPrint(
-          '[MARKERS] cluster response merged (stale version=$requestVersion current=$_markerRequestVersion)',
-        );
-        return;
-      }
-
-      debugPrint(
-        '[MARKERS] cluster response applied: ${clusters.length} new, ${zoomBucket.length} total at z$zoomFloor',
-      );
-      setState(() {
-        _isClusterMode = true;
-        _serverClusters = zoomBucket.values.toList();
-      });
-    } catch (e) {
-      debugPrint('[MARKERS] cluster fetch FAILED: $e');
-    }
-  }
-
-  // ignore: unused_element
-  Future<void> _loadTileMarkers(ExploreViewportQuery viewport) async {
-    final sw = LatLng(
-      viewport.center.latitude - (viewport.radiusKm / 111.0),
-      viewport.center.longitude -
-          (viewport.radiusKm /
-              (111.0 * cos(viewport.center.latitude * pi / 180))),
-    );
-    final ne = LatLng(
-      viewport.center.latitude + (viewport.radiusKm / 111.0),
-      viewport.center.longitude +
-          (viewport.radiusKm /
-              (111.0 * cos(viewport.center.latitude * pi / 180))),
-    );
-
-    final neededTiles = computeVisibleGeohashTiles(
-      sw: sw,
-      ne: ne,
-      zoom: viewport.zoom,
-    );
-
-    final missingTiles = neededTiles
-        .where((tile) => !_tileCache.containsKey(tile))
-        .toSet();
-
-    if (missingTiles.isEmpty) {
-      setState(() {
-        _isClusterMode = false;
-        _visibleMarkers = _collectMarkersFromTiles(_tileCache.keys.toSet());
-      });
+    final latitude = event.location.latitude;
+    final longitude = event.location.longitude;
+    if (latitude == null || longitude == null) {
+      _markerStore.remove(event.id);
       return;
     }
 
-    final requestVersion = ++_markerRequestVersion;
-    // Don't flip _isClusterMode yet — keep showing old markers until tiles load.
+    final region = _markerRegion;
+    // Outside the fetched region it is not ours to cache; the next refetch
+    // will pick it up.
+    if (region != null &&
+        distanceInMetersBetween(
+                  region.center.latitude,
+                  region.center.longitude,
+                  latitude,
+                  longitude,
+                ) /
+                1000.0 >
+            region.radiusKm) {
+      return;
+    }
 
-    try {
-      final tileData = await eventService.getEventMarkersByTiles(
-        tiles: missingTiles,
-        zoom: viewport.zoom.floor(),
-        status: _statusQueryForFilters(_appliedFilters),
-        type: _appliedFilters.eventType,
-        datePreset: _appliedFilters.datePreset,
-        tagIds: _appliedFilters.tagIds,
-      );
-      if (!mounted) return;
+    _markerStore[event.id] = EventMarker(
+      id: event.id,
+      name: event.name,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
 
-      // Always merge fetched tiles into the cache regardless of version.
-      // Tile data is spatially keyed and always valid — discarding it causes
-      // markers to disappear when the user pans back to a previously-viewed area.
-      final nextCache = Map<String, List<EventMarker>>.from(_tileCache);
-      tileData.forEach((key, value) {
-        nextCache[key] = value;
-      });
-      _tileCache = nextCache;
-
-      // Only flip the display mode if this is still the latest request.
-      // A stale version means the user has since triggered a different fetch
-      // (e.g. zoomed back to cluster mode) and we shouldn't override that.
-      if (requestVersion != _markerRequestVersion) {
-        debugPrint(
-          '[MARKERS] tiles cached (stale version=$requestVersion current=$_markerRequestVersion)',
-        );
-        return;
-      }
-
-      setState(() {
-        _isClusterMode = false;
-        _visibleMarkers = _collectMarkersFromTiles(nextCache.keys.toSet());
-      });
-    } catch (_) {
-      // Tile fetch failed — keep existing state.
+  void _removeMarkerFromStore(String eventId) {
+    _markerStore.remove(eventId);
+    if (_pinnedSelectedMarker?.id == eventId) {
+      _pinnedSelectedMarker = null;
     }
   }
 
-  List<EventMarker> _collectMarkersFromTiles(Set<String> tiles) {
-    final seen = <String>{};
-    final markers = <EventMarker>[];
-    for (final tile in tiles) {
-      final tileMarkers = _tileCache[tile];
-      if (tileMarkers == null) continue;
-      for (final marker in tileMarkers) {
-        if (seen.add(marker.id)) {
-          markers.add(marker);
-        }
-      }
-    }
-    return markers;
-  }
-
-  EventMarker? _findMarkerById(String markerId) {
-    for (final marker in _visibleMarkers) {
-      if (marker.id == markerId) return marker;
-    }
-    for (final list in _tileCache.values) {
-      for (final marker in list) {
-        if (marker.id == markerId) return marker;
-      }
-    }
-    return null;
-  }
+  EventMarker? _findMarkerById(String markerId) => _markerStore[markerId];
 
   void _selectMarkerById(String markerId) {
     // Pin the tapped marker so it stays on the map regardless of any
@@ -1366,37 +1118,43 @@ class _ExploreScreenState extends State<ExploreScreen>
         });
   }
 
-  void _invalidateTileCache() {
-    // Only clear cache metadata so new fetches are forced.
-    // Do NOT clear _visibleMarkers or _serverClusters here — they stay
-    // visible until the replacement fetch arrives, preventing a blank flash.
-    _tileCache = {};
-    _markerCacheByFilter.clear();
-    _clusterAccumulatorByZoom.clear();
-    _fetchedClusterRegionsByZoom.clear();
-    _markerFetchRegions.clear();
+  /// Drops the cached region so the next refresh refetches. [_markerStore]
+  /// and [_visibleMarkers] are left alone so the map keeps showing the old
+  /// markers until the replacement lands, avoiding a blank flash.
+  void _invalidateMarkerCache() {
+    _markerRegion = null;
+    _markersTruncated = false;
   }
 
-  /// Refreshes markers for whatever state the screen is currently in:
-  /// - If a viewport query is active (user has panned/zoomed), use it.
-  /// - Otherwise bootstrap from the user's location in cluster mode.
+  void _retryMarkerFetch() {
+    setState(() {
+      _markerFetchFailed = false;
+    });
+    _invalidateMarkerCache();
+    _refreshMarkersForCurrentState();
+  }
+
+  /// Refreshes markers for whatever state the screen is currently in: the
+  /// active viewport if the user has panned, otherwise a bootstrap circle
+  /// around their location.
   void _refreshMarkersForCurrentState() {
-    if (_viewportQuery != null) {
-      unawaited(_refreshMarkersForViewport(_viewportQuery!));
-    } else {
-      final location = _effectiveLocation;
-      if (location != null) {
-        unawaited(
-          _loadFlatMarkersForViewport(
-            ExploreViewportQuery(
-              center: location,
-              radiusKm: _appliedFilters.radiusKm,
-              zoom: 12,
-            ),
-          ),
-        );
-      }
+    final viewport = _viewportQuery;
+    if (viewport != null) {
+      unawaited(_loadMarkersForViewport(viewport));
+      return;
     }
+
+    final location = _effectiveLocation;
+    if (location == null) return;
+    unawaited(
+      _loadMarkersForViewport(
+        ExploreViewportQuery(
+          center: location,
+          radiusKm: _appliedFilters.radiusKm,
+          zoom: 12,
+        ),
+      ),
+    );
   }
 
   void _handleRecenterRequested() {
@@ -1480,8 +1238,6 @@ class _ExploreScreenState extends State<ExploreScreen>
               manager: _mapManager,
               eventMarkers: _visibleMarkers,
               pinnedMarker: _pinnedSelectedMarker,
-              serverClusters: const [],
-              useServerClusters: false,
               selectedEvent: selectedVisibleEvent,
               selectedMarkerId: _selectedEvent?.id,
               userLocation: _effectiveLocation,
@@ -1515,14 +1271,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    ExploreSearchBar(
-                      onOpenFilters: _openFilters,
-                      showFilterIndicator: hasAppliedExploreDrawerFilters(
-                        _appliedFilters,
+                      AppSearchBar(
+                        onOpenFilters: _openFilters,
+                        showFilterIndicator: hasAppliedExploreDrawerFilters(
+                          _appliedFilters,
+                        ),
+                        readOnly: true,
+                        onTap: () => context.push(SearchScreen.routePath),
                       ),
-                      readOnly: true,
-                      onTap: () => context.push(SearchScreen.routePath),
-                    ),
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 40,
@@ -1536,10 +1292,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 _appliedFilters.quickStatus == filter.id;
                             return GestureDetector(
                               onTap: () => _applyQuickFilter(filter.id),
-                              child: _buildQuickFilterChip(
-                                filter,
-                                isSelected,
-                              ),
+                              child: _buildQuickFilterChip(filter, isSelected),
                             );
                           },
                         ),
@@ -1570,6 +1323,21 @@ class _ExploreScreenState extends State<ExploreScreen>
                               'Location is disabled. Nearby results may be incomplete.',
                           ctaLabel: 'Enable location',
                           onTap: _requestCurrentLocationFromNudge,
+                        ),
+                      ] else if (_markerFetchFailed) ...[
+                        const SizedBox(height: 10),
+                        _buildInfoBanner(
+                          icon: LucideIcons.alertTriangle,
+                          message: 'Could not load map pins.',
+                          ctaLabel: 'Retry',
+                          onTap: _retryMarkerFetch,
+                        ),
+                      ] else if (_markersTruncated) ...[
+                        const SizedBox(height: 10),
+                        _buildInfoBanner(
+                          icon: LucideIcons.search,
+                          message:
+                              'Too many events in this area to show them all. Zoom in to see the rest.',
                         ),
                       ],
                       if (_isFetchingMoreEvents) ...[
@@ -2427,6 +2195,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     debugPrint('=== EXPLORE SCREEN DISPOSED ===');
     debugPrint('Stack: ${StackTrace.current}');
     _socketSubscription?.cancel();
+    _markerFetchCancelToken?.cancel('screen disposed');
     _detailsPageController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -2467,21 +2236,12 @@ class _ExploreEventCacheEntry {
   final bool hasNext;
 }
 
-class _ClusterFetchRegion {
-  const _ClusterFetchRegion({required this.center, required this.radiusKm});
-
-  final LatLng center;
-  final double radiusKm;
-}
-
+/// Circle the marker store was fetched for. Holds no markers — the store is a
+/// single id-keyed map, so a region only needs to answer "is this viewport
+/// already covered?".
 class _MarkerFetchRegion {
-  const _MarkerFetchRegion({
-    required this.center,
-    required this.radiusKm,
-    required this.markers,
-  });
+  const _MarkerFetchRegion({required this.center, required this.radiusKm});
 
   final LatLng center;
   final double radiusKm;
-  final List<EventMarker> markers;
 }

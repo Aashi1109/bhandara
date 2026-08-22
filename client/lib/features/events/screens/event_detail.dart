@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../config.dart';
 import '../../../shared/constants/socket_events.dart';
 import '../../chat/models/chat.dart';
 import '../models/engagement.dart';
@@ -23,11 +25,13 @@ import '../../../shared/utils/maps.dart';
 import '../../saved/services/save.dart';
 import '../../../shared/services/socket.dart';
 import '../../../shared/theme/theme.dart';
+import '../utils/event_share.dart';
 import '../utils/event_status.dart';
 import '../../../shared/utils/error.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/button.dart';
 import '../widgets/review_editor_sheet.dart';
+import '../widgets/event_ratings_preview.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../../../shared/widgets/snackbar.dart';
 import './create_event.dart';
@@ -84,6 +88,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   StreamSubscription<Map<String, dynamic>>? _socketSubscription;
   Event? _event;
   EngagementSummary? _engagementSummary;
+  List<EventReview> _eventReviews = const [];
   bool _isLoading = true;
   bool _isHydratingFullEvent = false;
   bool _isLoadingEngagement = false;
@@ -184,9 +189,23 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       );
       if (!mounted) return;
       _applyEngagementSummary(summary);
+      unawaited(_loadReviewPreview());
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoadingEngagement = false);
+    }
+  }
+
+  Future<void> _loadReviewPreview() async {
+    try {
+      final reviews = await engagementService.getEntityRatings(
+        'events',
+        widget.id,
+      );
+      if (!mounted) return;
+      setState(() => _eventReviews = reviews);
+    } catch (_) {
+      // The rating summary remains useful when review details are unavailable.
     }
   }
 
@@ -400,8 +419,35 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     await _loadEvent(showBlockingLoader: false);
   }
 
-  void _shareEvent() {
-    AppSnackBar.info(context, 'Share is not available yet.');
+  Future<void> _shareEvent() async {
+    final event = _event;
+    if (event == null) return;
+
+    final message = buildEventShareMessage(
+      name: event.name,
+      startTime: event.startTime,
+      address: event.location.address,
+      link: AppConfig.shareLink('/event/${widget.id}'),
+    );
+
+    // iPad needs an anchor rect for the share popover.
+    final box = context.findRenderObject();
+    final origin = box is RenderBox && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: message,
+          subject: event.name,
+          sharePositionOrigin: origin,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.error(context, 'Unable to share this event right now.');
+    }
   }
 
   void _applyEngagementSummary(EngagementSummary summary) {
@@ -581,6 +627,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
       if (!mounted) return;
       _applyEngagementSummary(summary);
+      unawaited(_loadReviewPreview());
     } catch (e) {
       if (!mounted) return;
       AppSnackBar.show(
@@ -634,13 +681,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       kIsWeb ? _webLocationMapHeight : _mobileLocationMapHeight;
 
   void _openAttendees() {
-    if (_participantUsers.isEmpty) return;
-
     context.push(
       EventAttendeesScreen.routePath,
       extra: {
         'eventName': _event?.name ?? 'Event',
         'attendees': _participantUsers,
+        'capacity': _event?.capacity,
       },
     );
   }
@@ -1175,118 +1221,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           },
                         ),
                         const SizedBox(height: 40),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Who's Going",
-                                style: typography.titleMD,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            GestureDetector(
-                              onTap: _participantUsers.isEmpty
-                                  ? null
-                                  : _openAttendees,
-                              child: _isHydratingFullEvent &&
-                                      !_canShowFullEventDetails
-                                  ? const AppSkeletonLine(
-                                      width: 80,
-                                      height: 12,
-                                    )
-                                  : Text(
-                                      '$_participantCount Attending',
-                                      textAlign: TextAlign.right,
-                                      style: typography.bodySMStrong.copyWith(
-                                        color: _participantUsers.isEmpty
-                                            ? AppColors.mutedForeground
-                                            : AppColors.primary,
-                                        decoration: _participantUsers.isEmpty
-                                            ? TextDecoration.none
-                                            : TextDecoration.underline,
-                                      ),
-                                    ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (_participantUsers.isEmpty && _isHydratingFullEvent)
-                          SizedBox(
-                            height: 52,
-                            child: Stack(
-                              children: List.generate(
-                                4,
-                                (i) => Positioned(
-                                  left: i * 34.0,
-                                  child: const AppSkeleton(
-                                    width: 52,
-                                    height: 52,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (_participantUsers.isEmpty)
-                          SizedBox(
-                            height: 40,
-                            child: Align(
-                              alignment: Alignment.center,
-                              child: Text(
-                                'No attendees yet',
-                                style: typography.bodyMDSemi.copyWith(
-                                  color: AppColors.mutedForeground,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                        else
-                          SizedBox(
-                            height: 52,
-                            child: Stack(
-                              children: [
-                                ...List.generate(
-                                  _participantUsers.take(4).length,
-                                  (i) => Positioned(
-                                    left: i * 34.0,
-                                    child: _avatarBubble(
-                                      user: _participantUsers[i],
-                                      size: 52,
-                                      textSize: 13,
-                                      borderColor: AppColors.surface,
-                                    ),
-                                  ),
-                                ),
-                                if (_participantCount > 4)
-                                  Positioned(
-                                    left: 4 * 34.0,
-                                    child: Container(
-                                      width: 52,
-                                      height: 52,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.muted,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: AppColors.surface,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '+${_participantCount - 4}',
-                                          style: typography.bodySMStrong
-                                              .copyWith(
-                                                color:
-                                                    AppColors.mutedForeground,
-                                              ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
+                        _guestListPreview(),
                         const SizedBox(height: 40),
                         _ratingsAndReviewsSection(),
                       ],
@@ -1348,105 +1283,172 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     );
   }
 
-  Widget _ratingsAndReviewsSection() {
+  Widget _guestListPreview() {
     final typography = context.appTypography;
-    final hasRatings = _eventStats.ratingCount > 0;
+    final previewGuests = _participantUsers.take(4).toList();
+    final isLoading = _isHydratingFullEvent && !_canShowFullEventDetails;
 
     return Column(
+      key: const ValueKey('guest-list-preview'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(
-              child: Text(
-                hasRatings ? 'Ratings & Reviews' : 'No review yet',
-                style: typography.titleMD,
-              ),
+              child: Text('Around the table', style: typography.titleLGStrong),
             ),
             const SizedBox(width: 12),
-            GestureDetector(
-              onTap: hasRatings || _isOwner
-                  ? _openRatingsPage
-                  : (_isSubmittingReview ? null : _openReviewComposer),
-              child: Text(
-                hasRatings
-                    ? '${_eventStats.ratingCount} ratings'
-                    : _isOwner
-                    ? 'No reviews yet'
-                    : 'Be the first to review',
-                textAlign: TextAlign.right,
-                style: typography.captionMD.copyWith(
-                  color: _isSubmittingReview && !hasRatings
-                      ? AppColors.mutedForeground
-                      : AppColors.primary,
-                  decoration: hasRatings || !_isOwner
-                      ? TextDecoration.underline
-                      : TextDecoration.none,
+            InkWell(
+              onTap: _openAttendees,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  'View guest list',
+                  style: typography.bodySMStrong.copyWith(
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
           ],
         ),
-        if (_engagementSummary?.currentUserRating != null) ...[
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Your Review',
-                      style: typography.captionMDStrong.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const Spacer(),
-                    ...List.generate(
-                      5,
-                      (index) => Icon(
-                        index < (_engagementSummary?.currentUserRating ?? 0)
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        size: 18,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    if (!_isOwner)
-                      GestureDetector(
-                        onTap: _isSubmittingReview ? null : _openReviewComposer,
-                        child: Icon(
-                          LucideIcons.pencil,
-                          color: _isSubmittingReview
-                              ? AppColors.mutedForeground
-                              : AppColors.primary,
-                          size: AppIconSizes.defaultSize,
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 58,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 142,
+                height: 44,
+                child: isLoading
+                    ? Stack(
+                        children: List.generate(
+                          4,
+                          (index) => Positioned(
+                            left: index * 32,
+                            top: 2,
+                            child: const AppSkeleton(
+                              width: 40,
+                              height: 40,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Stack(
+                        children: List.generate(
+                          previewGuests.length,
+                          (index) => Positioned(
+                            left: index * 32,
+                            top: 2,
+                            child: _guestAvatar(
+                              user: previewGuests[index],
+                              index: index,
+                            ),
+                          ),
                         ),
                       ),
-                  ],
-                ),
-                if ((_engagementSummary?.currentUserReview ?? '')
-                    .trim()
-                    .isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _engagementSummary!.currentUserReview!,
-                    style: typography.bodyMD.copyWith(color: AppColors.primary),
-                  ),
-                ],
-              ],
-            ),
+              ),
+              Expanded(
+                child: isLoading
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppSkeletonLine(width: 124, height: 13),
+                          SizedBox(height: 6),
+                          AppSkeletonLine(width: 156, height: 10),
+                        ],
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$_participantCount ${_participantCount == 1 ? 'guest is' : 'guests are'} going',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: typography.captionMD.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _participantCount == 0
+                                ? 'Be the first to join the table'
+                                : 'A shared table, mostly new faces',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: typography.labelSMRegular.copyWith(
+                              color: AppColors.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ],
     );
+  }
+
+  Widget _guestAvatar({required EventUser user, required int index}) {
+    final backgrounds = <Color>[
+      AppColors.accent.withValues(alpha: 0.14),
+      AppColors.warning.withValues(alpha: 0.14),
+      AppColors.muted,
+      AppColors.border,
+    ];
+
+    return Avatar(
+      name: user.name,
+      imageUrl: user.avatarUrl,
+      size: 40,
+      textSize: 12,
+      borderColor: AppColors.surface,
+      borderWidth: 2,
+      backgroundColor: backgrounds[index % backgrounds.length],
+    );
+  }
+
+  Widget _ratingsAndReviewsSection() {
+    final summary =
+        _engagementSummary ??
+        EngagementSummary(
+          viewCount: _eventStats.viewCount,
+          ratingCount: _eventStats.ratingCount,
+          ratingAverage: _eventStats.ratingAverage,
+          ratingHistogram: const RatingHistogram(
+            one: 0,
+            two: 0,
+            three: 0,
+            four: 0,
+            five: 0,
+          ),
+          currentUserRating: null,
+          currentUserReview: null,
+        );
+
+    return EventRatingsPreview(
+      summary: summary,
+      recentReview: _recentCommunityReview,
+      isOwner: _isOwner,
+      isSubmitting: _isSubmittingReview,
+      onOpenRatings: _openRatingsPage,
+      onEditReview: _openReviewComposer,
+    );
+  }
+
+  EventReview? get _recentCommunityReview {
+    final currentUserId = ref.read(userProfileProvider).value?.id;
+    for (final review in _eventReviews) {
+      if (review.userId != currentUserId &&
+          (review.review?.trim().isNotEmpty ?? false)) {
+        return review;
+      }
+    }
+    return null;
   }
 
   Widget _circleButton(IconData icon, VoidCallback onTap) {
@@ -1823,8 +1825,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           width: 16,
                                           height: 16,
                                           shape: BoxShape.circle,
-                                          baseColor: AppColors.surface.withValues(alpha: 0.15),
-                                          highlightColor: AppColors.surface.withValues(alpha: 0.4),
+                                          baseColor: AppColors.surface
+                                              .withValues(alpha: 0.15),
+                                          highlightColor: AppColors.surface
+                                              .withValues(alpha: 0.4),
                                         ),
                                     ],
                                   ),
@@ -1927,22 +1931,6 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _avatarBubble({
-    required EventUser user,
-    required double size,
-    required double textSize,
-    required Color borderColor,
-  }) {
-    return Avatar(
-      name: user.name,
-      imageUrl: user.avatarUrl,
-      size: size,
-      textSize: textSize,
-      borderColor: borderColor,
-      borderWidth: 2,
     );
   }
 

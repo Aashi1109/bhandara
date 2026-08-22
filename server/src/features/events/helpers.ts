@@ -44,8 +44,11 @@ function buildMarkerCacheKey(
     mode,
     zoom: options.zoom,
     tiles: options.tiles ? [...options.tiles].sort() : undefined,
-    lat: filters.latitude?.toFixed(3),
-    lng: filters.longitude?.toFixed(3),
+    // Full precision on purpose: flat-marker viewports are already grid-snapped
+    // by the service before they reach here, so the key is stable across a pan.
+    // Rounding here instead would silently merge distinct queries.
+    lat: filters.latitude,
+    lng: filters.longitude,
     radius: filters.radiusKm,
     statuses: filters.statuses ? [...filters.statuses].sort() : undefined,
     types: filters.types ? [...filters.types].sort() : undefined,
@@ -70,3 +73,53 @@ export const setMarkerCache = <T>(
   options: { zoom?: number; tiles?: string[] },
   value: T,
 ) => markerCache.setItem(buildMarkerCacheKey(mode, filters, options), value);
+
+export const MAX_FLAT_MARKER_RADIUS_KM = 250;
+const KM_PER_DEGREE_LAT = 110.574;
+const KM_PER_DEGREE_LNG = 111.32;
+
+/**
+ * Snaps a flat-marker viewport to a coarse grid so panning inside a cell
+ * produces an identical query — and therefore an actual Redis cache hit.
+ * Keying on a raw 3-decimal centre never hit: pan centres are continuous, so
+ * every request minted a fresh key.
+ *
+ * The returned circle always *contains* the requested one, so a client that
+ * caches the echoed centre/radius never claims coverage it does not have.
+ */
+export const normalizeFlatMarkerViewport = (filters: IEventListFilters): IEventListFilters => {
+  const { latitude, longitude, radiusKm } = filters;
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(radiusKm) ||
+    (radiusKm ?? 0) <= 0
+  ) {
+    return filters;
+  }
+
+  const clampedKm = Math.min(radiusKm!, MAX_FLAT_MARKER_RADIUS_KM);
+  const bucketKm = Math.min(2 ** Math.ceil(Math.log2(Math.max(clampedKm, 1))), MAX_FLAT_MARKER_RADIUS_KM);
+  const stepKm = bucketKm / 4;
+
+  // A plain degree grid, deliberately not scaled by cos(latitude): scaling the
+  // longitude step by the *requested* latitude gave neighbouring requests
+  // different grids, so they never shared a cache entry. It also keeps the
+  // containment bound latitude-independent, since cos(lat) <= 1 only ever
+  // shrinks the east-west span of a cell.
+  const stepLat = stepKm / KM_PER_DEGREE_LAT;
+  const stepLng = stepKm / KM_PER_DEGREE_LNG;
+
+  return {
+    ...filters,
+    latitude: Math.round(latitude! / stepLat) * stepLat,
+    longitude: Math.round(longitude! / stepLng) * stepLng,
+    // Worst-case centre shift is half a cell diagonal (~0.18 x bucket), so
+    // 1.2x guarantees the snapped circle still covers the requested one — up
+    // to the hard cap, which wins. Past the cap the response is truncated by
+    // design, and the echoed radius must stay honest: the client treats it as
+    // the region it may serve from memory, so overstating it would hide
+    // markers just outside the circle that was actually queried.
+    radiusKm: Math.min(bucketKm * 1.2, MAX_FLAT_MARKER_RADIUS_KM),
+  };
+};

@@ -11,7 +11,6 @@ import '../../events/models/event.dart';
 import '../../../shared/services/maps/map_manager.dart';
 import '../../../shared/services/maps/map_marker_factory.dart';
 import '../../../shared/theme/theme.dart';
-import '../models/event_cluster.dart' as models;
 import '../models/event_marker.dart';
 import '../utils/event_marker_clusterer.dart';
 import '../utils/explore_viewport.dart';
@@ -33,7 +32,6 @@ class ExploreEventMap extends StatefulWidget {
     required this.manager,
     this.events = const [],
     this.eventMarkers = const [],
-    this.serverClusters = const [],
     this.selectedEvent,
     this.selectedMarkerId,
     required this.userLocation,
@@ -45,7 +43,6 @@ class ExploreEventMap extends StatefulWidget {
     this.onClusterFocusStart,
     this.onViewportChanged,
     this.onRecenterRequested,
-    this.useServerClusters = false,
     this.pinnedMarker,
     this.initialZoom,
   });
@@ -53,7 +50,6 @@ class ExploreEventMap extends StatefulWidget {
   final MapManager manager;
   final List<Event> events;
   final List<EventMarker> eventMarkers;
-  final List<models.EventCluster> serverClusters;
   final Event? selectedEvent;
   final String? selectedMarkerId;
   final LatLng? userLocation;
@@ -65,7 +61,6 @@ class ExploreEventMap extends StatefulWidget {
   final VoidCallback? onClusterFocusStart;
   final ValueChanged<ExploreViewportQuery>? onViewportChanged;
   final VoidCallback? onRecenterRequested;
-  final bool useServerClusters;
   final EventMarker? pinnedMarker;
   final double? initialZoom;
 
@@ -93,6 +88,14 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   final Set<int> _pendingClusterIcons = <int>{};
   int _clusterVersion = 0;
   bool _iconRebuildPending = false;
+
+  /// Cached clustering result plus the inputs it was derived from. Cluster
+  /// geometry depends only on the marker set and the zoom bucket, so anything
+  /// else (selection, icons, user location) rebuilds from this cache instead of
+  /// paying for another isolate round-trip.
+  List<EventMarker>? _clusteredMarkers;
+  int? _clusteredZoomBucket;
+  List<EventMarkerMapCluster> _clusters = const [];
   final ValueNotifier<Set<Marker>> _markersNotifier =
       ValueNotifier<Set<Marker>>(const <Marker>{});
   final ValueNotifier<Set<Circle>> _circlesNotifier =
@@ -151,28 +154,24 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
     final eventsChanged = oldWidget.events != widget.events;
     final markersChanged = oldWidget.eventMarkers != widget.eventMarkers;
-    final clustersChanged = oldWidget.serverClusters != widget.serverClusters;
     final locationChanged = oldWidget.userLocation != widget.userLocation;
     final safeAreaChanged = oldWidget.safeAreaPadding != widget.safeAreaPadding;
-    final modeChanged = oldWidget.useServerClusters != widget.useServerClusters;
     final selectionChanged =
         oldWidget.selectedEvent?.id != widget.selectedEvent?.id ||
         oldWidget.selectedMarkerId != widget.selectedMarkerId ||
         oldWidget.pinnedMarker?.id != widget.pinnedMarker?.id;
 
-    if (eventsChanged ||
-        markersChanged ||
-        clustersChanged ||
-        selectionChanged ||
-        locationChanged ||
-        modeChanged) {
-      debugPrint(
-        '[MAP] _rebuildMapMarkers: events=$eventsChanged markers=$markersChanged clusters=$clustersChanged selection=$selectionChanged location=$locationChanged mode=$modeChanged useServerClusters=${widget.useServerClusters} clusterCount=${widget.serverClusters.length} markerCount=${widget.eventMarkers.length}',
-      );
+    // Only a change to the marker set needs a re-cluster. Selection and
+    // location only swap icons, so they rebuild from the cached clusters —
+    // re-clustering there meant spawning an isolate on every marker tap.
+    if (markersChanged) {
+      unawaited(_reclusterAndRebuild());
+    } else if (eventsChanged || selectionChanged || locationChanged) {
       _rebuildMapMarkers();
-      if (locationChanged) {
-        _rebuildUserLocationPulse();
-      }
+    }
+
+    if (locationChanged) {
+      _rebuildUserLocationPulse();
     }
 
     if (widget.selectedEvent != null &&
@@ -203,7 +202,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
 
     // Auto-fit once when first content arrives after map is ready.
     if (!_hasAutoFittedInitially &&
-        (eventsChanged || markersChanged || clustersChanged) &&
+        (eventsChanged || markersChanged) &&
         _mapController != null &&
         _contentPoints().isNotEmpty) {
       _hasAutoFittedInitially = true;
@@ -246,37 +245,47 @@ class _ExploreEventMapState extends State<ExploreEventMap>
       return widget.eventMarkers.first.position;
     }
 
-    if (widget.serverClusters.isNotEmpty) {
-      return widget.serverClusters.first.position;
-    }
-
     return const LatLng(21.1458, 79.0882);
   }
 
+  int get _zoomBucket => _mapZoom.round();
+
+  /// Rebuilds the map's marker set from the cached clusters. Synchronous and
+  /// cheap — safe on every selection change or icon load.
   void _rebuildMapMarkers() {
-    if (!widget.useServerClusters && widget.eventMarkers.isNotEmpty) {
-      _rebuildMapMarkersAsync();
-      return;
-    }
-    final markers = _buildMarkers();
-    debugPrint(
-      '[MAP] _rebuildMapMarkers OUTPUT: ${markers.length} markers (useServerClusters=${widget.useServerClusters} clusterInput=${widget.serverClusters.length} markerInput=${widget.eventMarkers.length})',
-    );
-    _markersNotifier.value = markers;
+    _markersNotifier.value = _buildMarkersFromClusters(_clusters);
   }
 
-  Future<void> _rebuildMapMarkersAsync() async {
+  /// Re-clusters off the UI isolate, then rebuilds. No-op when neither the
+  /// marker set nor the zoom bucket moved.
+  Future<void> _reclusterAndRebuild() async {
+    final markers = widget.eventMarkers;
+    final zoomBucket = _zoomBucket;
+
+    if (identical(_clusteredMarkers, markers) &&
+        _clusteredZoomBucket == zoomBucket) {
+      return;
+    }
+
+    if (markers.isEmpty) {
+      _clusteredMarkers = markers;
+      _clusteredZoomBucket = zoomBucket;
+      _clusters = const [];
+      _rebuildMapMarkers();
+      return;
+    }
+
     final version = ++_clusterVersion;
     final clusters = await compute(_computeEventMarkerClusters, (
-      markers: widget.eventMarkers,
+      markers: markers,
       zoom: _mapZoom,
     ));
     if (!mounted || version != _clusterVersion) return;
-    final markers = _buildMarkersFromClusters(clusters);
-    debugPrint(
-      '[MAP] _rebuildMapMarkersAsync OUTPUT: ${markers.length} markers (markerInput=${widget.eventMarkers.length})',
-    );
-    _markersNotifier.value = markers;
+
+    _clusteredMarkers = markers;
+    _clusteredZoomBucket = zoomBucket;
+    _clusters = clusters;
+    _rebuildMapMarkers();
   }
 
   void _rebuildUserLocationPulse() {
@@ -312,61 +321,6 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         zIndex: 2,
       ),
     };
-  }
-
-  Set<Marker> _buildMarkers() {
-    if (widget.useServerClusters) {
-      return _buildServerClusterMarkers();
-    }
-    // No data yet — just show user location if available.
-    final markers = <Marker>{};
-    _addUserLocationMarker(markers);
-    return markers;
-  }
-
-  Set<Marker> _buildServerClusterMarkers() {
-    final markers = <Marker>{};
-
-    for (final cluster in widget.serverClusters) {
-      if (cluster.count == 1) {
-        // Single event — render as individual pin, not a cluster bubble
-        final icon = _eventMarkerIcon;
-        if (icon != null) {
-          markers.add(
-            Marker(
-              markerId: MarkerId(
-                'scluster_${cluster.latitude}_${cluster.longitude}_1',
-              ),
-              position: cluster.position,
-              icon: icon,
-              zIndexInt: 2,
-              infoWindow: InfoWindow(
-                title:
-                    'Event at ${cluster.latitude.toStringAsFixed(4)}, ${cluster.longitude.toStringAsFixed(4)}',
-              ),
-              onTap: () => _focusOnServerCluster(cluster),
-            ),
-          );
-        }
-      } else {
-        markers.add(
-          Marker(
-            markerId: MarkerId(
-              'scluster_${cluster.latitude}_${cluster.longitude}_${cluster.count}',
-            ),
-            position: cluster.position,
-            anchor: const Offset(0.5, 0.5),
-            zIndexInt: 2,
-            icon: _resolveClusterMarker(cluster.count),
-            onTap: () => _focusOnServerCluster(cluster),
-          ),
-        );
-      }
-    }
-
-    _addPinnedMarker(markers);
-    _addUserLocationMarker(markers);
-    return markers;
   }
 
   void _addPinnedMarker(Set<Marker> markers) {
@@ -486,10 +440,6 @@ class _ExploreEventMapState extends State<ExploreEventMap>
       points.add(marker.position);
     }
 
-    for (final cluster in widget.serverClusters) {
-      points.add(cluster.position);
-    }
-
     return points;
   }
 
@@ -579,17 +529,6 @@ class _ExploreEventMapState extends State<ExploreEventMap>
   Future<void> _focusOnVisibleContent() async {
     widget.onRecenterRequested?.call();
     await _fitCameraToVisibleContent();
-  }
-
-  Future<void> _focusOnServerCluster(models.EventCluster cluster) async {
-    widget.onClusterFocusStart?.call();
-    // One tap on any server cluster jumps directly into tile mode — never
-    // a +2 escalator that can land on yet another server cluster and force
-    // the user to tap again (which was nuking the accumulator mid-flight).
-    const targetZoom = clusterZoomThreshold + 1.5;
-    await _animateCameraAndEmitViewport(
-      CameraUpdate.newLatLngZoom(cluster.position, targetZoom),
-    );
   }
 
   Future<void> _focusOnMarkerCluster(EventMarkerMapCluster cluster) async {
@@ -731,7 +670,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
       setState(() {
         _mapZoom = nextZoom;
       });
-      _rebuildMapMarkers();
+      unawaited(_reclusterAndRebuild());
     }
 
     if (_isProgrammaticCameraMove) {
@@ -808,8 +747,20 @@ class _ExploreEventMapState extends State<ExploreEventMap>
     return Rect.fromLTRB(left, top, right, bottom);
   }
 
+  /// Converts a logical-pixel offset inside the map to a [ScreenCoordinate].
+  ///
+  /// ScreenCoordinate is in *physical* device pixels — the platform feeds it
+  /// straight to `Projection.fromScreenLocation`. Passing logical pixels
+  /// shrank the sampled rect by the device pixel ratio, so the emitted
+  /// viewport centre drifted toward the top-left of the map and the radius
+  /// came out several times too small. Markers that were plainly on screen
+  /// fell outside the clip box and vanished a frame after loading.
   ScreenCoordinate _screenCoordinate(Offset offset) {
-    return ScreenCoordinate(x: offset.dx.round(), y: offset.dy.round());
+    final ratio = MediaQuery.devicePixelRatioOf(context);
+    return ScreenCoordinate(
+      x: (offset.dx * ratio).round(),
+      y: (offset.dy * ratio).round(),
+    );
   }
 
   Widget _mapControl(IconData icon, bool isPrimary, {VoidCallback? onTap}) {

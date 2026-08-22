@@ -10,7 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:foody_mobile/features/events/models/event.dart';
 import 'package:foody_mobile/features/events/screens/event_detail.dart';
 import 'package:foody_mobile/shared/services/api.dart';
+import 'package:foody_mobile/shared/widgets/avatar.dart';
 import 'package:foody_mobile/shared/widgets/skeleton.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   late HttpClientAdapter originalAdapter;
@@ -170,6 +172,82 @@ void main() {
     expect(find.text('Verified Host'), findsOneWidget);
     expect(find.bySemanticsLabel('Minimize hero header'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('matches guest list preview and opens existing guest route', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final guests = List.generate(
+      5,
+      (index) => EventUser(id: 'guest-$index', name: 'Guest $index'),
+    );
+    final event = Event(
+      id: 'guest-preview',
+      name: 'Spring Table',
+      status: 'upcoming',
+      type: 'PUBLIC',
+      startTime: DateTime(2026, 4, 10, 18),
+      endTime: DateTime(2026, 4, 10, 21),
+      createdBy: 'host-1',
+      location: const Location(address: 'Garden Room'),
+      participants: guests,
+      creator: EventUser(id: 'host-1', name: 'Host'),
+    );
+    final router = GoRouter(
+      initialLocation: '/event/${event.id}',
+      routes: [
+        GoRoute(
+          path: EventDetailScreen.routePath,
+          builder: (_, _) =>
+              EventDetailScreen(id: event.id, initialEvent: event),
+        ),
+        GoRoute(
+          path: '/event-attendees',
+          builder: (_, state) {
+            final extra = state.extra! as Map<String, dynamic>;
+            final attendees = extra['attendees']! as List<EventUser>;
+            return Scaffold(
+              body: Text('Guest route received ${attendees.length} guests'),
+            );
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pump();
+
+    expect(find.text('Around the table'), findsOneWidget);
+    expect(find.text('View guest list'), findsOneWidget);
+    expect(find.text('5 guests are going'), findsOneWidget);
+    expect(find.text('A shared table, mostly new faces'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('guest-list-preview')),
+        matching: find.byType(Avatar),
+      ),
+      findsNWidgets(4),
+    );
+
+    final title = tester.widget<Text>(find.text('Around the table'));
+    expect(title.style?.fontSize, 20);
+    expect(title.style?.fontWeight, FontWeight.w800);
+
+    await tester.ensureVisible(find.text('View guest list'));
+    await tester.tap(find.text('View guest list'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Guest route received 5 guests'), findsOneWidget);
   });
 
   testWidgets('shows event detail skeletons while remote data is loading', (

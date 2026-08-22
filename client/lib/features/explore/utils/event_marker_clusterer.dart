@@ -53,6 +53,10 @@ class EventMarkerClusterer {
     for (var i = 0; i < projected.length; i++) {
       if (visited.contains(i)) continue;
 
+      // `enqueued` is separate from `visited`: without it the same index gets
+      // pushed once per neighbouring cell that can see it, so the queue grows
+      // quadratically in dense areas.
+      final enqueued = <int>{i};
       final queue = <int>[i];
       final clusterMarkers = <EventMarker>[];
       var sumLat = 0.0;
@@ -77,13 +81,14 @@ class EventMarkerClusterer {
             if (candidates == null) continue;
 
             for (final candidateIndex in candidates) {
-              if (visited.contains(candidateIndex) ||
-                  currentIndex == candidateIndex) {
+              if (enqueued.contains(candidateIndex) ||
+                  visited.contains(candidateIndex)) {
                 continue;
               }
 
               if ((current.point - projected[candidateIndex].point).magnitude <=
                   clusterRadius) {
+                enqueued.add(candidateIndex);
                 queue.add(candidateIndex);
               }
             }

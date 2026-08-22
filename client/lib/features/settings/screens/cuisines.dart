@@ -8,8 +8,8 @@ import '../../../shared/providers/tag.dart';
 import '../../../shared/providers/user.dart';
 import '../../../shared/providers/user_settings.dart';
 import '../../../shared/theme/theme.dart';
+import '../../../shared/widgets/app_search_bar.dart';
 import '../../../shared/widgets/header.dart';
-import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/settings_action_footer.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -151,13 +151,8 @@ class _CuisineInterestsScreenState
                     ),
                   ),
                   const SizedBox(height: 32),
-                  AppInput(
+                  AppSearchBar(
                     placeholder: 'Search cuisines...',
-                    icon: const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: Icon(LucideIcons.search),
-                    ),
-                    borderRadius: 16,
                     controller: _searchController,
                     onChanged: (_) => setState(() {}),
                   ),
@@ -298,10 +293,11 @@ class _CuisineInterestsScreenState
                 : () async {
                     final current = _selectedIds.toSet();
 
-                    await ref.read(userSettingsProvider.notifier).updateSettings(
-                      user.id,
-                      {'interests': current.toList()},
-                    );
+                    await ref
+                        .read(userSettingsProvider.notifier)
+                        .updateSettings(user.id, {
+                          'interests': current.toList(),
+                        });
                     if (!mounted) return;
                     setState(() {
                       _initialSelectedIds = {...current};

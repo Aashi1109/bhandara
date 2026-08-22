@@ -38,6 +38,24 @@ class AppConfig {
 
   static String get apiBaseUrl => apiUri.toString();
 
+  // ── Public web links (deep links / share) ────────────
+  /// Base URL used to build shareable links, e.g. `https://zentry.app`.
+  /// Empty until a public web/deep-link host exists — shares fall back to
+  /// text-only when unset.
+  static const String shareBaseUrl = String.fromEnvironment('SHARE_BASE_URL');
+
+  static Uri? shareLink(String path) {
+    if (shareBaseUrl.isEmpty) return null;
+    return Uri.parse(shareBaseUrl).resolve(path);
+  }
+
+  // ── Cloudinary assets ────────────────────────────────
+  static const String cloudinaryImageBaseUrl = String.fromEnvironment(
+    'CLOUDINARY_IMAGE_BASE_URL',
+    defaultValue:
+        'https://res.cloudinary.com/aashish1109/image/upload/zentry/mobile',
+  );
+
   // ── Google OAuth ─────────────────────────────────────
   static const String googleWebClientId = String.fromEnvironment(
     'GOOGLE_WEB_CLIENT_ID',

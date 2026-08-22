@@ -10,5 +10,9 @@ class AppColors {
   static const Color error = Color(0xFFEF4444);
   static const Color success = Color(0xFF10B981);
   static const Color warning = Color(0xFFF59E0B);
+  static const Color badgeFirstEventBackground = Color(0xFFFCF5E1);
+  static const Color badgeConversationStarterBackground = Color(0xFFEAF6F1);
+  static const Color badgeCommunitySupporterBackground = Color(0xFFF2E8D5);
+  static const Color badgeWeekStreakBackground = Color(0xFFF7F1DF);
   static const Color transparent = Colors.transparent;
 }

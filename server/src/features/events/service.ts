@@ -1,5 +1,4 @@
 import AddressService from '@/features/addresses/service';
-import { Address } from '@/features/addresses/model';
 import { EAddressEntityType, EEventParticipantStatus, EEventStatus, type EEventType } from '@/common/definitions/enums';
 import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/common/definitions/types';
 import ThreadsService from '../threads/service';
@@ -19,6 +18,7 @@ import {
   setEventUsersCache,
   deleteEventCache,
   getMarkerCache,
+  normalizeFlatMarkerViewport,
   setMarkerCache,
 } from './helpers';
 import { isEmpty } from '@/common/utils';
@@ -148,7 +148,9 @@ class EventService {
     return field === 'start' ? '"startTime"' : '"endTime"';
   }
 
-  private buildDerivedStatusClause(status: EEventStatus) {
+  /// Raw SQL predicate for a derived status, over unqualified Event columns.
+  /// Single source of truth so the `findAll` and raw-query paths cannot drift.
+  private buildDerivedStatusSql(status: EEventStatus): string | null {
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
     const now = escape(new Date().toISOString());
     const startExpr = this.timestampColumnExpression('start');
@@ -157,18 +159,23 @@ class EventService {
 
     switch (status) {
       case EEventStatus.Draft:
-        return { isDraft: true, cancelledAt: null };
+        return '("isDraft" = TRUE AND "cancelledAt" IS NULL)';
       case EEventStatus.Cancelled:
-        return Sequelize.literal('"cancelledAt" IS NOT NULL');
+        return '"cancelledAt" IS NOT NULL';
       case EEventStatus.Upcoming:
-        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} > ${now})`);
+        return `(${activeStatuses} AND ${startExpr} > ${now})`;
       case EEventStatus.Ongoing:
-        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} <= ${now} AND ${endExpr} > ${now})`);
+        return `(${activeStatuses} AND ${startExpr} <= ${now} AND ${endExpr} > ${now})`;
       case EEventStatus.Completed:
-        return Sequelize.literal(`(${activeStatuses} AND ${endExpr} <= ${now})`);
+        return `(${activeStatuses} AND ${endExpr} <= ${now})`;
       default:
         return null;
     }
+  }
+
+  private buildDerivedStatusClause(status: EEventStatus) {
+    const sql = this.buildDerivedStatusSql(status);
+    return sql ? Sequelize.literal(sql) : null;
   }
 
   private buildWhere(filters: IEventListFilters = {}): WhereOptions {
@@ -227,35 +234,51 @@ class EventService {
     return { [Op.and]: clauses };
   }
 
-  private buildEventOnlyWhere(filters: IEventListFilters): WhereOptions {
+  /// Raw SQL predicate for the non-geo event filters, over unqualified Event
+  /// columns. Returns '' when no filter applies.
+  ///
+  /// Marker queries embed this as `IN (SELECT "id" FROM "Events" WHERE ...)`.
+  /// The previous version ran a separate `findAll`, pulled every matching id
+  /// into Node and inlined them into an `IN (...)` list — 100k parameters for a
+  /// broad filter.
+  private buildEventOnlyWhereSql(filters: IEventListFilters): string {
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
-    const clauses: any[] = [];
+    const clauses: string[] = [];
 
     if (filters.types?.length) {
-      clauses.push({ type: { [Op.in]: filters.types } });
+      clauses.push(`"type" IN (${filters.types.map((type) => escape(type)).join(', ')})`);
     }
 
     if (filters.statuses?.length) {
-      const statusClauses = filters.statuses.map((status) => this.buildDerivedStatusClause(status)).filter(Boolean);
-      if (statusClauses.length) {
-        clauses.push({ [Op.or]: statusClauses });
+      const statusSql = filters.statuses
+        .map((status) => this.buildDerivedStatusSql(status))
+        .filter((sql): sql is string => Boolean(sql));
+      if (statusSql.length) {
+        clauses.push(`(${statusSql.join(' OR ')})`);
       }
     }
 
     if (filters.tagIds?.length) {
       const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
-      clauses.push(Sequelize.literal(`(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`));
+      // jsonb_exists_any, not `?|`: a literal `?` in a raw query collides with
+      // Sequelize's replacement placeholder syntax.
+      clauses.push(`jsonb_exists_any(COALESCE("tags", '[]'::jsonb), ARRAY[${tagArray}])`);
     }
 
     if (filters.startDate && filters.endDate) {
+      const startExpr = this.timestampColumnExpression('start');
       clauses.push(
-        Sequelize.literal(
-          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
-        ),
+        `(${startExpr} >= ${escape(filters.startDate.toISOString())} AND ${startExpr} <= ${escape(filters.endDate.toISOString())})`,
       );
     }
 
-    return clauses.length ? { [Op.and]: clauses } : {};
+    return clauses.join(' AND ');
+  }
+
+  /// `AND a."entityId" IN (...)` fragment for the current event filters, or ''.
+  private buildMarkerEventIdFilter(filters: IEventListFilters): string {
+    const eventWhereSql = this.buildEventOnlyWhereSql(filters);
+    return eventWhereSql ? `AND a."entityId" IN (SELECT "id" FROM "Events" WHERE ${eventWhereSql})` : '';
   }
 
   private async populateEvent(event: IEvent, populate?: boolean | string[]): Promise<IEvent> {
@@ -441,6 +464,7 @@ class EventService {
   private static readonly CLUSTER_ZOOM_THRESHOLD = 12;
   private static readonly MARKERS_PER_TILE_LIMIT = 500;
   private static readonly MAX_CLUSTERS = 200;
+  private static readonly FLAT_MARKER_LIMIT = 3000;
 
   private static gridSizeFromZoom(zoom: number): number {
     if (zoom <= 4) return 5.0;
@@ -451,63 +475,12 @@ class EventService {
     return 0.05;
   }
 
-  private async getMatchingEventMarkers(filters: IEventListFilters) {
-    const eventWhere = this.buildEventOnlyWhere(filters);
-    const hasEventFilters = Object.keys(eventWhere).length > 0;
-
-    let allowedIds: string[] | null = null;
-    if (hasEventFilters) {
-      const eventRows = await Event.findAll({
-        where: eventWhere,
-        attributes: ['id'],
-        raw: true,
-      });
-      allowedIds = (eventRows as unknown as { id: string }[]).map((e) => e.id);
-      if (allowedIds.length === 0) return [];
-    }
-
-    const whereClauses: any[] = [
-      { entityType: EAddressEntityType.Event },
-      Sequelize.literal('"latitude" IS NOT NULL AND "longitude" IS NOT NULL'),
-    ];
-
-    if (allowedIds) {
-      whereClauses.push({ entityId: { [Op.in]: allowedIds } });
-    }
-
-    if (
-      Number.isFinite(filters.latitude) &&
-      Number.isFinite(filters.longitude) &&
-      Number.isFinite(filters.radiusKm) &&
-      (filters.radiusKm ?? 0) > 0
-    ) {
-      const escape = Event.sequelize!.escape.bind(Event.sequelize);
-      whereClauses.push(
-        Sequelize.literal(
-          `ST_DWithin(ST_SetSRID(ST_MakePoint("longitude", "latitude"), 4326)::geography, ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography, ${escape(filters.radiusKm! * 1000)})`,
-        ),
-      );
-    }
-
-    const rows = await Address.findAll({
-      where: { [Op.and]: whereClauses },
-      attributes: ['entityId', 'latitude', 'longitude'],
-      raw: true,
-      limit: 5000,
-    });
-
-    return rows.map((row) => ({
-      id: row.entityId,
-      latitude: row.latitude as number,
-      longitude: row.longitude as number,
-    }));
-  }
-
   async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[]; flat?: boolean } = {}) {
     const { zoom = 0, tiles, flat = false } = options;
     const mode = flat ? 'flat' : zoom < EventService.CLUSTER_ZOOM_THRESHOLD ? 'clusters' : 'tiles';
+    const effectiveFilters = flat ? normalizeFlatMarkerViewport(filters) : filters;
 
-    const cached = await getMarkerCache(mode, filters, { zoom, tiles });
+    const cached = await getMarkerCache(mode, effectiveFilters, { zoom, tiles });
     if (cached) return cached;
 
     let result: Awaited<
@@ -515,14 +488,14 @@ class EventService {
     >;
 
     if (flat) {
-      result = await this.getFlatMarkers(filters);
+      result = await this.getFlatMarkers(effectiveFilters);
     } else if (zoom < EventService.CLUSTER_ZOOM_THRESHOLD) {
-      result = await this.getClusterMarkers(filters, zoom);
+      result = await this.getClusterMarkers(effectiveFilters, zoom);
     } else {
-      result = await this.getTileMarkers(filters, tiles);
+      result = await this.getTileMarkers(effectiveFilters, tiles);
     }
 
-    await setMarkerCache(mode, filters, { zoom, tiles }, result);
+    await setMarkerCache(mode, effectiveFilters, { zoom, tiles }, result);
     return result;
   }
 
@@ -530,18 +503,8 @@ class EventService {
     const gridSize = EventService.gridSizeFromZoom(zoom);
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
 
-    // Step 1: resolve event-level filters (status, type, tags, dates) to IDs
-    const eventWhere = this.buildEventOnlyWhere(filters);
-    const hasEventFilters = Object.keys(eventWhere).length > 0;
-    let idFilter = '';
-
-    if (hasEventFilters) {
-      const eventRows = await Event.findAll({ where: eventWhere, attributes: ['id'], raw: true });
-      const ids = (eventRows as unknown as { id: string }[]).map((e) => e.id);
-      if (ids.length === 0) return { mode: 'clusters' as const, items: [] };
-      const idList = ids.map((id) => escape(id)).join(', ');
-      idFilter = `AND a."entityId" IN (${idList})`;
-    }
+    // Step 1: event-level filters (status, type, tags, dates) as a subquery
+    const idFilter = this.buildMarkerEventIdFilter(filters);
 
     // Step 2: optional geo filter
     let geoFilter = '';
@@ -597,22 +560,8 @@ class EventService {
 
     const escape = Event.sequelize!.escape.bind(Event.sequelize);
 
-    // Step 1: resolve event-level filters to IDs
-    const eventWhere = this.buildEventOnlyWhere(filters);
-    const hasEventFilters = Object.keys(eventWhere).length > 0;
-    let idFilter = '';
-
-    if (hasEventFilters) {
-      const eventRows = await Event.findAll({ where: eventWhere, attributes: ['id'], raw: true });
-      const ids = (eventRows as unknown as { id: string }[]).map((e) => e.id);
-      if (ids.length === 0) {
-        const emptyResult: Record<string, { id: string; latitude: number; longitude: number }[]> = {};
-        for (const tile of tiles) emptyResult[tile] = [];
-        return { mode: 'tiles' as const, items: emptyResult };
-      }
-      const idList = ids.map((id) => escape(id)).join(', ');
-      idFilter = `AND a."entityId" IN (${idList})`;
-    }
+    // Step 1: event-level filters as a subquery
+    const idFilter = this.buildMarkerEventIdFilter(filters);
 
     // Step 2: decode geohash tiles to bboxes
     const tileBboxes = tiles.map((tile) => {
@@ -671,11 +620,66 @@ class EventService {
   }
 
   private async getFlatMarkers(filters: IEventListFilters) {
-    const rows = await this.getMatchingEventMarkers(filters);
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const limit = EventService.FLAT_MARKER_LIMIT;
+    const idFilter = this.buildMarkerEventIdFilter(filters);
+
+    const hasGeo =
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0;
+
+    let geoFilter = '';
+    // A deterministic ORDER BY is mandatory: with a bare LIMIT, Postgres may
+    // return any slice, so identical requests produced different marker sets
+    // and pins flickered in and out between refetches.
+    let orderBy = 'ORDER BY a."entityId"';
+
+    if (hasGeo) {
+      const origin = `ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography`;
+      const rowPoint = 'ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326)::geography';
+      geoFilter = `AND ST_DWithin(${rowPoint}, ${origin}, ${escape(filters.radiusKm! * 1000)})`;
+      // Nearest first, so hitting the cap drops the least relevant pins.
+      orderBy = `ORDER BY ST_Distance(${rowPoint}, ${origin}), a."entityId"`;
+    }
+
+    const sql = `
+    SELECT a."entityId" AS id, e."name" AS name, a.latitude, a.longitude
+    FROM "Addresses" a
+    JOIN "Events" e ON e."id" = a."entityId"
+    WHERE a."entityType" = ${escape(EAddressEntityType.Event)}
+      AND a.latitude  IS NOT NULL
+      AND a.longitude IS NOT NULL
+      ${idFilter}
+      ${geoFilter}
+    ${orderBy}
+    LIMIT ${limit + 1}
+  `;
+
+    const rows = await Event.sequelize!.query<{
+      id: string;
+      name: string | null;
+      latitude: number;
+      longitude: number;
+    }>(sql, { type: QueryTypes.SELECT });
+
+    const truncated = rows.length > limit;
 
     return {
       mode: 'flat' as const,
-      items: rows,
+      items: (truncated ? rows.slice(0, limit) : rows).map((row) => ({
+        id: row.id,
+        name: row.name ?? '',
+        latitude: row.latitude,
+        longitude: row.longitude,
+      })),
+      // Echo what was actually queried: the caller clamps and grid-snaps, so
+      // the client must cache this region, not the one it asked for.
+      latitude: filters.latitude,
+      longitude: filters.longitude,
+      radiusKm: filters.radiusKm,
+      truncated,
     };
   }
 

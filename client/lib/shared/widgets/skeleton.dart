@@ -31,10 +31,17 @@ class AppSkeleton extends StatefulWidget {
 
 class _AppSkeletonState extends State<AppSkeleton>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: widget.duration,
-  )..repeat();
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created eagerly: a lazy `late final` initializer would run on first
+    // read, and if that read is dispose(), `vsync: this` looks up TickerMode
+    // on an already-deactivated element and throws.
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat();
+  }
 
   @override
   void dispose() {

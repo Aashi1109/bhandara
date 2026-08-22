@@ -160,8 +160,14 @@ export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
     throw new BadRequestError('Too many tiles requested (max 100)');
   }
 
-  if (flatMarkers && (!Number.isFinite(filters.radiusKm) || (filters.radiusKm ?? 0) <= 0)) {
-    throw new BadRequestError('radiusKm is required for flat marker requests');
+  if (
+    flatMarkers &&
+    (!Number.isFinite(filters.latitude) ||
+      !Number.isFinite(filters.longitude) ||
+      !Number.isFinite(filters.radiusKm) ||
+      (filters.radiusKm ?? 0) <= 0)
+  ) {
+    throw new BadRequestError('latitude, longitude and radiusKm are required for flat marker requests');
   }
 
   const result = await eventService.getMarkers(filters, {

@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../shared/constants/api.dart';
 import '../../../shared/services/api.dart';
 import '../../../shared/models/api_response.dart';
 import '../models/event.dart';
-import '../../explore/models/event_cluster.dart';
 import '../../explore/models/event_marker.dart';
 import '../../../shared/services/base.dart';
 
@@ -139,85 +139,19 @@ class EventService extends BaseService {
     }
   }
 
-  Future<List<EventCluster>> getEventClusters({
+  /// Fetches individual event markers inside a padded circle.
+  ///
+  /// [cancelToken] lets the caller abort a request that a newer viewport has
+  /// already superseded instead of paying for a response it will discard.
+  Future<EventMarkerPage> getFlatEventMarkers({
     String? status,
     String? type,
     String? datePreset,
-    double? latitude,
-    double? longitude,
-    double? radiusKm,
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
     Set<String>? tagIds,
-    required int zoom,
-  }) async {
-    try {
-      final response = await _dio.get(
-        Api.eventMarkers,
-        queryParameters: {
-          'status': status,
-          'type': type,
-          'datePreset': datePreset,
-          'latitude': latitude,
-          'longitude': longitude,
-          'radiusKm': radiusKm,
-          'tagIds': tagIds?.isEmpty == true ? null : tagIds?.join(','),
-          'zoom': zoom,
-        },
-      );
-      final data = response.data['data'] as Map<String, dynamic>;
-      final items = data['items'] as List<dynamic>;
-      return items
-          .map((e) => EventCluster.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on DioException catch (e) {
-      throwError(e, 'Failed to fetch event clusters');
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<Map<String, List<EventMarker>>> getEventMarkersByTiles({
-    required Set<String> tiles,
-    String? status,
-    String? type,
-    String? datePreset,
-    Set<String>? tagIds,
-    required int zoom,
-  }) async {
-    try {
-      final response = await _dio.get(
-        Api.eventMarkers,
-        queryParameters: {
-          'tiles': tiles.join(','),
-          'status': status,
-          'type': type,
-          'datePreset': datePreset,
-          'tagIds': tagIds?.isEmpty == true ? null : tagIds?.join(','),
-          'zoom': zoom,
-        },
-      );
-      final data = response.data['data'] as Map<String, dynamic>;
-      final items = data['items'] as Map<String, dynamic>;
-      return items.map((key, value) {
-        final markers = (value as List<dynamic>)
-            .map((e) => EventMarker.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return MapEntry(key, markers);
-      });
-    } on DioException catch (e) {
-      throwError(e, 'Failed to fetch event markers');
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<EventMarker>> getFlatEventMarkers({
-    String? status,
-    String? type,
-    String? datePreset,
-    double? latitude,
-    double? longitude,
-    double? radiusKm,
-    Set<String>? tagIds,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.get(
@@ -232,15 +166,25 @@ class EventService extends BaseService {
           'radiusKm': radiusKm,
           'tagIds': tagIds?.isEmpty == true ? null : tagIds?.join(','),
         },
+        cancelToken: cancelToken,
       );
       final data = response.data['data'] as Map<String, dynamic>;
       final items = data['items'] as List<dynamic>;
-      return items
-          .map((e) => EventMarker.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on DioException catch (e) {
-      throwError(e, 'Failed to fetch event markers');
-    } catch (e) {
+      return EventMarkerPage(
+        markers: items
+            .map((e) => EventMarker.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        center: LatLng(
+          (data['latitude'] as num?)?.toDouble() ?? latitude,
+          (data['longitude'] as num?)?.toDouble() ?? longitude,
+        ),
+        radiusKm: (data['radiusKm'] as num?)?.toDouble() ?? radiusKm,
+        truncated: data['truncated'] == true,
+      );
+    } on DioException {
+      // Marker fetches are background work: no global snackbar. Cancellations
+      // are routine (a newer viewport superseded this one) and the caller
+      // surfaces real failures with an inline retry.
       rethrow;
     }
   }

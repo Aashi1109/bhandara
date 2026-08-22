@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:foody_mobile/shared/widgets/skeleton.dart';
 import 'package:foody_mobile/shared/services/api.dart';
 import 'package:foody_mobile/features/saved/screens/saved.dart';
@@ -87,6 +88,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(AppSkeleton), findsWidgets);
+    expect(find.byIcon(LucideIcons.slidersHorizontal), findsNothing);
 
     delayedAdapter.completeFirstRequest();
     await _pumpUntilFound(tester, find.text('Pizza Night'));

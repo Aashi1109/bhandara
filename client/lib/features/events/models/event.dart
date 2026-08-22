@@ -182,6 +182,17 @@ class Event {
     );
   }
 
+  /// First image attached to the event, if any. Video media is skipped —
+  /// its URL is not renderable as a thumbnail.
+  String? get previewImageUrl {
+    final items = media;
+    if (items == null) return null;
+    for (final item in items) {
+      if (item.type == 'image' && item.url.isNotEmpty) return item.url;
+    }
+    return null;
+  }
+
   bool get hasPreviewData =>
       (media?.isNotEmpty ?? false) ||
       (tags?.isNotEmpty ?? false) ||

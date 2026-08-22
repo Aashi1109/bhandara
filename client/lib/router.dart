@@ -111,6 +111,7 @@ final router = GoRouter(
           attendees: (extra['attendees'] as List<dynamic>? ?? const [])
               .whereType<EventUser>()
               .toList(),
+          capacity: extra['capacity'] as int?,
         );
       },
     ),

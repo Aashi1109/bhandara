@@ -24,3 +24,23 @@ class EventMarker {
 
   LatLng get position => LatLng(latitude, longitude);
 }
+
+/// Result of a flat-marker fetch.
+///
+/// [center] and [radiusKm] describe the circle the server actually queried: it
+/// clamps and grid-snaps the request for cache reuse, so the caller must cache
+/// this region rather than the one it asked for. [truncated] is true when the
+/// row cap was hit and the caller should tell the user to zoom in.
+class EventMarkerPage {
+  const EventMarkerPage({
+    required this.markers,
+    required this.center,
+    required this.radiusKm,
+    required this.truncated,
+  });
+
+  final List<EventMarker> markers;
+  final LatLng center;
+  final double radiusKm;
+  final bool truncated;
+}

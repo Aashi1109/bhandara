@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../profile/models/update.dart';
@@ -262,10 +263,77 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   }
 
   Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: context.appTypography.overline.copyWith(
+        color: AppColors.mutedForeground,
+        letterSpacing: 1,
+      ),
+    );
+  }
+
+  Widget _unreadSummary(int unreadCount) {
     final typography = context.appTypography;
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(text, style: typography.overline),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        spacing: 12,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              LucideIcons.bellRing,
+              size: AppIconSizes.defaultSize,
+              color: AppColors.accent,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 3,
+              children: [
+                Text(
+                  'You have $unreadCount new ${unreadCount == 1 ? 'update' : 'updates'}',
+                  style: typography.titleXSStrong.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+                Text(
+                  'Here’s what happened while you were away',
+                  style: typography.bodyXS.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$unreadCount',
+              style: typography.bodySMExtraBold.copyWith(
+                color: AppColors.surface,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -273,84 +341,87 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     final content = _contentFor(update);
     final typography = context.appTypography;
 
-    return GestureDetector(
+    return InkWell(
       onTap: () => _openUpdate(update),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: update.isUnread
-              ? AppColors.muted.withValues(alpha: 0.5)
-              : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 16,
+          spacing: 12,
           children: [
+            if (update.isUnread)
+              Container(
+                width: 3,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: update.isUnread ? AppColors.primary : AppColors.muted,
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: AppColors.muted,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 content.icon,
                 size: AppIconSizes.defaultSize,
-                color: update.isUnread ? AppColors.surface : AppColors.primary,
+                color: content.color,
               ),
             ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    spacing: 8,
                     children: [
                       Expanded(
                         child: Text(
                           content.title,
-                          style:
-                              (update.isUnread
-                                      ? typography.labelMD
-                                      : typography.labelMDSemi)
-                                  .copyWith(
-                                    color: update.isUnread
-                                        ? AppColors.primary
-                                        : AppColors.mutedForeground,
-                                  ),
-                        ),
-                      ),
-                      if (update.isUnread)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: typography.labelMD.copyWith(
                             color: AppColors.primary,
-                            shape: BoxShape.circle,
                           ),
                         ),
+                      ),
+                      Text(
+                        _timeAgo(update.createdAt),
+                        style: typography.captionSMStrong.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     content.body,
-                    style: typography.bodyBase.copyWith(
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: typography.bodySM.copyWith(
                       color: AppColors.mutedForeground,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _timeAgo(update.createdAt),
-                    style: typography.captionSM.copyWith(
-                      color: AppColors.mutedForeground,
+                      height: 1.3,
                     ),
                   ),
                 ],
               ),
             ),
+            if (update.isUnread)
+              const SizedBox(
+                width: 7,
+                height: 7,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -374,33 +445,21 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
       children: [
-        if (_updates.isNotEmpty && unreadCount > 0)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: Text(
-                '$unreadCount UNREAD',
-                style: context.appTypography.labelSM.copyWith(
-                  color: AppColors.surface,
-                ),
-              ),
-            ),
-          ),
-        if (_updates.isNotEmpty && unreadCount > 0) const SizedBox(height: 24),
+        if (_updates.isNotEmpty && unreadCount > 0) ...[
+          _unreadSummary(unreadCount),
+          const SizedBox(height: 16),
+        ],
         if (today.isNotEmpty) ...[
-          _sectionLabel('TODAY'),
-          const SizedBox(height: 12),
+          _sectionLabel(
+            'TODAY · ${DateFormat('MMM d').format(now).toUpperCase()}',
+          ),
+          const SizedBox(height: 4),
           ...today.map(_notif),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
         ],
         if (earlier.isNotEmpty) ...[
-          _sectionLabel('EARLIER'),
-          const SizedBox(height: 12),
+          _sectionLabel('EARLIER THIS WEEK'),
+          const SizedBox(height: 4),
           ...earlier.map(_notif),
         ],
         if (_updates.isEmpty)
@@ -441,55 +500,62 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.muted,
-              borderRadius: BorderRadius.circular(50),
-            ),
-            child: const AppSkeletonLine(width: 88, height: 12),
+        Container(
+          height: 80,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(18),
           ),
-        ),
-        const SizedBox(height: 24),
-        const AppSkeletonLine(width: 52, height: 12),
-        const SizedBox(height: 12),
-        ...List.generate(4, (_) => _buildUpdateSkeletonCard()),
-      ],
-    );
-  }
-
-  Widget _buildUpdateSkeletonCard() {
-    return const Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-          border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: const Row(
+            spacing: 12,
             children: [
               AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
-              SizedBox(width: 14),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 8,
                   children: [
-                    AppSkeletonLine(width: 160, height: 16),
-                    SizedBox(height: 10),
-                    AppSkeletonLine(height: 12),
-                    SizedBox(height: 8),
-                    AppSkeletonLine(width: 96, height: 10),
+                    AppSkeletonLine(width: 150, height: 12),
+                    AppSkeletonLine(width: 210, height: 9),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+        const AppSkeletonLine(width: 92, height: 10),
+        const SizedBox(height: 4),
+        ...List.generate(5, (_) => _buildUpdateSkeletonCard()),
+      ],
+    );
+  }
+
+  Widget _buildUpdateSkeletonCard() {
+    return const SizedBox(
+      height: 78,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border)),
+        ),
+        child: Row(
+          spacing: 12,
+          children: [
+            AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  AppSkeletonLine(width: 160, height: 12),
+                  AppSkeletonLine(height: 10),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -511,25 +577,34 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                 title: 'Updates',
                 showBack: false,
                 rightElement: GestureDetector(
-                  onTap: _updates.isEmpty || _isMarkingAll || showCaughtUpInHeader
+                  onTap:
+                      _updates.isEmpty || _isMarkingAll || showCaughtUpInHeader
                       ? null
                       : _markAllRead,
-                  child: Text(
-                    _isMarkingAll
-                        ? 'Marking...'
-                        : showCaughtUpInHeader
-                        ? 'You are all caught up.'
-                        : 'Mark all as read',
-                    style: typography.bodySM.copyWith(
-                      color: _updates.isEmpty || _isMarkingAll
-                          ? AppColors.mutedForeground
-                          : showCaughtUpInHeader
-                          ? AppColors.mutedForeground
-                          : AppColors.primary,
-                      decoration: showCaughtUpInHeader
-                          ? TextDecoration.none
-                          : TextDecoration.underline,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 5,
+                    children: [
+                      Icon(
+                        LucideIcons.checkCheck,
+                        size: AppIconSizes.s,
+                        color: _updates.isEmpty || showCaughtUpInHeader
+                            ? AppColors.mutedForeground
+                            : AppColors.accent,
+                      ),
+                      Text(
+                        _isMarkingAll
+                            ? 'Marking…'
+                            : showCaughtUpInHeader
+                            ? 'Caught up'
+                            : 'Mark all read',
+                        style: typography.bodySMStrong.copyWith(
+                          color: _updates.isEmpty || showCaughtUpInHeader
+                              ? AppColors.mutedForeground
+                              : AppColors.accent,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

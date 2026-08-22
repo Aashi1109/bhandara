@@ -49,7 +49,11 @@ class AppInput extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType,
     this.height = 56,
-    this.borderRadius = 16,
+    this.borderRadius = 20,
+    this.contentPadding,
+    this.elementSpacing = 16,
+    this.textFieldContentPadding,
+    this.trailingSpacing = 6,
     this.backgroundColor,
     this.hasBorder = true,
     this.validations,
@@ -72,6 +76,10 @@ class AppInput extends StatefulWidget {
   final TextInputType? keyboardType;
   final double height;
   final double borderRadius;
+  final EdgeInsetsGeometry? contentPadding;
+  final double elementSpacing;
+  final EdgeInsetsGeometry? textFieldContentPadding;
+  final double trailingSpacing;
   final Color? backgroundColor;
   final bool hasBorder;
   final InputValidations? validations;
@@ -215,6 +223,7 @@ class _AppInputState extends State<AppInput> {
         ],
         Container(
           height: widget.height,
+          padding: widget.contentPadding,
           decoration: BoxDecoration(
             color: widget.backgroundColor ?? AppColors.surface,
             borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -228,7 +237,7 @@ class _AppInputState extends State<AppInput> {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 16,
+            spacing: widget.elementSpacing,
             children: [
               if (widget.icon != null) ...[
                 IconTheme(
@@ -265,15 +274,18 @@ class _AppInputState extends State<AppInput> {
                       color: AppColors.mutedForeground.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: widget.icon != null ? 12 : 20,
-                    ),
+                    contentPadding:
+                        widget.textFieldContentPadding ??
+                        EdgeInsets.symmetric(
+                          horizontal: widget.icon != null ? 12 : 20,
+                        ),
                   ),
                 ),
               ),
               if (widget.rightElement != null) ...[
                 widget.rightElement!,
-                const SizedBox(width: 6),
+                if (widget.trailingSpacing > 0)
+                  SizedBox(width: widget.trailingSpacing),
               ],
             ],
           ),
