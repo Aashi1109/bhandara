@@ -1,9 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui' show lerpDouble;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,19 +18,14 @@ import '../../../shared/providers/tag.dart';
 import '../../../shared/providers/user.dart';
 import '../services/event.dart';
 import '../../../shared/services/file.dart';
-import '../../../shared/services/location_permission.dart';
-import '../../../shared/services/maps/map_manager.dart';
-import '../../../shared/services/maps/map_provider_type.dart';
 import '../../../shared/services/tag.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/utils/error.dart';
 import '../utils/event_schedule.dart';
-import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/textarea.dart';
 import '../../../shared/widgets/action_sheet.dart';
 import '../../../shared/widgets/attachment_pill.dart';
-import '../../../shared/widgets/map_view.dart';
 import '../../../shared/widgets/skeleton.dart';
 import '../widgets/media_preview.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -38,7 +33,7 @@ import '../../explore/screens/explore_screen.dart';
 import '../../settings/screens/location.dart';
 import '../../auth/screens/success.dart';
 
-enum _MediaSourceAction { gallery, cameraImage }
+enum _MediaSourceAction { gallery, documents, cameraImage }
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   const CreateEventScreen({
@@ -51,7 +46,6 @@ class CreateEventScreen extends ConsumerStatefulWidget {
     this.createEventRequest,
     this.updateEventRequest,
     this.resolveTagIds,
-    this.currentLocationResolver,
     this.initialAttachments,
     this.initialSelectedAttachmentIndex = 0,
     this.initialLocation,
@@ -60,7 +54,7 @@ class CreateEventScreen extends ConsumerStatefulWidget {
   });
 
   static const String routePath = '/create';
-  static const int maxAttachments = 5;
+  static const int maxAttachments = 8;
 
   final Event? initialEvent;
   final Future<XFile?> Function(ImageSource source)? pickImage;
@@ -71,7 +65,6 @@ class CreateEventScreen extends ConsumerStatefulWidget {
   final Future<Event?> Function(String eventId, Map<String, dynamic> data)?
   updateEventRequest;
   final Future<List<String>> Function(User user)? resolveTagIds;
-  final Future<UserAddress?> Function()? currentLocationResolver;
   final List<ChatAttachment>? initialAttachments;
   final int initialSelectedAttachmentIndex;
   final UserAddress? initialLocation;
@@ -92,21 +85,21 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   final _descriptionFocusNode = FocusNode();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _capacityController = TextEditingController();
   final DateFormat _dateFormat = DateFormat('EEE, d MMM');
   final DateFormat _timeFormat = DateFormat('h:mm a');
   final List<ChatAttachment> _attachments = [];
-  final MapManager _mapManager = MapManager(type: MapProviderType.google);
 
   bool _isLoading = false;
   bool _didHydrateLocation = false;
   bool _didHydrateInitialEvent = false;
-  double _launchDragProgress = 0;
   String? _error;
   String? _titleError;
   String? _descriptionError;
   String? _locationError;
   String? _timingError;
   String? _categoryError;
+  String? _capacityError;
   int _selectedAttachmentIndex = 0;
   UserAddress? _selectedLocation;
   LatLng? _locationPreviewTarget;
@@ -114,20 +107,26 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Tag? _selectedCategory;
   late DateTime _startAt;
   late DateTime _endAt;
+  bool _isPublic = true;
+  bool _requiresApproval = false;
+  bool _didSelectDate = false;
+  bool _didSelectStartTime = false;
+  bool _didSelectEndTime = false;
 
-  Set<Factory<OneSequenceGestureRecognizer>> get _mapGestureRecognizers => {
-    Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
-    Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
-  };
+  ChatAttachment? get _coverAttachment =>
+      _attachments.isEmpty ? null : _attachments.first;
 
   bool get _hasUploadInProgress => _attachments.any((item) => item.isUploading);
   bool get _hasFailedUploads => _attachments.any((item) => item.hasFailed);
   bool get _canSubmit =>
       !_isLoading && !_hasUploadInProgress && !_hasFailedUploads;
-  bool get _canDragLaunch => _canSubmit && !_isLoading;
   bool get _isEditMode => widget.initialEvent != null;
   String get _screenTitle => _isEditMode ? 'Edit Event' : 'Create Event';
-  String get _submitLabel => _isEditMode ? 'Update Event' : 'Launch Event';
+  String get _submitLabel => _isEditMode ? 'Update event' : 'Create event';
+  TextStyle get _fieldTextStyle =>
+      context.appTypography.bodyMD.copyWith(height: 1.2);
+  TextStyle get _fieldPlaceholderStyle =>
+      _fieldTextStyle.copyWith(color: AppColors.mutedForeground);
 
   Future<List<String>> _resolveDefaultTagIds(User user) async {
     final interestIds = user.meta?.interests ?? const <String>[];
@@ -188,6 +187,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           DateTime.now().add(const Duration(hours: 1)),
         );
     _endAt = widget.initialEndAt ?? _startAt.add(const Duration(hours: 2));
+    final hasInitialSchedule =
+        widget.initialEvent != null || widget.initialStartAt != null;
+    _didSelectDate = hasInitialSchedule;
+    _didSelectStartTime = hasInitialSchedule;
+    _didSelectEndTime =
+        widget.initialEvent != null || widget.initialEndAt != null;
     _hydrateInitialEvent();
   }
 
@@ -197,6 +202,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     _descriptionFocusNode.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
+    _capacityController.dispose();
     super.dispose();
   }
 
@@ -283,7 +289,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             (tag) => tag?.id == preferredId,
             orElse: () => null,
           );
-    _selectedCategory = matched ?? rootTags.first;
+    _selectedCategory = matched;
   }
 
   Future<void> _handleMediaSelection() async {
@@ -309,6 +315,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           ),
           const SizedBox(height: 12),
           AppActionSheetItem(
+            icon: LucideIcons.fileText,
+            title: 'Choose Files',
+            subtitle: 'Add PDF menus, flyers, or schedules',
+            onTap: () => Navigator.pop(context, _MediaSourceAction.documents),
+          ),
+          const SizedBox(height: 12),
+          AppActionSheetItem(
             icon: LucideIcons.camera,
             title: 'Take Photo',
             subtitle: 'Capture with your camera',
@@ -322,6 +335,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       case _MediaSourceAction.gallery:
         await _addFromGallery();
         break;
+      case _MediaSourceAction.documents:
+        await _addDocuments();
+        break;
       case _MediaSourceAction.cameraImage:
         await _addImage(ImageSource.camera);
         break;
@@ -334,6 +350,33 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     final file = await _pickImageFile(source);
     if (file == null) return;
     await _queueAttachment(file, isVideo: false);
+  }
+
+  Future<void> _handleCoverSelection() async {
+    final file = await _pickImageFile(ImageSource.gallery);
+    if (file == null) return;
+
+    if (_attachments.isNotEmpty) {
+      setState(() {
+        _attachments.removeAt(0);
+        _selectedAttachmentIndex = 0;
+      });
+    }
+    await _queueAttachment(file, isVideo: false, insertAt: 0);
+  }
+
+  Future<void> _addDocuments() async {
+    final remaining = CreateEventScreen.maxAttachments - _attachments.length;
+    if (remaining <= 0) return;
+
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+    );
+
+    for (final picked in files.take(remaining)) {
+      await _queueAttachment(picked.xFile, isVideo: false);
+    }
   }
 
   Future<void> _addFromGallery() async {
@@ -357,7 +400,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Future<void> _queueAttachment(XFile file, {required bool isVideo}) async {
+  Future<void> _queueAttachment(
+    XFile file, {
+    required bool isVideo,
+    int? insertAt,
+  }) async {
     if (_attachments.length >= CreateEventScreen.maxAttachments) return;
 
     final sizeBytes = await file.length();
@@ -372,8 +419,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     setState(() {
       _error = null;
-      _attachments.add(attachment);
-      _selectedAttachmentIndex = _attachments.length - 1;
+      final targetIndex = insertAt?.clamp(0, _attachments.length);
+      if (targetIndex == null) {
+        _attachments.add(attachment);
+        _selectedAttachmentIndex = _attachments.length - 1;
+      } else {
+        _attachments.insert(targetIndex, attachment);
+        _selectedAttachmentIndex = targetIndex;
+      }
     });
 
     await _uploadAttachment(attachment);
@@ -444,63 +497,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     });
   }
 
-  Future<void> _useCurrentLocation() async {
-    try {
-      final resolved = widget.currentLocationResolver != null
-          ? await widget.currentLocationResolver!()
-          : await _resolveCurrentLocation();
-      if (!mounted || resolved == null) return;
-      setState(() {
-        _selectedLocation = resolved;
-        _didHydrateLocation = true;
-        if (resolved.latitude != null && resolved.longitude != null) {
-          _locationPreviewTarget = LatLng(
-            resolved.latitude!,
-            resolved.longitude!,
-          );
-          _locationPreviewZoom = 14;
-        }
-        _locationError = null;
-        _error = null;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      AppSnackBar.error(context, 'Unable to get current location.');
-    }
-  }
-
-  Future<UserAddress?> _resolveCurrentLocation() async {
-    var status = await LocationPermissionService.currentStatus();
-    if (!LocationPermissionService.hasAccess(status)) {
-      status = await LocationPermissionService.requestOnStartup();
-    }
-    if (!LocationPermissionService.hasAccess(status)) {
-      return null;
-    }
-
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
-    final resolved = await _mapManager.getAddressFromCoordinates(
-      latitude: position.latitude,
-      longitude: position.longitude,
-    );
-    if (resolved == null) {
-      return UserAddress(
-        label:
-            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-    }
-
-    return UserAddress(
-      label: resolved.formattedAddress,
-      latitude: resolved.latitude,
-      longitude: resolved.longitude,
-    );
-  }
-
   Future<void> _openLocationPicker() async {
     final result = await context.push<LocationPickerResult>(
       LocationSettingsScreen.routePath,
@@ -536,6 +532,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     String? locationError;
     String? timingError;
     String? categoryError;
+    String? capacityError;
 
     if (title.isEmpty) {
       titleError = 'Please enter an event title.';
@@ -561,7 +558,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       categoryError = 'Select an event category.';
     }
 
-    if (!_endAt.isAfter(_startAt)) {
+    final capacityText = _capacityController.text.trim();
+    if (capacityText.isNotEmpty) {
+      final capacity = int.tryParse(capacityText);
+      if (capacity == null || capacity < 1) {
+        capacityError = 'Enter a valid guest capacity.';
+      }
+    }
+
+    if (!_didSelectDate || !_didSelectStartTime || !_didSelectEndTime) {
+      timingError = 'Choose the event date, start time, and end time.';
+    } else if (!_endAt.isAfter(_startAt)) {
       timingError = 'End time must be after the start time.';
     } else if (!_endAt.isAfter(DateTime.now())) {
       timingError = 'Event end time must be in the future.';
@@ -575,12 +582,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       _locationError = locationError;
       _timingError = timingError;
       _categoryError = categoryError;
+      _capacityError = capacityError;
       _error =
           titleError != null ||
               descriptionError != null ||
               locationError != null ||
               timingError != null ||
-              categoryError != null
+              categoryError != null ||
+              capacityError != null
           ? 'Fix the highlighted event details before continuing.'
           : null;
     });
@@ -597,64 +606,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         descriptionError == null &&
         locationError == null &&
         timingError == null &&
-        categoryError == null;
-  }
-
-  Future<void> _openCategoryPicker(List<Tag> categories) async {
-    final selectedId = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ...categories.map((tag) {
-                final isSelected = _selectedCategory?.id == tag.id;
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  title: Text(
-                    tag.name,
-                    style: context.appTypography.titleXS.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? const Icon(
-                          LucideIcons.check,
-                          size: AppIconSizes.defaultSize,
-                          color: AppColors.primary,
-                        )
-                      : null,
-                  onTap: () => Navigator.pop(context, tag.id),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (selectedId == null || !mounted) return;
-    final nextCategory = categories.firstWhere((tag) => tag.id == selectedId);
-    setState(() {
-      _selectedCategory = nextCategory;
-      _categoryError = null;
-      _error = null;
-    });
+        categoryError == null &&
+        capacityError == null;
   }
 
   Future<ChatAttachment?> _resolveAttachmentPreview(int index) async {
@@ -682,7 +635,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 
   Future<void> _openMediaPreview(int index) async {
-    if (_attachments.isEmpty) return;
+    if (index < 0 || index >= _attachments.length) return;
+    if (_isDocumentAttachment(_attachments[index])) return;
     final selected = await _resolveAttachmentPreview(index);
     if (selected == null || !mounted) return;
     if (selected.isUploading || selected.hasFailed) return;
@@ -720,24 +674,35 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Future<void> _pickDateTime({required bool isStart}) async {
-    final seed = isStart ? _startAt : _endAt;
-    final firstDate = isStart
-        ? DateTime.now().subtract(const Duration(days: 7))
-        : DateTime(_startAt.year, _startAt.month, _startAt.day);
-    final lastDate = isStart
-        ? DateTime.now().add(const Duration(days: 30))
-        : _startAt.add(const Duration(days: 7));
-
+  Future<void> _pickEventDate() async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: seed,
-      firstDate: firstDate,
-      lastDate: lastDate,
+      initialDate: _startAt,
+      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
       builder: _datePickerThemeBuilder,
     );
     if (pickedDate == null || !mounted) return;
 
+    final duration = _endAt.difference(_startAt);
+    final nextStart = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      _startAt.hour,
+      _startAt.minute,
+    );
+    setState(() {
+      _startAt = nextStart;
+      _endAt = nextStart.add(duration);
+      _didSelectDate = true;
+      _timingError = null;
+      _error = null;
+    });
+  }
+
+  Future<void> _pickEventTime({required bool isStart}) async {
+    final seed = isStart ? _startAt : _endAt;
     final pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(seed),
@@ -745,52 +710,46 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
     if (pickedTime == null || !mounted) return;
 
-    final pickedDateTime = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
     if (isStart) {
-      final normalizedStart = roundDateTimeToQuarterHour(pickedDateTime);
-      var normalizedEnd = normalizeEventEndDateTime(
-        start: normalizedStart,
-        proposedEnd: _endAt,
+      final duration = _endAt.difference(_startAt);
+      final nextStart = roundDateTimeToQuarterHour(
+        DateTime(
+          _startAt.year,
+          _startAt.month,
+          _startAt.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        ),
       );
-      if (normalizedEnd == normalizedStart.add(const Duration(minutes: 30))) {
-        normalizedEnd = normalizedStart.add(const Duration(hours: 2));
-      }
-
       setState(() {
-        _startAt = normalizedStart;
-        _endAt = normalizedEnd;
+        _startAt = nextStart;
+        _endAt = normalizeEventEndDateTime(
+          start: nextStart,
+          proposedEnd: nextStart.add(duration),
+        );
+        _didSelectStartTime = true;
         _timingError = null;
         _error = null;
       });
       return;
     }
 
-    final normalizedEnd = normalizeEventEndDateTime(
-      start: _startAt,
-      proposedEnd: pickedDateTime,
+    var proposedEnd = DateTime(
+      _startAt.year,
+      _startAt.month,
+      _startAt.day,
+      pickedTime.hour,
+      pickedTime.minute,
     );
-    if (!pickedDateTime.isAfter(_startAt)) {
-      AppSnackBar.info(
-        context,
-        'End time was adjusted to stay after the start time.',
-      );
+    if (!proposedEnd.isAfter(_startAt)) {
+      proposedEnd = proposedEnd.add(const Duration(days: 1));
     }
-    if (pickedDateTime.isAfter(_startAt.add(const Duration(days: 7)))) {
-      AppSnackBar.info(
-        context,
-        'End time was limited to 7 days after the start time.',
-      );
-    }
-
     setState(() {
-      _endAt = normalizedEnd;
+      _endAt = normalizeEventEndDateTime(
+        start: _startAt,
+        proposedEnd: proposedEnd,
+      );
+      _didSelectEndTime = true;
       _timingError = null;
       _error = null;
     });
@@ -841,7 +800,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Future<void> _handleCreate() async {
+  Future<void> _handleCreate({bool saveAsDraft = false}) async {
     if (!_validateForm()) return;
     if (!_canSubmit) {
       setState(() {
@@ -874,15 +833,18 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           .map((item) => item.mediaId)
           .whereType<String>()
           .toList();
+      final capacity = int.tryParse(_capacityController.text.trim());
 
       final payload = {
         'name': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'type': widget.initialEvent?.type ?? 'custom',
+        if (saveAsDraft) 'status': 'draft',
         'createdBy': widget.initialEvent?.createdBy ?? user.id,
         'startTime': _startAt.toUtc().toIso8601String(),
         'endTime': _endAt.toUtc().toIso8601String(),
         if (uploadedMediaIds.isNotEmpty) 'media': uploadedMediaIds,
+        if (capacity != null && capacity > 0) 'capacity': capacity,
         'tags': tagIds,
         'location': {
           'address': selectedLocation.label,
@@ -911,13 +873,21 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         final createdEvent = await eventService.createEvent(payload);
         if (!mounted) return;
         setState(() => _isLoading = false);
-        context.go(SuccessScreen.routePath, extra: createdEvent);
+        if (saveAsDraft) {
+          context.go(ExploreScreen.routePath);
+        } else {
+          context.go(SuccessScreen.routePath, extra: createdEvent);
+        }
         return;
       }
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-      context.go(SuccessScreen.routePath);
+      if (saveAsDraft) {
+        context.go(ExploreScreen.routePath);
+      } else {
+        context.go(SuccessScreen.routePath);
+      }
     } catch (e) {
       if (!mounted) return;
       final message = extractExceptionMessage(e);
@@ -927,35 +897,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       });
       AppSnackBar.error(context, message);
     }
-  }
-
-  void _handleLaunchDragUpdate(DragUpdateDetails details, double maxTravel) {
-    if (!_canDragLaunch || maxTravel <= 0) return;
-
-    setState(() {
-      _launchDragProgress =
-          (_launchDragProgress + (details.delta.dx / maxTravel)).clamp(
-            0.0,
-            1.0,
-          );
-    });
-  }
-
-  Future<void> _handleLaunchDragEnd() async {
-    final shouldLaunch = _launchDragProgress >= 0.92 && _canDragLaunch;
-    if (!mounted) return;
-
-    if (shouldLaunch) {
-      setState(() {
-        _launchDragProgress = 1;
-      });
-      await _handleCreate();
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _launchDragProgress = 0;
-    });
   }
 
   @override
@@ -982,67 +923,33 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           SafeArea(
             child: Column(
               children: [
-                AppHeader(
-                  title: _screenTitle,
-                  onBack: () => _isEditMode
-                      ? context.pop()
-                      : context.go(ExploreScreen.routePath),
-                  rightElement: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Icon(
-                      LucideIcons.moreVertical,
-                      size: AppIconSizes.defaultSize,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  child: Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.muted,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: FractionallySizedBox(
-                      widthFactor: 0.66,
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildCreateHeader(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 180),
+                    padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildIntro(),
+                        if (_error != null) ...[
+                          const SizedBox(height: 20),
+                          _buildValidationBanner(),
+                        ],
+                        const SizedBox(height: 24),
+                        _buildCoverUpload(),
+                        const SizedBox(height: 26),
+                        _buildSupportingMedia(),
+                        const SizedBox(height: 28),
                         _buildDetailsSection(
                           categoriesAsync.value ?? const [],
                           isLoadingCategories: categoriesAsync.isLoading,
                         ),
-                        const SizedBox(height: 24),
-                        _buildLocationCard(),
-                        const SizedBox(height: 24),
-                        _buildHeroPreview(),
-                        if (_attachments.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _buildAttachmentPills(),
-                        ],
+                        const SizedBox(height: 28),
+                        _buildScheduleSection(),
+                        const SizedBox(height: 28),
+                        _buildGuestAccessSection(),
+                        const SizedBox(height: 28),
+                        _buildFormActions(),
                       ],
                     ),
                   ),
@@ -1050,175 +957,401 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               ],
             ),
           ),
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            child: _buildLaunchSlider(),
+          if (_isLoading) _buildPublishingOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreateHeader() {
+    return Container(
+      height: 72,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            key: const ValueKey('create_event_close_button'),
+            onTap: () => _isEditMode
+                ? context.pop()
+                : context.go(ExploreScreen.routePath),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(
+                LucideIcons.x,
+                size: AppIconSizes.defaultSize,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _screenTitle,
+              textAlign: TextAlign.center,
+              style: context.appTypography.heading3Heavy,
+            ),
+          ),
+          Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              _isEditMode ? 'Editing' : 'Draft',
+              style: context.appTypography.labelXSStrong.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLaunchSlider() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const horizontalPadding = 10.0;
-        const knobSize = 52.0;
-        final maxTravel =
-            constraints.maxWidth - (horizontalPadding * 2) - knobSize;
-        final startLeft = maxTravel / 2;
-        final endLeft = maxTravel;
-        final knobLeft =
-            horizontalPadding +
-            (lerpDouble(startLeft, endLeft, _launchDragProgress) ?? startLeft);
+  Widget _buildIntro() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _isEditMode ? 'REFINE THE GATHERING' : 'HOST SOMETHING MEMORABLE',
+          style: context.appTypography.overlineStrong.copyWith(
+            color: AppColors.primary,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _isEditMode ? 'Make the details sing.' : 'Bring people together.',
+          style: context.appTypography.heading2.copyWith(
+            fontFamily: context.appTypography.displayLG.fontFamily,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Share the essentials now. You can fine-tune everything before publishing.',
+          style: context.appTypography.bodyBase.copyWith(
+            color: AppColors.mutedForeground,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
 
-        return GestureDetector(
-          key: const ValueKey('create_event_launch_slider'),
-          onHorizontalDragUpdate: (details) =>
-              _handleLaunchDragUpdate(details, maxTravel / 2),
-          onHorizontalDragEnd: (_) => _handleLaunchDragEnd(),
-          child: Container(
-            height: 64,
-            decoration: BoxDecoration(
-              color: _canDragLaunch
-                  ? AppColors.primary
-                  : AppColors.primary.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+  Widget _buildValidationBanner() {
+    final errorCount = [
+      _titleError,
+      _descriptionError,
+      _categoryError,
+      _timingError,
+      _locationError,
+      _capacityError,
+    ].whereType<String>().length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
             ),
-            child: Stack(
-              alignment: Alignment.center,
+            child: const Icon(
+              LucideIcons.alertCircle,
+              size: AppIconSizes.m,
+              color: AppColors.error,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (_isLoading)
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: AppColors.surface,
-                      strokeWidth: 2,
-                    ),
-                  )
-                else
-                  IgnorePointer(
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 140),
-                      opacity: _launchDragProgress,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: 12,
-                        children: [
-                          Text(
-                            _submitLabel,
-                            style: context.appTypography.titleMD.copyWith(
-                              color: AppColors.surface,
-                            ),
-                          ),
-                          const Icon(
-                            LucideIcons.arrowRight,
-                            size: AppIconSizes.defaultSize,
-                            color: AppColors.surface,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 110),
-                  curve: Curves.easeOut,
-                  left: knobLeft,
-                  top: 6,
-                  child: Container(
-                    width: knobSize,
-                    height: knobSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.18),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      LucideIcons.arrowRight,
-                      size: AppIconSizes.defaultSize,
-                      color:
-                          (_canDragLaunch
-                                  ? AppColors.surface
-                                  : AppColors.mutedForeground)
-                              .withValues(alpha: 1 - _launchDragProgress),
-                    ),
+                Text(
+                  '$errorCount ${errorCount == 1 ? 'thing needs' : 'things need'} your attention',
+                  style: context.appTypography.bodySMExtraBold,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _error!,
+                  style: context.appTypography.bodyXS.copyWith(
+                    color: AppColors.mutedForeground,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildHeroPreview() {
+  Widget _buildCoverUpload() {
+    final cover = _coverAttachment;
     return GestureDetector(
       key: const ValueKey('create_event_hero_preview'),
+      onTap: _handleCoverSelection,
+      child: Container(
+        width: double.infinity,
+        height: 178,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.muted,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: cover == null
+            ? _buildEmptyCoverState()
+            : Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildCoverImage(cover),
+                  Positioned(
+                    left: 16,
+                    bottom: 16,
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.camera, size: AppIconSizes.s),
+                          const SizedBox(width: 7),
+                          Text(
+                            'Replace cover',
+                            style: context.appTypography.labelSMStrong,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyCoverState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            LucideIcons.imagePlus,
+            size: AppIconSizes.l,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text('Add an event cover', style: context.appTypography.titleSM),
+        const SizedBox(height: 4),
+        Text(
+          'JPG or PNG · 16:9 works best',
+          style: context.appTypography.bodyXS.copyWith(
+            color: AppColors.mutedForeground,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoverImage(ChatAttachment cover) {
+    if (cover.isUploading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (cover.hasFailed || cover.isVideo) {
+      return Container(
+        color: AppColors.muted,
+        alignment: Alignment.center,
+        child: Icon(
+          cover.hasFailed ? LucideIcons.alertCircle : LucideIcons.video,
+          color: cover.hasFailed ? AppColors.error : AppColors.primary,
+          size: AppIconSizes.hero,
+        ),
+      );
+    }
+
+    final source = cover.url?.isNotEmpty == true ? cover.url! : cover.localPath;
+    Widget fallback() => Container(
+      color: AppColors.muted,
+      alignment: Alignment.center,
+      child: const Icon(LucideIcons.image, size: AppIconSizes.hero),
+    );
+    if (source.startsWith('http') || kIsWeb) {
+      return Image.network(
+        source,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback(),
+      );
+    }
+    return Image.file(
+      File(source),
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback(),
+    );
+  }
+
+  Widget _buildSupportingMedia() {
+    final supporting = _attachments.asMap().entries.skip(1).toList();
+    if (supporting.isEmpty) return _buildEmptySupportingMedia();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Supporting media',
+                    style: context.appTypography.titleLGStrong,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Help guests picture the experience',
+                    style: context.appTypography.bodyXS.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '${_attachments.length}/${CreateEventScreen.maxAttachments}',
+              style: context.appTypography.labelXSStrong.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          key: const ValueKey('create_event_attachment_list'),
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ...supporting.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildAttachmentChip(entry.key, entry.value),
+                ),
+              ),
+              GestureDetector(
+                onTap: _handleMediaSelection,
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.plus, size: AppIconSizes.s),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Add more',
+                        style: context.appTypography.labelSMStrong,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptySupportingMedia() {
+    return GestureDetector(
+      key: const ValueKey('create_event_supporting_media'),
       onTap: _handleMediaSelection,
       child: Container(
         width: double.infinity,
-        height: 150,
+        height: 96,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: AppColors.muted,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: AppColors.border, width: 2),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
+        child: Row(
           children: [
-            GestureDetector(
-              onTap: _handleMediaSelection,
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                LucideIcons.imagePlus,
+                size: AppIconSizes.m,
+                color: AppColors.surface,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      LucideIcons.uploadCloud,
-                      size: AppIconSizes.l,
-                      color: AppColors.surface,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   Text(
-                    'Upload Event Media',
-                    style: context.appTypography.labelMD.copyWith(
-                      color: AppColors.primary,
+                    'Bring the moment to life',
+                    style: context.appTypography.bodyBaseSemi.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'ADD PHOTOS OR VIDEO FOR THE EVENT',
-                    style: context.appTypography.overline,
+                    'Add photos, videos or PDFs · Optional',
+                    style: context.appTypography.bodyXS.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
                 ],
               ),
@@ -1229,160 +1362,150 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _buildAttachmentPills() {
-    return SingleChildScrollView(
-      key: const ValueKey('create_event_attachment_list'),
-      scrollDirection: Axis.horizontal,
+  Widget _buildFormActions() {
+    return Container(
+      padding: const EdgeInsets.only(top: 22),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
       child: Row(
-        children: _attachments.asMap().entries.map((entry) {
-          return Padding(
-            padding: EdgeInsets.only(
-              right: entry.key == _attachments.length - 1 ? 0 : 8,
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              key: const ValueKey('create_event_save_draft_button'),
+              onPressed: _canSubmit
+                  ? () => _handleCreate(saveAsDraft: true)
+                  : null,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text('Save draft'),
             ),
-            child: _buildAttachmentChip(entry.key, entry.value),
-          );
-        }).toList(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              key: const ValueKey('create_event_submit_button'),
+              onPressed: _canSubmit ? _handleCreate : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.surface,
+                disabledBackgroundColor: AppColors.muted,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_submitLabel),
+                  const SizedBox(width: 8),
+                  const Icon(LucideIcons.arrowRight, size: AppIconSizes.m),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPublishingOverlay() {
+    return Positioned.fill(
+      child: ColoredBox(
+        color: AppColors.surface.withValues(alpha: 0.88),
+        child: Center(
+          child: Container(
+            width: 342,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.14),
+                  blurRadius: 32,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.send,
+                    color: AppColors.surface,
+                    size: AppIconSizes.l,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Creating your event…',
+                  style: context.appTypography.titleLGStrong,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Uploading media and preparing your guest page. Keep this screen open for a moment.',
+                  textAlign: TextAlign.center,
+                  style: context.appTypography.bodySM.copyWith(
+                    color: AppColors.mutedForeground,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const LinearProgressIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.muted,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildLocationCard() {
     final location = _selectedLocation;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: _sectionLabel('Location')),
-            GestureDetector(
-              key: const ValueKey('create_event_current_location_action'),
-              onTap: _useCurrentLocation,
-              child: Row(
-                children: [
-                  const Icon(
-                    LucideIcons.locateFixed,
-                    size: AppIconSizes.s,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Use Current',
-                    style: context.appTypography.labelSM.copyWith(
-                      color: AppColors.primary,
-                      decoration: TextDecoration.underline,
-                      decorationColor: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (_locationError != null) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              _locationError!,
-              style: context.appTypography.labelSM.copyWith(
-                color: AppColors.error,
-              ),
-            ),
-          ),
-        ],
+        const AppInputLabel(label: 'Location'),
+        const SizedBox(height: 8),
         KeyedSubtree(
           key: _locationFieldKey,
-          child: Container(
-            height: 160,
-            width: double.infinity,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppColors.muted,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(child: _buildMiniMapPreview(location)),
-                IgnorePointer(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            LucideIcons.mapPin,
-                            size: AppIconSizes.defaultSize,
-                            color: AppColors.surface,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(50),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Text(
-                            location?.label.isNotEmpty == true
-                                ? location!.label.toUpperCase()
-                                : 'TAP TO PINPOINT',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.appTypography.overline.copyWith(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: GestureDetector(
-                    key: const ValueKey('create_event_location_card'),
-                    onTap: _openLocationPicker,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(
-                        LucideIcons.expand,
-                        size: AppIconSizes.defaultSize,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: AppInput(
+            key: const ValueKey('create_event_location_card'),
+            value: location?.label ?? '',
+            placeholder: 'Add a venue or address',
+            readOnly: true,
+            onTap: _openLocationPicker,
+            error: _locationError,
+            textStyle: _fieldTextStyle,
+            placeholderStyle: _fieldPlaceholderStyle,
+            icon: const Icon(LucideIcons.mapPin, size: 18),
+            rightElement: const Icon(LucideIcons.chevronRight, size: 18),
+            height: 54,
+            borderRadius: 16,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            elementSpacing: 10,
+            trailingSpacing: 0,
           ),
         ),
       ],
@@ -1396,30 +1519,56 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('Event Details'),
-        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'The essentials',
+                style: context.appTypography.titleLGStrong,
+              ),
+            ),
+            Text(
+              'Required',
+              style: context.appTypography.bodySM.copyWith(
+                color: AppColors.mutedForeground,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         KeyedSubtree(
           key: _titleFieldKey,
           child: AppInput(
-            placeholder: 'Event Title (e.g. Midnight Pizza)',
+            label: 'Event name',
+            textStyle: _fieldTextStyle,
+            placeholderStyle: _fieldPlaceholderStyle,
+            placeholder: 'e.g. Sunday supper club',
             controller: _titleController,
             focusNode: _titleFocusNode,
             error: _titleError,
+            icon: const Icon(LucideIcons.sparkles, size: 18),
+            height: 54,
+            borderRadius: 16,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            elementSpacing: 10,
+            textFieldContentPadding: EdgeInsets.zero,
             onChanged: _handleTitleChanged,
           ),
         ),
         const SizedBox(height: 16),
-        _sectionLabel('About Event'),
-        const SizedBox(height: 8),
         KeyedSubtree(
           key: _descriptionFieldKey,
           child: AppTextArea(
-            placeholder:
-                'What is happening, who is it for, and what should people know?',
+            label: 'What’s it about?',
+            placeholder: 'Tell guests what to expect…',
             controller: _descriptionController,
             focusNode: _descriptionFocusNode,
-            minLines: 5,
-            maxLines: 5,
+            height: 88,
+            minLines: 1,
+            maxLines: 3,
             error: _descriptionError,
             onChanged: _handleDescriptionChanged,
           ),
@@ -1427,197 +1576,330 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         const SizedBox(height: 16),
         KeyedSubtree(
           key: _categoryFieldKey,
-          child: GestureDetector(
-            key: const ValueKey('create_event_category_field'),
-            onTap: categories.isEmpty
-                ? null
-                : () => _openCategoryPicker(categories),
-            child: Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _categoryError != null
-                      ? AppColors.error
-                      : AppColors.border,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _selectedCategory == null && isLoadingCategories
-                        ? const AppSkeletonLine(height: 14)
-                        : Text(
-                            _selectedCategory?.name ?? 'Select Category',
-                            style: context.appTypography.labelMD.copyWith(
-                              color: _selectedCategory != null
-                                  ? AppColors.primary
-                                  : AppColors.mutedForeground,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppInputLabel(label: 'Category'),
+              const SizedBox(height: 8),
+              if (isLoadingCategories)
+                const AppSkeletonLine(height: 38)
+              else
+                SingleChildScrollView(
+                  key: const ValueKey('create_event_category_list'),
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  child: Row(
+                    children: categories.map((tag) {
+                      final selected = _selectedCategory?.id == tag.id;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          key: ValueKey('create_event_category_${tag.id}'),
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = tag;
+                              _categoryError = null;
+                              _error = null;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 140),
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 13),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.muted
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(19),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _categoryIcon(tag.name),
+                                  size: 14,
+                                  color: selected
+                                      ? AppColors.primary
+                                      : AppColors.mutedForeground,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  tag.name,
+                                  style: context.appTypography.bodyXS.copyWith(
+                                    color: selected
+                                        ? AppColors.primary
+                                        : AppColors.mutedForeground,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  const Icon(
-                    LucideIcons.chevronDown,
-                    size: AppIconSizes.defaultSize,
-                    color: AppColors.mutedForeground,
-                  ),
-                ],
-              ),
-            ),
+                ),
+              if (_categoryError != null) ...[
+                const SizedBox(height: 8),
+                AppInputError(message: _categoryError!),
+              ],
+            ],
           ),
         ),
-        if (_categoryError != null) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              _categoryError!,
-              style: context.appTypography.labelSM.copyWith(
-                color: AppColors.error,
-              ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        KeyedSubtree(
-          key: _timingFieldKey,
-          child: Row(
+      ],
+    );
+  }
+
+  IconData _categoryIcon(String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains('food') || normalized.contains('dining')) {
+      return LucideIcons.utensils;
+    }
+    if (normalized.contains('learn') || normalized.contains('workshop')) {
+      return LucideIcons.lightbulb;
+    }
+    if (normalized.contains('music')) return LucideIcons.music;
+    if (normalized.contains('wellness') || normalized.contains('fitness')) {
+      return LucideIcons.heartPulse;
+    }
+    return LucideIcons.users;
+  }
+
+  Widget _buildScheduleSection() {
+    return KeyedSubtree(
+      key: _timingFieldKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('When & where', style: context.appTypography.titleLGStrong),
+          const SizedBox(height: 16),
+          _buildDateField(),
+          const SizedBox(height: 16),
+          Row(
             children: [
               Expanded(
-                child: _buildDateTimeField(
+                child: _buildTimeField(
                   key: const ValueKey('create_event_start_field'),
                   label: 'Starts',
                   value: _startAt,
-                  onTap: () => _pickDateTime(isStart: true),
+                  onTap: () => _pickEventTime(isStart: true),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _buildDateTimeField(
+                child: _buildTimeField(
                   key: const ValueKey('create_event_end_field'),
                   label: 'Ends',
                   value: _endAt,
-                  onTap: () => _pickDateTime(isStart: false),
+                  nextDay: !_isSameDay(_startAt, _endAt),
+                  onTap: () => _pickEventTime(isStart: false),
                 ),
               ),
             ],
           ),
-        ),
-        if (_timingError != null) ...[
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              _timingError!,
-              style: context.appTypography.labelSM.copyWith(
-                color: AppColors.error,
-              ),
-            ),
-          ),
+          if (_timingError != null) ...[
+            const SizedBox(height: 8),
+            AppInputError(message: _timingError!),
+          ],
+          const SizedBox(height: 16),
+          _buildLocationCard(),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildDateTimeField({
+  Widget _buildDateField() {
+    return AppInput(
+      key: const ValueKey('create_event_date_field'),
+      label: 'Date',
+      value: _didSelectDate ? _dateFormat.format(_startAt) : '',
+      placeholder: 'Choose date',
+      textStyle: _fieldTextStyle,
+      placeholderStyle: _fieldPlaceholderStyle,
+      readOnly: true,
+      onTap: _pickEventDate,
+      icon: const Icon(LucideIcons.calendar, size: 18),
+      height: 54,
+      borderRadius: 16,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      elementSpacing: 10,
+    );
+  }
+
+  Widget _buildTimeField({
     required Key key,
     required String label,
     required DateTime value,
     required VoidCallback onTap,
+    bool nextDay = false,
   }) {
+    return AppInput(
+      key: key,
+      label: label,
+      value: (label == 'Starts' ? _didSelectStartTime : _didSelectEndTime)
+          ? '${_timeFormat.format(value)}${nextDay ? ' +1' : ''}'
+          : '',
+      placeholder: 'Choose time',
+      textStyle: _fieldTextStyle,
+      placeholderStyle: _fieldPlaceholderStyle,
+      readOnly: true,
+      onTap: onTap,
+      error: _timingError,
+      showErrorText: false,
+      icon: const Icon(LucideIcons.watch, size: 18),
+      height: 54,
+      borderRadius: 16,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      elementSpacing: 10,
+    );
+  }
+
+  Widget _buildGuestAccessSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel(label),
+        Text('Guests & access', style: context.appTypography.titleLGStrong),
+        const SizedBox(height: 16),
+        AppInput(
+          label: 'Guest capacity',
+          textStyle: _fieldTextStyle,
+          placeholderStyle: _fieldPlaceholderStyle,
+          placeholder: 'No limit',
+          controller: _capacityController,
+          keyboardType: TextInputType.number,
+          error: _capacityError,
+          onChanged: (_) {
+            if (_capacityError == null && _error == null) return;
+            setState(() {
+              _capacityError = null;
+              _error = null;
+            });
+          },
+          icon: const Icon(LucideIcons.users, size: 18),
+          height: 54,
+          borderRadius: 16,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          elementSpacing: 10,
+          textFieldContentPadding: EdgeInsets.zero,
+        ),
+        const SizedBox(height: 16),
+        const AppInputLabel(label: 'Who can see this?'),
         const SizedBox(height: 8),
-        GestureDetector(
-          key: key,
-          onTap: onTap,
-          child: Container(
-            height: 72,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                const Icon(LucideIcons.calendarClock, size: AppIconSizes.m),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _dateFormat.format(value),
-                        style: context.appTypography.captionMD.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _timeFormat.format(value),
-                        style: context.appTypography.bodySM.copyWith(
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.muted,
+            borderRadius: BorderRadius.circular(16),
           ),
+          child: Row(
+            children: [
+              Expanded(child: _buildVisibilityOption(public: true)),
+              const SizedBox(width: 4),
+              Expanded(child: _buildVisibilityOption(public: false)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Approve requests',
+                    style: context.appTypography.bodySMExtraBold,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Review guests before they’re added',
+                    style: context.appTypography.bodyXS.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: _requiresApproval,
+              activeTrackColor: AppColors.primary,
+              activeThumbColor: AppColors.surface,
+              onChanged: (value) => setState(() => _requiresApproval = value),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildMiniMapPreview(UserAddress? location) {
-    final target =
-        _locationPreviewTarget ??
-        LatLng(location?.latitude ?? 21.1702, location?.longitude ?? 79.6527);
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        AppMapView(
-          manager: _mapManager,
-          initialCameraPosition: CameraPosition(
-            target: target,
-            zoom: _locationPreviewZoom,
-          ),
-          markers: const <Marker>{},
-          gestureRecognizers: _mapGestureRecognizers,
+  Widget _buildVisibilityOption({required bool public}) {
+    final selected = _isPublic == public;
+    return GestureDetector(
+      key: ValueKey(public ? 'create_event_public' : 'create_event_private'),
+      onTap: () => setState(() => _isPublic = public),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surface : AppColors.muted,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? [
+                  const BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.surface.withValues(alpha: 0.06),
-                AppColors.primary.withValues(alpha: 0.12),
-              ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              public ? LucideIcons.globe2 : LucideIcons.lock,
+              size: 15,
+              color: selected ? AppColors.primary : AppColors.mutedForeground,
             ),
-          ),
+            const SizedBox(width: 7),
+            Text(
+              public ? 'Public' : 'Private',
+              style: context.appTypography.labelSMStrong.copyWith(
+                color: selected ? AppColors.primary : AppColors.mutedForeground,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _buildAttachmentChip(int index, ChatAttachment file) {
     return AttachmentPill(
       key: ValueKey('create_event_attachment_$index'),
       file: file,
-      onTap: () => _openMediaPreview(index),
+      onTap: _isDocumentAttachment(file)
+          ? null
+          : () => _openMediaPreview(index),
       onRetry: () => _retryAttachment(file),
       onRemove: () => _removeAttachment(file),
     );
   }
 
-  Widget _sectionLabel(String text) {
-    return Text(text.toUpperCase(), style: context.appTypography.overline);
+  bool _isDocumentAttachment(ChatAttachment attachment) {
+    final name = attachment.name.toLowerCase();
+    return name.endsWith('.pdf');
   }
 
   void _hydrateInitialEvent() {
@@ -1626,6 +1908,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     _titleController.text = initialEvent.name;
     _descriptionController.text = initialEvent.description ?? '';
+    _capacityController.text = initialEvent.capacity?.toString() ?? '';
     _startAt = initialEvent.startTime;
     _endAt = initialEvent.endTime;
     _selectedLocation = UserAddress(

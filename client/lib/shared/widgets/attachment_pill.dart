@@ -22,6 +22,20 @@ class AttachmentPill extends StatelessWidget {
   final VoidCallback? onRemove;
 
   Widget _buildImagePreview(bool hasError) {
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      return Container(
+        color: hasError
+            ? AppColors.error.withValues(alpha: 0.08)
+            : AppColors.muted,
+        alignment: Alignment.center,
+        child: Icon(
+          LucideIcons.fileText,
+          size: AppIconSizes.m,
+          color: hasError ? AppColors.error : AppColors.primary,
+        ),
+      );
+    }
+
     Widget fallback() => Container(
       color: hasError
           ? AppColors.error.withValues(alpha: 0.08)

@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/theme.dart';
+import 'input_error.dart';
+import 'input_label.dart';
+
+export 'input_error.dart';
+export 'input_label.dart';
 
 enum AppInputType { text, email }
 
@@ -62,6 +67,15 @@ class AppInput extends StatefulWidget {
     this.minLines,
     this.focusNode,
     this.autofocus = false,
+    this.uppercaseLabel = false,
+    this.labelStyle,
+    this.readOnly = false,
+    this.value,
+    this.onTap,
+    this.showErrorText = true,
+    this.labelPadding = EdgeInsets.zero,
+    this.textStyle,
+    this.placeholderStyle,
   });
 
   final AppInputType type;
@@ -88,6 +102,15 @@ class AppInput extends StatefulWidget {
   final int? minLines;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool uppercaseLabel;
+  final TextStyle? labelStyle;
+  final bool readOnly;
+  final String? value;
+  final VoidCallback? onTap;
+  final bool showErrorText;
+  final EdgeInsetsGeometry labelPadding;
+  final TextStyle? textStyle;
+  final TextStyle? placeholderStyle;
 
   @override
   State<AppInput> createState() => _AppInputState();
@@ -210,96 +233,111 @@ class _AppInputState extends State<AppInput> {
       mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
-        if (widget.label != null) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              widget.label!.toUpperCase(),
-              style: typography.overline.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+        if (widget.label != null)
+          AppInputLabel(
+            label: widget.label!,
+            uppercase: widget.uppercaseLabel,
+            style: widget.labelStyle,
+            padding: widget.labelPadding,
+          ),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            height: widget.height,
+            padding: widget.contentPadding,
+            decoration: BoxDecoration(
+              color: widget.backgroundColor ?? AppColors.surface,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              border: widget.hasBorder
+                  ? Border.all(
+                      color: displayError != null
+                          ? AppColors.error
+                          : AppColors.border,
+                    )
+                  : null,
             ),
-          ),
-        ],
-        Container(
-          height: widget.height,
-          padding: widget.contentPadding,
-          decoration: BoxDecoration(
-            color: widget.backgroundColor ?? AppColors.surface,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            border: widget.hasBorder
-                ? Border.all(
-                    color: displayError != null
-                        ? AppColors.error
-                        : AppColors.border,
-                  )
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: widget.elementSpacing,
-            children: [
-              if (widget.icon != null) ...[
-                IconTheme(
-                  data: const IconThemeData(
-                    color: AppColors.mutedForeground,
-                    size: AppIconSizes.defaultSize,
-                  ),
-                  child: widget.icon!,
-                ),
-              ],
-              Expanded(
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  autofocus: widget.autofocus,
-                  onChanged: (value) {
-                    _validate(value);
-                    if (widget.onChanged != null) {
-                      widget.onChanged!(value);
-                    }
-                  },
-                  obscureText: widget.obscureText,
-                  keyboardType:
-                      widget.keyboardType ??
-                      (widget.type == AppInputType.email
-                          ? TextInputType.emailAddress
-                          : null),
-                  maxLines: widget.maxLines,
-                  minLines: widget.minLines,
-                  style: typography.bodyMD.copyWith(color: AppColors.primary),
-                  decoration: InputDecoration(
-                    hintText: widget.placeholder,
-                    hintStyle: typography.bodyMD.copyWith(
-                      color: AppColors.mutedForeground.withValues(alpha: 0.5),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: widget.elementSpacing,
+              children: [
+                if (widget.icon != null) ...[
+                  IconTheme(
+                    data: const IconThemeData(
+                      color: AppColors.mutedForeground,
+                      size: AppIconSizes.defaultSize,
                     ),
-                    border: InputBorder.none,
-                    contentPadding:
-                        widget.textFieldContentPadding ??
-                        EdgeInsets.symmetric(
-                          horizontal: widget.icon != null ? 12 : 20,
-                        ),
+                    child: widget.icon!,
                   ),
+                ],
+                Expanded(
+                  child: widget.readOnly
+                      ? Text(
+                          widget.value?.isNotEmpty == true
+                              ? widget.value!
+                              : widget.placeholder ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: widget.value?.isNotEmpty == true
+                              ? widget.textStyle ?? typography.bodyMD
+                              : widget.placeholderStyle ??
+                                    typography.bodyMD.copyWith(
+                                      color: AppColors.mutedForeground
+                                          .withValues(alpha: 0.5),
+                                    ),
+                        )
+                      : TextField(
+                          controller: widget.controller,
+                          focusNode: widget.focusNode,
+                          autofocus: widget.autofocus,
+                          onChanged: (value) {
+                            _validate(value);
+                            if (widget.onChanged != null) {
+                              widget.onChanged!(value);
+                            }
+                          },
+                          obscureText: widget.obscureText,
+                          keyboardType:
+                              widget.keyboardType ??
+                              (widget.type == AppInputType.email
+                                  ? TextInputType.emailAddress
+                                  : null),
+                          maxLines: widget.maxLines,
+                          minLines: widget.minLines,
+                          style:
+                              widget.textStyle ??
+                              typography.bodyMD.copyWith(
+                                color: AppColors.primary,
+                              ),
+                          decoration: InputDecoration(
+                            hintText: widget.placeholder,
+                            hintStyle:
+                                widget.placeholderStyle ??
+                                typography.bodyMD.copyWith(
+                                  color: AppColors.mutedForeground.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                            border: InputBorder.none,
+                            contentPadding:
+                                widget.textFieldContentPadding ??
+                                EdgeInsets.symmetric(
+                                  horizontal: widget.icon != null ? 12 : 20,
+                                ),
+                          ),
+                        ),
                 ),
-              ),
-              if (widget.rightElement != null) ...[
-                widget.rightElement!,
-                if (widget.trailingSpacing > 0)
-                  SizedBox(width: widget.trailingSpacing),
+                if (widget.rightElement != null) ...[
+                  widget.rightElement!,
+                  if (widget.trailingSpacing > 0)
+                    SizedBox(width: widget.trailingSpacing),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-        if (displayError != null) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              displayError,
-              style: typography.overline.copyWith(color: AppColors.error),
-            ),
-          ),
-        ],
+        if (displayError != null && widget.showErrorText)
+          AppInputError(message: displayError),
       ],
     );
   }

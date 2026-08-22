@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import '../../events/models/event.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../../config.dart';
 import '../../../shared/theme/theme.dart';
-import '../../../shared/widgets/button.dart';
-import '../../../shared/widgets/card.dart';
+import '../../../shared/widgets/snackbar.dart';
+import '../../events/models/event.dart';
+import '../../events/screens/event_detail.dart';
+import '../../events/utils/event_share.dart';
 import '../../explore/screens/explore_screen.dart';
 
 class SuccessScreen extends StatelessWidget {
@@ -16,55 +19,84 @@ class SuccessScreen extends StatelessWidget {
 
   final Event? event;
 
-  String get _imageUrl => event?.media?.isNotEmpty == true
-      ? event!.media!.first.url
-      : 'https://picsum.photos/seed/burrito/200/200';
+  String get _title => event?.name ?? 'Event';
 
   String get _categoryLabel {
     final tag = event?.tags?.isNotEmpty == true
-        ? event!.tags!.first.name
-        : null;
-    if (tag != null && tag.isNotEmpty) return tag.toUpperCase();
-    return 'EVENT';
+        ? event!.tags!.first.name.trim()
+        : '';
+    return tag.isEmpty ? 'EVENT' : tag.toUpperCase();
   }
-
-  String get _title => event?.name ?? 'Event';
 
   String get _locationLabel {
-    final address = event?.location.address.trim();
-    return address != null && address.isNotEmpty
-        ? address
-        : 'Location unavailable';
+    final address = event?.location.address.trim() ?? '';
+    return address.isEmpty ? 'Location unavailable' : address;
   }
 
-  String get _timeRange {
+  String get _dateLabel {
+    final start = event?.startTime.toLocal();
+    return start == null
+        ? 'Date unavailable'
+        : DateFormat('EEE, d MMM').format(start);
+  }
+
+  String get _timeLabel {
     final currentEvent = event;
     if (currentEvent == null) return 'Time unavailable';
+    final format = DateFormat('h:mm a');
     final start = currentEvent.startTime.toLocal();
     final end = currentEvent.endTime.toLocal();
-    final dateFormatter = DateFormat('EEE, d MMM');
-    final timeFormatter = DateFormat('h:mm a');
-    final startDate = dateFormatter.format(start);
-    final endDate = dateFormatter.format(end);
-    final startTime = timeFormatter.format(start);
-    final endTime = timeFormatter.format(end);
-    if (startDate == endDate) {
-      // Fri, 9 May  ·  8:15 AM – 10:15 AM
-      return '$startDate  ·  $startTime – $endTime';
-    }
-    // Fri, 9 May 8:15 AM  –  Sat, 10 May 10:15 AM
-    return '$startDate $startTime  –  $endDate $endTime';
+    final nextDay = !_isSameDay(start, end) ? ' · next day' : '';
+    return '${format.format(start)}–${format.format(end)}$nextDay';
   }
 
-  // String get _participantLabel {
-  //   final currentEvent = event;
-  //   if (currentEvent == null) return '0';
-  //   final count =
-  //       currentEvent.stats?.participantCount ??
-  //       currentEvent.participants?.length ??
-  //       0;
-  //   return '$count';
-  // }
+  int get _attachmentCount => event?.media?.length ?? 0;
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  void _close(BuildContext context) => context.go(ExploreScreen.routePath);
+
+  void _viewEvent(BuildContext context) {
+    final currentEvent = event;
+    if (currentEvent == null) {
+      context.go(ExploreScreen.routePath);
+      return;
+    }
+    context.go(
+      EventDetailScreen.routePath.replaceAll(':id', currentEvent.id),
+      extra: currentEvent,
+    );
+  }
+
+  Future<void> _shareEvent(BuildContext context) async {
+    final currentEvent = event;
+    if (currentEvent == null) return;
+
+    final message = buildEventShareMessage(
+      name: currentEvent.name,
+      startTime: currentEvent.startTime,
+      address: currentEvent.location.address,
+      link: AppConfig.shareLink('/event/${currentEvent.id}'),
+    );
+    final renderObject = context.findRenderObject();
+    final origin = renderObject is RenderBox && renderObject.hasSize
+        ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+        : null;
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: message,
+          subject: currentEvent.name,
+          sharePositionOrigin: origin,
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, 'Unable to share this event right now.');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,216 +104,229 @@ class SuccessScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Check icon
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        LucideIcons.check,
-                        size: AppIconSizes.hero,
-                        color: AppColors.surface,
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton.outlined(
+                      key: const ValueKey('success_close_button'),
+                      onPressed: () => _close(context),
+                      icon: const Icon(LucideIcons.x),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Event Live!',
-                      style: typography.heading1.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your contribution is now visible on the map.',
-                      style: typography.bodyLG.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Event card
-                    AppCard(
-                      padding: AppCardPadding.lg,
-                      backgroundColor: AppColors.muted,
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: ColorFiltered(
-                                  colorFilter: const ColorFilter.mode(
-                                    Colors.grey,
-                                    BlendMode.saturation,
-                                  ),
-                                  child: CachedNetworkImage(
-                                    imageUrl: _imageUrl,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary,
-                                            borderRadius: BorderRadius.circular(
-                                              50,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _categoryLabel,
-                                            style: typography.overline.copyWith(
-                                              color: AppColors.surface,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Just now',
-                                          style: typography.labelSM.copyWith(
-                                            color: AppColors.mutedForeground,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _title,
-                                      style: typography.titleMD.copyWith(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          LucideIcons.mapPin,
-                                          size: AppIconSizes.s,
-                                          color: AppColors.mutedForeground,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            _locationLabel,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: typography.bodySM.copyWith(
-                                              color: AppColors.mutedForeground,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
                           const SizedBox(height: 20),
                           Container(
-                            padding: const EdgeInsets.only(top: 20),
+                            width: 116,
+                            height: 116,
                             decoration: const BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: AppColors.border),
+                              color: AppColors.muted,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                LucideIcons.check,
+                                size: AppIconSizes.xl,
+                                color: AppColors.surface,
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  LucideIcons.clock,
-                                  size: AppIconSizes.m,
-                                  color: AppColors.mutedForeground,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _timeRange,
-                                  style: typography.bodySMStrong.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // TODO: show participant count when data is available
-                            // Row(
-                            //   children: [
-                            //     Container(
-                            //       width: 24,
-                            //       height: 24,
-                            //       decoration: BoxDecoration(
-                            //         color: AppColors.muted,
-                            //         shape: BoxShape.circle,
-                            //         border: Border.all(color: AppColors.surface, width: 2),
-                            //       ),
-                            //       child: Center(
-                            //         child: Text(_participantLabel, style: ...),
-                            //       ),
-                            //     ),
-                            //     const SizedBox(width: 6),
-                            //     Icon(LucideIcons.users, size: AppIconSizes.s, ...),
-                            //   ],
-                            // ),
                           ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'YOU’RE LIVE',
+                            style: typography.overlineStrong.copyWith(
+                              letterSpacing: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Your table is set.',
+                            textAlign: TextAlign.center,
+                            style: typography.heading2.copyWith(
+                              fontFamily: typography.displayLG.fontFamily,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$_title is ready to welcome guests. Share the invite or preview the event page.',
+                            textAlign: TextAlign.center,
+                            style: typography.bodyBase.copyWith(
+                              color: AppColors.mutedForeground,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          _buildEventSummary(context),
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    key: const ValueKey('success_share_button'),
+                    onPressed: event == null
+                        ? null
+                        : () => _shareEvent(context),
+                    icon: const Icon(LucideIcons.share2),
+                    label: const Text('Share invite'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(56),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    key: const ValueKey('success_view_event_button'),
+                    onPressed: () => _viewEvent(context),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                    ),
+                    child: const Text('View event page'),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'You can manage requests anytime from My Events.',
+                    textAlign: TextAlign.center,
+                    style: typography.bodyXS.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventSummary(BuildContext context) {
+    final typography = context.appTypography;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(LucideIcons.utensils, size: AppIconSizes.m),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: typography.bodyBaseSemi,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '$_categoryLabel · ${event?.capacity == null ? 'Open capacity' : '${event!.capacity} spots'}',
+                      style: typography.bodyXSStrong.copyWith(
+                        color: AppColors.mutedForeground,
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // Bottom buttons
-              Column(
-                children: [
-                  AppButton(
-                    size: AppButtonSize.xl,
-                    fullWidth: true,
-                    icon: const Icon(LucideIcons.map),
-                    label: 'View on Map',
-                    onPressed: () => context.go(ExploreScreen.routePath),
-                  ),
-                  const SizedBox(height: 12),
-                  AppButton(
-                    variant: AppButtonVariant.outline,
-                    size: AppButtonSize.xl,
-                    fullWidth: true,
-                    label: 'Done',
-                    onPressed: () => context.go(ExploreScreen.routePath),
-                  ),
-                ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _summaryItem(context, LucideIcons.calendar, _dateLabel),
+              ),
+              Expanded(
+                child: _summaryItem(context, LucideIcons.clock, _timeLabel),
+              ),
+              Expanded(
+                child: _summaryItem(
+                  context,
+                  LucideIcons.mapPin,
+                  _locationLabel,
+                ),
               ),
             ],
           ),
-        ),
+          if (_attachmentCount > 0) ...[
+            const SizedBox(height: 14),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(LucideIcons.paperclip, size: AppIconSizes.s),
+                const SizedBox(width: 7),
+                Text('Supporting media', style: typography.bodyXSStrong),
+                const Spacer(),
+                Text(
+                  '$_attachmentCount ${_attachmentCount == 1 ? 'attachment' : 'attachments'}',
+                  style: typography.bodyXS.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _summaryItem(BuildContext context, IconData icon, String value) {
+    return Column(
+      children: [
+        Icon(icon, size: AppIconSizes.s, color: AppColors.mutedForeground),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: context.appTypography.bodyXSStrong,
+        ),
+      ],
     );
   }
 }

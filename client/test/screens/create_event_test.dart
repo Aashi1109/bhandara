@@ -16,6 +16,7 @@ void main() {
     id: 'user-1',
     email: 'test@example.com',
     name: 'Test User',
+    meta: UserMeta(interests: ['tag-1']),
     address: UserAddress(
       label: 'Base Location',
       latitude: 21.1458,
@@ -46,6 +47,13 @@ void main() {
           sizeBytes: 2048,
           isVideo: true,
         ),
+        ChatAttachment(
+          id: '3',
+          mediaId: 'media-3',
+          name: 'menu.pdf',
+          localPath: '/tmp/menu.pdf',
+          sizeBytes: 4096,
+        ),
       ],
       initialSelectedAttachmentIndex: 1,
     );
@@ -56,21 +64,85 @@ void main() {
     );
     expect(
       find.byKey(const ValueKey('create_event_attachment_0')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byKey(const ValueKey('create_event_attachment_1')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('create_event_attachment_2')),
+      findsOneWidget,
+    );
     expect(find.text('clip-two.mp4'), findsWidgets);
+    expect(find.text('menu.pdf'), findsOneWidget);
+    expect(find.text('Supporting media'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const ValueKey('create_event_attachment_0')),
+      find.byKey(const ValueKey('create_event_attachment_1')),
       warnIfMissed: false,
     );
     await _settle(tester);
 
-    expect(find.text('clip-one.mp4'), findsWidgets);
+    expect(find.text('clip-two.mp4'), findsWidgets);
+  });
+
+  testWidgets('matches the canvas empty supporting media treatment', (
+    tester,
+  ) async {
+    await _pumpCreateScreen(tester, user: testUser, scheduleSelected: false);
+
+    expect(
+      find.byKey(const ValueKey('create_event_supporting_media')),
+      findsOneWidget,
+    );
+    expect(find.text('Bring the moment to life'), findsOneWidget);
+    expect(find.text('Add photos, videos or PDFs · Optional'), findsOneWidget);
+    expect(find.text('Supporting media'), findsNothing);
+  });
+
+  testWidgets('matches canvas field and category typography', (tester) async {
+    await _pumpCreateScreen(tester, user: testUser, scheduleSelected: false);
+
+    final eventNameLabel = tester.widget<Text>(find.text('Event name'));
+    final startsLabel = tester.widget<Text>(find.text('Starts'));
+    final visibilityLabel = tester.widget<Text>(find.text('Who can see this?'));
+    final requiredLabel = tester.widget<Text>(find.text('Required'));
+    final timePlaceholders = tester.widgetList<Text>(find.text('Choose time'));
+
+    expect(eventNameLabel.style?.fontSize, 14);
+    expect(eventNameLabel.style?.fontWeight, FontWeight.w700);
+    expect(startsLabel.style?.fontSize, 14);
+    expect(visibilityLabel.style?.fontSize, 14);
+    expect(visibilityLabel.style?.fontWeight, FontWeight.w700);
+    expect(requiredLabel.style?.fontSize, 12);
+    expect(requiredLabel.style?.fontWeight, FontWeight.w600);
+    expect(requiredLabel.style?.letterSpacing, 0);
+    expect(timePlaceholders, hasLength(2));
+    for (final placeholder in timePlaceholders) {
+      expect(placeholder.style?.fontSize, 14);
+      expect(placeholder.style?.fontWeight, FontWeight.w500);
+    }
+    expect(find.byType(ChoiceChip), findsNothing);
+    final categoryList = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey('create_event_category_list')),
+    );
+    expect(categoryList.scrollDirection, Axis.horizontal);
+  });
+
+  testWidgets('matches the narrow mobile layout without overflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpCreateScreen(tester, user: testUser);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('create_event_submit_button')),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('failed uploads stay visible and block create', (tester) async {
@@ -131,8 +203,8 @@ void main() {
       resolveTagIds: (_) async => ['tag-1'],
     );
 
-    final titleField = find.text('Event Title (e.g. Midnight Pizza)');
-    final aboutLabel = find.text('ABOUT EVENT');
+    final titleField = find.text('e.g. Sunday supper club');
+    final aboutLabel = find.text('What’s it about?');
 
     expect(
       tester.getTopLeft(aboutLabel).dy,
@@ -143,7 +215,15 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('create_event_current_location_action')),
+      find.byKey(const ValueKey('create_event_date_field')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('create_event_start_field')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('create_event_end_field')),
       findsOneWidget,
     );
 
@@ -162,6 +242,84 @@ void main() {
 
     expect(end.isAfter(start), isTrue);
     expect(end.difference(start), lessThanOrEqualTo(const Duration(days: 7)));
+  });
+
+  testWidgets('submits guest capacity and keeps the event API type', (
+    tester,
+  ) async {
+    Map<String, dynamic>? payload;
+
+    await _pumpCreateScreen(
+      tester,
+      user: testUser,
+      createEventRequest: (data) async {
+        payload = data;
+        throw Exception('skip navigation');
+      },
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'Community Supper');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'A shared table for the neighborhood.',
+    );
+    await tester.enterText(find.byType(TextField).at(2), '24');
+    await _dragLaunch(tester);
+    await _settle(tester);
+
+    expect(payload, isNotNull);
+    expect(payload!['capacity'], 24);
+    expect(payload!['type'], 'custom');
+  });
+
+  testWidgets('rejects invalid guest capacity', (tester) async {
+    var createCalls = 0;
+
+    await _pumpCreateScreen(
+      tester,
+      user: testUser,
+      createEventRequest: (_) async => createCalls += 1,
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'Small Supper');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'A deliberately small gathering.',
+    );
+    await tester.enterText(find.byType(TextField).at(2), '0');
+    await _dragLaunch(tester);
+    await _settle(tester);
+
+    expect(createCalls, 0);
+    expect(find.text('Enter a valid guest capacity.'), findsOneWidget);
+  });
+
+  testWidgets('save draft sends draft status', (tester) async {
+    Map<String, dynamic>? payload;
+
+    await _pumpCreateScreen(
+      tester,
+      user: testUser,
+      createEventRequest: (data) async {
+        payload = data;
+        throw Exception('skip navigation');
+      },
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'Draft Supper');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'A draft gathering description.',
+    );
+    final saveDraft = find.byKey(
+      const ValueKey('create_event_save_draft_button'),
+    );
+    await tester.ensureVisible(saveDraft);
+    await tester.tap(saveDraft);
+    await _settle(tester);
+
+    expect(payload, isNotNull);
+    expect(payload!['status'], 'draft');
   });
 
   testWidgets('edit mode submits update request with prefilled values', (
@@ -260,7 +418,13 @@ Future<void> _pumpCreateScreen(
   int initialSelectedAttachmentIndex = 0,
   DateTime? initialStartAt,
   DateTime? initialEndAt,
+  bool scheduleSelected = true,
 }) async {
+  final selectedStart =
+      initialStartAt ??
+      (scheduleSelected ? DateTime.now().add(const Duration(days: 1)) : null);
+  final selectedEnd =
+      initialEndAt ?? selectedStart?.add(const Duration(hours: 2));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -277,8 +441,8 @@ Future<void> _pumpCreateScreen(
           resolveTagIds: resolveTagIds,
           initialAttachments: initialAttachments,
           initialSelectedAttachmentIndex: initialSelectedAttachmentIndex,
-          initialStartAt: initialStartAt,
-          initialEndAt: initialEndAt,
+          initialStartAt: selectedStart,
+          initialEndAt: selectedEnd,
         ),
       ),
     ),
@@ -294,9 +458,10 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 Future<void> _dragLaunch(WidgetTester tester) async {
-  final slider = find.byKey(const ValueKey('create_event_launch_slider'));
-  expect(slider, findsOneWidget);
-  await tester.drag(slider, const Offset(320, 0));
+  final submit = find.byKey(const ValueKey('create_event_submit_button'));
+  expect(submit, findsOneWidget);
+  await tester.ensureVisible(submit);
+  await tester.tap(submit);
 }
 
 class _TestUserProfile extends UserProfile {

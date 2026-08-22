@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
+import 'input_error.dart';
+import 'input_label.dart';
 
 class AppTextArea extends StatelessWidget {
   const AppTextArea({
@@ -18,6 +20,9 @@ class AppTextArea extends StatelessWidget {
     this.maxLines,
     this.focusNode,
     this.autofocus = false,
+    this.uppercaseLabel = false,
+    this.labelStyle,
+    this.labelPadding = EdgeInsets.zero,
   });
 
   final String? label;
@@ -33,6 +38,9 @@ class AppTextArea extends StatelessWidget {
   final int? maxLines;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool uppercaseLabel;
+  final TextStyle? labelStyle;
+  final EdgeInsetsGeometry labelPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -43,17 +51,13 @@ class AppTextArea extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
-        if (label != null) ...[
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              label!,
-              style: typography.overline.copyWith(
-                color: AppColors.mutedForeground,
-              ),
-            ),
+        if (label != null)
+          AppInputLabel(
+            label: label!,
+            uppercase: uppercaseLabel,
+            style: labelStyle,
+            padding: labelPadding,
           ),
-        ],
         Container(
           height: height,
           decoration: BoxDecoration(
@@ -83,16 +87,7 @@ class AppTextArea extends StatelessWidget {
             ),
           ),
         ),
-        if (error != null) ...[
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              error!,
-              style: typography.overline.copyWith(color: AppColors.error),
-            ),
-          ),
-        ],
+        if (error != null) AppInputError(message: error!),
       ],
     );
   }

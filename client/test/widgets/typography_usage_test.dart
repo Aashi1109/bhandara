@@ -35,12 +35,9 @@ void main() {
       const AppInput(label: 'Email', placeholder: 'chef@foodie.com'),
     );
 
-    final labelText = tester.widget<Text>(find.text('EMAIL'));
-    expect(labelText.style!.fontSize, AppTheme.typography.overline.fontSize);
-    expect(
-      labelText.style!.letterSpacing,
-      AppTheme.typography.overline.letterSpacing,
-    );
+    final labelText = tester.widget<Text>(find.text('Email'));
+    expect(labelText.style!.fontSize, AppTheme.typography.labelMD.fontSize);
+    expect(labelText.style!.fontWeight, AppTheme.typography.labelMD.fontWeight);
 
     final textField = tester.widget<TextField>(find.byType(TextField));
     expect(textField.style!.fontSize, AppTheme.typography.bodyMD.fontSize);
