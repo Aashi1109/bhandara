@@ -105,6 +105,7 @@ export interface IEvent extends ITimeStamp {
   participants: IParticipant[]; // JSONB field
   verifiers: IVerifier[]; // Array of verifier IDs
   type: EEventType;
+  visibility: EAccessLevel;
   createdBy: string; // References "User" table
   creator?: IBaseUser;
   status: EEventStatus;

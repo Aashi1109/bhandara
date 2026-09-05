@@ -3,7 +3,7 @@ import { Activity } from '@/features/activity/model';
 import { Address } from '@/features/addresses/model';
 import { AchievementProgress, UserAchievement } from '@/features/achievements/model';
 import { EntityEngagement, EntityRating } from '@/features/engagement/model';
-import { Event } from '@/features/events/model';
+import { Event, EventParticipant } from '@/features/events/model';
 import { Media } from '@/features/media/model';
 import { MEDIA_TABLE_NAME } from '@/features/media/constants';
 import { Message } from '@/features/messages/model';
@@ -24,6 +24,7 @@ const REGISTERED_MODELS = [
   Media,
   Tag,
   Event,
+  EventParticipant,
   Thread,
   Message,
   Reaction,

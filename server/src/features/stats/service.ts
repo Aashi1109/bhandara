@@ -8,8 +8,9 @@ import type {
   IThreadStats,
 } from '@/common/definitions/types';
 import RedisCache from '@/features/cache/redis';
+import { Op } from 'sequelize';
 import { EEventParticipantStatus } from '@/common/definitions/enums';
-import { Event } from '@/features/events/model';
+import { Event, EventParticipant } from '@/features/events/model';
 import { Thread } from '@/features/threads/model';
 import { Message } from '@/features/messages/model';
 import { Reaction } from '@/features/reactions/model';
@@ -154,28 +155,39 @@ class EntityStatsService {
     await Message.update({ stats } as Partial<IMessage>, { where: { id } });
   }
 
+  /// Participation counts live in "EventParticipants"; a verifier is a row with
+  /// `verifiedAt` set, which is why both counts come from the same table.
+  private async countEventParticipation(eventId: string) {
+    const [participantCount, verifierCount] = await Promise.all([
+      EventParticipant.count({
+        where: { eventId, status: { [Op.ne]: EEventParticipantStatus.Declined } },
+      }),
+      EventParticipant.count({ where: { eventId, verifiedAt: { [Op.not]: null } } }),
+    ]);
+    return { participantCount, verifierCount };
+  }
+
   private async bootstrapEventStats(id: string): Promise<IEventStats> {
     const event = (await Event.findByPk(id, {
       raw: true,
-      attributes: ['participants', 'verifiers', 'media', 'tags'],
-    })) as Pick<IEvent, 'participants' | 'verifiers' | 'media' | 'tags'> | null;
+      attributes: ['media', 'tags'],
+    })) as Pick<IEvent, 'media' | 'tags'> | null;
 
     if (!event) {
       return { ...DEFAULT_EVENT_STATS };
     }
 
-    const [reactionCount, threadCount] = await Promise.all([
+    const [reactionCount, threadCount, participation] = await Promise.all([
       Reaction.count({ where: { contentId: `events/${id}` } }),
       Thread.count({ where: { eventId: id } }),
+      this.countEventParticipation(id),
     ]);
 
     return {
       reactionCount,
       threadCount,
-      participantCount: (event.participants || []).filter(
-        (participant) => participant.status !== EEventParticipantStatus.Declined,
-      ).length,
-      verifierCount: (event.verifiers || []).length,
+      participantCount: participation.participantCount,
+      verifierCount: participation.verifierCount,
       mediaCount: (event.media || []).length,
       tagCount: (event.tags || []).length,
     };
@@ -307,17 +319,15 @@ class EntityStatsService {
     }
   }
 
-  async syncEventRowStats(
-    event: Pick<IEvent, 'id' | 'participants' | 'verifiers' | 'media' | 'tags'>,
-    persist = false,
-  ) {
-    const current = await this.getEventStats(event.id);
+  async syncEventRowStats(event: Pick<IEvent, 'id' | 'media' | 'tags'>, persist = false) {
+    const [current, participation] = await Promise.all([
+      this.getEventStats(event.id),
+      this.countEventParticipation(event.id),
+    ]);
     const next: IEventStats = {
       ...current,
-      participantCount: (event.participants || []).filter(
-        (participant) => participant.status !== EEventParticipantStatus.Declined,
-      ).length,
-      verifierCount: (event.verifiers || []).length,
+      participantCount: participation.participantCount,
+      verifierCount: participation.verifierCount,
       mediaCount: (event.media || []).length,
       tagCount: (event.tags || []).length,
     };

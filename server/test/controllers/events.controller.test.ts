@@ -196,10 +196,12 @@ describe('events controller', () => {
   it('emits event:update after join/leave mutations', async () => {
     const previousEvent = {
       id: 'event-1',
+      visibility: 'public',
       participants: [],
     };
     const updatedEvent = {
       id: 'event-1',
+      visibility: 'public',
       participants: [{ status: 'confirmed', user: 'user-1' }],
     };
     getByIdMock.mockResolvedValue({ createdBy: 'owner-1', id: 'event-1' });
@@ -227,13 +229,43 @@ describe('events controller', () => {
     expect(json).toHaveBeenCalledWith({ data: updatedEvent });
   });
 
+  it('does not broadcast join/leave mutations on private events', async () => {
+    const previousEvent = { id: 'event-1', visibility: 'private', participants: [] };
+    const updatedEvent = {
+      id: 'event-1',
+      visibility: 'private',
+      participants: [{ status: 'confirmed', user: 'user-1' }],
+    };
+    getByIdMock.mockResolvedValue({ createdBy: 'owner-1', id: 'event-1' });
+    joinLeaveEventMock.mockResolvedValue('Successfully joined the event');
+    getEventDataMock.mockResolvedValueOnce(previousEvent).mockResolvedValueOnce(updatedEvent);
+
+    const { eventJoinLeaveHandler } = await import('@/features/events/controller');
+    const status = vi.fn().mockReturnThis();
+    const json = vi.fn();
+    const req = {
+      params: { action: 'join', eventId: 'event-1' },
+      user: { id: 'user-1' },
+    } as unknown as Request;
+    const res = { json, status } as unknown as Response;
+
+    await eventJoinLeaveHandler(req as any, res);
+
+    // The socket broadcast is unscoped, so a private event must never reach it.
+    expect(emitSocketEventMock).not.toHaveBeenCalledWith('event:update', { data: updatedEvent });
+    // The requester still gets the payload over REST.
+    expect(json).toHaveBeenCalledWith({ data: updatedEvent });
+  });
+
   it('emits event:update after event verification', async () => {
     const previousEvent = {
       id: 'event-1',
+      visibility: 'public',
       verifiers: [],
     };
     const updatedEvent = {
       id: 'event-1',
+      visibility: 'public',
       verifiers: [{ user: 'user-1' }],
     };
     verifyEventMock.mockResolvedValue(true);

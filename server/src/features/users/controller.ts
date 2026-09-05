@@ -5,11 +5,11 @@ import UserSettingsService from './settings.service';
 import type { Request, Response } from 'express';
 import { hasMeaningfulChange, isEmpty, omit } from '@/common/utils';
 import { NotFoundError } from '@/common/exceptions';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import EntityEngagementService from '@/features/engagement/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/common/constants';
-import { Event } from '@/features/events/model';
+import { buildEventVisibilitySql, Event } from '@/features/events/model';
 import { cacheKeys } from '@/features/cache/keys';
 import { getRedisConnection } from '@/common/connections/redis';
 
@@ -161,7 +161,9 @@ export const getUserImpact = async (req: ICustomRequest, res: Response) => {
   const { id } = req.params;
 
   const events = await Event.findAll({
-    where: { createdBy: id },
+    where: {
+      [Op.and]: [{ createdBy: id }, Sequelize.literal(buildEventVisibilitySql(req.user?.id, '"Event"."id"'))],
+    },
     attributes: ['id', 'name', 'startTime', 'createdAt'],
     order: [['createdAt', 'ASC']],
     limit: 50,

@@ -511,7 +511,8 @@ export function initializeSocket(server: http.Server) {
 
         const eventResponse = await eventService.getById(eventId);
 
-        if (isEmpty(eventResponse)) throw new NotFoundError('Event not found');
+        if (isEmpty(eventResponse) || !(await eventService.canView(eventResponse!, socketUserId)))
+          throw new NotFoundError('Event not found');
 
         const newThread = await threadService.create({
           eventId,

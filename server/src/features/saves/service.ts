@@ -41,10 +41,14 @@ class SavedEntityService {
     return SUPPORTED_SAVED_ENTITY_TYPES.includes(entityType as SupportedSavedEntityType);
   }
 
-  private async findEntity(entityType: SupportedSavedEntityType, entityId: string): Promise<SavedEntityPayload> {
+  private async findEntity(
+    entityType: SupportedSavedEntityType,
+    entityId: string,
+    viewerId?: string,
+  ): Promise<SavedEntityPayload> {
     switch (entityType) {
       case 'event':
-        return this.eventService.getEventPreview(entityId);
+        return this.eventService.getEventPreview(entityId, viewerId);
       case 'thread':
         return this.threadService.getById(entityId);
       case 'message':
@@ -97,7 +101,7 @@ class SavedEntityService {
     }
   }
 
-  private async hydrateSavedItems(items: SavedEntityRecord[]): Promise<ISavedEntityListItem[]> {
+  private async hydrateSavedItems(items: SavedEntityRecord[], viewerId?: string): Promise<ISavedEntityListItem[]> {
     if (!items.length) return [];
 
     const byType: Partial<Record<SupportedSavedEntityType, string[]>> = {};
@@ -115,7 +119,7 @@ class SavedEntityService {
           case 'event': {
             await Promise.all(
               ids.map(async (id) => {
-                entityMap[id] = await this.eventService.getEventPreview(id);
+                entityMap[id] = await this.eventService.getEventPreview(id, viewerId);
               }),
             );
             break;
@@ -181,7 +185,7 @@ class SavedEntityService {
       ],
     })) as SavedEntityRecord[];
 
-    const hydrated = await this.hydrateSavedItems(rows);
+    const hydrated = await this.hydrateSavedItems(rows, userId);
     const normalizedQuery = filters.query.trim().toLowerCase();
     const matched = hydrated.filter((item) => {
       if (!item.entity) {
@@ -223,8 +227,8 @@ class SavedEntityService {
     };
   }
 
-  private async assertEntityExists(entityType: SupportedSavedEntityType, entityId: string) {
-    const entity = await this.findEntity(entityType, entityId);
+  private async assertEntityExists(entityType: SupportedSavedEntityType, entityId: string, viewerId?: string) {
+    const entity = await this.findEntity(entityType, entityId, viewerId);
     if (!entity) {
       throw new NotFoundError('Entity not found');
     }
@@ -258,7 +262,7 @@ class SavedEntityService {
     entityType: SupportedSavedEntityType,
     entityId: string,
   ): Promise<IEntitySaveSummary> {
-    await this.assertEntityExists(entityType, entityId);
+    await this.assertEntityExists(entityType, entityId, userId);
 
     const [savedEntity, saveCount] = await Promise.all([
       SavedEntity.findOne({
@@ -280,7 +284,7 @@ class SavedEntityService {
       throw new BadRequestError('You cannot save your own profile');
     }
 
-    await this.assertEntityExists(entityType, entityId);
+    await this.assertEntityExists(entityType, entityId, userId);
 
     const existing = await SavedEntity.findOne({
       where: { userId, entityType, entityId },
@@ -305,6 +309,8 @@ class SavedEntityService {
     entityType: SupportedSavedEntityType,
     entityId: string,
   ): Promise<IEntitySaveSummary> {
+    // Deliberately not viewer-scoped: un-saving must keep working even if the
+    // entity has since gone private on the user.
     await this.assertEntityExists(entityType, entityId);
 
     const existing = await SavedEntity.findOne({
@@ -350,7 +356,7 @@ class SavedEntityService {
       },
     );
 
-    const items = await this.hydrateSavedItems(data.items as SavedEntityRecord[]);
+    const items = await this.hydrateSavedItems(data.items as SavedEntityRecord[], userId);
 
     return {
       items,

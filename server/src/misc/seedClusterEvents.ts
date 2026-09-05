@@ -3,9 +3,9 @@ import { faker } from '@faker-js/faker';
 import { QueryTypes, type CreationAttributes } from 'sequelize';
 
 import { disconnect, getDBConnection, getUUIDv7 } from '@/common';
-import { EAddressEntityType, EEventParticipantStatus, EEventType } from '@/common/definitions/enums';
+import { EAccessLevel, EAddressEntityType, EEventParticipantStatus, EEventType } from '@/common/definitions/enums';
 import { Address } from '@/features/addresses/model';
-import { Event } from '@/features/events/model';
+import { Event, EventParticipant } from '@/features/events/model';
 import { Tag } from '@/features/tags/model';
 import { User } from '@/features/users/model';
 import { clusterSeedConfigs, fallbackTagSeeds } from './clusterSeedConfig';
@@ -18,9 +18,9 @@ type EventInsert = {
   id: string;
   name: string;
   description: string;
-  participants: { user: string; status: EEventParticipantStatus }[];
-  verifiers: { user: string; verifiedAt: string }[];
+  participants: { user: string; status: EEventParticipantStatus; verifiedAt: string | null }[];
   type: EEventType;
+  visibility: EAccessLevel;
   createdBy: string;
   isDraft: boolean;
   cancelledAt: null;
@@ -129,17 +129,21 @@ function buildParticipants(allUserIds: string[], ownerId: string) {
   }));
 }
 
-function buildVerifiers(participants: { user: string; status: EEventParticipantStatus }[]) {
+/// Verification is an attribute of participation, so this stamps `verifiedAt`
+/// onto a couple of the confirmed participants rather than building a second list.
+function withVerifications(participants: { user: string; status: EEventParticipantStatus }[]) {
   const confirmedUsers = participants
     .filter((participant) => participant.status === EEventParticipantStatus.Confirmed)
     .map((participant) => participant.user);
 
-  return faker.helpers
-    .arrayElements(confirmedUsers, faker.number.int({ min: 0, max: Math.min(2, confirmedUsers.length) }))
-    .map((userId) => ({
-      user: userId,
-      verifiedAt: faker.date.recent({ days: 5 }).toISOString(),
-    }));
+  const verified = new Set(
+    faker.helpers.arrayElements(confirmedUsers, faker.number.int({ min: 0, max: Math.min(2, confirmedUsers.length) })),
+  );
+
+  return participants.map((participant) => ({
+    ...participant,
+    verifiedAt: verified.has(participant.user) ? faker.date.recent({ days: 5 }).toISOString() : null,
+  }));
 }
 
 function buildTimings() {
@@ -161,8 +165,7 @@ function buildEventPayload(args: {
   longitude: number;
   band: SeedBand;
 }) {
-  const participants = buildParticipants(args.allUserIds, args.ownerId);
-  const verifiers = buildVerifiers(participants);
+  const participants = withVerifications(buildParticipants(args.allUserIds, args.ownerId));
   const timings = buildTimings();
   const tags = faker.helpers.arrayElements(
     args.tagIds,
@@ -188,8 +191,11 @@ function buildEventPayload(args: {
     description: `${faker.lorem.sentences({ min: 2, max: 4 })} Seed band: ${args.band}.`,
     location,
     participants,
-    verifiers,
     type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
+    visibility: faker.helpers.weightedArrayElement([
+      { value: EAccessLevel.Public, weight: 9 },
+      { value: EAccessLevel.Private, weight: 1 },
+    ]),
     createdBy: args.ownerId,
     isDraft: faker.helpers.weightedArrayElement([
       { value: false, weight: 9 },
@@ -277,7 +283,9 @@ async function main() {
 
   try {
     const created = (await Event.bulkCreate(
-      payloads.map(({ location: _location, ...event }) => event) as unknown as CreationAttributes<Event>[],
+      payloads.map(
+        ({ location: _location, participants: _participants, ...event }) => event,
+      ) as unknown as CreationAttributes<Event>[],
       {
         transaction,
         returning: ['id', 'createdBy'],
@@ -287,6 +295,19 @@ async function main() {
     await Address.bulkCreate(addressRows as unknown as CreationAttributes<Address>[], {
       transaction,
     });
+
+    await EventParticipant.bulkCreate(
+      payloads.flatMap((payload) =>
+        payload.participants.map((participant) => ({
+          id: getUUIDv7(),
+          eventId: payload.id,
+          userId: participant.user,
+          status: participant.status,
+          verifiedAt: participant.verifiedAt ? new Date(participant.verifiedAt) : null,
+        })),
+      ) as unknown as CreationAttributes<EventParticipant>[],
+      { transaction },
+    );
 
     await transaction.commit();
 

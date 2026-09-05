@@ -1,4 +1,4 @@
-import type { ICustomRequest, IRequestPagination } from '@/common/definitions/types';
+import type { ICustomRequest, IEvent, IRequestPagination } from '@/common/definitions/types';
 import type { Response } from 'express';
 import EventService, { toEventSummary, type IEventListFilters } from './service';
 import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/exceptions';
@@ -7,7 +7,7 @@ import TagService from '@/features/tags/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/common/constants';
 import { getUserRoom } from '@/socket/rooms';
-import { EEventStatus, EEventType } from '@/common/definitions/enums';
+import { EAccessLevel, EEventStatus, EEventType } from '@/common/definitions/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { getRedisConnection } from '@/common/connections/redis';
 import { RESERVED_TID_KEY_PREFIX, RESERVED_TID_SET_KEY, RESERVED_TID_TTL_SECONDS } from '@/common/queues/cleanup';
@@ -52,6 +52,18 @@ const getViewerIp = (req: ICustomRequest) => {
 
   return req.socket.remoteAddress || null;
 };
+
+/// Event socket events are an unscoped broadcast to every connected client, so
+/// only public events may be announced. Private events reach their participants
+/// through the REST endpoints, which are viewer-scoped.
+function broadcastEventChange(
+  socketEvent: string,
+  event: Pick<IEvent, 'visibility'>,
+  payload: Record<string, unknown>,
+) {
+  if (event.visibility !== EAccessLevel.Public) return;
+  emitSocketEvent(socketEvent, payload);
+}
 
 function parseEventListFilters(req: ICustomRequest): IEventListFilters {
   const { createdBy, status, type, latitude, longitude, radiusKm, tagIds, datePreset } = req.query;
@@ -108,6 +120,8 @@ function parseEventListFilters(req: ICustomRequest): IEventListFilters {
   }
 
   return {
+    // Session-derived, never client-supplied: this is the permission subject.
+    viewerId: req.user?.id,
     createdBy: typeof createdBy === 'string' && createdBy.length > 0 ? createdBy : undefined,
     statuses,
     types,
@@ -184,8 +198,8 @@ export const getEventById = async (req: ICustomRequest, res: Response) => {
 
   const event =
     view === 'preview'
-      ? await eventService.getEventPreview(eventId as string)
-      : await eventService.getEventData(eventId as string);
+      ? await eventService.getEventPreview(eventId as string, req.user.id)
+      : await eventService.getEventData(eventId as string, req.user.id);
 
   if (isEmpty(event)) throw new NotFoundError('Event not found');
 
@@ -216,7 +230,7 @@ export const createEvent = async (req: ICustomRequest, res: Response) => {
     }),
     achievementService.trackActivity(req.user.id, EActivityType.EventCreated),
   ]);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, { data: toEventSummary(event) });
+  broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, event, { data: toEventSummary(event) });
   return res.status(201).json({ data: event });
 };
 
@@ -225,7 +239,7 @@ export const updateEvent = async (req: ICustomRequest, res: Response) => {
   const event = await eventService.getById(eventId);
   if (!event) throw new NotFoundError('Event not found');
   if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only update your own events');
-  const existingEventData = await eventService.getEventData(eventId);
+  const existingEventData = await eventService.getEventData(eventId, req.user.id);
   const updatedEvent = await eventService.update({
     existing: event,
     data: req.body,
@@ -233,7 +247,7 @@ export const updateEvent = async (req: ICustomRequest, res: Response) => {
   });
 
   if (hasMeaningfulChange(existingEventData, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, {
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
       data: toEventSummary({ ...updatedEvent, id: eventId }),
     });
   }
@@ -248,7 +262,7 @@ export const deleteEvent = async (req: ICustomRequest, res: Response) => {
 
   await eventService.delete(req.params.eventId as string);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_DELETE, {
+  broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_DELETE, event, {
     data: { id: req.params.eventId },
   });
 
@@ -273,9 +287,9 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
   const eventId = req.params.eventId as string;
   const action = req.params.action as 'join' | 'leave';
   const eventData = await eventService.getById(eventId);
-  const previousEvent = await eventService.getEventData(eventId);
+  const previousEvent = await eventService.getEventData(eventId, req.user.id);
   await eventService.joinLeaveEvent(req.user.id, eventId, action);
-  const updatedEvent = await eventService.getEventData(eventId);
+  const updatedEvent = await eventService.getEventData(eventId, req.user.id);
 
   const activityType = action === 'join' ? EActivityType.EventJoined : EActivityType.EventLeft;
 
@@ -303,7 +317,9 @@ export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) 
   }
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: toEventSummary(updatedEvent) });
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
+      data: toEventSummary(updatedEvent),
+    });
   }
 
   return res.status(200).json({ data: updatedEvent });
@@ -314,9 +330,9 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
 
   if (isEmpty(currentCoordinates)) throw new BadRequestError('Current coordinates are required');
 
-  const previousEvent = await eventService.getEventData(req.params.eventId as string);
+  const previousEvent = await eventService.getEventData(req.params.eventId as string, req.user.id);
   await eventService.verifyEvent(req.user.id, req.params.eventId as string, currentCoordinates);
-  const updatedEvent = await eventService.getEventData(req.params.eventId as string);
+  const updatedEvent = await eventService.getEventData(req.params.eventId as string, req.user.id);
 
   await Promise.all([
     activityService.create({
@@ -333,7 +349,9 @@ export const verifyEvent = async (req: ICustomRequest, res: Response) => {
   ]);
 
   if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
-    emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: toEventSummary(updatedEvent) });
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
+      data: toEventSummary(updatedEvent),
+    });
   }
 
   return res.status(200).json({ data: updatedEvent });
@@ -356,7 +374,7 @@ export const deleteEventMedia = async (req: ICustomRequest, res: Response) => {
 
 export const getEventThreads = async (req: ICustomRequest & IRequestPagination, res: Response) => {
   const { eventId } = req.params;
-  const threads = await eventService.getThreads(eventId as string, req.pagination);
+  const threads = await eventService.getThreads(eventId as string, req.pagination, req.user.id);
 
   return res.status(200).json({ data: threads });
 };

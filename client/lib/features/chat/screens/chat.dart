@@ -28,6 +28,7 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, this.id, this.eventId});
 
   static const String routePath = '/chat/:id';
+
   /// Thread ID. If null, the screen resolves the thread from [eventId].
   final String? id;
   final String? eventId;
@@ -1415,10 +1416,116 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  List<Message> _threadReplies(Message message) {
+    final replies = <Message>[];
+
+    void collect(List<Message> children) {
+      for (final child in children) {
+        replies.add(child);
+        collect(child.children);
+      }
+    }
+
+    collect(message.children);
+    replies.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return replies;
+  }
+
+  List<Message> _threadParticipants(List<Message> replies) {
+    final participants = <Message>[];
+    final seen = <String>{};
+
+    for (final reply in replies.reversed) {
+      final key = reply.senderId.isNotEmpty
+          ? reply.senderId
+          : (reply.senderName ?? 'User');
+      if (seen.add(key)) participants.add(reply);
+    }
+
+    return participants;
+  }
+
+  String _threadParticipantLabel(List<Message> participants) {
+    final names = participants
+        .map((reply) => reply.senderName?.trim())
+        .whereType<String>()
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (names.isEmpty) return 'Participants';
+
+    final visibleNames = names.take(2).join(', ');
+    final remaining = names.length - 2;
+    return remaining > 0 ? '$visibleNames +$remaining' : visibleNames;
+  }
+
+  Widget _buildThreadAvatar(Message message, {double size = 26}) {
+    final typography = context.appTypography;
+    final name = message.senderName?.trim();
+    final initial = name?.isNotEmpty == true ? name![0].toUpperCase() : 'U';
+    final fallback = Center(
+      child: Text(
+        initial,
+        style: typography.labelXS.copyWith(color: AppColors.primary),
+      ),
+    );
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.surface),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: message.senderAvatar?.isNotEmpty == true
+          ? Image.network(
+              message.senderAvatar!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            )
+          : fallback,
+    );
+  }
+
+  Widget _buildThreadParticipantAvatars(List<Message> participants) {
+    const avatarSize = 18.0;
+    const overlap = 8.0;
+    final visible = participants.take(3).toList();
+    final width = visible.isEmpty
+        ? 0.0
+        : avatarSize + ((visible.length - 1) * overlap);
+
+    return SizedBox(
+      width: width,
+      height: avatarSize,
+      child: Stack(
+        children: [
+          for (var index = 0; index < visible.length; index++)
+            Positioned(
+              left: index * overlap,
+              child: _buildThreadAvatar(visible[index], size: avatarSize),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildThreadCard(Message message) {
     final typography = context.appTypography;
-    final replyCount = message.children.length;
-    final latestReply = replyCount > 0 ? message.children.last : null;
+    final replies = _threadReplies(message);
+    final latestReply = replies.isEmpty ? null : replies.last;
+    final participants = _threadParticipants(replies);
+    final messagesById = {
+      message.id: message,
+      for (final reply in replies) reply.id: reply,
+    };
+    final parent = latestReply == null
+        ? null
+        : messagesById[latestReply.parentId];
+    final isNestedReply = parent != null && parent.id != message.id;
+    final replyLabel =
+        '${replies.length} repl${replies.length == 1 ? 'y' : 'ies'}';
     final previewText = latestReply == null
         ? 'Open replies'
         : latestReply.content.isNotEmpty
@@ -1428,7 +1535,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.5),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
       ),
@@ -1436,44 +1543,99 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 12,
         children: [
+          Text(
+            'Thread',
+            style: typography.bodySMStrong.copyWith(color: AppColors.primary),
+          ),
+          if (latestReply != null)
+            Row(
+              children: [
+                _buildThreadAvatar(latestReply),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        latestReply.senderName ?? 'User',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: typography.bodySMStrong.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Text(
+                        '${isNestedReply ? 'replied to ${parent.senderName ?? 'a reply'} · ' : ''}${DateFormat('h:mm a').format(latestReply.createdAt)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: typography.labelXS.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: const BoxDecoration(
+              color: AppColors.muted,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(14),
+                bottomLeft: Radius.circular(14),
+                bottomRight: Radius.circular(14),
+              ),
+            ),
+            child: Text(
+              previewText,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: typography.bodyBaseSemi.copyWith(color: AppColors.primary),
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('THREAD', style: typography.overlineStrong),
-              const Icon(
-                LucideIcons.externalLink,
-                size: AppIconSizes.xs,
-                color: AppColors.mutedForeground,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    LucideIcons.cornerDownRight,
+                    size: AppIconSizes.xs,
+                    color: AppColors.mutedForeground,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    replyLabel,
+                    style: typography.labelSMStrong.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(50),
-                  border: Border.all(color: AppColors.border),
+              if (participants.isNotEmpty)
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildThreadParticipantAvatars(participants),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _threadParticipantLabel(participants),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: typography.labelXS.copyWith(
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text('Original', style: typography.labelXS),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '$replyCount repl${replyCount == 1 ? 'y' : 'ies'}',
-                  style: typography.bodySMStrong,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
             ],
-          ),
-          Text(
-            previewText,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: typography.bodyBaseSemi.copyWith(color: AppColors.primary),
           ),
         ],
       ),

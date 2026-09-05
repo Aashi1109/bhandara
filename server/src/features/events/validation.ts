@@ -1,6 +1,6 @@
 import { validateSchema } from '@/common/helpers';
 import { EVENT_TABLE_NAME } from './constants';
-import { EEventParticipantStatus, EEventStatus, EEventType } from '@/common/definitions/enums';
+import { EAccessLevel, EEventStatus, EEventType } from '@/common/definitions/enums';
 import { validateEventTimings } from './status';
 
 const locationSchema = {
@@ -18,49 +18,6 @@ const locationSchema = {
   },
 };
 
-// Event Participant Schema
-const participantSchema = {
-  type: 'object',
-  properties: {
-    user: {
-      type: 'string',
-      format: 'uuid',
-      errorMessage: 'userId must be a valid UUID',
-    },
-    status: {
-      type: 'string',
-      enum: Object.values(EEventParticipantStatus),
-      errorMessage: `Status must be one of ${Object.values(EEventParticipantStatus).join(', ')}`,
-    },
-  },
-  required: ['user', 'status'],
-  additionalProperties: false,
-  errorMessage: {
-    type: 'Participant data must be an object',
-    required: {
-      userId: 'userId is required and must be a valid UUID',
-      status: 'Status is required',
-    },
-  },
-};
-
-const verifierSchema = {
-  type: 'object',
-  properties: {
-    user: {
-      type: 'string',
-      format: 'uuid',
-      errorMessage: 'Each verifier must be a valid UUID',
-    },
-    verifiedAt: {
-      type: 'string',
-      format: 'date-time',
-      errorMessage: 'Verified at must be a valid date-time',
-    },
-  },
-  required: ['user', 'verifiedAt'],
-};
-
 const eventSchema = {
   type: 'object',
   properties: {
@@ -74,18 +31,11 @@ const eventSchema = {
       errorMessage: 'Description must be a valid string',
     },
     location: locationSchema,
-    // participants: {
-    //   type: "array",
-    //   items: participantSchema,
-    //   uniqueItems: true,
-    //   errorMessage: "Participants must be an array of unique objects",
-    // },
-    // verifiers: {
-    //   type: ["array", null],
-    //   items: verifierSchema,
-    //   uniqueItems: true,
-    //   errorMessage: "Verifiers must be an array of unique objects",
-    // },
+    visibility: {
+      type: 'string',
+      enum: [EAccessLevel.Public, EAccessLevel.Private],
+      errorMessage: `Visibility must be one of ${EAccessLevel.Public}, ${EAccessLevel.Private}`,
+    },
     startTime: {
       type: 'string',
       format: 'date-time',
@@ -153,28 +103,13 @@ const eventUpdateSchema = {
       errorMessage: 'Description must be a valid string',
     },
     location: { oneOf: [locationSchema, { type: 'null' }] },
-    participants: {
-      oneOf: [
-        {
-          type: 'array',
-          items: participantSchema,
-          uniqueItems: true,
-          errorMessage: 'Participants must be an array of unique objects',
-        },
-        { type: 'null' },
-      ],
+    visibility: {
+      type: 'string',
+      enum: [EAccessLevel.Public, EAccessLevel.Private],
+      errorMessage: `Visibility must be one of ${EAccessLevel.Public}, ${EAccessLevel.Private}`,
     },
-    verifiers: {
-      oneOf: [
-        {
-          type: 'array',
-          items: verifierSchema,
-          uniqueItems: true,
-          errorMessage: 'Verifiers must be an array of unique objects',
-        },
-        { type: 'null' },
-      ],
-    },
+    // participants / verifiers are not writable through the event payload —
+    // they live in "EventParticipants" and are changed via join/leave/verify.
     status: {
       type: 'string',
       enum: Object.values(EEventStatus),

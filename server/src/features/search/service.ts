@@ -4,10 +4,12 @@ import { EAddressEntityType, type EEventStatus, type EEventType } from '@/common
 import type { IPaginationParams, PaginatedResult } from '@/common/definitions/types';
 
 import AddressService from '../addresses/service';
-import { Event } from '../events/model';
+import { buildEventVisibilitySql, Event } from '../events/model';
 import { buildActiveEventStatusPredicate, deriveEventStatus } from '../events/status';
 
 export interface ISearchFilters {
+  /// Session-derived permission subject. Never populated from client input.
+  viewerId?: string;
   eventStatus?: EEventStatus[];
   eventType?: EEventType[];
   location?: {
@@ -83,6 +85,7 @@ class SearchService {
 
   private buildWhere(query: string, filters: ISearchFilters): WhereOptions {
     const clauses: any[] = [
+      Sequelize.literal(buildEventVisibilitySql(filters.viewerId, '"Event"."id"')),
       {
         [Op.or]: [
           { name: { [Op.iLike]: `%${query}%` } },
@@ -278,13 +281,14 @@ class SearchService {
     return score;
   }
 
-  async getSuggestions(query: string, limit: number = 5): Promise<string[]> {
+  async getSuggestions(query: string, limit: number = 5, viewerId?: string): Promise<string[]> {
     const rows = await Event.findAll({
       attributes: ['name'],
       where: {
-        name: {
-          [Op.iLike]: `%${query}%`,
-        },
+        [Op.and]: [
+          Sequelize.literal(buildEventVisibilitySql(viewerId, '"Event"."id"')),
+          { name: { [Op.iLike]: `%${query}%` } },
+        ],
       },
       order: [['createdAt', 'DESC']],
       limit,

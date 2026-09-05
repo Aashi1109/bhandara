@@ -12,7 +12,7 @@ import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/featu
 import { Activity } from '@/features/activity/model';
 import { Address } from '@/features/addresses/model';
 import { EntityEngagement, EntityRating } from '@/features/engagement/model';
-import { Event } from '@/features/events/model';
+import { Event, EventParticipant } from '@/features/events/model';
 import { Message } from '@/features/messages/model';
 import { Reaction } from '@/features/reactions/model';
 import { SavedEntity } from '@/features/saves/model';
@@ -171,6 +171,12 @@ export async function seedContentForUsers({
       try {
         const eventsForUser = plannedEventCounts.get(user.id) ?? 0;
         const eventRows = [];
+        const eventParticipantRows: {
+          id: string;
+          eventId: string;
+          userId: string;
+          status: EEventParticipantStatus;
+        }[] = [];
         const eventAddressRows = [];
         const eventActivityRows = [];
         const userEvents: Array<{ id: string; threadsForEvent: number }> = [];
@@ -207,13 +213,24 @@ export async function seedContentForUsers({
                   `${user.id}:event-slot:${eventIndex}:threads`,
                 );
 
+          participants.forEach((participant) => {
+            eventParticipantRows.push({
+              id: getUUIDv7(),
+              eventId,
+              userId: participant.user,
+              status: participant.status,
+            });
+          });
+
           eventRows.push({
             id: eventId,
             name: eventName,
             description: faker.lorem.paragraph(),
-            participants,
-            verifiers: [],
             type: faker.helpers.arrayElement([EEventType.Organized, EEventType.Custom]),
+            visibility: faker.helpers.weightedArrayElement([
+              { weight: 9, value: EAccessLevel.Public },
+              { weight: 1, value: EAccessLevel.Private },
+            ]),
             createdBy: user.id,
             isDraft: faker.helpers.arrayElement([false, true]),
             cancelledAt: null,
@@ -306,6 +323,13 @@ export async function seedContentForUsers({
         }
 
         await bulkCreateInChunks(Event, eventRows, transaction, step('events', `user=${user.email}`), currentChunkSize);
+        await bulkCreateInChunks(
+          EventParticipant,
+          eventParticipantRows,
+          transaction,
+          step('event-participants', `user=${user.email}`),
+          currentChunkSize,
+        );
         await bulkCreateInChunks(
           Address,
           eventAddressRows,

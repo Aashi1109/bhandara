@@ -1,4 +1,5 @@
 import { Event } from '@/features/events/model';
+import { EAccessLevel } from '@/common/definitions/enums';
 import EventService from '@/features/events/service';
 import { emitSocketEvent } from '@/socket/emitter';
 import { PLATFORM_SOCKET_EVENTS } from '@/common/constants';
@@ -21,9 +22,11 @@ export function initializeMediaRealtime() {
         if (!eventId) return;
         try {
           const events = await Event.findAll({
-            where: { id: eventId },
+            where: { id: eventId, visibility: EAccessLevel.Public },
             raw: true,
           });
+          // Public only: this is an unscoped broadcast to every connected
+          // socket, so a private event's payload would land on strangers.
           for (const e of events) {
             const ev = await eventService.getEventData((e as any).id);
             emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, { data: ev });
