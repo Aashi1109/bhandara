@@ -13,7 +13,6 @@ services:
       - NODE_ENV=production
       - PUBLIC_PORT=3000
       - APP_PORT=3001
-      - WORKER_TYPE=video-processor
       - REDIS_HOST=127.0.0.1
       - REDIS_PORT=6379
       - REDIS_TLS=false
@@ -69,12 +68,12 @@ services:
       - ./server/.env
     restart: unless-stopped
     command: ["node", "index.js"]
+    healthcheck:
+      disable: true
     networks:
       - zentry-network
     volumes:
       - video-temp:/app/tmp
-    depends_on:
-      - server
 
   event-cleanup-worker:
     build:
@@ -91,10 +90,10 @@ services:
       - ./server/.env
     restart: unless-stopped
     command: ["node", "index.js"]
+    healthcheck:
+      disable: true
     networks:
       - zentry-network
-    depends_on:
-      - server
 
 networks:
   zentry-network:

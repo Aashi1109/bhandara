@@ -86,3 +86,5 @@ ruvector.db
 .mcp.json
 .codegraph
 .tmp
+.pnpm-store
+.codegraph

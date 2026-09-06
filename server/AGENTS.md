@@ -32,7 +32,6 @@ Prefer running `pnpm build` and `pnpm test` after backend changes unless the tas
 - Use named Redis connection-manager entries instead of one shared DB for everything.
 - Current Redis DB layout:
   - sessions -> DB 1
-  - bull -> DB 2
   - analytics -> DB 3
   - rate_limit -> DB 4
   - cache -> DB 5

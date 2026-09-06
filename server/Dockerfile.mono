@@ -61,7 +61,6 @@ RUN chmod +x /usr/local/bin/docker-mono-entrypoint.sh && \
 ENV NODE_ENV=production
 ENV PUBLIC_PORT=3000
 ENV APP_PORT=3001
-ENV WORKER_TYPE=video-processor
 ENV REDIS_HOST=127.0.0.1
 ENV REDIS_PORT=6379
 ENV REDIS_PASSWORD=

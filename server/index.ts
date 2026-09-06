@@ -34,13 +34,20 @@ async function startServer() {
 
 startServer();
 
-process.on('SIGTERM', () => {
-  Sentry.flush(2000)
-    .then(() => Promise.all([stopBoss(), shutdownTracing()]))
-    .finally(() => {
-      process.exit(0);
-    });
-});
+let shutdownPromise: Promise<void> | undefined;
+
+const shutdown = async () => {
+  shutdownPromise ??= (async () => {
+    await Sentry.flush(2000).catch(() => false);
+    await Promise.allSettled([stopBoss(), shutdownTracing()]);
+    process.exit(0);
+  })();
+
+  await shutdownPromise;
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught exception in server process', error);
