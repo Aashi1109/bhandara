@@ -51,16 +51,16 @@ class PasswordRequirements extends StatelessWidget {
                   req.met ? LucideIcons.check : LucideIcons.x,
                   size: AppIconSizes.m,
                   color: req.met
-                      ? AppColors.primary
-                      : AppColors.mutedForeground,
+                      ? context.appPalette.primary
+                      : context.appPalette.mutedForeground,
                 ),
                 const SizedBox(width: 12),
                 Text(
                   req.label,
                   style: typography.bodyMD.copyWith(
                     color: req.met
-                        ? AppColors.primary
-                        : AppColors.mutedForeground,
+                        ? context.appPalette.primary
+                        : context.appPalette.mutedForeground,
                   ),
                 ),
               ],

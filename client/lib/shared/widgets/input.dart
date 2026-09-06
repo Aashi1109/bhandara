@@ -247,13 +247,13 @@ class _AppInputState extends State<AppInput> {
             height: widget.height,
             padding: widget.contentPadding,
             decoration: BoxDecoration(
-              color: widget.backgroundColor ?? AppColors.surface,
+              color: widget.backgroundColor ?? context.appPalette.surface,
               borderRadius: BorderRadius.circular(widget.borderRadius),
               border: widget.hasBorder
                   ? Border.all(
                       color: displayError != null
-                          ? AppColors.error
-                          : AppColors.border,
+                          ? context.appPalette.error
+                          : context.appPalette.border,
                     )
                   : null,
             ),
@@ -263,8 +263,8 @@ class _AppInputState extends State<AppInput> {
               children: [
                 if (widget.icon != null) ...[
                   IconTheme(
-                    data: const IconThemeData(
-                      color: AppColors.mutedForeground,
+                    data: IconThemeData(
+                      color: context.appPalette.mutedForeground,
                       size: AppIconSizes.defaultSize,
                     ),
                     child: widget.icon!,
@@ -282,7 +282,7 @@ class _AppInputState extends State<AppInput> {
                               ? widget.textStyle ?? typography.bodyMD
                               : widget.placeholderStyle ??
                                     typography.bodyMD.copyWith(
-                                      color: AppColors.mutedForeground
+                                      color: context.appPalette.mutedForeground
                                           .withValues(alpha: 0.5),
                                     ),
                         )
@@ -307,14 +307,14 @@ class _AppInputState extends State<AppInput> {
                           style:
                               widget.textStyle ??
                               typography.bodyMD.copyWith(
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                           decoration: InputDecoration(
                             hintText: widget.placeholder,
                             hintStyle:
                                 widget.placeholderStyle ??
                                 typography.bodyMD.copyWith(
-                                  color: AppColors.mutedForeground.withValues(
+                                  color: context.appPalette.mutedForeground.withValues(
                                     alpha: 0.5,
                                   ),
                                 ),

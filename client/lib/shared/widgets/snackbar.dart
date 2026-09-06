@@ -23,19 +23,19 @@ class AppSnackBar {
 
     switch (type) {
       case SnackBarType.error:
-        backgroundColor = AppColors.error;
+        backgroundColor = context.appPalette.error;
         icon = LucideIcons.alertCircle;
         break;
       case SnackBarType.warning:
-        backgroundColor = AppColors.warning;
+        backgroundColor = context.appPalette.warning;
         icon = LucideIcons.alertTriangle;
         break;
       case SnackBarType.success:
-        backgroundColor = AppColors.success;
+        backgroundColor = context.appPalette.success;
         icon = LucideIcons.checkCircle;
         break;
       case SnackBarType.info:
-        backgroundColor = AppColors.primary;
+        backgroundColor = context.appPalette.primary;
         icon = LucideIcons.info;
         break;
     }
@@ -80,6 +80,8 @@ class AppSnackBar {
   }) {
     final overlay = rootNavigatorKey.currentState?.overlay;
     if (overlay == null) return;
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return;
 
     _currentEntry?.remove();
     _currentEntry = null;
@@ -89,19 +91,19 @@ class AppSnackBar {
 
     switch (type) {
       case SnackBarType.error:
-        backgroundColor = AppColors.error;
+        backgroundColor = context.appPalette.error;
         icon = LucideIcons.alertCircle;
         break;
       case SnackBarType.warning:
-        backgroundColor = AppColors.warning;
+        backgroundColor = context.appPalette.warning;
         icon = LucideIcons.alertTriangle;
         break;
       case SnackBarType.success:
-        backgroundColor = AppColors.success;
+        backgroundColor = context.appPalette.success;
         icon = LucideIcons.checkCircle;
         break;
       case SnackBarType.info:
-        backgroundColor = AppColors.primary;
+        backgroundColor = context.appPalette.primary;
         icon = LucideIcons.info;
         break;
     }
@@ -204,23 +206,23 @@ class _TopSnackBarState extends State<_TopSnackBar>
               children: [
                 Icon(
                   widget.icon,
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                   size: AppIconSizes.defaultSize,
                 ),
                 Expanded(
                   child: Text(
                     widget.message,
                     style: typography.bodyMD.copyWith(
-                      color: AppColors.surface,
+                      color: context.appPalette.surface,
                     ),
                   ),
                 ),
                 GestureDetector(
                   onTap: () =>
                       _controller.reverse().then((_) => widget.onDismiss()),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.x,
-                    color: AppColors.surface,
+                    color: context.appPalette.surface,
                     size: AppIconSizes.m,
                   ),
                 ),

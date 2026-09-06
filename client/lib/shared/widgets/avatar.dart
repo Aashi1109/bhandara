@@ -12,8 +12,8 @@ class Avatar extends StatelessWidget {
     required this.textSize,
     this.borderColor,
     this.borderWidth = 0,
-    this.backgroundColor = AppColors.muted,
-    this.textColor = AppColors.primary,
+    this.backgroundColor,
+    this.textColor,
     this.imageBuilder,
   });
 
@@ -23,8 +23,8 @@ class Avatar extends StatelessWidget {
   final double textSize;
   final Color? borderColor;
   final double borderWidth;
-  final Color backgroundColor;
-  final Color textColor;
+  final Color? backgroundColor;
+  final Color? textColor;
   final Widget Function(BuildContext context, Widget child)? imageBuilder;
 
   String get _initial {
@@ -35,16 +35,20 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor =
+        this.backgroundColor ?? context.appPalette.muted;
+    final textColor = this.textColor ?? context.appPalette.primary;
     final normalizedImageUrl = imageUrl?.trim();
     final Widget child;
     if (normalizedImageUrl == null || normalizedImageUrl.isEmpty) {
-      child = _fallback(context);
+      child = _fallback(context, backgroundColor, textColor);
     } else {
       child = CachedNetworkImage(
         imageUrl: normalizedImageUrl,
         fit: BoxFit.cover,
         placeholder: (_, _) => Container(color: backgroundColor),
-        errorWidget: (_, _, _) => _fallback(context),
+        errorWidget: (_, _, _) =>
+            _fallback(context, backgroundColor, textColor),
       );
     }
 
@@ -63,7 +67,11 @@ class Avatar extends StatelessWidget {
     );
   }
 
-  Widget _fallback(BuildContext context) {
+  Widget _fallback(
+    BuildContext context,
+    Color backgroundColor,
+    Color textColor,
+  ) {
     final typography = context.appTypography;
     final style = switch (textSize) {
       >= 18 => typography.titleMD,

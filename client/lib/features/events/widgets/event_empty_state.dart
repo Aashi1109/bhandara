@@ -51,7 +51,7 @@ class EventEmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: typography.titleXL.copyWith(color: AppColors.primary),
+            style: typography.titleXL.copyWith(color: context.appPalette.primary),
           ),
           const SizedBox(height: 8),
           ConstrainedBox(
@@ -60,7 +60,7 @@ class EventEmptyState extends StatelessWidget {
               description,
               textAlign: TextAlign.center,
               style: typography.bodyBase.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
                 height: 1.45,
               ),
             ),

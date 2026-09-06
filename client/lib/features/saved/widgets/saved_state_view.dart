@@ -33,18 +33,18 @@ class SavedStateView extends StatelessWidget {
               width: 96,
               height: 96,
               decoration: BoxDecoration(
-                color: AppColors.muted,
+                color: context.appPalette.muted,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.appPalette.border),
               ),
-              child: Icon(icon, size: 36, color: AppColors.primary),
+              child: Icon(icon, size: 36, color: context.appPalette.primary),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.appTypography.titleLGStrong.copyWith(
-                color: AppColors.primary,
+                color: context.appPalette.primary,
               ),
             ),
             const SizedBox(height: 8),
@@ -54,7 +54,7 @@ class SavedStateView extends StatelessWidget {
                 description,
                 textAlign: TextAlign.center,
                 style: context.appTypography.bodyMD.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                   height: 1.5,
                 ),
               ),
@@ -97,8 +97,8 @@ class _LoadingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 94,
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.appPalette.border)),
       ),
       child: const Row(
         children: [

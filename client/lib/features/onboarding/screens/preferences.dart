@@ -197,7 +197,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     final tagsAsync = ref.watch(tagsProvider(rootOnly: true));
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -208,7 +208,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
               child: Text(
                 'Skip',
                 style: context.appTypography.labelMD.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ),
@@ -223,21 +223,21 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                   Text(
                     "Let's set up your preferences",
                     style: context.appTypography.titleXL.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Customize your feed to see the free food events you actually care about.',
                     style: context.appTypography.bodyLG.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                   const SizedBox(height: 40),
                   Text(
                     'What do you like?',
                     style: context.appTypography.titleMD.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -265,7 +265,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                       child: Text(
                         'Failed to load categories: ${err.toString()}',
                         style: context.appTypography.bodyMD.copyWith(
-                          color: AppColors.error,
+                          color: context.appPalette.error,
                         ),
                       ),
                     ),
@@ -328,7 +328,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
               child: Text(
                 'Use Current Location',
                 style: context.appTypography.bodySMStrong.copyWith(
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -340,9 +340,9 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           borderRadius: BorderRadius.circular(24),
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
               borderRadius: BorderRadius.circular(24),
-              color: AppColors.muted,
+              color: context.appPalette.muted,
             ),
             child: Column(
               children: [
@@ -378,7 +378,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                 ),
                 Container(
                   padding: const EdgeInsets.all(20),
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -390,7 +390,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                             child: Text(
                               'CURRENT SELECTION',
                               style: context.appTypography.overline.copyWith(
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                             ),
                           ),
@@ -398,14 +398,14 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                             onTap: _openLocationPicker,
                             child: Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: AppColors.muted,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.muted,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.edit2,
                                 size: AppIconSizes.m,
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                             ),
                           ),
@@ -414,10 +414,10 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             LucideIcons.mapPin,
                             size: 14,
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -428,7 +428,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
                                       ? _locationLabel
                                       : 'Location unavailable',
                               style: context.appTypography.bodySM.copyWith(
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -449,7 +449,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
           child: Text(
             'We use this to show you events nearby. You can always change this in your profile settings later.',
             style: context.appTypography.bodyXS.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ),
@@ -461,8 +461,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.8),
-        border: const Border(top: BorderSide(color: AppColors.border)),
+        color: context.appPalette.surface.withValues(alpha: 0.8),
+        border: Border(top: BorderSide(color: context.appPalette.border)),
       ),
       child: AppButton(
         size: AppButtonSize.lg,
@@ -655,21 +655,21 @@ class TagChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary
+              ? context.appPalette.primary
               : isIntermediate
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : AppColors.surface,
+              ? context.appPalette.primary.withValues(alpha: 0.1)
+              : context.appPalette.surface,
           borderRadius: BorderRadius.circular(50),
           border: Border.all(
             color: (isSelected || isIntermediate)
-                ? AppColors.primary
-                : AppColors.border,
+                ? context.appPalette.primary
+                : context.appPalette.border,
             width: isIntermediate ? 1.5 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: context.appPalette.primary.withValues(alpha: 0.2),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -699,16 +699,16 @@ class TagChip extends StatelessWidget {
                                 : context.appTypography.labelMD)
                             .copyWith(
                               color: isSelected
-                                  ? AppColors.surface
-                                  : AppColors.primary,
+                                  ? context.appPalette.surface
+                                  : context.appPalette.primary,
                             ),
                   ),
                   if (isSelected) ...[
                     const SizedBox(width: 6),
-                    const Icon(
+                    Icon(
                       LucideIcons.check,
                       size: AppIconSizes.xs,
-                      color: AppColors.surface,
+                      color: context.appPalette.surface,
                     ),
                   ],
                   if (showExpand) ...[
@@ -720,8 +720,8 @@ class TagChip extends StatelessWidget {
                         LucideIcons.chevronDown,
                         size: AppIconSizes.m,
                         color: isSelected
-                            ? AppColors.surface
-                            : AppColors.primary,
+                            ? context.appPalette.surface
+                            : context.appPalette.primary,
                       ),
                     ),
                   ],
@@ -739,7 +739,7 @@ class TagChip extends StatelessWidget {
       return Icon(
         LucideIcons.utensils,
         size: isSmall ? 14 : 16,
-        color: active ? AppColors.surface : AppColors.primary,
+        color: active ? context.appPalette.surface : context.appPalette.primary,
       );
     }
 
@@ -768,7 +768,7 @@ class TagChip extends StatelessWidget {
             errorWidget: (context, url, error) => Icon(
               LucideIcons.utensils,
               size: isSmall ? 14 : 16,
-              color: active ? AppColors.surface : AppColors.primary,
+              color: active ? context.appPalette.surface : context.appPalette.primary,
             ),
           ),
         ),
@@ -778,7 +778,7 @@ class TagChip extends StatelessWidget {
     return Icon(
       _getLucideIcon(tag.icon!),
       size: isSmall ? 14 : 16,
-      color: active ? AppColors.surface : AppColors.primary,
+      color: active ? context.appPalette.surface : context.appPalette.primary,
     );
   }
 

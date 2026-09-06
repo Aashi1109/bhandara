@@ -223,7 +223,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -350,14 +350,14 @@ class _CreateEventButton extends StatelessWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
+        decoration: BoxDecoration(
+          color: context.appPalette.primary,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
+        child: Icon(
           LucideIcons.plus,
           size: AppIconSizes.defaultSize,
-          color: AppColors.surface,
+          color: context.appPalette.surface,
         ),
       ),
     );

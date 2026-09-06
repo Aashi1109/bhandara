@@ -1,25 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import './app_colors.dart';
+import './app_palette.dart';
 import './app_icon_sizes.dart';
 import './app_typography.dart';
+import './palettes.dart';
 
 class AppTheme {
-  static AppTypography get typography => AppTypographyTokens.typography;
+  static AppTypography typographyFor(AppPalette p) =>
+      AppTypographyTokens.forPalette(p);
 
-  static ThemeData get theme {
+  static ThemeData buildTheme(AppPalette p) {
+    final typography = typographyFor(p);
+
     return ThemeData(
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.surface,
-      primaryColor: AppColors.primary,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        surface: AppColors.surface,
-        onPrimary: AppColors.surface,
-        onSurface: AppColors.primary,
-        outline: AppColors.border,
-      ),
-      textTheme: AppTypographyTokens.baseTextTheme.copyWith(
+      brightness: p.brightness,
+      scaffoldBackgroundColor: p.surface,
+      primaryColor: p.primary,
+      colorScheme: p.brightness == Brightness.dark
+          ? ColorScheme.dark(
+              primary: p.primary,
+              surface: p.surface,
+              onPrimary: p.surface,
+              onSurface: p.primary,
+              outline: p.border,
+            )
+          : ColorScheme.light(
+              primary: p.primary,
+              surface: p.surface,
+              onPrimary: p.surface,
+              onSurface: p.primary,
+              outline: p.border,
+            ),
+      textTheme: AppTypographyTokens.baseTextThemeFor(p).copyWith(
         displayLarge: typography.displayLG,
         headlineLarge: typography.heading1,
         headlineMedium: typography.heading2,
@@ -34,17 +47,20 @@ class AppTheme {
         labelMedium: typography.labelMD,
         labelSmall: typography.labelSM,
       ),
-      extensions: <ThemeExtension<dynamic>>[typography],
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.primary,
+      extensions: <ThemeExtension<dynamic>>[typography, p],
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.surface,
+        foregroundColor: p.primary,
         elevation: 0,
+        systemOverlayStyle: p.brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
-      iconTheme: const IconThemeData(
-        color: AppColors.primary,
+      iconTheme: IconThemeData(
+        color: p.primary,
         size: AppIconSizes.defaultSize,
       ),
-      dividerColor: AppColors.border,
+      dividerColor: p.border,
       bottomSheetTheme: const BottomSheetThemeData(
         constraints: BoxConstraints(maxWidth: double.infinity),
       ),
@@ -52,5 +68,6 @@ class AppTheme {
     );
   }
 
-  static TextStyle get serifFont => AppTypographyTokens.serifFont;
+  static TextStyle get serifFont =>
+      AppTypographyTokens.serifFontFor(lightPalette);
 }

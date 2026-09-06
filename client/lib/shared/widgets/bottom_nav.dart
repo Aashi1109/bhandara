@@ -48,12 +48,12 @@ class AppBottomNav extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: context.appPalette.surface,
               borderRadius: BorderRadius.circular(50),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: context.appPalette.primary.withValues(alpha: 0.12),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -71,20 +71,20 @@ class AppBottomNav extends ConsumerWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.2),
+                            color: context.appPalette.primary.withValues(alpha: 0.2),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.plus,
                         size: AppIconSizes.l,
-                        color: AppColors.surface,
+                        color: context.appPalette.surface,
                       ),
                     ),
                   );
@@ -97,12 +97,12 @@ class AppBottomNav extends ConsumerWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.appPalette.surface,
                       borderRadius: BorderRadius.circular(50),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.appPalette.border),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.04),
+                          color: context.appPalette.primary.withValues(alpha: 0.04),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -115,20 +115,20 @@ class AppBottomNav extends ConsumerWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: context.appPalette.primary,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             item.icon,
                             size: AppIconSizes.m,
-                            color: AppColors.surface,
+                            color: context.appPalette.surface,
                           ),
                         ),
                         Text(
                           item.label,
                           style: typography.bodySM.copyWith(
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                       ],
@@ -150,7 +150,7 @@ class AppBottomNav extends ConsumerWidget {
                         Icon(
                           item.icon,
                           size: AppIconSizes.l,
-                          color: AppColors.mutedForeground,
+                          color: context.appPalette.mutedForeground,
                         ),
                         if (showBadge)
                           Positioned(
@@ -159,8 +159,8 @@ class AppBottomNav extends ConsumerWidget {
                             child: Container(
                               width: 8,
                               height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.primary,
                                 shape: BoxShape.circle,
                               ),
                             ),

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-import './app_theme.dart';
+import './app_palette.dart';
 import './app_typography.dart';
+import './palettes.dart';
 
 extension AppThemeContext on BuildContext {
+  AppPalette get appPalette =>
+      Theme.of(this).extension<AppPalette>() ?? lightPalette;
+
   AppTypography get appTypography {
     final typography = Theme.of(this).extension<AppTypography>();
     if (typography == null) {
-      return AppTheme.typography;
+      return AppTypographyTokens.forPalette(lightPalette);
     }
 
     // Hot reload can keep an older ThemeExtension instance alive after new
@@ -23,11 +27,11 @@ extension AppThemeContext on BuildContext {
         typography.overlineStrong,
       ];
       if (validation.isEmpty) {
-        return AppTheme.typography;
+        return AppTypographyTokens.forPalette(lightPalette);
       }
       return typography;
     } catch (_) {
-      return AppTheme.typography;
+      return AppTypographyTokens.forPalette(lightPalette);
     }
   }
 }

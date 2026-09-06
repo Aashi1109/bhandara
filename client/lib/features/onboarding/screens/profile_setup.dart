@@ -67,7 +67,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final typography = context.appTypography;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           // Decorative Blurs (Simulated)
@@ -78,7 +78,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.2),
+                color: context.appPalette.muted.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
             ),
@@ -90,7 +90,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.2),
+                color: context.appPalette.muted.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
             ),
@@ -102,7 +102,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 onBack: () => context.pop(),
                 title: 'Set Up Profile',
                 showBorder: false,
-                backgroundColor: AppColors.transparent,
+                backgroundColor: context.appPalette.transparent,
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -120,15 +120,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.muted.withValues(alpha: 0.1),
+                                  color: context.appPalette.muted.withValues(alpha: 0.1),
                                   width: 4,
                                 ),
                               ),
                               child: Container(
                                 width: 140,
                                 height: 140,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFDE6D8),
+                                decoration: BoxDecoration(
+                                  color: context.appPalette.muted,
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
@@ -151,10 +151,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
+                                  color: context.appPalette.primary,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.surface,
+                                    color: context.appPalette.surface,
                                     width: 2,
                                   ),
                                   boxShadow: [
@@ -167,10 +167,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   LucideIcons.camera,
                                   size: AppIconSizes.m,
-                                  color: AppColors.surface,
+                                  color: context.appPalette.surface,
                                 ),
                               ),
                             ),
@@ -181,14 +181,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       Text(
                         'Upload Photo',
                         style: typography.heading3Heavy.copyWith(
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Personalize your profile',
                         style: typography.bodyMDSemi.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: context.appPalette.mutedForeground,
                         ),
                       ),
 
@@ -203,7 +203,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             child: Text(
                               'FULL NAME',
                               style: typography.overlineStrong.copyWith(
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                             ),
                           ),
@@ -212,7 +212,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             controller: _nameController,
                             placeholder: 'John Doe',
                             borderRadius: 20,
-                            backgroundColor: AppColors.surface,
+                            backgroundColor: context.appPalette.surface,
                             hasBorder: true,
                             validations: const InputValidations(
                               required: true,
@@ -225,7 +225,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             child: Text(
                               'GENDER',
                               style: typography.overlineStrong.copyWith(
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                             ),
                           ),
@@ -270,8 +270,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
               decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.8),
-                border: const Border(top: BorderSide(color: AppColors.border)),
+                color: context.appPalette.surface.withValues(alpha: 0.8),
+                border: Border(top: BorderSide(color: context.appPalette.border)),
               ),
               child: AppButton(
                 size: AppButtonSize.xl,

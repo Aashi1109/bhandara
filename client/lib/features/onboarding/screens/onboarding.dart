@@ -48,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           // Skip button
@@ -90,8 +90,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       height: 6,
                       decoration: BoxDecoration(
                         color: i == _current
-                            ? AppColors.primary
-                            : AppColors.muted,
+                            ? context.appPalette.primary
+                            : context.appPalette.muted,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     );
@@ -130,14 +130,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Container(
           width: 192,
           height: 192,
-          decoration: const BoxDecoration(
-            color: AppColors.muted,
+          decoration: BoxDecoration(
+            color: context.appPalette.muted,
             shape: BoxShape.circle,
           ),
           child: Icon(
             slide.icon,
             size: AppIconSizes.display,
-            color: AppColors.primary,
+            color: context.appPalette.primary,
           ),
         ),
         const SizedBox(height: 40),

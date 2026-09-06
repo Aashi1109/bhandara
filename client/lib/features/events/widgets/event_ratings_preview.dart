@@ -74,7 +74,7 @@ class EventRatingsPreview extends StatelessWidget {
           child: Text(
             'See all ${summary.ratingCount}',
             style: context.appTypography.bodySMStrong.copyWith(
-              color: AppColors.primary,
+              color: context.appPalette.primary,
               decoration: TextDecoration.underline,
             ),
           ),
@@ -99,7 +99,7 @@ class EventRatingsPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.55),
+        color: context.appPalette.muted.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -115,12 +115,12 @@ class EventRatingsPreview extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _stars(summary.ratingAverage, size: 16),
+                    _stars(context, summary.ratingAverage, size: 16),
                     const SizedBox(height: 4),
                     Text(
                       '${summary.ratingCount} guest ratings',
                       style: context.appTypography.captionSM.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ],
@@ -133,13 +133,13 @@ class EventRatingsPreview extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.12),
+                    color: context.appPalette.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     '$_recommendationPercent% RECOMMEND',
                     style: context.appTypography.overlineEmphasis.copyWith(
-                      color: AppColors.accent,
+                      color: context.appPalette.accent,
                     ),
                   ),
                 ),
@@ -170,8 +170,8 @@ class EventRatingsPreview extends StatelessWidget {
               child: LinearProgressIndicator(
                 minHeight: 5,
                 value: progress,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                backgroundColor: context.appPalette.border,
+                valueColor: AlwaysStoppedAnimation(context.appPalette.accent),
               ),
             ),
           ),
@@ -182,7 +182,7 @@ class EventRatingsPreview extends StatelessWidget {
               '$count',
               textAlign: TextAlign.right,
               style: context.appTypography.captionSM.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
               ),
             ),
           ),
@@ -202,7 +202,7 @@ class EventRatingsPreview extends StatelessWidget {
       key: const ValueKey('event-current-user-review'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -216,7 +216,11 @@ class EventRatingsPreview extends StatelessWidget {
                   style: context.appTypography.overlineEmphasis,
                 ),
               ),
-              _stars((summary.currentUserRating ?? 0).toDouble(), size: 15),
+              _stars(
+                context,
+                (summary.currentUserRating ?? 0).toDouble(),
+                size: 15,
+              ),
               if (!isOwner) ...[
                 const SizedBox(width: 10),
                 GestureDetector(
@@ -226,8 +230,8 @@ class EventRatingsPreview extends StatelessWidget {
                     LucideIcons.pencil,
                     size: AppIconSizes.m,
                     color: isSubmitting
-                        ? AppColors.mutedForeground
-                        : AppColors.primary,
+                        ? context.appPalette.mutedForeground
+                        : context.appPalette.primary,
                   ),
                 ),
               ],
@@ -254,8 +258,8 @@ class EventRatingsPreview extends StatelessWidget {
     return Container(
       key: const ValueKey('event-community-review-preview'),
       padding: const EdgeInsets.only(top: 14),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.appPalette.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,13 +286,13 @@ class EventRatingsPreview extends StatelessWidget {
                           ? 'Attended this event'
                           : '$date · Attended this event',
                       style: context.appTypography.captionSM.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ],
                 ),
               ),
-              _stars(review.value.toDouble(), size: 13),
+              _stars(context, review.value.toDouble(), size: 13),
             ],
           ),
           if (reviewText.isNotEmpty) ...[
@@ -305,7 +309,7 @@ class EventRatingsPreview extends StatelessWidget {
 
   Widget _allReviewsButton(BuildContext context) {
     return Material(
-      color: AppColors.primary,
+      color: context.appPalette.primary,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onOpenRatings,
@@ -319,14 +323,14 @@ class EventRatingsPreview extends StatelessWidget {
               Text(
                 'Read all reviews',
                 style: context.appTypography.bodySMStrong.copyWith(
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 LucideIcons.arrowRight,
                 size: AppIconSizes.m,
-                color: AppColors.surface,
+                color: context.appPalette.surface,
               ),
             ],
           ),
@@ -347,8 +351,8 @@ class EventRatingsPreview extends StatelessWidget {
             isOwner ? 'No reviews yet' : 'Be the first to review',
             style: context.appTypography.captionMD.copyWith(
               color: isOwner || isSubmitting
-                  ? AppColors.mutedForeground
-                  : AppColors.primary,
+                  ? context.appPalette.mutedForeground
+                  : context.appPalette.primary,
               decoration: isOwner ? null : TextDecoration.underline,
             ),
           ),
@@ -357,7 +361,11 @@ class EventRatingsPreview extends StatelessWidget {
     );
   }
 
-  Widget _stars(double rating, {required double size}) {
+  Widget _stars(
+    BuildContext context,
+    double rating, {
+    required double size,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (index) {
@@ -367,7 +375,7 @@ class EventRatingsPreview extends StatelessWidget {
             : difference >= 0.5
             ? Icons.star_half_rounded
             : Icons.star_outline_rounded;
-        return Icon(icon, size: size, color: AppColors.accent);
+        return Icon(icon, size: size, color: context.appPalette.accent);
       }),
     );
   }

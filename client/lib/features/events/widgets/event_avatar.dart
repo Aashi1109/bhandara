@@ -15,7 +15,7 @@ class EventAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = imageUrl;
-    if (url == null || url.isEmpty) return _fallback();
+    if (url == null || url.isEmpty) return _fallback(context);
 
     return ClipOval(
       child: CachedNetworkImage(
@@ -23,25 +23,25 @@ class EventAvatar extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholder: (_, _) => _fallback(),
-        errorWidget: (_, _, _) => _fallback(),
+        placeholder: (_, _) => _fallback(context),
+        errorWidget: (_, _, _) => _fallback(context),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(BuildContext context) {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.muted,
-        border: Border.all(color: AppColors.border),
+        color: context.appPalette.muted,
+        border: Border.all(color: context.appPalette.border),
       ),
-      child: const Icon(
+      child: Icon(
         LucideIcons.calendar,
         size: AppIconSizes.defaultSize,
-        color: AppColors.mutedForeground,
+        color: context.appPalette.mutedForeground,
       ),
     );
   }

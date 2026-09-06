@@ -33,16 +33,16 @@ class AppSearchBar extends StatelessWidget {
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             LucideIcons.search,
             size: AppIconSizes.defaultSize,
-            color: AppColors.mutedForeground,
+            color: context.appPalette.mutedForeground,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -55,12 +55,12 @@ class AppSearchBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: placeholder,
                 hintStyle: typography.bodyMD.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
                 border: InputBorder.none,
                 isCollapsed: true,
               ),
-              style: typography.bodyMD.copyWith(color: AppColors.primary),
+              style: typography.bodyMD.copyWith(color: context.appPalette.primary),
             ),
           ),
           if (onOpenFilters != null) ...[
@@ -92,14 +92,14 @@ class _FilterButton extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
+            decoration: BoxDecoration(
+              color: context.appPalette.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.slidersHorizontal,
               size: AppIconSizes.m,
-              color: AppColors.primary,
+              color: context.appPalette.primary,
             ),
           ),
           if (showIndicator)
@@ -110,9 +110,9 @@ class _FilterButton extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.surface, width: 2),
+                  border: Border.all(color: context.appPalette.surface, width: 2),
                 ),
               ),
             ),

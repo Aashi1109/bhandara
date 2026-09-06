@@ -415,7 +415,7 @@ class _LocationSettingsScreenState
     final typography = context.appTypography;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -431,8 +431,8 @@ class _LocationSettingsScreenState
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppColors.muted,
-                      border: Border.all(color: AppColors.border),
+                      color: context.appPalette.muted,
+                      border: Border.all(color: context.appPalette.border),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
@@ -441,7 +441,7 @@ class _LocationSettingsScreenState
                           child: AbsorbPointer(
                             absorbing: _suggestions.isNotEmpty,
                             child: widget.useStaticMapPlaceholder
-                                ? Container(color: AppColors.muted)
+                                ? Container(color: context.appPalette.muted)
                                 : AppMapView(
                                     manager: _mapManager,
                                     initialCameraPosition: CameraPosition(
@@ -504,7 +504,7 @@ class _LocationSettingsScreenState
                             child: _isSearchOpen
                                 ? Material(
                                     key: const ValueKey('location-search-open'),
-                                    color: AppColors.transparent,
+                                    color: context.appPalette.transparent,
                                     child: _buildSearchBar(),
                                   )
                                 : GestureDetector(
@@ -518,20 +518,20 @@ class _LocationSettingsScreenState
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.surface.withValues(
+                                        color: context.appPalette.surface.withValues(
                                           alpha: 0.9,
                                         ),
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
-                                          color: AppColors.border,
+                                          color: context.appPalette.border,
                                         ),
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             LucideIcons.search,
                                             size: AppIconSizes.s,
-                                            color: AppColors.mutedForeground,
+                                            color: context.appPalette.mutedForeground,
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
@@ -543,7 +543,7 @@ class _LocationSettingsScreenState
                                               overflow: TextOverflow.ellipsis,
                                               style: typography.bodySMStrong
                                                   .copyWith(
-                                                    color: AppColors.primary,
+                                                    color: context.appPalette.primary,
                                                   ),
                                             ),
                                           ),
@@ -576,7 +576,7 @@ class _LocationSettingsScreenState
                                 duration: const Duration(milliseconds: 180),
                                 opacity: 1,
                                 child: Material(
-                                  color: AppColors.transparent,
+                                  color: context.appPalette.transparent,
                                   elevation: 24,
                                   child: GestureDetector(
                                     behavior: HitTestBehavior.opaque,
@@ -586,14 +586,14 @@ class _LocationSettingsScreenState
                                         maxHeight: 180,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.surface,
+                                        color: context.appPalette.surface,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: AppColors.border,
+                                          color: context.appPalette.border,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: AppColors.primary.withValues(
+                                            color: context.appPalette.primary.withValues(
                                               alpha: 0.08,
                                             ),
                                             blurRadius: 20,
@@ -606,9 +606,9 @@ class _LocationSettingsScreenState
                                         shrinkWrap: true,
                                         itemCount: _suggestions.length,
                                         separatorBuilder: (_, _) =>
-                                            const Divider(
+                                            Divider(
                                               height: 1,
-                                              color: AppColors.border,
+                                              color: context.appPalette.border,
                                             ),
                                         itemBuilder: (context, index) {
                                           final suggestion =
@@ -627,7 +627,7 @@ class _LocationSettingsScreenState
                                             details.add(distanceLabel);
                                           }
                                           return Material(
-                                            color: AppColors.transparent,
+                                            color: context.appPalette.transparent,
                                             child: InkWell(
                                               onTap: () async {
                                                 await _selectSuggestion(
@@ -650,7 +650,8 @@ class _LocationSettingsScreenState
                                                       suggestion.title,
                                                       style: typography.labelMD
                                                           .copyWith(
-                                                            color: AppColors
+                                                            color: context
+                                                                .appPalette
                                                                 .primary,
                                                           ),
                                                     ),
@@ -666,7 +667,8 @@ class _LocationSettingsScreenState
                                                         details.join(' • '),
                                                         style: typography.bodySM
                                                             .copyWith(
-                                                              color: AppColors
+                                                              color: context
+                                                                  .appPalette
                                                                   .mutedForeground,
                                                             ),
                                                       ),
@@ -732,12 +734,12 @@ class _LocationSettingsScreenState
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: isPrimary ? AppColors.primary : AppColors.surface,
+          color: isPrimary ? context.appPalette.primary : context.appPalette.surface,
           borderRadius: BorderRadius.circular(16),
-          border: isPrimary ? null : Border.all(color: AppColors.border),
+          border: isPrimary ? null : Border.all(color: context.appPalette.border),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: context.appPalette.primary.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -746,7 +748,7 @@ class _LocationSettingsScreenState
         child: Icon(
           icon,
           size: AppIconSizes.defaultSize,
-          color: isPrimary ? AppColors.surface : AppColors.primary,
+          color: isPrimary ? context.appPalette.surface : context.appPalette.primary,
         ),
       ),
     );
@@ -757,12 +759,12 @@ class _LocationSettingsScreenState
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.appPalette.primary.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -772,15 +774,15 @@ class _LocationSettingsScreenState
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColors.transparent,
+          color: context.appPalette.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               LucideIcons.search,
               size: AppIconSizes.defaultSize,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -797,12 +799,12 @@ class _LocationSettingsScreenState
                 decoration: InputDecoration(
                   hintText: 'Search address or area',
                   hintStyle: typography.bodyMD.copyWith(
-                    color: AppColors.mutedForeground.withValues(alpha: 0.5),
+                    color: context.appPalette.mutedForeground.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   isCollapsed: true,
                 ),
-                style: typography.bodyMD.copyWith(color: AppColors.primary),
+                style: typography.bodyMD.copyWith(color: context.appPalette.primary),
               ),
             ),
           ],

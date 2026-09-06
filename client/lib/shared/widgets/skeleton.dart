@@ -52,9 +52,9 @@ class _AppSkeletonState extends State<AppSkeleton>
   @override
   Widget build(BuildContext context) {
     final baseColor =
-        widget.baseColor ?? AppColors.muted.withValues(alpha: 0.82);
+        widget.baseColor ?? context.appPalette.muted.withValues(alpha: 0.82);
     final highlightColor =
-        widget.highlightColor ?? AppColors.surface.withValues(alpha: 0.92);
+        widget.highlightColor ?? context.appPalette.surface.withValues(alpha: 0.92);
 
     return SizedBox(
       width: widget.width,

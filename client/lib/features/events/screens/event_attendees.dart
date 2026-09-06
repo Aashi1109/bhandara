@@ -86,7 +86,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(title: 'Attendees', subtitle: widget.eventName),
@@ -169,7 +169,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                       ? 'Guest list'
                       : '$spotsRemaining spots remaining',
                   style: typography.bodySM.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -179,14 +179,14 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.users,
               size: AppIconSizes.defaultSize,
-              color: AppColors.primary,
+              color: context.appPalette.primary,
             ),
           ),
         ],
@@ -210,9 +210,9 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
         onPressed: _showSortOptions,
         icon: const Icon(LucideIcons.slidersHorizontal),
         iconSize: AppIconSizes.m,
-        color: AppColors.primary,
+        color: context.appPalette.primary,
       ),
-      backgroundColor: AppColors.muted,
+      backgroundColor: context.appPalette.muted,
       hasBorder: false,
     );
   }
@@ -226,7 +226,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
         Text(
           _sort == _AttendeeSort.name ? 'A–Z' : '$resultCount results',
           style: context.appTypography.bodyXSStrong.copyWith(
-            color: AppColors.primary,
+            color: context.appPalette.primary,
           ),
         ),
       ],
@@ -239,8 +239,8 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
           context.push(ProfileScreen.routePath, extra: {'userId': attendee.id}),
       child: Container(
         height: 64,
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.appPalette.border)),
         ),
         child: Row(
           children: [
@@ -259,10 +259,10 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                 style: context.appTypography.titleXSStrong,
               ),
             ),
-            const Icon(
+            Icon(
               LucideIcons.chevronRight,
               size: AppIconSizes.m,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ],
         ),
@@ -292,7 +292,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
   void _showSortOptions() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: context.appPalette.transparent,
       builder: (context) => _AttendeeSortSheet(
         value: _sort,
         onChanged: (value) {
@@ -313,9 +313,9 @@ class _AttendeeSortSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.appPalette.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
@@ -330,7 +330,7 @@ class _AttendeeSortSheet extends StatelessWidget {
                   width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.appPalette.border,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -390,14 +390,14 @@ class _SortRow extends StatelessWidget {
               Container(
                 width: 28,
                 height: 28,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                decoration: BoxDecoration(
+                  color: context.appPalette.primary,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.check,
                   size: AppIconSizes.m,
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                 ),
               ),
           ],

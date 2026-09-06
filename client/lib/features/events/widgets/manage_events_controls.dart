@@ -75,7 +75,7 @@ class ManageEventsOverview extends StatelessWidget {
       height: 92,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
@@ -92,7 +92,7 @@ class ManageEventsOverview extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: typography.bodySM.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -143,10 +143,10 @@ class ManageEventsFilters extends StatelessWidget {
               height: 40,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.surface,
+                color: selected ? context.appPalette.primary : context.appPalette.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: selected ? AppColors.primary : AppColors.border,
+                  color: selected ? context.appPalette.primary : context.appPalette.border,
                   width: selected ? 2 : 1,
                 ),
               ),
@@ -156,8 +156,8 @@ class ManageEventsFilters extends StatelessWidget {
                   filter.label,
                   style: context.appTypography.bodySMSemi.copyWith(
                     color: selected
-                        ? AppColors.surface
-                        : AppColors.mutedForeground,
+                        ? context.appPalette.surface
+                        : context.appPalette.mutedForeground,
                   ),
                 ),
               ),
@@ -179,7 +179,7 @@ Future<void> showManagedEventActions({
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppColors.transparent,
+    backgroundColor: context.appPalette.transparent,
     isScrollControlled: true,
     builder: (sheetContext) => _ManagedEventActionsSheet(
       event: event,
@@ -209,9 +209,9 @@ class _ManagedEventActionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.appPalette.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
@@ -226,7 +226,7 @@ class _ManagedEventActionsSheet extends StatelessWidget {
                   width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.appPalette.border,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -237,7 +237,7 @@ class _ManagedEventActionsSheet extends StatelessWidget {
               Text(
                 'Choose what you would like to manage.',
                 style: context.appTypography.bodyBase.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
               const SizedBox(height: 12),
@@ -249,7 +249,7 @@ class _ManagedEventActionsSheet extends StatelessWidget {
               _ActionRow(
                 icon: LucideIcons.users,
                 label: 'View attendees',
-                color: AppColors.accent,
+                color: context.appPalette.accent,
                 onTap: onViewAttendees,
               ),
               _ActionRow(
@@ -260,7 +260,7 @@ class _ManagedEventActionsSheet extends StatelessWidget {
               _ActionRow(
                 icon: LucideIcons.ban,
                 label: 'Cancel event',
-                color: AppColors.error,
+                color: context.appPalette.error,
                 onTap: onCancel,
               ),
             ],
@@ -276,16 +276,18 @@ class _ActionRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = AppColors.primary,
+    this.color,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? context.appPalette.primary;
+
     return InkWell(
       onTap: () {
         Navigator.of(context).pop();

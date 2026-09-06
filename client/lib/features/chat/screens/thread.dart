@@ -617,9 +617,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,7 +677,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Column(
@@ -688,14 +688,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 rightElement: Container(
                   width: 40,
                   height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.muted,
+                  decoration: BoxDecoration(
+                    color: context.appPalette.muted,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.moreHorizontal,
                     size: AppIconSizes.defaultSize,
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
               ),
@@ -728,7 +728,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                                   Container(
                                     width: 1,
                                     height: 24,
-                                    color: AppColors.border,
+                                    color: context.appPalette.border,
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
@@ -744,7 +744,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                                 child: Text(
                                   'No replies yet. Be the first to reply!',
                                   style: context.appTypography.bodyMD.copyWith(
-                                    color: AppColors.mutedForeground,
+                                    color: context.appPalette.mutedForeground,
                                   ),
                                 ),
                               )
@@ -813,9 +813,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
             ),
             child: Column(
               children: [
@@ -829,7 +829,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                     reply.content,
                     textAlign: TextAlign.center,
                     style: typography.bodyBaseSemi.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                 ],
@@ -863,14 +863,14 @@ class _ThreadScreenState extends State<ThreadScreen> {
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.muted,
+            decoration: BoxDecoration(
+              color: context.appPalette.muted,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(
               initials,
-              style: typography.bodySMStrong.copyWith(color: AppColors.primary),
+              style: typography.bodySMStrong.copyWith(color: context.appPalette.primary),
             ),
           ),
         Expanded(
@@ -880,7 +880,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             children: [
               Text(
                 reply.senderName ?? 'User',
-                style: typography.labelMD.copyWith(color: AppColors.primary),
+                style: typography.labelMD.copyWith(color: context.appPalette.primary),
               ),
               if (imageMedia != null)
                 GestureDetector(
@@ -922,13 +922,13 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.muted,
+                      color: context.appPalette.muted,
                       borderRadius: const BorderRadius.only(
                         topRight: Radius.circular(20),
                         bottomLeft: Radius.circular(20),
                         bottomRight: Radius.circular(20),
                       ),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.appPalette.border),
                     ),
                     child: Text(
                       reply.content.isEmpty && attachmentCount > 0
@@ -948,7 +948,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 Text(
                   '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'}',
                   style: typography.captionSM.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -958,22 +958,22 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   Text(
                     DateFormat('hh:mm a').format(reply.createdAt),
                     style: typography.labelSM.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                   if (reply.isPending) ...[
-                    const SizedBox(
+                    SizedBox(
                       width: 12,
                       height: 12,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                     Text(
                       'Sending',
                       style: typography.labelSM.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ],
@@ -983,15 +983,15 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       child: Row(
                         spacing: 4,
                         children: [
-                          const Icon(
+                          Icon(
                             LucideIcons.rotateCcw,
                             size: AppIconSizes.xs,
-                            color: AppColors.error,
+                            color: context.appPalette.error,
                           ),
                           Text(
                             'Retry',
                             style: typography.labelSM.copyWith(
-                              color: AppColors.error,
+                              color: context.appPalette.error,
                             ),
                           ),
                         ],
@@ -1001,7 +1001,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   Text(
                     'In thread',
                     style: typography.labelSMStrong.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -1043,14 +1043,14 @@ class _OriginalMessageCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
             ),
             child: Text(
               message?.content ?? '',
               textAlign: TextAlign.center,
-              style: typography.bodyMDSemi.copyWith(color: AppColors.primary),
+              style: typography.bodyMDSemi.copyWith(color: context.appPalette.primary),
             ),
           ),
         ),
@@ -1066,14 +1066,14 @@ class _OriginalMessageCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.muted,
+            color: context.appPalette.muted,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(8),
               topRight: Radius.circular(20),
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
             ),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1081,7 +1081,7 @@ class _OriginalMessageCard extends StatelessWidget {
             children: [
               Text(
                 isCurrentUser ? 'You' : (message?.senderName ?? 'Unknown'),
-                style: typography.labelMD.copyWith(color: AppColors.primary),
+                style: typography.labelMD.copyWith(color: context.appPalette.primary),
               ),
               GestureDetector(
                 key: contentKey,
@@ -1110,7 +1110,7 @@ class _OriginalMessageCard extends StatelessWidget {
                     : '',
                 textAlign: TextAlign.left,
                 style: typography.labelSM.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ],

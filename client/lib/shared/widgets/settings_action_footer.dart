@@ -20,8 +20,8 @@ class SettingsActionFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.8),
-        border: const Border(top: BorderSide(color: AppColors.border)),
+        color: context.appPalette.surface.withValues(alpha: 0.8),
+        border: Border(top: BorderSide(color: context.appPalette.border)),
       ),
       child: AppButton(
         size: AppButtonSize.xl,

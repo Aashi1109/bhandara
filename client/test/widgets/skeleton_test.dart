@@ -9,7 +9,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const Scaffold(
           body: Column(
             children: [
@@ -29,7 +29,7 @@ void main() {
   testWidgets('app skeleton line respects explicit sizing', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const Scaffold(body: AppSkeletonLine(width: 180, height: 14)),
       ),
     );
@@ -51,7 +51,7 @@ void main() {
   testWidgets('shimmer animation pumps without exceptions', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const Scaffold(body: AppSkeleton(width: 160, height: 16)),
       ),
     );

@@ -11,7 +11,7 @@ class HelpSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           const AppHeader(title: 'Help & Support'),
@@ -57,9 +57,9 @@ class _FaqItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,13 +67,13 @@ class _FaqItem extends StatelessWidget {
         children: [
           Text(
             question,
-            style: typography.titleXS.copyWith(color: AppColors.primary),
+            style: typography.titleXS.copyWith(color: context.appPalette.primary),
           ),
           Text(
             answer,
             style: typography.bodyBase.copyWith(
               height: 1.5,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ],

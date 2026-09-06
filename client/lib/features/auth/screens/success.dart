@@ -102,7 +102,7 @@ class SuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -127,22 +127,22 @@ class SuccessScreen extends StatelessWidget {
                           Container(
                             width: 116,
                             height: 116,
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
+                            decoration: BoxDecoration(
+                              color: context.appPalette.muted,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
                             child: Container(
                               width: 70,
                               height: 70,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.primary,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.check,
                                 size: AppIconSizes.xl,
-                                color: AppColors.surface,
+                                color: context.appPalette.surface,
                               ),
                             ),
                           ),
@@ -167,7 +167,7 @@ class SuccessScreen extends StatelessWidget {
                             '$_title is ready to welcome guests. Share the invite or preview the event page.',
                             textAlign: TextAlign.center,
                             style: typography.bodyBase.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                               height: 1.5,
                             ),
                           ),
@@ -187,8 +187,8 @@ class SuccessScreen extends StatelessWidget {
                     label: const Text('Share invite'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(56),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.surface,
+                      backgroundColor: context.appPalette.primary,
+                      foregroundColor: context.appPalette.surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(17),
                       ),
@@ -200,8 +200,8 @@ class SuccessScreen extends StatelessWidget {
                     onPressed: () => _viewEvent(context),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: context.appPalette.primary,
+                      side: BorderSide(color: context.appPalette.border),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(17),
                       ),
@@ -213,7 +213,7 @@ class SuccessScreen extends StatelessWidget {
                     'You can manage requests anytime from My Events.',
                     textAlign: TextAlign.center,
                     style: typography.bodyXS.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -231,7 +231,7 @@ class SuccessScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -241,8 +241,8 @@ class SuccessScreen extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
+                decoration: BoxDecoration(
+                  color: context.appPalette.surface,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(LucideIcons.utensils, size: AppIconSizes.m),
@@ -262,7 +262,7 @@ class SuccessScreen extends StatelessWidget {
                     Text(
                       '$_categoryLabel · ${event?.capacity == null ? 'Open capacity' : '${event!.capacity} spots'}',
                       style: typography.bodyXSStrong.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ],
@@ -303,7 +303,7 @@ class SuccessScreen extends StatelessWidget {
                 Text(
                   '$_attachmentCount ${_attachmentCount == 1 ? 'attachment' : 'attachments'}',
                   style: typography.bodyXS.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -317,7 +317,7 @@ class SuccessScreen extends StatelessWidget {
   Widget _summaryItem(BuildContext context, IconData icon, String value) {
     return Column(
       children: [
-        Icon(icon, size: AppIconSizes.s, color: AppColors.mutedForeground),
+        Icon(icon, size: AppIconSizes.s, color: context.appPalette.mutedForeground),
         const SizedBox(height: 5),
         Text(
           value,

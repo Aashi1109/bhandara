@@ -9,7 +9,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const Scaffold(
           body: Center(child: AppButton(label: 'Save')),
         ),
@@ -22,7 +22,7 @@ void main() {
     final label = tester.widget<Text>(find.text('Save'));
 
     expect(gestureDetector.onTap, isNull);
-    expect(label.style?.color, AppColors.mutedForeground);
+    expect(label.style?.color, lightPalette.mutedForeground);
   });
 
   testWidgets('enabled button invokes callback once when tapped', (
@@ -32,7 +32,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: Scaffold(
           body: Center(
             child: AppButton(
@@ -57,7 +57,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.theme,
+          theme: AppTheme.buildTheme(lightPalette),
           home: const Scaffold(
             body: Center(
               child: SizedBox(

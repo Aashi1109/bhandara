@@ -134,26 +134,26 @@ class _AppButtonState extends State<AppButton> {
   Color get _backgroundColor {
     switch (widget.variant) {
       case AppButtonVariant.primary:
-        return AppColors.primary;
+        return context.appPalette.primary;
       case AppButtonVariant.secondary:
-        return AppColors.muted;
+        return context.appPalette.muted;
       case AppButtonVariant.ghost:
-        return AppColors.transparent;
+        return context.appPalette.transparent;
       case AppButtonVariant.outline:
-        return AppColors.transparent;
+        return context.appPalette.transparent;
     }
   }
 
   Color get _foregroundColor {
     switch (widget.variant) {
       case AppButtonVariant.primary:
-        return AppColors.surface;
+        return context.appPalette.surface;
       case AppButtonVariant.secondary:
-        return AppColors.primary;
+        return context.appPalette.primary;
       case AppButtonVariant.ghost:
-        return AppColors.primary;
+        return context.appPalette.primary;
       case AppButtonVariant.outline:
-        return AppColors.primary;
+        return context.appPalette.primary;
     }
   }
 
@@ -161,7 +161,7 @@ class _AppButtonState extends State<AppButton> {
     switch (widget.variant) {
       case AppButtonVariant.outline:
       case AppButtonVariant.secondary:
-        return Border.all(color: AppColors.border);
+        return Border.all(color: context.appPalette.border);
       default:
         return null;
     }
@@ -171,7 +171,7 @@ class _AppButtonState extends State<AppButton> {
     if (widget.variant == AppButtonVariant.primary) {
       return [
         BoxShadow(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: context.appPalette.primary.withValues(alpha: 0.1),
           blurRadius: 20,
           offset: const Offset(0, 8),
         ),
@@ -187,21 +187,21 @@ class _AppButtonState extends State<AppButton> {
     final isDisabled = widget.onPressed == null && !isLoading;
     final backgroundColor = isDisabled
         ? switch (widget.variant) {
-            AppButtonVariant.primary => AppColors.muted,
-            AppButtonVariant.secondary => AppColors.muted,
-            AppButtonVariant.ghost => AppColors.transparent,
-            AppButtonVariant.outline => AppColors.transparent,
+            AppButtonVariant.primary => context.appPalette.muted,
+            AppButtonVariant.secondary => context.appPalette.muted,
+            AppButtonVariant.ghost => context.appPalette.transparent,
+            AppButtonVariant.outline => context.appPalette.transparent,
           }
         : isLoading
         ? _backgroundColor.withValues(alpha: 0.5)
         : _backgroundColor;
     final foregroundColor = isDisabled
-        ? AppColors.mutedForeground
+        ? context.appPalette.mutedForeground
         : _foregroundColor;
     final border = isDisabled
         ? switch (widget.variant) {
-            AppButtonVariant.secondary => Border.all(color: AppColors.border),
-            AppButtonVariant.outline => Border.all(color: AppColors.border),
+            AppButtonVariant.secondary => Border.all(color: context.appPalette.border),
+            AppButtonVariant.outline => Border.all(color: context.appPalette.border),
             _ => _border,
           }
         : _border;

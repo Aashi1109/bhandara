@@ -10,7 +10,7 @@ class AppPullToRefresh extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.edgeOffset = 0,
     this.displacement = 40,
-    this.color = AppColors.primary,
+    this.color,
     this.wrapInScrollView = true,
   });
 
@@ -19,11 +19,13 @@ class AppPullToRefresh extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double edgeOffset;
   final double displacement;
-  final Color color;
+  final Color? color;
   final bool wrapInScrollView;
 
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? context.appPalette.primary;
+
     if (!wrapInScrollView) {
       return RefreshIndicator(
         color: color,

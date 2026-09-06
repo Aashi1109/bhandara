@@ -91,7 +91,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
     final typography = context.appTypography;
 
     return Material(
-      color: AppColors.surface,
+      color: context.appPalette.surface,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: Padding(
         padding: EdgeInsets.fromLTRB(24, 20, 24, bottomInset + 24),
@@ -104,7 +104,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: context.appPalette.border,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -135,8 +135,8 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
                           : Icons.star_outline_rounded,
                       size: 34,
                       color: index <= (_rating ?? 0)
-                          ? AppColors.primary
-                          : AppColors.mutedForeground,
+                          ? context.appPalette.primary
+                          : context.appPalette.mutedForeground,
                     ),
                   ),
               ],
@@ -145,7 +145,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: typography.bodyMDSemi.copyWith(color: AppColors.error),
+                style: typography.bodyMDSemi.copyWith(color: context.appPalette.error),
               ),
             ],
             const SizedBox(height: 20),
@@ -155,7 +155,7 @@ class _ReviewEditorSheetState extends State<_ReviewEditorSheet> {
               minLines: 5,
               maxLines: 5,
               borderRadius: 20,
-              backgroundColor: AppColors.muted.withValues(alpha: 0.45),
+              backgroundColor: context.appPalette.muted.withValues(alpha: 0.45),
             ),
             const SizedBox(height: 20),
             Row(

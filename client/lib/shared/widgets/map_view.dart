@@ -125,7 +125,7 @@ class _AppMapViewState extends State<AppMapView> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return ColoredBox(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -153,7 +153,7 @@ class _AppMapViewState extends State<AppMapView> {
 
   Widget _buildGoogleMap() {
     return ColoredBox(
-      color: AppColors.muted,
+      color: context.appPalette.muted,
       child: GoogleMap(
         initialCameraPosition: widget.initialCameraPosition,
         markers: widget.markers,

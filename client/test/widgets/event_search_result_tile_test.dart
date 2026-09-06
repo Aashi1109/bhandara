@@ -9,7 +9,7 @@ void main() {
   testWidgets('shows the current event status as a badge', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: Scaffold(
           body: EventSearchResultTile(
             item: SearchEventItem(

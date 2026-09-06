@@ -93,9 +93,9 @@ class _CuisineInterestsScreenState
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: const Row(
             children: [
@@ -130,7 +130,7 @@ class _CuisineInterestsScreenState
     final typography = context.appTypography;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -164,7 +164,7 @@ class _CuisineInterestsScreenState
                         child: Text(
                           error.toString(),
                           style: typography.bodyMD.copyWith(
-                            color: AppColors.error,
+                            color: context.appPalette.error,
                           ),
                         ),
                       ),
@@ -193,17 +193,17 @@ class _CuisineInterestsScreenState
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface,
+                                  color: context.appPalette.surface,
                                   borderRadius: BorderRadius.circular(24),
                                   border: Border.all(
                                     color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.border,
+                                        ? context.appPalette.primary
+                                        : context.appPalette.border,
                                   ),
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: AppColors.primary.withValues(
+                                            color: context.appPalette.primary.withValues(
                                               alpha: 0.05,
                                             ),
                                             blurRadius: 10,
@@ -219,16 +219,16 @@ class _CuisineInterestsScreenState
                                       height: 44,
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? AppColors.primary
-                                            : AppColors.muted,
+                                            ? context.appPalette.primary
+                                            : context.appPalette.muted,
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
                                         _iconForTag(tag),
                                         size: AppIconSizes.defaultSize,
                                         color: isSelected
-                                            ? AppColors.surface
-                                            : AppColors.primary,
+                                            ? context.appPalette.surface
+                                            : context.appPalette.primary,
                                       ),
                                     ),
                                     const SizedBox(width: 16),
@@ -254,21 +254,21 @@ class _CuisineInterestsScreenState
                                       height: 24,
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? AppColors.primary
-                                            : AppColors.muted,
+                                            ? context.appPalette.primary
+                                            : context.appPalette.muted,
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color: isSelected
-                                              ? AppColors.primary
-                                              : AppColors.border,
+                                              ? context.appPalette.primary
+                                              : context.appPalette.border,
                                           width: 2,
                                         ),
                                       ),
                                       child: isSelected
-                                          ? const Icon(
+                                          ? Icon(
                                               LucideIcons.check,
                                               size: AppIconSizes.s,
-                                              color: AppColors.surface,
+                                              color: context.appPalette.surface,
                                             )
                                           : null,
                                     ),

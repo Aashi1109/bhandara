@@ -1230,7 +1230,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Positioned.fill(
@@ -1394,9 +1394,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                       Container(
                         height: 56,
                         decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.92),
+                          color: context.appPalette.surface.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: context.appPalette.border),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: const Row(
@@ -1632,14 +1632,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                           child: Container(
                             width: 32,
                             height: 32,
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
+                            decoration: BoxDecoration(
+                              color: context.appPalette.muted,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.x,
                               size: AppIconSizes.m,
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                         ),
@@ -1657,7 +1657,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: context.appTypography.bodySMStrong.copyWith(
-                            color: AppColors.mutedForeground,
+                            color: context.appPalette.mutedForeground,
                           ),
                         ),
                       ],
@@ -1665,10 +1665,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           LucideIcons.timer,
                           size: AppIconSizes.m,
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -1677,7 +1677,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: context.appTypography.bodyMDStrong.copyWith(
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                         ),
@@ -1739,13 +1739,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              const AppButton(
+              AppButton(
                 variant: AppButtonVariant.outline,
                 size: AppButtonSize.lg,
                 child: Icon(
                   LucideIcons.share2,
                   size: AppIconSizes.defaultSize,
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                 ),
               ),
             ],
@@ -1782,7 +1782,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           height: 8,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? context.appPalette.primary : context.appPalette.border,
             borderRadius: BorderRadius.circular(999),
           ),
         );
@@ -1795,15 +1795,15 @@ class _ExploreScreenState extends State<ExploreScreen>
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary : AppColors.surface,
+        color: isSelected ? context.appPalette.primary : context.appPalette.surface,
         borderRadius: BorderRadius.circular(50),
         border: Border.all(
-          color: isSelected ? AppColors.primary : AppColors.border,
+          color: isSelected ? context.appPalette.primary : context.appPalette.border,
         ),
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: context.appPalette.primary.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -1815,13 +1815,13 @@ class _ExploreScreenState extends State<ExploreScreen>
           Icon(
             filter.icon,
             size: AppIconSizes.m,
-            color: isSelected ? AppColors.surface : AppColors.primary,
+            color: isSelected ? context.appPalette.surface : context.appPalette.primary,
           ),
           const SizedBox(width: 8),
           Text(
             filter.name,
             style: context.appTypography.bodySMStrong.copyWith(
-              color: isSelected ? AppColors.surface : AppColors.primary,
+              color: isSelected ? context.appPalette.surface : context.appPalette.primary,
             ),
           ),
         ],
@@ -1844,14 +1844,14 @@ class _ExploreScreenState extends State<ExploreScreen>
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: AppIconSizes.m, color: AppColors.warning),
+            child: Icon(icon, size: AppIconSizes.m, color: context.appPalette.warning),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: context.appTypography.bodySMSemi.copyWith(
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                 ),
                 children: [
                   TextSpan(text: message),
@@ -1877,7 +1877,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Material(
-          color: AppColors.transparent,
+          color: context.appPalette.transparent,
           child: InkWell(
             onTap: onTap,
             borderRadius: borderRadius,
@@ -1888,17 +1888,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.surface.withValues(alpha: 0.42),
-                    AppColors.warning.withValues(alpha: 0.08),
+                    context.appPalette.surface.withValues(alpha: 0.42),
+                    context.appPalette.warning.withValues(alpha: 0.08),
                   ],
                 ),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.35),
+                  color: context.appPalette.warning.withValues(alpha: 0.35),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.06),
+                    color: context.appPalette.primary.withValues(alpha: 0.06),
                     blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),
@@ -1920,7 +1920,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(text, style: context.appTypography.labelSM),
@@ -1932,14 +1932,14 @@ class _ExploreScreenState extends State<ExploreScreen>
       mainAxisSize: MainAxisSize.min,
       spacing: 6,
       children: [
-        Icon(icon, size: AppIconSizes.s, color: AppColors.mutedForeground),
+        Icon(icon, size: AppIconSizes.s, color: context.appPalette.mutedForeground),
         Flexible(
           child: Text(
             text,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
             style: context.appTypography.bodySMStrong.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ),
@@ -1953,7 +1953,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         children: [
           GestureDetector(
             onTap: () => setState(() => _isFilterOpen = false),
-            child: Container(color: AppColors.primary.withValues(alpha: 0.4)),
+            child: Container(color: context.appPalette.primary.withValues(alpha: 0.4)),
           ),
           Positioned(
             bottom: 0,
@@ -1961,9 +1961,9 @@ class _ExploreScreenState extends State<ExploreScreen>
             right: 0,
             child: Container(
               height: MediaQuery.of(context).size.height * 0.78,
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+              decoration: BoxDecoration(
+                color: context.appPalette.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
               ),
               child: Column(
                 children: [
@@ -1972,7 +1972,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     width: 48,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: AppColors.muted,
+                      color: context.appPalette.muted,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -1993,21 +1993,21 @@ class _ExploreScreenState extends State<ExploreScreen>
                           child: Container(
                             width: 32,
                             height: 32,
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
+                            decoration: BoxDecoration(
+                              color: context.appPalette.muted,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.x,
                               size: AppIconSizes.m,
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(color: AppColors.border, height: 1),
+                  Divider(color: context.appPalette.border, height: 1),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(32),
@@ -2024,8 +2024,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                             value: _draftFilters.radiusKm.clamp(1, 500),
                             min: 1,
                             max: 500,
-                            activeColor: AppColors.primary,
-                            inactiveColor: AppColors.muted,
+                            activeColor: context.appPalette.primary,
+                            inactiveColor: context.appPalette.muted,
                             onChanged: (value) {
                               setState(() {
                                 _draftFilters = _draftFilters.copyWith(
@@ -2122,9 +2122,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.8),
-                      border: const Border(
-                        top: BorderSide(color: AppColors.border),
+                      color: context.appPalette.surface.withValues(alpha: 0.8),
+                      border: Border(
+                        top: BorderSide(color: context.appPalette.border),
                       ),
                     ),
                     child: Row(
@@ -2166,15 +2166,15 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: selected ? AppColors.primary : AppColors.surface,
+        color: selected ? context.appPalette.primary : context.appPalette.surface,
         borderRadius: BorderRadius.circular(50),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? context.appPalette.primary : context.appPalette.border,
         ),
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: context.appPalette.primary.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -2184,7 +2184,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       child: Text(
         text,
         style: context.appTypography.bodyMDStrong.copyWith(
-          color: selected ? AppColors.surface : AppColors.primary,
+          color: selected ? context.appPalette.surface : context.appPalette.primary,
         ),
       ),
     );

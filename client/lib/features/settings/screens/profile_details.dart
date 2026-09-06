@@ -193,7 +193,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
     final typography = context.appTypography;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -235,7 +235,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.border,
+                                      color: context.appPalette.border,
                                       width: 2,
                                     ),
                                   ),
@@ -248,8 +248,8 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                                                 const CircularProgressIndicator(),
                                           )
                                         : ColorFiltered(
-                                            colorFilter: const ColorFilter.mode(
-                                              AppColors.mutedForeground,
+                                            colorFilter: ColorFilter.mode(
+                                              context.appPalette.mutedForeground,
                                               BlendMode.saturation,
                                             ),
                                             child: CachedNetworkImage(
@@ -264,12 +264,12 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                                   width: 32,
                                   height: 32,
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color: context.appPalette.surface,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.border),
+                                    border: Border.all(color: context.appPalette.border),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withValues(
+                                        color: context.appPalette.primary.withValues(
                                           alpha: 0.05,
                                         ),
                                         blurRadius: 4,
@@ -277,10 +277,10 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     LucideIcons.edit2,
                                     size: AppIconSizes.m,
-                                    color: AppColors.primary,
+                                    color: context.appPalette.primary,
                                   ),
                                 ),
                               ],
@@ -290,7 +290,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                           Text(
                             'Tap to change photo',
                             style: typography.bodyMD.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                             ),
                           ),
                         ],
@@ -310,7 +310,7 @@ class _ProfileDetailsScreenState extends ConsumerState<ProfileDetailsScreen> {
                       child: Text(
                         'Gender',
                         style: typography.labelMD.copyWith(
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                     ),

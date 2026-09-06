@@ -27,6 +27,7 @@ import './features/settings/screens/password.dart';
 import './features/settings/screens/email.dart';
 import './features/settings/screens/cuisines.dart';
 import './features/settings/screens/notifications.dart';
+import './features/settings/screens/appearance.dart';
 import './features/settings/screens/data_privacy.dart';
 import './features/settings/screens/help_support.dart';
 import './features/settings/screens/about.dart';
@@ -129,9 +130,7 @@ final router = GoRouter(
       path: ForgotPasswordOTPScreen.routePath,
       builder: (context, state) {
         final extra = _extraAsMap(state.extra);
-        return ForgotPasswordOTPScreen(
-          email: extra?['email'] as String?,
-        );
+        return ForgotPasswordOTPScreen(email: extra?['email'] as String?);
       },
     ),
     GoRoute(
@@ -162,9 +161,8 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/event/:id/discussion',
-      builder: (context, state) => ChatScreen(
-        eventId: state.pathParameters['id'],
-      ),
+      builder: (context, state) =>
+          ChatScreen(eventId: state.pathParameters['id']),
     ),
     GoRoute(
       path: ThreadScreen.routePath,
@@ -229,6 +227,10 @@ final router = GoRouter(
     GoRoute(
       path: DataPrivacyScreen.routePath,
       builder: (context, state) => const DataPrivacyScreen(),
+    ),
+    GoRoute(
+      path: AppearanceScreen.routePath,
+      builder: (context, state) => const AppearanceScreen(),
     ),
     GoRoute(
       path: HelpSupportScreen.routePath,

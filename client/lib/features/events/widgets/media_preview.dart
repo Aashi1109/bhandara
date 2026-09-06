@@ -180,12 +180,12 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
     final typography = context.appTypography;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: context.appPalette.transparent,
       builder: (context) {
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface),
+            decoration: BoxDecoration(color: context.appPalette.surface),
             child: EmojiPicker(
               onEmojiSelected: (_, emoji) {
                 Navigator.of(context).pop();
@@ -194,26 +194,26 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
               config: Config(
                 height: 320,
                 checkPlatformCompatibility: true,
-                emojiViewConfig: const EmojiViewConfig(
-                  backgroundColor: AppColors.surface,
+                emojiViewConfig: EmojiViewConfig(
+                  backgroundColor: context.appPalette.surface,
                   columns: 8,
                 ),
-                categoryViewConfig: const CategoryViewConfig(
+                categoryViewConfig: CategoryViewConfig(
                   initCategory: Category.SMILEYS,
-                  backgroundColor: AppColors.surface,
-                  indicatorColor: AppColors.primary,
-                  iconColorSelected: AppColors.primary,
-                  iconColor: AppColors.mutedForeground,
-                  dividerColor: AppColors.border,
+                  backgroundColor: context.appPalette.surface,
+                  indicatorColor: context.appPalette.primary,
+                  iconColorSelected: context.appPalette.primary,
+                  iconColor: context.appPalette.mutedForeground,
+                  dividerColor: context.appPalette.border,
                 ),
                 searchViewConfig: SearchViewConfig(
-                  backgroundColor: AppColors.surface,
-                  buttonIconColor: AppColors.mutedForeground,
+                  backgroundColor: context.appPalette.surface,
+                  buttonIconColor: context.appPalette.mutedForeground,
                   inputTextStyle: typography.bodyMDSemi.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                   hintTextStyle: typography.bodyMD.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
                 bottomActionBarConfig: const BottomActionBarConfig(
@@ -282,7 +282,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Material(
-      color: AppColors.surface,
+      color: context.appPalette.surface,
       child: Column(
         children: [
           // Header
@@ -297,7 +297,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.muted,
+                      color: context.appPalette.muted,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -311,14 +311,14 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                     Text(
                       widget.items[_currentIndex].name.toUpperCase(),
                       style: typography.overline.copyWith(
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${_currentIndex + 1} OF ${widget.items.length}',
                       style: typography.labelSM.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ],
@@ -327,7 +327,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.muted,
+                    color: context.appPalette.muted,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -401,7 +401,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
 
           // Bottom Bar
           Container(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             child: SafeArea(
               top: false,
               child: Padding(
@@ -416,7 +416,7 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: AppColors.muted,
+                          color: context.appPalette.muted,
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: ConstrainedBox(
@@ -439,10 +439,10 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(
+                              SizedBox(
                                 height: 20,
                                 child: VerticalDivider(
-                                  color: AppColors.border,
+                                  color: context.appPalette.border,
                                   width: 1,
                                 ),
                               ),
@@ -451,27 +451,27 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                                 onTap: _isSubmittingReaction || !_isSocketReady
                                     ? null
                                     : _openEmojiPicker,
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
                                     vertical: 8,
                                   ),
                                   child: Icon(
                                     LucideIcons.plus,
                                     size: AppIconSizes.m,
-                                    color: AppColors.primary,
+                                    color: context.appPalette.primary,
                                   ),
                                 ),
                               ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
                                 child: Icon(
                                   LucideIcons.share2,
                                   size: AppIconSizes.m,
-                                  color: AppColors.primary,
+                                  color: context.appPalette.primary,
                                 ),
                               ),
                             ],
@@ -502,8 +502,8 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.border,
+                                      ? context.appPalette.primary
+                                      : context.appPalette.border,
                                   width: 2,
                                 ),
                               ),
@@ -537,13 +537,13 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: context.appPalette.primary.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
           size: AppIconSizes.defaultSize,
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         ),
       ),
     );
@@ -566,13 +566,13 @@ class _AppMediaPreviewState extends State<AppMediaPreview> {
                 item.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: typography.labelMD.copyWith(color: AppColors.primary),
+                style: typography.labelMD.copyWith(color: context.appPalette.primary),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: typography.bodySM.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ],
@@ -758,9 +758,9 @@ class _VideoPreviewCardState extends State<_VideoPreviewCard> {
     final typography = context.appTypography;
     if (!_isReady) {
       return Container(
-        color: AppColors.muted,
-        child: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        color: context.appPalette.muted,
+        child: Center(
+          child: CircularProgressIndicator(color: context.appPalette.primary),
         ),
       );
     }

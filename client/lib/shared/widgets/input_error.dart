@@ -19,7 +19,7 @@ class AppInputError extends StatelessWidget {
       child: Text(
         message,
         style: context.appTypography.bodySM.copyWith(
-          color: AppColors.error,
+          color: context.appPalette.error,
           fontWeight: FontWeight.w600,
           height: 1.3,
         ),

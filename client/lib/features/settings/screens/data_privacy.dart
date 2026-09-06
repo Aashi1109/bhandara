@@ -11,7 +11,7 @@ class DataPrivacyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           const AppHeader(title: 'Data & Privacy'),
@@ -57,9 +57,9 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.45),
+        color: context.appPalette.muted.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,13 +67,13 @@ class _InfoCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: typography.titleSM.copyWith(color: AppColors.primary),
+            style: typography.titleSM.copyWith(color: context.appPalette.primary),
           ),
           Text(
             body,
             style: typography.bodyBase.copyWith(
               height: 1.5,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ],

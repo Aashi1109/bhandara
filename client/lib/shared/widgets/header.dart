@@ -41,9 +41,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         bottom: _hasSubtitle ? 14 : 12,
       ),
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surface.withValues(alpha: 0.9),
+        color: backgroundColor ?? context.appPalette.surface.withValues(alpha: 0.9),
         border: showBorder
-            ? const Border(bottom: BorderSide(color: AppColors.border))
+            ? Border(bottom: BorderSide(color: context.appPalette.border))
             : null,
       ),
       child: Stack(
@@ -58,14 +58,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.appPalette.surface,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: context.appPalette.border),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.arrowLeft,
                         size: AppIconSizes.defaultSize,
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                   )
@@ -82,7 +82,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: typography.heading3Strong.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 if (_hasSubtitle)
@@ -91,7 +91,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: typography.bodySM.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
               ],

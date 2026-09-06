@@ -153,7 +153,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
     final maskedEmail = _maskEmail(widget.email ?? '');
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Positioned(
@@ -163,7 +163,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.5),
+                color: context.appPalette.muted.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
             ),
@@ -175,7 +175,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.4),
+                color: context.appPalette.muted.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -187,7 +187,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                   onBack: () => context.pop(),
                   title: '',
                   showBorder: false,
-                  backgroundColor: AppColors.transparent,
+                  backgroundColor: context.appPalette.transparent,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -198,14 +198,14 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                         Container(
                           width: 72,
                           height: 72,
-                          decoration: const BoxDecoration(
-                            color: AppColors.muted,
+                          decoration: BoxDecoration(
+                            color: context.appPalette.muted,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.mail,
                             size: AppIconSizes.xl,
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -217,7 +217,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                             textAlign: TextAlign.center,
                             text: TextSpan(
                               style: typography.bodyLG.copyWith(
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                               children: [
                                 const TextSpan(
@@ -227,7 +227,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                                 TextSpan(
                                   text: maskedEmail,
                                   style: typography.bodyMDStrong.copyWith(
-                                    color: AppColors.primary,
+                                    color: context.appPalette.primary,
                                   ),
                                 ),
                               ],
@@ -238,7 +238,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppColors.muted,
+                            color: context.appPalette.muted,
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: Column(
@@ -252,7 +252,7 @@ class _ForgotPasswordOTPScreenState extends State<ForgotPasswordOTPScreen> {
                                 child: Text(
                                   'VERIFICATION CODE',
                                   style: typography.overline.copyWith(
-                                    color: AppColors.mutedForeground,
+                                    color: context.appPalette.mutedForeground,
                                   ),
                                 ),
                               ),
@@ -322,7 +322,7 @@ class _ResendRow extends StatelessWidget {
       children: [
         Text(
           'Didn\'t receive the code? ',
-          style: typography.bodyMD.copyWith(color: AppColors.mutedForeground),
+          style: typography.bodyMD.copyWith(color: context.appPalette.mutedForeground),
         ),
         if (canResend)
           GestureDetector(
@@ -330,7 +330,7 @@ class _ResendRow extends StatelessWidget {
             child: Text(
               'Resend code',
               style: typography.bodyMDStrong.copyWith(
-                color: AppColors.primary,
+                color: context.appPalette.primary,
                 decoration: TextDecoration.underline,
               ),
             ),
@@ -339,7 +339,7 @@ class _ResendRow extends StatelessWidget {
           Text(
             'Resend in ${secondsRemaining}s',
             style: typography.bodyMDStrong.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
       ],
@@ -407,20 +407,20 @@ class _OTPDigitBox extends StatelessWidget {
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           inputFormatters: [_SingleDigitFormatter(onPaste: onPaste)],
-          style: typography.titleLG.copyWith(color: AppColors.primary),
+          style: typography.titleLG.copyWith(color: context.appPalette.primary),
           decoration: InputDecoration(
             counterText: '',
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.appPalette.surface,
             contentPadding: EdgeInsets.zero,
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: context.appPalette.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: AppColors.primary,
+              borderSide: BorderSide(
+                color: context.appPalette.primary,
                 width: 2,
               ),
             ),

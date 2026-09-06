@@ -21,9 +21,9 @@ class AppActionSheet extends StatelessWidget {
       top: false,
       child: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: context.appPalette.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -34,7 +34,7 @@ class AppActionSheet extends StatelessWidget {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: context.appPalette.border,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -46,7 +46,7 @@ class AppActionSheet extends StatelessWidget {
                       child: Text(
                         title!,
                         style: context.appTypography.titleLGStrong.copyWith(
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                     ),
@@ -61,7 +61,7 @@ class AppActionSheet extends StatelessWidget {
                       child: Text(
                         description!,
                         style: context.appTypography.bodyBase.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: context.appPalette.mutedForeground,
                           height: 1.35,
                         ),
                       ),
@@ -101,7 +101,7 @@ class AppActionSheetItem extends StatelessWidget {
     final typography = context.appTypography;
 
     return Material(
-      color: AppColors.transparent,
+      color: context.appPalette.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
@@ -109,13 +109,13 @@ class AppActionSheetItem extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isDestructive
-                ? AppColors.error.withValues(alpha: 0.06)
-                : AppColors.surface,
+                ? context.appPalette.error.withValues(alpha: 0.06)
+                : context.appPalette.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isDestructive
-                  ? AppColors.error.withValues(alpha: 0.18)
-                  : AppColors.border,
+                  ? context.appPalette.error.withValues(alpha: 0.18)
+                  : context.appPalette.border,
             ),
           ),
           child: Row(
@@ -125,14 +125,14 @@ class AppActionSheetItem extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: isDestructive
-                      ? AppColors.error.withValues(alpha: 0.1)
-                      : AppColors.muted,
+                      ? context.appPalette.error.withValues(alpha: 0.1)
+                      : context.appPalette.muted,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icon,
                   size: AppIconSizes.defaultSize,
-                  color: isDestructive ? AppColors.error : AppColors.primary,
+                  color: isDestructive ? context.appPalette.error : context.appPalette.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -144,8 +144,8 @@ class AppActionSheetItem extends StatelessWidget {
                       title,
                       style: typography.titleXSStrong.copyWith(
                         color: isDestructive
-                            ? AppColors.error
-                            : AppColors.primary,
+                            ? context.appPalette.error
+                            : context.appPalette.primary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -154,8 +154,8 @@ class AppActionSheetItem extends StatelessWidget {
                         subtitle!,
                         style: typography.bodySM.copyWith(
                           color: isDestructive
-                              ? AppColors.error.withValues(alpha: 0.8)
-                              : AppColors.mutedForeground,
+                              ? context.appPalette.error.withValues(alpha: 0.8)
+                              : context.appPalette.mutedForeground,
                         ),
                       ),
                     ],
@@ -166,8 +166,8 @@ class AppActionSheetItem extends StatelessWidget {
                 LucideIcons.chevronRight,
                 size: AppIconSizes.defaultSize,
                 color: isDestructive
-                    ? AppColors.error.withValues(alpha: 0.8)
-                    : AppColors.mutedForeground,
+                    ? context.appPalette.error.withValues(alpha: 0.8)
+                    : context.appPalette.mutedForeground,
               ),
             ],
           ),

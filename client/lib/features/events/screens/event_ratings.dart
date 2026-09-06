@@ -152,9 +152,9 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.muted.withValues(alpha: 0.45),
+            color: context.appPalette.muted.withValues(alpha: 0.45),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: const Row(
             children: [
@@ -225,7 +225,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     final publicReviews = _publicReviews(currentUser?.id);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(title: 'Ratings & Reviews', subtitle: widget.eventName),
@@ -244,20 +244,20 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                           Text(
                             'Your review',
                             style: context.appTypography.titleMDStrong.copyWith(
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                           const SizedBox(height: 12),
                           _reviewCard(currentUserReview, isCurrentUser: true),
                         ],
-                        const Divider(height: 32, color: AppColors.border),
+                        Divider(height: 32, color: context.appPalette.border),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
                                 'Reviews',
                                 style: context.appTypography.titleMDStrong
-                                    .copyWith(color: AppColors.primary),
+                                    .copyWith(color: context.appPalette.primary),
                               ),
                             ),
                             _ratingFilterDropdown(),
@@ -272,9 +272,9 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                               children: [
                                 _reviewCard(entry.value, isCurrentUser: false),
                                 if (entry.key != publicReviews.length - 1)
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: AppColors.border,
+                                    color: context.appPalette.border,
                                   ),
                               ],
                             ),
@@ -288,21 +288,21 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
       floatingActionButton: !widget.isOwner && currentUserReview == null
           ? FloatingActionButton.extended(
               onPressed: _isSubmitting ? null : _openEditor,
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.surface,
+              backgroundColor: context.appPalette.primary,
+              foregroundColor: context.appPalette.surface,
               label: Text(
                 'Add Review',
                 style: context.appTypography.labelMD.copyWith(
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                 ),
               ),
               icon: _isSubmitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.surface,
+                        color: context.appPalette.surface,
                       ),
                     )
                   : const Icon(LucideIcons.pencil),
@@ -315,9 +315,9 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.45),
+        color: context.appPalette.muted.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -334,13 +334,13 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                       ? summary.ratingAverage.toStringAsFixed(1)
                       : '0.0',
                   style: context.appTypography.headingXL.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 Text(
                   '${summary.ratingCount} ratings',
                   style: context.appTypography.captionMD.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -362,14 +362,14 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                               Text(
                                 '$stars',
                                 style: context.appTypography.labelMD.copyWith(
-                                  color: AppColors.primary,
+                                  color: context.appPalette.primary,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(
+                              Icon(
                                 Icons.star_rounded,
                                 size: 18,
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                             ],
                           ),
@@ -383,9 +383,9 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                                   ? 0
                                   : summary.ratingHistogram.valueFor(stars) /
                                         summary.ratingCount,
-                              backgroundColor: AppColors.surface,
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.primary,
+                              backgroundColor: context.appPalette.surface,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                context.appPalette.primary,
                               ),
                             ),
                           ),
@@ -394,7 +394,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                         Text(
                           '${summary.ratingHistogram.valueFor(stars)}',
                           style: context.appTypography.labelMD.copyWith(
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                       ],
@@ -412,13 +412,13 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     return DropdownButtonHideUnderline(
       child: DropdownButton<int?>(
         value: _selectedRatingFilter,
-        icon: const Icon(
+        icon: Icon(
           LucideIcons.chevronDown,
           size: AppIconSizes.m,
-          color: AppColors.mutedForeground,
+          color: context.appPalette.mutedForeground,
         ),
         borderRadius: BorderRadius.circular(18),
-        style: context.appTypography.labelMD.copyWith(color: AppColors.primary),
+        style: context.appTypography.labelMD.copyWith(color: context.appPalette.primary),
         items: _filterOptions
             .map(
               (value) => DropdownMenuItem<int?>(
@@ -444,14 +444,14 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.muted.withValues(alpha: 0.45),
+        color: context.appPalette.muted.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Text(
         message,
         style: context.appTypography.bodyMDSemi.copyWith(
-          color: AppColors.mutedForeground,
+          color: context.appPalette.mutedForeground,
         ),
         textAlign: TextAlign.center,
       ),
@@ -478,14 +478,14 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                     Text(
                       name,
                       style: context.appTypography.titleSM.copyWith(
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                     if (review.updatedAt != null)
                       Text(
                         _formatDate(review.updatedAt),
                         style: context.appTypography.bodySM.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: context.appPalette.mutedForeground,
                         ),
                       ),
                   ],
@@ -494,16 +494,16 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.star_rounded,
                     size: 22,
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${review.value}',
                     style: context.appTypography.titleSM.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   if (isCurrentUser && !widget.isOwner) ...[
@@ -514,21 +514,21 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: context.appPalette.surface,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: context.appPalette.border),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.05),
+                              color: context.appPalette.primary.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: const Icon(
+                        child: Icon(
                           LucideIcons.pencil,
                           size: AppIconSizes.m,
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                     ),
@@ -542,7 +542,7 @@ class _EventRatingsScreenState extends ConsumerState<EventRatingsScreen> {
             Text(
               review.review!,
               style: context.appTypography.bodyMD.copyWith(
-                color: AppColors.primary,
+                color: context.appPalette.primary,
               ),
             ),
           ],

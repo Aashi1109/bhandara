@@ -4,6 +4,7 @@ import 'package:foody_mobile/features/events/models/event.dart';
 import 'package:foody_mobile/features/events/screens/my_events.dart';
 import 'package:foody_mobile/features/events/widgets/managed_event_card.dart';
 import 'package:foody_mobile/shared/theme/app_theme.dart';
+import 'package:foody_mobile/shared/theme/palettes.dart';
 
 void main() {
   testWidgets('filters managed events using compact status controls', (
@@ -36,7 +37,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: MyEventsScreen(initialEvents: events, loadRemoteImages: false),
       ),
     );
@@ -62,7 +63,7 @@ void main() {
     final now = DateTime.now();
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: MyEventsScreen(
           loadRemoteImages: false,
           initialEvents: [

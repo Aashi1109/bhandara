@@ -13,41 +13,41 @@ class EventStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _statusBackground(status),
+        color: _statusBackground(context, status),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         formatEventStatusLabel(status).toUpperCase(),
         style: context.appTypography.labelXS.copyWith(
-          color: _statusForeground(status),
+          color: _statusForeground(context, status),
         ),
       ),
     );
   }
 
-  Color _statusBackground(String status) {
+  Color _statusBackground(BuildContext context, String status) {
     switch (status) {
       case EventStatusValue.ongoing:
-        return AppColors.success.withValues(alpha: 0.14);
+        return context.appPalette.success.withValues(alpha: 0.14);
       case EventStatusValue.completed:
       case EventStatusValue.cancelled:
-        return AppColors.muted;
+        return context.appPalette.muted;
       case EventStatusValue.upcoming:
       default:
-        return AppColors.warning.withValues(alpha: 0.14);
+        return context.appPalette.warning.withValues(alpha: 0.14);
     }
   }
 
-  Color _statusForeground(String status) {
+  Color _statusForeground(BuildContext context, String status) {
     switch (status) {
       case EventStatusValue.ongoing:
-        return AppColors.success;
+        return context.appPalette.success;
       case EventStatusValue.upcoming:
-        return AppColors.warning;
+        return context.appPalette.warning;
       case EventStatusValue.completed:
       case EventStatusValue.cancelled:
       default:
-        return AppColors.mutedForeground;
+        return context.appPalette.mutedForeground;
     }
   }
 }

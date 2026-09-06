@@ -126,7 +126,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   TextStyle get _fieldTextStyle =>
       context.appTypography.bodyMD.copyWith(height: 1.2);
   TextStyle get _fieldPlaceholderStyle =>
-      _fieldTextStyle.copyWith(color: AppColors.mutedForeground);
+      _fieldTextStyle.copyWith(color: context.appPalette.mutedForeground);
 
   Future<List<String>> _resolveDefaultTagIds(User user) async {
     final interestIds = user.meta?.interests ?? const <String>[];
@@ -303,7 +303,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     final action = await showModalBottomSheet<_MediaSourceAction>(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: context.appPalette.transparent,
       builder: (context) => AppActionSheet(
         children: [
           AppActionSheetItem(
@@ -756,17 +756,17 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 
   Widget _datePickerThemeBuilder(BuildContext context, Widget? child) {
-    const colorScheme = ColorScheme.light(
-      primary: AppColors.primary,
-      onPrimary: AppColors.surface,
-      surface: AppColors.surface,
-      onSurface: AppColors.primary,
+    final colorScheme = ColorScheme.light(
+      primary: context.appPalette.primary,
+      onPrimary: context.appPalette.surface,
+      surface: context.appPalette.surface,
+      onSurface: context.appPalette.primary,
     );
 
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: colorScheme,
-        dialogTheme: const DialogThemeData(backgroundColor: AppColors.surface),
+        dialogTheme: DialogThemeData(backgroundColor: context.appPalette.surface),
       ),
       child: child ?? const SizedBox.shrink(),
     );
@@ -775,22 +775,22 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget _timePickerThemeBuilder(BuildContext context, Widget? child) {
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: const ColorScheme.light(
-          primary: AppColors.primary,
-          onPrimary: AppColors.surface,
-          surface: AppColors.surface,
-          onSurface: AppColors.primary,
+        colorScheme: ColorScheme.light(
+          primary: context.appPalette.primary,
+          onPrimary: context.appPalette.surface,
+          surface: context.appPalette.surface,
+          onSurface: context.appPalette.primary,
         ),
         timePickerTheme: TimePickerThemeData(
-          backgroundColor: AppColors.surface,
-          dayPeriodBorderSide: const BorderSide(color: AppColors.border),
-          dayPeriodColor: AppColors.muted,
-          dayPeriodTextColor: AppColors.primary,
-          dialHandColor: AppColors.primary,
-          dialBackgroundColor: AppColors.muted,
-          hourMinuteColor: AppColors.muted,
-          hourMinuteTextColor: AppColors.primary,
-          entryModeIconColor: AppColors.primary,
+          backgroundColor: context.appPalette.surface,
+          dayPeriodBorderSide: BorderSide(color: context.appPalette.border),
+          dayPeriodColor: context.appPalette.muted,
+          dayPeriodTextColor: context.appPalette.primary,
+          dialHandColor: context.appPalette.primary,
+          dialBackgroundColor: context.appPalette.muted,
+          hourMinuteColor: context.appPalette.muted,
+          hourMinuteTextColor: context.appPalette.primary,
+          entryModeIconColor: context.appPalette.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
@@ -917,7 +917,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     categoriesAsync.whenData((tags) => _hydrateInitialCategory(user, tags));
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           SafeArea(
@@ -967,9 +967,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: context.appPalette.surface,
+        border: Border(bottom: BorderSide(color: context.appPalette.border)),
       ),
       child: Row(
         children: [
@@ -982,14 +982,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: context.appPalette.surface,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.appPalette.border),
               ),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.x,
                 size: AppIconSizes.defaultSize,
-                color: AppColors.primary,
+                color: context.appPalette.primary,
               ),
             ),
           ),
@@ -1005,13 +1005,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               _isEditMode ? 'Editing' : 'Draft',
               style: context.appTypography.labelXSStrong.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
               ),
             ),
           ),
@@ -1027,7 +1027,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         Text(
           _isEditMode ? 'REFINE THE GATHERING' : 'HOST SOMETHING MEMORABLE',
           style: context.appTypography.overlineStrong.copyWith(
-            color: AppColors.primary,
+            color: context.appPalette.primary,
             letterSpacing: 1.2,
           ),
         ),
@@ -1043,7 +1043,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         Text(
           'Share the essentials now. You can fine-tune everything before publishing.',
           style: context.appTypography.bodyBase.copyWith(
-            color: AppColors.mutedForeground,
+            color: context.appPalette.mutedForeground,
             height: 1.45,
           ),
         ),
@@ -1065,7 +1065,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.1),
+        color: context.appPalette.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -1073,14 +1073,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
+            decoration: BoxDecoration(
+              color: context.appPalette.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.alertCircle,
               size: AppIconSizes.m,
-              color: AppColors.error,
+              color: context.appPalette.error,
             ),
           ),
           const SizedBox(width: 12),
@@ -1096,7 +1096,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 Text(
                   _error!,
                   style: context.appTypography.bodyXS.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -1117,9 +1117,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         height: 178,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppColors.muted,
+          color: context.appPalette.muted,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
         ),
         child: cover == null
             ? _buildEmptyCoverState()
@@ -1134,11 +1134,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                       height: 36,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: context.appPalette.surface,
                         borderRadius: BorderRadius.circular(999),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: context.appPalette.primary.withValues(alpha: 0.12),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -1170,14 +1170,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         Container(
           width: 48,
           height: 48,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
+          decoration: BoxDecoration(
+            color: context.appPalette.surface,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
+          child: Icon(
             LucideIcons.imagePlus,
             size: AppIconSizes.l,
-            color: AppColors.primary,
+            color: context.appPalette.primary,
           ),
         ),
         const SizedBox(height: 10),
@@ -1186,7 +1186,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         Text(
           'JPG or PNG · 16:9 works best',
           style: context.appTypography.bodyXS.copyWith(
-            color: AppColors.mutedForeground,
+            color: context.appPalette.mutedForeground,
           ),
         ),
       ],
@@ -1199,11 +1199,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     }
     if (cover.hasFailed || cover.isVideo) {
       return Container(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         alignment: Alignment.center,
         child: Icon(
           cover.hasFailed ? LucideIcons.alertCircle : LucideIcons.video,
-          color: cover.hasFailed ? AppColors.error : AppColors.primary,
+          color: cover.hasFailed ? context.appPalette.error : context.appPalette.primary,
           size: AppIconSizes.hero,
         ),
       );
@@ -1211,7 +1211,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     final source = cover.url?.isNotEmpty == true ? cover.url! : cover.localPath;
     Widget fallback() => Container(
-      color: AppColors.muted,
+      color: context.appPalette.muted,
       alignment: Alignment.center,
       child: const Icon(LucideIcons.image, size: AppIconSizes.hero),
     );
@@ -1251,7 +1251,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   Text(
                     'Help guests picture the experience',
                     style: context.appTypography.bodyXS.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -1260,7 +1260,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             Text(
               '${_attachments.length}/${CreateEventScreen.maxAttachments}',
               style: context.appTypography.labelXSStrong.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
               ),
             ),
           ],
@@ -1283,9 +1283,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   height: 42,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: context.appPalette.surface,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: context.appPalette.border),
                   ),
                   child: Row(
                     children: [
@@ -1315,23 +1315,23 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         height: 96,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: AppColors.muted,
+          color: context.appPalette.muted,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
         ),
         child: Row(
           children: [
             Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
+              decoration: BoxDecoration(
+                color: context.appPalette.primary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.imagePlus,
                 size: AppIconSizes.m,
-                color: AppColors.surface,
+                color: context.appPalette.surface,
               ),
             ),
             const SizedBox(width: 14),
@@ -1350,7 +1350,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   Text(
                     'Add photos, videos or PDFs · Optional',
                     style: context.appTypography.bodyXS.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -1365,8 +1365,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget _buildFormActions() {
     return Container(
       padding: const EdgeInsets.only(top: 22),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.appPalette.border)),
       ),
       child: Row(
         children: [
@@ -1378,8 +1378,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   : null,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(54),
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.border),
+                foregroundColor: context.appPalette.primary,
+                side: BorderSide(color: context.appPalette.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -1396,9 +1396,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(54),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.surface,
-                disabledBackgroundColor: AppColors.muted,
+                backgroundColor: context.appPalette.primary,
+                foregroundColor: context.appPalette.surface,
+                disabledBackgroundColor: context.appPalette.muted,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -1421,18 +1421,18 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget _buildPublishingOverlay() {
     return Positioned.fill(
       child: ColoredBox(
-        color: AppColors.surface.withValues(alpha: 0.88),
+        color: context.appPalette.surface.withValues(alpha: 0.88),
         child: Center(
           child: Container(
             width: 342,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: context.appPalette.surface,
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.14),
+                  color: context.appPalette.primary.withValues(alpha: 0.14),
                   blurRadius: 32,
                   offset: const Offset(0, 12),
                 ),
@@ -1444,13 +1444,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 Container(
                   width: 62,
                   height: 62,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                  decoration: BoxDecoration(
+                    color: context.appPalette.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.send,
-                    color: AppColors.surface,
+                    color: context.appPalette.surface,
                     size: AppIconSizes.l,
                   ),
                 ),
@@ -1464,14 +1464,14 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   'Uploading media and preparing your guest page. Keep this screen open for a moment.',
                   textAlign: TextAlign.center,
                   style: context.appTypography.bodySM.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                     height: 1.45,
                   ),
                 ),
                 const SizedBox(height: 18),
-                const LinearProgressIndicator(
-                  color: AppColors.primary,
-                  backgroundColor: AppColors.muted,
+                LinearProgressIndicator(
+                  color: context.appPalette.primary,
+                  backgroundColor: context.appPalette.muted,
                 ),
               ],
             ),
@@ -1530,7 +1530,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             Text(
               'Required',
               style: context.appTypography.bodySM.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
                 fontWeight: FontWeight.w600,
                 height: 1.2,
                 letterSpacing: 0,
@@ -1608,13 +1608,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 13),
                             decoration: BoxDecoration(
                               color: selected
-                                  ? AppColors.muted
-                                  : AppColors.surface,
+                                  ? context.appPalette.muted
+                                  : context.appPalette.surface,
                               borderRadius: BorderRadius.circular(19),
                               border: Border.all(
                                 color: selected
-                                    ? AppColors.primary
-                                    : AppColors.border,
+                                    ? context.appPalette.primary
+                                    : context.appPalette.border,
                               ),
                             ),
                             child: Row(
@@ -1624,16 +1624,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                                   _categoryIcon(tag.name),
                                   size: 14,
                                   color: selected
-                                      ? AppColors.primary
-                                      : AppColors.mutedForeground,
+                                      ? context.appPalette.primary
+                                      : context.appPalette.mutedForeground,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   tag.name,
                                   style: context.appTypography.bodyXS.copyWith(
                                     color: selected
-                                        ? AppColors.primary
-                                        : AppColors.mutedForeground,
+                                        ? context.appPalette.primary
+                                        : context.appPalette.mutedForeground,
                                     fontWeight: FontWeight.w700,
                                     height: 1.2,
                                   ),
@@ -1796,7 +1796,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           height: 48,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppColors.muted,
+            color: context.appPalette.muted,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -1822,7 +1822,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                   Text(
                     'Review guests before they’re added',
                     style: context.appTypography.bodyXS.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -1830,8 +1830,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             ),
             Switch(
               value: _requiresApproval,
-              activeTrackColor: AppColors.primary,
-              activeThumbColor: AppColors.surface,
+              activeTrackColor: context.appPalette.primary,
+              activeThumbColor: context.appPalette.surface,
               onChanged: (value) => setState(() => _requiresApproval = value),
             ),
           ],
@@ -1849,7 +1849,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         duration: const Duration(milliseconds: 160),
         height: double.infinity,
         decoration: BoxDecoration(
-          color: selected ? AppColors.surface : AppColors.muted,
+          color: selected ? context.appPalette.surface : context.appPalette.muted,
           borderRadius: BorderRadius.circular(12),
           boxShadow: selected
               ? [
@@ -1867,13 +1867,13 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             Icon(
               public ? LucideIcons.globe2 : LucideIcons.lock,
               size: 15,
-              color: selected ? AppColors.primary : AppColors.mutedForeground,
+              color: selected ? context.appPalette.primary : context.appPalette.mutedForeground,
             ),
             const SizedBox(width: 7),
             Text(
               public ? 'Public' : 'Private',
               style: context.appTypography.labelSMStrong.copyWith(
-                color: selected ? AppColors.primary : AppColors.mutedForeground,
+                color: selected ? context.appPalette.primary : context.appPalette.mutedForeground,
               ),
             ),
           ],

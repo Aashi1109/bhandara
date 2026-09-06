@@ -17,7 +17,7 @@ Future<void> showAppDialog({
     context: context,
     barrierDismissible: barrierDismissible,
     barrierLabel: 'app-dialog',
-    barrierColor: AppColors.primary.withValues(alpha: 0.35),
+    barrierColor: context.appPalette.primary.withValues(alpha: 0.35),
     transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (context, animation, secondaryAnimation) {
       return SafeArea(
@@ -25,7 +25,7 @@ Future<void> showAppDialog({
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Material(
-              color: AppColors.transparent,
+              color: context.appPalette.transparent,
               child: _AppDialogCard(
                 title: title,
                 message: message,
@@ -80,12 +80,12 @@ class _AppDialogCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.16),
+            color: context.appPalette.primary.withValues(alpha: 0.16),
             blurRadius: 36,
             offset: const Offset(0, 14),
           ),
@@ -102,7 +102,7 @@ class _AppDialogCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: typography.bodyMD.copyWith(color: AppColors.mutedForeground),
+            style: typography.bodyMD.copyWith(color: context.appPalette.mutedForeground),
           ),
           const SizedBox(height: 20),
           Row(

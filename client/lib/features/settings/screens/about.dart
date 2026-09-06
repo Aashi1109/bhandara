@@ -12,7 +12,7 @@ class AboutAppScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           const AppHeader(title: 'About App'),
@@ -23,9 +23,9 @@ class AboutAppScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.muted.withValues(alpha: 0.4),
+                  color: context.appPalette.muted.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.appPalette.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

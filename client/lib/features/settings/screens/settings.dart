@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../shared/providers/theme_preference.dart';
 import '../../../shared/theme/theme.dart';
 import '../../../shared/widgets/header.dart';
 import '../../../shared/widgets/button.dart';
@@ -15,10 +16,12 @@ import './email.dart';
 import './password.dart';
 import './cuisines.dart';
 import './location.dart';
+import './appearance.dart';
 import './notifications.dart';
 import './data_privacy.dart';
 import './help_support.dart';
 import './about.dart';
+import '../widgets/theme_swatch.dart';
 import '../../auth/screens/auth.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -50,13 +53,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final userAsync = ref.watch(userProfileProvider);
     final user = userAsync.value;
     final settingsPrivacy = ref.watch(userSettingsProvider).value?.privacy;
+    final themeSelection = ref.watch(themePreferenceProvider).value ?? 'system';
+    final selectedPalette = paletteById(themeSelection);
+    final appearancePalette = themeSelection == 'system'
+        ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
+              ? darkPalette
+              : lightPalette
+        : selectedPalette ?? lightPalette;
+    final appearanceLabel = themeSelection == 'system'
+        ? 'System'
+        : selectedPalette?.label ?? 'System';
     if (!_didSyncLocationSharing && settingsPrivacy != null) {
       _locationSharing = settingsPrivacy.shareLocation;
       _didSyncLocationSharing = true;
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -80,9 +93,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 width: 64,
                                 height: 64,
                                 decoration: BoxDecoration(
-                                  color: AppColors.muted,
+                                  color: context.appPalette.muted,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(
+                                    color: context.appPalette.border,
+                                  ),
                                 ),
                                 child: ClipOval(
                                   child: user?.avatarUrl != null
@@ -92,7 +107,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           errorBuilder: (_, _, _) => Icon(
                                             LucideIcons.user,
                                             size: AppIconSizes.xl,
-                                            color: AppColors.mutedForeground
+                                            color: context
+                                                .appPalette
+                                                .mutedForeground
                                                 .withValues(alpha: 0.4),
                                           ),
                                         )
@@ -100,7 +117,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           child: Icon(
                                             LucideIcons.user,
                                             size: AppIconSizes.xl,
-                                            color: AppColors.mutedForeground
+                                            color: context
+                                                .appPalette
+                                                .mutedForeground
                                                 .withValues(alpha: 0.4),
                                           ),
                                         ),
@@ -117,17 +136,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     width: 24,
                                     height: 24,
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary,
+                                      color: context.appPalette.primary,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: AppColors.surface,
+                                        color: context.appPalette.surface,
                                         width: 2,
                                       ),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       LucideIcons.edit2,
                                       size: AppIconSizes.xs,
-                                      color: AppColors.surface,
+                                      color: context.appPalette.surface,
                                     ),
                                   ),
                                 ),
@@ -142,14 +161,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 Text(
                                   user?.name ?? user?.email ?? 'User',
                                   style: context.appTypography.titleLG.copyWith(
-                                    color: AppColors.primary,
+                                    color: context.appPalette.primary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   user?.email ?? '',
                                   style: context.appTypography.bodyMD.copyWith(
-                                    color: AppColors.mutedForeground,
+                                    color: context.appPalette.mutedForeground,
                                   ),
                                 ),
                               ],
@@ -231,6 +250,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onTap: () =>
                           context.push(LocationSettingsScreen.routePath),
                       showBorder: true,
+                    ),
+                    _settingItem(
+                      LucideIcons.palette,
+                      'Appearance',
+                      appearanceLabel,
+                      onTap: () => context.push(AppearanceScreen.routePath),
+                      showBorder: true,
+                      trailing: ThemeSwatch(
+                        palette: appearancePalette,
+                        selected: false,
+                        size: 28,
+                      ),
                     ),
                     _settingItem(
                       LucideIcons.bell,
@@ -328,12 +359,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _settingContainer(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
+            color: context.appPalette.primary.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -357,6 +388,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     String subtitle, {
     VoidCallback? onTap,
     bool showBorder = false,
+    Widget? trailing,
   }) {
     final typography = context.appTypography;
     return GestureDetector(
@@ -365,7 +397,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: showBorder
-              ? const Border(bottom: BorderSide(color: AppColors.border))
+              ? Border(bottom: BorderSide(color: context.appPalette.border))
               : null,
         ),
         child: Row(
@@ -374,14 +406,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.muted,
+              decoration: BoxDecoration(
+                color: context.appPalette.muted,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: AppIconSizes.m,
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
               ),
             ),
             Expanded(
@@ -391,22 +423,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Text(
                     title,
                     style: typography.labelMD.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   Text(
                     subtitle,
                     style: typography.labelSMRegular.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            ?trailing,
+            Icon(
               LucideIcons.chevronRight,
               size: AppIconSizes.m,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ],
         ),
@@ -427,7 +460,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: showBorder
-            ? const Border(bottom: BorderSide(color: AppColors.border))
+            ? Border(bottom: BorderSide(color: context.appPalette.border))
             : null,
       ),
       child: Row(
@@ -436,14 +469,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Container(
             width: 32,
             height: 32,
-            decoration: const BoxDecoration(
-              color: AppColors.muted,
+            decoration: BoxDecoration(
+              color: context.appPalette.muted,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
               size: AppIconSizes.m,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
           Expanded(
@@ -452,12 +485,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: typography.labelMD.copyWith(color: AppColors.primary),
+                  style: typography.labelMD.copyWith(
+                    color: context.appPalette.primary,
+                  ),
                 ),
                 Text(
                   subtitle,
                   style: typography.labelSMRegular.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -470,7 +505,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               width: 44,
               height: 24,
               decoration: BoxDecoration(
-                color: value ? AppColors.primary : AppColors.muted,
+                color: value
+                    ? context.appPalette.primary
+                    : context.appPalette.muted,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AnimatedAlign(
@@ -480,8 +517,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   margin: const EdgeInsets.all(4),
                   width: 16,
                   height: 16,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                  decoration: BoxDecoration(
+                    color: context.appPalette.surface,
                     shape: BoxShape.circle,
                   ),
                 ),

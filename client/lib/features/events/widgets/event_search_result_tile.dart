@@ -30,7 +30,7 @@ class EventSearchResultTile extends StatelessWidget {
     );
 
     return Material(
-      color: AppColors.surface,
+      color: context.appPalette.surface,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -38,8 +38,8 @@ class EventSearchResultTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
-            color: AppColors.surface,
+            border: Border.all(color: context.appPalette.border),
+            color: context.appPalette.surface,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

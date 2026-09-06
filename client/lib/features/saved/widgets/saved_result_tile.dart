@@ -28,8 +28,8 @@ class SavedResultTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: Container(
         height: 94,
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.appPalette.border)),
         ),
         child: Row(
           children: [
@@ -78,7 +78,7 @@ class _Placeholder extends StatelessWidget {
     return Container(
       width: 72,
       height: 72,
-      color: AppColors.muted,
+      color: context.appPalette.muted,
       alignment: Alignment.center,
       child: Icon(
         switch (type) {
@@ -88,7 +88,7 @@ class _Placeholder extends StatelessWidget {
           _ => LucideIcons.messagesSquare,
         },
         size: AppIconSizes.xl,
-        color: AppColors.mutedForeground,
+        color: context.appPalette.mutedForeground,
       ),
     );
   }
@@ -118,7 +118,7 @@ class _SavedItemCopy extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: typography.titleXSStrong.copyWith(
-            color: AppColors.primary,
+            color: context.appPalette.primary,
             height: 1.18,
           ),
         ),
@@ -129,7 +129,7 @@ class _SavedItemCopy extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: typography.captionMD.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ],
@@ -147,9 +147,9 @@ class _TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = type == 'user' ? 'PROFILE' : type.toUpperCase();
     final background = switch (type) {
-      'event' => AppColors.warning.withValues(alpha: 0.14),
-      'thread' => const Color(0xFFE8E3F2),
-      _ => AppColors.accent.withValues(alpha: 0.12),
+      'event' => context.appPalette.warning.withValues(alpha: 0.14),
+      'thread' => context.appPalette.mutedForeground.withValues(alpha: 0.14),
+      _ => context.appPalette.accent.withValues(alpha: 0.12),
     };
 
     return Container(
@@ -161,7 +161,7 @@ class _TypeBadge extends StatelessWidget {
       child: Text(
         label,
         style: context.appTypography.labelXSStrong.copyWith(
-          color: AppColors.primary,
+          color: context.appPalette.primary,
           letterSpacing: 0.8,
         ),
       ),
@@ -183,20 +183,20 @@ class _SavedToggle extends StatelessWidget {
       style: IconButton.styleFrom(
         fixedSize: const Size.square(36),
         padding: EdgeInsets.zero,
-        backgroundColor: AppColors.error.withValues(alpha: 0.1),
+        backgroundColor: context.appPalette.error.withValues(alpha: 0.1),
       ),
       icon: isLoading
-          ? const SizedBox.square(
+          ? SizedBox.square(
               dimension: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.accent,
+                color: context.appPalette.accent,
               ),
             )
-          : const Icon(
+          : Icon(
               LucideIcons.bookmarkMinus,
               size: 17,
-              color: AppColors.error,
+              color: context.appPalette.error,
             ),
     );
   }

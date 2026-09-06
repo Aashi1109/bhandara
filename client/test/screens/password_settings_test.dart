@@ -8,7 +8,7 @@ void main() {
   testWidgets('password update button is disabled initially', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const PasswordSettingsScreen(),
       ),
     );
@@ -22,7 +22,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const PasswordSettingsScreen(),
       ),
     );

@@ -280,11 +280,11 @@ class MessageReactionSummaryRow extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : AppColors.muted,
+                      ? context.appPalette.primary.withValues(alpha: 0.12)
+                      : context.appPalette.muted,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.border,
+                    color: isSelected ? context.appPalette.primary : context.appPalette.border,
                   ),
                 ),
                 child: Row(
@@ -308,10 +308,10 @@ class MessageReactionSummaryRow extends StatelessWidget {
                         key: ValueKey('${summary.emoji}_${summary.count}'),
                         style: isSelected
                             ? typography.captionSMStrong.copyWith(
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               )
                             : typography.captionSM.copyWith(
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                       ),
                     ),
@@ -340,13 +340,13 @@ class MessageReactionQuickBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Material(
-      color: AppColors.transparent,
+      color: context.appPalette.transparent,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.appPalette.surface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
           boxShadow: const [
             BoxShadow(
               color: Color(0x22000000),
@@ -378,8 +378,8 @@ class MessageReactionQuickBar extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.12)
-                        : AppColors.transparent,
+                        ? context.appPalette.primary.withValues(alpha: 0.12)
+                        : context.appPalette.transparent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(emoji, style: typography.titleLG),
@@ -521,7 +521,7 @@ Future<void> showMessageReactionDetailsSheet({
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.transparent,
+    backgroundColor: context.appPalette.transparent,
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setModalState) {
@@ -553,9 +553,9 @@ Future<void> showMessageReactionDetailsSheet({
             child: FractionallySizedBox(
               heightFactor: 0.72,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                decoration: BoxDecoration(
+                  color: context.appPalette.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: Column(
                   children: [
@@ -564,7 +564,7 @@ Future<void> showMessageReactionDetailsSheet({
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.border,
+                        color: context.appPalette.border,
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -576,7 +576,7 @@ Future<void> showMessageReactionDetailsSheet({
                           Text(
                             'Reactions',
                             style: typography.titleMDStrong.copyWith(
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                         ],
@@ -612,7 +612,7 @@ Future<void> showMessageReactionDetailsSheet({
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Divider(height: 1, color: AppColors.border),
+                    Divider(height: 1, color: context.appPalette.border),
                     Expanded(
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -631,7 +631,7 @@ Future<void> showMessageReactionDetailsSheet({
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.muted,
+                              color: context.appPalette.muted,
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: Row(
@@ -647,7 +647,7 @@ Future<void> showMessageReactionDetailsSheet({
                                   child: Text(
                                     displayName,
                                     style: typography.labelMD.copyWith(
-                                      color: AppColors.primary,
+                                      color: context.appPalette.primary,
                                     ),
                                   ),
                                 ),
@@ -657,9 +657,9 @@ Future<void> showMessageReactionDetailsSheet({
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color: context.appPalette.surface,
                                     borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(color: AppColors.border),
+                                    border: Border.all(color: context.appPalette.border),
                                   ),
                                   child: Text(
                                     reaction.emoji,
@@ -706,11 +706,11 @@ class _ReactionFilterChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : AppColors.muted,
+              ? context.appPalette.primary.withValues(alpha: 0.12)
+              : context.appPalette.muted,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: isSelected ? context.appPalette.primary : context.appPalette.border,
           ),
         ),
         child: Row(
@@ -719,7 +719,7 @@ class _ReactionFilterChip extends StatelessWidget {
             Text(
               label,
               style: typography.captionMD.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.primary,
+                color: isSelected ? context.appPalette.primary : context.appPalette.primary,
               ),
             ),
             const SizedBox(width: 8),
@@ -727,10 +727,10 @@ class _ReactionFilterChip extends StatelessWidget {
               '$count',
               style: isSelected
                   ? typography.bodySMExtraBold.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     )
                   : typography.bodySMStrong.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
             ),
           ],

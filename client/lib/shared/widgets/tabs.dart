@@ -40,16 +40,16 @@ class AppTabs<T> extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 height: height,
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : AppColors.surface,
+                  color: isSelected ? context.appPalette.primary : context.appPalette.surface,
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.border,
+                    color: isSelected ? context.appPalette.primary : context.appPalette.border,
                     width: 2,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.1),
+                            color: context.appPalette.primary.withValues(alpha: 0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -64,8 +64,8 @@ class AppTabs<T> extends StatelessWidget {
                         item.icon!,
                         style: typography.titleMD.copyWith(
                           color: isSelected
-                              ? AppColors.surface
-                              : AppColors.primary,
+                              ? context.appPalette.surface
+                              : context.appPalette.primary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -74,8 +74,8 @@ class AppTabs<T> extends StatelessWidget {
                       item.label,
                       style: typography.labelMD.copyWith(
                         color: isSelected
-                            ? AppColors.surface
-                            : AppColors.mutedForeground,
+                            ? context.appPalette.surface
+                            : context.appPalette.mutedForeground,
                       ),
                     ),
                   ],

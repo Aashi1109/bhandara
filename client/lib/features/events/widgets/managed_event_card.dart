@@ -31,7 +31,7 @@ class ManagedEventCard extends StatelessWidget {
         : '$participantCount / $capacity';
 
     return Material(
-      color: AppColors.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -39,12 +39,12 @@ class ManagedEventCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: context.appPalette.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.appPalette.border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.04),
+                color: context.appPalette.primary.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -80,7 +80,7 @@ class ManagedEventCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: typography.bodyXS.copyWith(
-                                  color: AppColors.mutedForeground,
+                                  color: context.appPalette.mutedForeground,
                                 ),
                               ),
                             ),
@@ -97,7 +97,7 @@ class ManagedEventCard extends StatelessWidget {
                       tooltip: 'Event actions',
                       icon: const Icon(LucideIcons.moreVertical),
                       iconSize: AppIconSizes.m,
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                       padding: EdgeInsets.zero,
                       alignment: Alignment.topCenter,
                       constraints: const BoxConstraints.tightFor(
@@ -112,10 +112,10 @@ class ManagedEventCard extends StatelessWidget {
               const SizedBox(height: 13),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     LucideIcons.mapPin,
                     size: AppIconSizes.s,
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                   const SizedBox(width: 7),
                   Expanded(
@@ -126,14 +126,14 @@ class ManagedEventCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: typography.bodyXS.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Container(height: 1, color: AppColors.border),
+              Container(height: 1, color: context.appPalette.border),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -146,10 +146,10 @@ class ManagedEventCard extends StatelessWidget {
                   const Spacer(),
                   Text('Manage', style: typography.bodySMStrong),
                   const SizedBox(width: 5),
-                  const Icon(
+                  Icon(
                     LucideIcons.arrowRight,
                     size: AppIconSizes.s,
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ],
               ),
@@ -172,12 +172,12 @@ class _Metric extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: AppIconSizes.s, color: AppColors.mutedForeground),
+        Icon(icon, size: AppIconSizes.s, color: context.appPalette.mutedForeground),
         const SizedBox(width: 5),
         Text(
           label,
           style: context.appTypography.bodyXSStrong.copyWith(
-            color: AppColors.mutedForeground,
+            color: context.appPalette.mutedForeground,
           ),
         ),
       ],
@@ -195,13 +195,13 @@ class _StatusPill extends StatelessWidget {
     final isUpcoming = status == EventStatusValue.upcoming;
     final isOngoing = status == EventStatusValue.ongoing;
     final foreground = isUpcoming
-        ? AppColors.warning
+        ? context.appPalette.warning
         : isOngoing
-        ? AppColors.success
-        : AppColors.mutedForeground;
+        ? context.appPalette.success
+        : context.appPalette.mutedForeground;
     final background = (isUpcoming || isOngoing)
         ? foreground.withValues(alpha: 0.14)
-        : AppColors.muted;
+        : context.appPalette.muted;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

@@ -21,13 +21,13 @@ class ProfileBadgesScreen extends ConsumerWidget {
     final userAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           const AppHeader(title: 'Badges'),
           Expanded(
             child: userAsync.when(
-              loading: _buildLoadingState,
+              loading: () => _buildLoadingState(context),
               error: (_, _) => const _MessageState(
                 icon: LucideIcons.alertCircle,
                 message: 'Unable to load badges',
@@ -44,7 +44,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
                   future: userService.getUserAchievements(user.id),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return _buildLoadingState();
+                      return _buildLoadingState(context);
                     }
                     if (snapshot.hasError) {
                       return const _MessageState(
@@ -66,7 +66,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(BuildContext context) {
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -75,7 +75,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
           height: 120,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.14),
+            color: context.appPalette.warning.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Row(
@@ -114,7 +114,7 @@ class ProfileBadgesScreen extends ConsumerWidget {
           itemBuilder: (_, _) => Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.appPalette.border),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Column(
@@ -195,9 +195,9 @@ class _ProgressHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.14),
+        color: context.appPalette.warning.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Row(
         spacing: 16,
@@ -205,14 +205,14 @@ class _ProgressHero extends StatelessWidget {
           Container(
             width: 62,
             height: 62,
-            decoration: const BoxDecoration(
-              color: AppColors.warning,
+            decoration: BoxDecoration(
+              color: context.appPalette.warning,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.trophy,
               size: AppIconSizes.xl,
-              color: AppColors.surface,
+              color: context.appPalette.surface,
             ),
           ),
           Expanded(
@@ -222,14 +222,12 @@ class _ProgressHero extends StatelessWidget {
               children: [
                 Text(
                   'YOUR COLLECTION',
-                  style: typography.overlineStrong.copyWith(
-                    color: const Color(0xFF8A5A00),
-                  ),
+                  style: typography.overlineStrong,
                 ),
                 Text(
                   '$earnedCount of $collectionSize unlocked',
                   style: typography.titleLGStrong.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 ClipRRect(
@@ -237,14 +235,14 @@ class _ProgressHero extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 7,
-                    backgroundColor: AppColors.warning.withValues(alpha: 0.2),
-                    valueColor: const AlwaysStoppedAnimation(AppColors.warning),
+                    backgroundColor: context.appPalette.warning.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation(context.appPalette.warning),
                   ),
                 ),
                 Text(
                   nextMilestone,
                   style: typography.bodyXS.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -274,12 +272,12 @@ class _CollectionHeading extends StatelessWidget {
             children: [
               Text(
                 'Your collection',
-                style: typography.titleLG.copyWith(color: AppColors.primary),
+                style: typography.titleLG.copyWith(color: context.appPalette.primary),
               ),
               Text(
                 'Small wins, worth celebrating',
                 style: typography.bodyXS.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ],
@@ -287,7 +285,7 @@ class _CollectionHeading extends StatelessWidget {
         ),
         Text(
           '$earnedCount earned',
-          style: typography.bodySMStrong.copyWith(color: AppColors.accent),
+          style: typography.bodySMStrong.copyWith(color: context.appPalette.accent),
         ),
       ],
     );
@@ -305,16 +303,16 @@ class _BadgeCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: ColoredBox(
-              color: _backgroundFor(badge),
+              color: _backgroundFor(context, badge),
               child: SizedBox.expand(
                 child: Padding(
                   padding: const EdgeInsets.all(4),
@@ -339,7 +337,7 @@ class _BadgeCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: typography.titleXSStrong.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -349,7 +347,7 @@ class _BadgeCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: typography.bodyXS.copyWith(
                       height: 1.2,
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                     ),
                   ),
                 ],
@@ -361,18 +359,21 @@ class _BadgeCard extends StatelessWidget {
     );
   }
 
-  Color _backgroundFor(Achievement badge) {
+  Color _backgroundFor(BuildContext context, Achievement badge) {
     return switch (badge.key) {
-      'first_event' => AppColors.badgeFirstEventBackground,
-      'conversation_starter' => AppColors.badgeConversationStarterBackground,
-      'community_supporter' => AppColors.badgeCommunitySupporterBackground,
-      'week_streak' => AppColors.badgeWeekStreakBackground,
+      'first_event' => context.appPalette.badgeFirstEventBackground,
+      'conversation_starter' =>
+        context.appPalette.badgeConversationStarterBackground,
+      'community_supporter' =>
+        context.appPalette.badgeCommunitySupporterBackground,
+      'week_streak' => context.appPalette.badgeWeekStreakBackground,
       _ => switch (badge.icon) {
-        'calendar' => AppColors.badgeFirstEventBackground,
-        'message-circle' => AppColors.badgeConversationStarterBackground,
-        'heart' => AppColors.badgeCommunitySupporterBackground,
-        'flame' => AppColors.badgeWeekStreakBackground,
-        _ => AppColors.muted,
+        'calendar' => context.appPalette.badgeFirstEventBackground,
+        'message-circle' =>
+          context.appPalette.badgeConversationStarterBackground,
+        'heart' => context.appPalette.badgeCommunitySupporterBackground,
+        'flame' => context.appPalette.badgeWeekStreakBackground,
+        _ => context.appPalette.muted,
       },
     };
   }
@@ -411,17 +412,17 @@ class _NextBadgeHint extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.12),
+        color: context.appPalette.accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Row(
         spacing: 10,
         children: [
-          const Icon(
+          Icon(
             LucideIcons.sparkles,
             size: AppIconSizes.defaultSize,
-            color: AppColors.accent,
+            color: context.appPalette.accent,
           ),
           Expanded(
             child: Column(
@@ -433,7 +434,7 @@ class _NextBadgeHint extends StatelessWidget {
                       ? 'Your collection is complete'
                       : 'Your next badge is close',
                   style: typography.bodySMStrong.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 Text(
@@ -441,7 +442,7 @@ class _NextBadgeHint extends StatelessWidget {
                       ? 'Keep showing up and celebrating the community.'
                       : 'Keep hosting, joining, and helping your community.',
                   style: typography.bodyXS.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -462,26 +463,26 @@ class _EmptyCollection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       decoration: BoxDecoration(
-        color: AppColors.muted,
+        color: context.appPalette.muted,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Column(
         spacing: 10,
         children: [
-          const Icon(
+          Icon(
             LucideIcons.award,
             size: AppIconSizes.xl,
-            color: AppColors.mutedForeground,
+            color: context.appPalette.mutedForeground,
           ),
           Text(
             'No badges unlocked yet',
-            style: typography.titleXSStrong.copyWith(color: AppColors.primary),
+            style: typography.titleXSStrong.copyWith(color: context.appPalette.primary),
           ),
           Text(
             'Join events and contribute to the community to earn your first badge.',
             textAlign: TextAlign.center,
-            style: typography.bodySM.copyWith(color: AppColors.mutedForeground),
+            style: typography.bodySM.copyWith(color: context.appPalette.mutedForeground),
           ),
         ],
       ),
@@ -502,11 +503,11 @@ class _MessageState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 12,
         children: [
-          Icon(icon, color: AppColors.mutedForeground),
+          Icon(icon, color: context.appPalette.mutedForeground),
           Text(
             message,
             style: context.appTypography.bodySM.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ],

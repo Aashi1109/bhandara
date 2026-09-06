@@ -25,7 +25,7 @@ class AppInputLabel extends StatelessWidget {
         style:
             style ??
             context.appTypography.labelMD.copyWith(
-              color: AppColors.primary,
+              color: context.appPalette.primary,
               height: 1.2,
             ),
       ),

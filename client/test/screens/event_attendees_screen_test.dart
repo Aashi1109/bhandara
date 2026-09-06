@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:foody_mobile/features/events/models/event.dart';
 import 'package:foody_mobile/features/events/screens/event_attendees.dart';
 import 'package:foody_mobile/shared/theme/app_theme.dart';
+import 'package:foody_mobile/shared/theme/palettes.dart';
 import 'package:foody_mobile/shared/widgets/input.dart';
 import 'package:foody_mobile/shared/widgets/remote_svg.dart';
 
@@ -10,7 +11,7 @@ void main() {
   testWidgets('centers the guest-list illustration', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const EventAttendeesScreen(
           eventName: 'Spring Table',
           attendees: [],
@@ -28,7 +29,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: EventAttendeesScreen(
           eventName: 'Spring Table',
           capacity: 12,
@@ -62,7 +63,7 @@ void main() {
   testWidgets('opens attendee sort options', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: EventAttendeesScreen(
           eventName: 'Spring Table',
           loadRemoteImages: false,

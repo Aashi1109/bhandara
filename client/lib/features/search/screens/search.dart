@@ -299,7 +299,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final nextFilters = await showModalBottomSheet<ExploreFilterState>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: context.appPalette.transparent,
       builder: (context) => _SearchFilterSheet(
         initialFilters: _appliedFilters,
         rootTags: rootTags,
@@ -384,21 +384,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: context.appPalette.surface,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.appPalette.border),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: context.appPalette.primary.withValues(alpha: 0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   LucideIcons.chevronLeft,
                   size: AppIconSizes.defaultSize,
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                 ),
               ),
             ),
@@ -432,7 +432,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadLandingData,
-      color: AppColors.primary,
+      color: context.appPalette.primary,
       child: ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -485,7 +485,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _searchEvents(refresh: true),
-      color: AppColors.primary,
+      color: context.appPalette.primary,
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -529,7 +529,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         Text(
           title,
           style: context.appTypography.heading3Strong.copyWith(
-            color: AppColors.primary,
+            color: context.appPalette.primary,
           ),
         ),
         const SizedBox(height: 12),
@@ -537,7 +537,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Text(
             emptyLabel,
             style: context.appTypography.bodyMD.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           )
         else
@@ -571,14 +571,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Icon(
               icon,
               size: AppIconSizes.hero,
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.appTypography.titleMD.copyWith(
-                color: AppColors.primary,
+                color: context.appPalette.primary,
               ),
             ),
             const SizedBox(height: 8),
@@ -586,7 +586,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               subtitle,
               textAlign: TextAlign.center,
               style: context.appTypography.bodyMD.copyWith(
-                color: AppColors.mutedForeground,
+                color: context.appPalette.mutedForeground,
               ),
             ),
           ],
@@ -617,15 +617,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildSearchSkeletonTile() {
-    return const Padding(
-      padding: EdgeInsets.only(bottom: 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-          border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
+          color: context.appPalette.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          border: Border.fromBorderSide(BorderSide(color: context.appPalette.border)),
         ),
-        child: Padding(
+        child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
@@ -663,7 +663,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           _buildHeader(),
@@ -721,9 +721,9 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.82,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+      decoration: BoxDecoration(
+        color: context.appPalette.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
       ),
       child: Column(
         children: [
@@ -732,7 +732,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
             width: 48,
             height: 6,
             decoration: BoxDecoration(
-              color: AppColors.muted,
+              color: context.appPalette.muted,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -744,7 +744,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                 Text(
                   'Filter Events',
                   style: context.appTypography.titleLG.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 GestureDetector(
@@ -752,21 +752,21 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: const BoxDecoration(
-                      color: AppColors.muted,
+                    decoration: BoxDecoration(
+                      color: context.appPalette.muted,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.x,
                       size: AppIconSizes.m,
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: context.appPalette.border, height: 1),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(28),
@@ -802,15 +802,15 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                   Text(
                     '${_draftFilters.radiusKm.toStringAsFixed(0)} km',
                     style: context.appTypography.bodyMDStrong.copyWith(
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                   Slider(
                     value: _draftFilters.radiusKm.clamp(1, 500),
                     min: 1,
                     max: 500,
-                    activeColor: AppColors.primary,
-                    inactiveColor: AppColors.muted,
+                    activeColor: context.appPalette.primary,
+                    inactiveColor: context.appPalette.muted,
                     onChanged: (value) {
                       setState(() {
                         _draftFilters = _draftFilters.copyWith(
@@ -875,7 +875,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
                     Text(
                       'Categories are unavailable right now.',
                       style: context.appTypography.bodyBase.copyWith(
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     )
                   else
@@ -898,8 +898,8 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
           ),
           Container(
             padding: const EdgeInsets.all(28),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.appPalette.border)),
             ),
             child: Row(
               children: [
@@ -932,7 +932,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
     return Text(
       text,
       style: context.appTypography.overline.copyWith(
-        color: AppColors.mutedForeground,
+        color: context.appPalette.mutedForeground,
       ),
     );
   }
@@ -941,15 +941,15 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: selected ? AppColors.primary : AppColors.surface,
+        color: selected ? context.appPalette.primary : context.appPalette.surface,
         borderRadius: BorderRadius.circular(50),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? context.appPalette.primary : context.appPalette.border,
         ),
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: context.appPalette.primary.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -959,7 +959,7 @@ class _SearchFilterSheetState extends State<_SearchFilterSheet> {
       child: Text(
         text,
         style: context.appTypography.bodyMDStrong.copyWith(
-          color: selected ? AppColors.surface : AppColors.primary,
+          color: selected ? context.appPalette.surface : context.appPalette.primary,
         ),
       ),
     );

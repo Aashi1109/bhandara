@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import './app_colors.dart';
+import './app_palette.dart';
 
 /// Semantic text roles live here so feature code can choose intent-based names
 /// instead of repeating raw font metrics. Add new roles only when the existing
@@ -377,32 +377,37 @@ class AppTypography extends ThemeExtension<AppTypography> {
 class AppTypographyTokens {
   AppTypographyTokens._();
 
-  static final TextTheme baseTextTheme = GoogleFonts.plusJakartaSansTextTheme()
-      .apply(bodyColor: AppColors.primary, displayColor: AppColors.primary);
+  static TextTheme baseTextThemeFor(AppPalette p) =>
+      GoogleFonts.plusJakartaSansTextTheme().apply(
+        bodyColor: p.primary,
+        displayColor: p.primary,
+      );
 
   static TextStyle _baseStyle({
+    required AppPalette p,
     required double size,
     required FontWeight weight,
     required double height,
     double letterSpacing = 0,
-    Color color = AppColors.primary,
+    Color? color,
   }) {
-    return baseTextTheme.bodyMedium!.copyWith(
+    return baseTextThemeFor(p).bodyMedium!.copyWith(
       fontSize: size,
       fontWeight: weight,
       height: height,
       letterSpacing: letterSpacing,
-      color: color,
+      color: color ?? p.primary,
     );
   }
 
   static TextStyle _serifStyle({
+    required AppPalette p,
     required double size,
     required FontWeight weight,
     required double height,
     double letterSpacing = 0,
     FontStyle fontStyle = FontStyle.normal,
-    Color color = AppColors.primary,
+    Color? color,
   }) {
     return GoogleFonts.playfairDisplay(
       fontSize: size,
@@ -410,212 +415,324 @@ class AppTypographyTokens {
       height: height,
       letterSpacing: letterSpacing,
       fontStyle: fontStyle,
-      color: color,
+      color: color ?? p.primary,
     );
   }
 
-  static final AppTypography typography = AppTypography(
-    displayXL: _serifStyle(
-      size: 90,
-      weight: FontWeight.w700,
-      height: 1,
-      letterSpacing: -5,
-      fontStyle: FontStyle.italic,
-    ),
-    displayLG: _serifStyle(
-      size: 48,
-      weight: FontWeight.w700,
-      height: 1.05,
-      letterSpacing: -1.2,
-    ),
-    headingXL: _baseStyle(
-      size: 44,
-      weight: FontWeight.w900,
-      height: 1,
-      letterSpacing: -1.2,
-    ),
-    heading1: _baseStyle(
-      size: 36,
-      weight: FontWeight.w800,
-      height: 1.1,
-      letterSpacing: -0.5,
-    ),
-    heading2: _baseStyle(
-      size: 32,
-      weight: FontWeight.w800,
-      height: 1.1,
-      letterSpacing: -1,
-    ),
-    heading3: _baseStyle(
-      size: 24,
-      weight: FontWeight.w800,
-      height: 1.15,
-      letterSpacing: -0.5,
-    ),
-    heading3Strong: _baseStyle(
-      size: 24,
-      weight: FontWeight.w700,
-      height: 1.15,
-      letterSpacing: -0.5,
-    ),
-    heading3Heavy: _baseStyle(
-      size: 24,
-      weight: FontWeight.w900,
-      height: 1.15,
-      letterSpacing: -0.5,
-    ),
-    titleXL: _baseStyle(
-      size: 28,
-      weight: FontWeight.w800,
-      height: 1.1,
-      letterSpacing: -0.4,
-    ),
-    titleLG: _baseStyle(size: 20, weight: FontWeight.w700, height: 1.2),
-    titleLGStrong: _baseStyle(size: 20, weight: FontWeight.w800, height: 1.2),
-    titleMD: _baseStyle(size: 18, weight: FontWeight.w700, height: 1.2),
-    titleMDStrong: _baseStyle(size: 18, weight: FontWeight.w800, height: 1.2),
-    titleSM: _baseStyle(size: 16, weight: FontWeight.w700, height: 1.25),
-    titleXS: _baseStyle(size: 15, weight: FontWeight.w600, height: 1.3),
-    titleXSRegular: _baseStyle(size: 15, weight: FontWeight.w500, height: 1.25),
-    titleXSStrong: _baseStyle(size: 15, weight: FontWeight.w700, height: 1.3),
-    bodyLG: _baseStyle(
-      size: 16,
-      weight: FontWeight.w500,
-      height: 1.5,
-      color: AppColors.mutedForeground,
-    ),
-    bodyLGSemi: _baseStyle(
-      size: 16,
-      weight: FontWeight.w600,
-      height: 1.5,
-      color: AppColors.primary,
-    ),
-    bodyMD: _baseStyle(
-      size: 14,
-      weight: FontWeight.w500,
-      height: 1.5,
-      color: AppColors.primary,
-    ),
-    bodyMDStrong: _baseStyle(
-      size: 14,
-      weight: FontWeight.w700,
-      height: 1.5,
-      color: AppColors.primary,
-    ),
-    bodyMDSemi: _baseStyle(
-      size: 14,
-      weight: FontWeight.w600,
-      height: 1.45,
-      color: AppColors.primary,
-    ),
-    bodyBase: _baseStyle(
-      size: 13,
-      weight: FontWeight.w500,
-      height: 1.5,
-      color: AppColors.mutedForeground,
-    ),
-    bodyBaseSemi: _baseStyle(
-      size: 13,
-      weight: FontWeight.w600,
-      height: 1.5,
-      color: AppColors.mutedForeground,
-    ),
-    bodySM: _baseStyle(
-      size: 12,
-      weight: FontWeight.w500,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    bodySMSemi: _baseStyle(
-      size: 12,
-      weight: FontWeight.w600,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    bodySMStrong: _baseStyle(
-      size: 12,
-      weight: FontWeight.w700,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    bodySMExtraBold: _baseStyle(
-      size: 12,
-      weight: FontWeight.w800,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    bodyXS: _baseStyle(
-      size: 11,
-      weight: FontWeight.w500,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    bodyXSStrong: _baseStyle(
-      size: 11,
-      weight: FontWeight.w800,
-      height: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    labelLG: _baseStyle(size: 16, weight: FontWeight.w700, height: 1.2),
-    labelMD: _baseStyle(size: 14, weight: FontWeight.w700, height: 1.2),
-    labelMDSemi: _baseStyle(size: 14, weight: FontWeight.w600, height: 1.2),
-    labelSM: _baseStyle(size: 10, weight: FontWeight.w700, height: 1.2),
-    labelSMStrong: _baseStyle(size: 10, weight: FontWeight.w800, height: 1.2),
-    labelSMRegular: _baseStyle(size: 10, weight: FontWeight.w500, height: 1.2),
-    labelXS: _baseStyle(size: 8, weight: FontWeight.w700, height: 1.2),
-    labelXSStrong: _baseStyle(
-      size: 8,
-      weight: FontWeight.w900,
-      height: 1.2,
-      letterSpacing: 1.5,
-    ),
-    captionMD: _baseStyle(
-      size: 13,
-      weight: FontWeight.w700,
-      height: 1.25,
-      color: AppColors.mutedForeground,
-    ),
-    captionMDStrong: _baseStyle(
-      size: 13,
-      weight: FontWeight.w800,
-      height: 1.25,
-      color: AppColors.mutedForeground,
-    ),
-    captionSM: _baseStyle(
-      size: 11,
-      weight: FontWeight.w700,
-      height: 1.25,
-      color: AppColors.mutedForeground,
-    ),
-    captionSMStrong: _baseStyle(
-      size: 11,
-      weight: FontWeight.w800,
-      height: 1.25,
-      color: AppColors.mutedForeground,
-    ),
-    overline: _baseStyle(
-      size: 10,
-      weight: FontWeight.w700,
-      height: 1.2,
-      letterSpacing: 2,
-      color: AppColors.mutedForeground,
-    ),
-    overlineEmphasis: _baseStyle(
-      size: 10,
-      weight: FontWeight.w800,
-      height: 1.2,
-      letterSpacing: 1.4,
-      color: AppColors.mutedForeground,
-    ),
-    overlineStrong: _baseStyle(
-      size: 10,
-      weight: FontWeight.w900,
-      height: 1.2,
-      letterSpacing: 2,
-      color: AppColors.mutedForeground,
-    ),
-  );
+  static final Map<String, AppTypography> _cache = {};
 
-  static TextStyle get serifFont =>
-      GoogleFonts.playfairDisplay(color: AppColors.primary);
+  static AppTypography forPalette(AppPalette p) {
+    return _cache.putIfAbsent(
+      p.id,
+      () => AppTypography(
+        displayXL: _serifStyle(
+          p: p,
+          size: 90,
+          weight: FontWeight.w700,
+          height: 1,
+          letterSpacing: -5,
+          fontStyle: FontStyle.italic,
+        ),
+        displayLG: _serifStyle(
+          p: p,
+          size: 48,
+          weight: FontWeight.w700,
+          height: 1.05,
+          letterSpacing: -1.2,
+        ),
+        headingXL: _baseStyle(
+          p: p,
+          size: 44,
+          weight: FontWeight.w900,
+          height: 1,
+          letterSpacing: -1.2,
+        ),
+        heading1: _baseStyle(
+          p: p,
+          size: 36,
+          weight: FontWeight.w800,
+          height: 1.1,
+          letterSpacing: -0.5,
+        ),
+        heading2: _baseStyle(
+          p: p,
+          size: 32,
+          weight: FontWeight.w800,
+          height: 1.1,
+          letterSpacing: -1,
+        ),
+        heading3: _baseStyle(
+          p: p,
+          size: 24,
+          weight: FontWeight.w800,
+          height: 1.15,
+          letterSpacing: -0.5,
+        ),
+        heading3Strong: _baseStyle(
+          p: p,
+          size: 24,
+          weight: FontWeight.w700,
+          height: 1.15,
+          letterSpacing: -0.5,
+        ),
+        heading3Heavy: _baseStyle(
+          p: p,
+          size: 24,
+          weight: FontWeight.w900,
+          height: 1.15,
+          letterSpacing: -0.5,
+        ),
+        titleXL: _baseStyle(
+          p: p,
+          size: 28,
+          weight: FontWeight.w800,
+          height: 1.1,
+          letterSpacing: -0.4,
+        ),
+        titleLG: _baseStyle(
+          p: p,
+          size: 20,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        titleLGStrong: _baseStyle(
+          p: p,
+          size: 20,
+          weight: FontWeight.w800,
+          height: 1.2,
+        ),
+        titleMD: _baseStyle(
+          p: p,
+          size: 18,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        titleMDStrong: _baseStyle(
+          p: p,
+          size: 18,
+          weight: FontWeight.w800,
+          height: 1.2,
+        ),
+        titleSM: _baseStyle(
+          p: p,
+          size: 16,
+          weight: FontWeight.w700,
+          height: 1.25,
+        ),
+        titleXS: _baseStyle(
+          p: p,
+          size: 15,
+          weight: FontWeight.w600,
+          height: 1.3,
+        ),
+        titleXSRegular: _baseStyle(
+          p: p,
+          size: 15,
+          weight: FontWeight.w500,
+          height: 1.25,
+        ),
+        titleXSStrong: _baseStyle(
+          p: p,
+          size: 15,
+          weight: FontWeight.w700,
+          height: 1.3,
+        ),
+        bodyLG: _baseStyle(
+          p: p,
+          size: 16,
+          weight: FontWeight.w500,
+          height: 1.5,
+          color: p.mutedForeground,
+        ),
+        bodyLGSemi: _baseStyle(
+          p: p,
+          size: 16,
+          weight: FontWeight.w600,
+          height: 1.5,
+          color: p.primary,
+        ),
+        bodyMD: _baseStyle(
+          p: p,
+          size: 14,
+          weight: FontWeight.w500,
+          height: 1.5,
+          color: p.primary,
+        ),
+        bodyMDStrong: _baseStyle(
+          p: p,
+          size: 14,
+          weight: FontWeight.w700,
+          height: 1.5,
+          color: p.primary,
+        ),
+        bodyMDSemi: _baseStyle(
+          p: p,
+          size: 14,
+          weight: FontWeight.w600,
+          height: 1.45,
+          color: p.primary,
+        ),
+        bodyBase: _baseStyle(
+          p: p,
+          size: 13,
+          weight: FontWeight.w500,
+          height: 1.5,
+          color: p.mutedForeground,
+        ),
+        bodyBaseSemi: _baseStyle(
+          p: p,
+          size: 13,
+          weight: FontWeight.w600,
+          height: 1.5,
+          color: p.mutedForeground,
+        ),
+        bodySM: _baseStyle(
+          p: p,
+          size: 12,
+          weight: FontWeight.w500,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        bodySMSemi: _baseStyle(
+          p: p,
+          size: 12,
+          weight: FontWeight.w600,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        bodySMStrong: _baseStyle(
+          p: p,
+          size: 12,
+          weight: FontWeight.w700,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        bodySMExtraBold: _baseStyle(
+          p: p,
+          size: 12,
+          weight: FontWeight.w800,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        bodyXS: _baseStyle(
+          p: p,
+          size: 11,
+          weight: FontWeight.w500,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        bodyXSStrong: _baseStyle(
+          p: p,
+          size: 11,
+          weight: FontWeight.w800,
+          height: 1.4,
+          color: p.mutedForeground,
+        ),
+        labelLG: _baseStyle(
+          p: p,
+          size: 16,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        labelMD: _baseStyle(
+          p: p,
+          size: 14,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        labelMDSemi: _baseStyle(
+          p: p,
+          size: 14,
+          weight: FontWeight.w600,
+          height: 1.2,
+        ),
+        labelSM: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        labelSMStrong: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w800,
+          height: 1.2,
+        ),
+        labelSMRegular: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w500,
+          height: 1.2,
+        ),
+        labelXS: _baseStyle(
+          p: p,
+          size: 8,
+          weight: FontWeight.w700,
+          height: 1.2,
+        ),
+        labelXSStrong: _baseStyle(
+          p: p,
+          size: 8,
+          weight: FontWeight.w900,
+          height: 1.2,
+          letterSpacing: 1.5,
+        ),
+        captionMD: _baseStyle(
+          p: p,
+          size: 13,
+          weight: FontWeight.w700,
+          height: 1.25,
+          color: p.mutedForeground,
+        ),
+        captionMDStrong: _baseStyle(
+          p: p,
+          size: 13,
+          weight: FontWeight.w800,
+          height: 1.25,
+          color: p.mutedForeground,
+        ),
+        captionSM: _baseStyle(
+          p: p,
+          size: 11,
+          weight: FontWeight.w700,
+          height: 1.25,
+          color: p.mutedForeground,
+        ),
+        captionSMStrong: _baseStyle(
+          p: p,
+          size: 11,
+          weight: FontWeight.w800,
+          height: 1.25,
+          color: p.mutedForeground,
+        ),
+        overline: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w700,
+          height: 1.2,
+          letterSpacing: 2,
+          color: p.mutedForeground,
+        ),
+        overlineEmphasis: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w800,
+          height: 1.2,
+          letterSpacing: 1.4,
+          color: p.mutedForeground,
+        ),
+        overlineStrong: _baseStyle(
+          p: p,
+          size: 10,
+          weight: FontWeight.w900,
+          height: 1.2,
+          letterSpacing: 2,
+          color: p.mutedForeground,
+        ),
+      ),
+    );
+  }
+
+  static TextStyle serifFontFor(AppPalette p) =>
+      GoogleFonts.playfairDisplay(color: p.primary);
 }

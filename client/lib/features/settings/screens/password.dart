@@ -41,7 +41,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -59,21 +59,21 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       Container(
                         width: 64,
                         height: 64,
-                        decoration: const BoxDecoration(
-                          color: AppColors.muted,
+                        decoration: BoxDecoration(
+                          color: context.appPalette.muted,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           LucideIcons.lock,
                           size: AppIconSizes.xl,
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Update Security',
                         style: typography.titleLG.copyWith(
-                          color: AppColors.primary,
+                          color: context.appPalette.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -83,7 +83,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                           'Please enter your current password to create a new one.',
                           textAlign: TextAlign.center,
                           style: typography.bodyMD.copyWith(
-                            color: AppColors.mutedForeground,
+                            color: context.appPalette.mutedForeground,
                           ),
                         ),
                       ),
@@ -101,7 +101,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       child: Icon(
                         _showCurrent ? LucideIcons.eyeOff : LucideIcons.eye,
                         size: AppIconSizes.defaultSize,
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ),
@@ -117,7 +117,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       child: Icon(
                         _showNew ? LucideIcons.eyeOff : LucideIcons.eye,
                         size: AppIconSizes.defaultSize,
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ),
@@ -161,7 +161,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
                       child: Icon(
                         _showConfirm ? LucideIcons.eyeOff : LucideIcons.eye,
                         size: AppIconSizes.defaultSize,
-                        color: AppColors.mutedForeground,
+                        color: context.appPalette.mutedForeground,
                       ),
                     ),
                   ),
@@ -183,7 +183,7 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
       child: Container(
         height: 6,
         decoration: BoxDecoration(
-          color: filled ? AppColors.primary : AppColors.muted,
+          color: filled ? context.appPalette.primary : context.appPalette.muted,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -199,15 +199,15 @@ class _PasswordSettingsScreenState extends State<PasswordSettingsScreen> {
           met ? LucideIcons.check : LucideIcons.x,
           size: AppIconSizes.s,
           color: met
-              ? AppColors.primary
-              : AppColors.mutedForeground.withValues(alpha: 0.4),
+              ? context.appPalette.primary
+              : context.appPalette.mutedForeground.withValues(alpha: 0.4),
         ),
         Text(
           label,
           style: typography.bodySMStrong.copyWith(
             color: met
-                ? AppColors.primary
-                : AppColors.mutedForeground.withValues(alpha: 0.4),
+                ? context.appPalette.primary
+                : context.appPalette.mutedForeground.withValues(alpha: 0.4),
           ),
         ),
       ],

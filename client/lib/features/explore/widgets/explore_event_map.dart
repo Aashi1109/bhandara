@@ -306,8 +306,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         circleId: const CircleId('user_location_pulse'),
         center: userLocation,
         radius: radius,
-        fillColor: AppColors.primary.withValues(alpha: opacity * 0.12),
-        strokeColor: AppColors.primary.withValues(alpha: opacity * 0.28),
+        fillColor: context.appPalette.primary.withValues(alpha: opacity * 0.12),
+        strokeColor: context.appPalette.primary.withValues(alpha: opacity * 0.28),
         strokeWidth: 2,
         zIndex: 1,
       ),
@@ -315,8 +315,8 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         circleId: const CircleId('user_location_halo'),
         center: userLocation,
         radius: 18,
-        fillColor: AppColors.primary.withValues(alpha: 0.16),
-        strokeColor: AppColors.primary.withValues(alpha: 0.28),
+        fillColor: context.appPalette.primary.withValues(alpha: 0.16),
+        strokeColor: context.appPalette.primary.withValues(alpha: 0.28),
         strokeWidth: 1,
         zIndex: 2,
       ),
@@ -770,12 +770,12 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: isPrimary ? AppColors.primary : AppColors.surface,
+          color: isPrimary ? context.appPalette.primary : context.appPalette.surface,
           borderRadius: BorderRadius.circular(16),
-          border: isPrimary ? null : Border.all(color: AppColors.border),
+          border: isPrimary ? null : Border.all(color: context.appPalette.border),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: context.appPalette.primary.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -784,7 +784,7 @@ class _ExploreEventMapState extends State<ExploreEventMap>
         child: Icon(
           icon,
           size: AppIconSizes.defaultSize,
-          color: isPrimary ? AppColors.surface : AppColors.primary,
+          color: isPrimary ? context.appPalette.surface : context.appPalette.primary,
         ),
       ),
     );

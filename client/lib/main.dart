@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import './shared/services/maps/map_platform_config.dart';
+import './shared/providers/theme_preference.dart';
 import './shared/theme/theme.dart';
 import './router.dart';
 import './shared/services/local_storage.dart';
@@ -29,7 +30,7 @@ Future<void> main() async {
   await LocalStorage.init();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: AppColors.transparent,
+      statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
       statusBarBrightness: Brightness.light,
     ),
@@ -37,14 +38,14 @@ Future<void> main() async {
   runApp(const ProviderScope(child: FoodyApp()));
 }
 
-class FoodyApp extends StatefulWidget {
+class FoodyApp extends ConsumerStatefulWidget {
   const FoodyApp({super.key});
 
   @override
-  State<FoodyApp> createState() => _FoodyAppState();
+  ConsumerState<FoodyApp> createState() => _FoodyAppState();
 }
 
-class _FoodyAppState extends State<FoodyApp> {
+class _FoodyAppState extends ConsumerState<FoodyApp> {
   bool _isLocationDialogVisible = false;
 
   @override
@@ -77,11 +78,17 @@ class _FoodyAppState extends State<FoodyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final selection = ref.watch(themePreferenceProvider).value ?? 'system';
+    final isSystem = selection == 'system';
+    final palette = paletteById(selection) ?? lightPalette;
+
     return AppSessionCoordinator(
       child: MaterialApp.router(
         title: 'Foody',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(isSystem ? lightPalette : palette),
+        darkTheme: isSystem ? AppTheme.buildTheme(darkPalette) : null,
+        themeMode: isSystem ? ThemeMode.system : ThemeMode.light,
         routerConfig: router,
       ),
     );

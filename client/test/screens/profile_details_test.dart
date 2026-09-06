@@ -154,7 +154,7 @@ void main() {
           userProfileProvider.overrideWith(() => _LoadingUserProfile()),
         ],
         child: MaterialApp(
-          theme: AppTheme.theme,
+          theme: AppTheme.buildTheme(lightPalette),
           home: const ProfileDetailsScreen(),
         ),
       ),
@@ -174,7 +174,7 @@ Future<void> _pumpProfileDetails(
     ProviderScope(
       overrides: [userProfileProvider.overrideWith(() => profile)],
       child: MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: const ProfileDetailsScreen(),
       ),
     ),

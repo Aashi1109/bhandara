@@ -59,7 +59,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Positioned(
@@ -69,7 +69,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.5),
+                color: context.appPalette.muted.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
             ),
@@ -81,7 +81,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.4),
+                color: context.appPalette.muted.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -93,7 +93,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   onBack: () => context.pop(),
                   title: '',
                   showBorder: false,
-                  backgroundColor: AppColors.transparent,
+                  backgroundColor: context.appPalette.transparent,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -104,14 +104,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         Container(
                           width: 72,
                           height: 72,
-                          decoration: const BoxDecoration(
-                            color: AppColors.muted,
+                          decoration: BoxDecoration(
+                            color: context.appPalette.muted,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.key,
                             size: AppIconSizes.xl,
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -123,7 +123,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             'Create a strong new password for your account.',
                             textAlign: TextAlign.center,
                             style: typography.bodyLG.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                             ),
                           ),
                         ),
@@ -131,7 +131,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppColors.muted,
+                            color: context.appPalette.muted,
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: Column(
@@ -152,7 +152,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                           ? LucideIcons.eyeOff
                                           : LucideIcons.eye,
                                       size: AppIconSizes.defaultSize,
-                                      color: AppColors.mutedForeground,
+                                      color: context.appPalette.mutedForeground,
                                     ),
                                   ),
                                 ),
@@ -174,7 +174,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                           ? LucideIcons.eyeOff
                                           : LucideIcons.eye,
                                       size: AppIconSizes.defaultSize,
-                                      color: AppColors.mutedForeground,
+                                      color: context.appPalette.mutedForeground,
                                     ),
                                   ),
                                 ),
@@ -271,15 +271,15 @@ class _RequirementRow extends StatelessWidget {
           met ? LucideIcons.checkCircle2 : LucideIcons.circle,
           size: AppIconSizes.s,
           color: met
-              ? AppColors.primary
-              : AppColors.mutedForeground.withValues(alpha: 0.4),
+              ? context.appPalette.primary
+              : context.appPalette.mutedForeground.withValues(alpha: 0.4),
         ),
         Text(
           label,
           style: typography.bodySMStrong.copyWith(
             color: met
-                ? AppColors.primary
-                : AppColors.mutedForeground.withValues(alpha: 0.4),
+                ? context.appPalette.primary
+                : context.appPalette.mutedForeground.withValues(alpha: 0.4),
           ),
         ),
       ],

@@ -38,12 +38,12 @@ class AppCard extends StatelessWidget {
     }
   }
 
-  List<BoxShadow> get _shadow {
+  List<BoxShadow> _shadow(BuildContext context) {
     switch (variant) {
       case AppCardVariant.defaultCard:
         return [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
+            color: context.appPalette.primary.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -52,7 +52,7 @@ class AppCard extends StatelessWidget {
       case AppCardVariant.glass:
         return [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.appPalette.primary.withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -65,10 +65,10 @@ class AppCard extends StatelessWidget {
     return Container(
       padding: _padding,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surface,
+        color: backgroundColor ?? context.appPalette.surface,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: border ?? Border.all(color: AppColors.border),
-        boxShadow: _shadow,
+        border: border ?? Border.all(color: context.appPalette.border),
+        boxShadow: _shadow(context),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,

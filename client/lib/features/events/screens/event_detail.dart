@@ -760,7 +760,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   Widget _buildLoadingState() {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -777,9 +777,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          AppColors.primary.withValues(alpha: 0.3),
-                          AppColors.transparent,
-                          AppColors.surface,
+                          context.appPalette.primary.withValues(alpha: 0.3),
+                          context.appPalette.transparent,
+                          context.appPalette.surface,
                         ],
                         stops: const [0.0, 0.45, 1.0],
                       ),
@@ -891,7 +891,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -915,9 +915,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              AppColors.primary.withValues(alpha: 0.6),
-                              AppColors.transparent,
-                              AppColors.surface,
+                              context.appPalette.primary.withValues(alpha: 0.6),
+                              context.appPalette.transparent,
+                              context.appPalette.surface,
                             ],
                             stops: const [0.0, 0.4, 1.0],
                           ),
@@ -990,9 +990,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 Transform.translate(
                   offset: const Offset(0, -24),
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.vertical(
+                    decoration: BoxDecoration(
+                      color: context.appPalette.surface,
+                      borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(40),
                       ),
                     ),
@@ -1008,8 +1008,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                               size: 48,
                               textSize: 16,
                               imageBuilder: (context, child) => ColorFiltered(
-                                colorFilter: const ColorFilter.mode(
-                                  AppColors.mutedForeground,
+                                colorFilter: ColorFilter.mode(
+                                  context.appPalette.mutedForeground,
                                   BlendMode.saturation,
                                 ),
                                 child: child,
@@ -1037,14 +1037,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             Container(
                               width: 48,
                               height: 48,
-                              decoration: const BoxDecoration(
-                                color: AppColors.muted,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.muted,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.messageCircle,
                                 size: AppIconSizes.l,
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                             ),
                           ],
@@ -1068,21 +1068,21 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(50),
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(color: context.appPalette.border),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       LucideIcons.messageCircle,
                                       size: AppIconSizes.m,
-                                      color: AppColors.primary,
+                                      color: context.appPalette.primary,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Join Discussion',
                                       style: typography.bodySMStrong.copyWith(
-                                        color: AppColors.primary,
+                                        color: context.appPalette.primary,
                                       ),
                                     ),
                                   ],
@@ -1137,7 +1137,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.right,
                                     style: typography.bodySMStrong.copyWith(
-                                      color: AppColors.primary,
+                                      color: context.appPalette.primary,
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
@@ -1164,9 +1164,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         imageUrl: _staticMapUrl(zoom: mapZoom),
                                         fit: BoxFit.cover,
                                         placeholder: (_, _) =>
-                                            Container(color: AppColors.muted),
+                                            Container(color: context.appPalette.muted),
                                         errorWidget: (_, _, _) =>
-                                            Container(color: AppColors.muted),
+                                            Container(color: context.appPalette.muted),
                                       ),
                                     ),
                                     Center(
@@ -1196,12 +1196,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.surface,
+                                          color: context.appPalette.surface,
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
                                           border: Border.all(
-                                            color: AppColors.border,
+                                            color: context.appPalette.border,
                                           ),
                                         ),
                                         child: Text(
@@ -1209,7 +1209,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: typography.overline.copyWith(
-                                            color: AppColors.primary,
+                                            color: context.appPalette.primary,
                                           ),
                                         ),
                                       ),
@@ -1242,7 +1242,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   width: 64,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.appPalette.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: AppButton(
@@ -1258,11 +1258,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   child: AppButton(
                     size: AppButtonSize.lg,
                     icon: _isJoining
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                              color: AppColors.surface,
+                              color: context.appPalette.surface,
                               strokeWidth: 2,
                             ),
                           )
@@ -1305,7 +1305,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 child: Text(
                   'View guest list',
                   style: typography.bodySMStrong.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
               ),
@@ -1369,7 +1369,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: typography.captionMD.copyWith(
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -1380,7 +1380,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: typography.labelSMRegular.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                             ),
                           ),
                         ],
@@ -1395,10 +1395,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   Widget _guestAvatar({required EventUser user, required int index}) {
     final backgrounds = <Color>[
-      AppColors.accent.withValues(alpha: 0.14),
-      AppColors.warning.withValues(alpha: 0.14),
-      AppColors.muted,
-      AppColors.border,
+      context.appPalette.accent.withValues(alpha: 0.14),
+      context.appPalette.warning.withValues(alpha: 0.14),
+      context.appPalette.muted,
+      context.appPalette.border,
     ];
 
     return Avatar(
@@ -1406,7 +1406,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       imageUrl: user.avatarUrl,
       size: 40,
       textSize: 12,
-      borderColor: AppColors.surface,
+      borderColor: context.appPalette.surface,
       borderWidth: 2,
       backgroundColor: backgrounds[index % backgrounds.length],
     );
@@ -1458,12 +1458,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.appPalette.surface,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.04),
+              color: context.appPalette.primary.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -1472,7 +1472,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         child: Icon(
           icon,
           size: AppIconSizes.defaultSize,
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         ),
       ),
     );
@@ -1497,7 +1497,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         final action = actions.firstWhere((item) => item.key == value);
         action.onTap?.call();
       },
-      color: AppColors.surface,
+      color: context.appPalette.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       itemBuilder: (context) => actions
           .map(
@@ -1510,8 +1510,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     action.icon,
                     size: AppIconSizes.defaultSize,
                     color: action.enabled
-                        ? AppColors.primary
-                        : AppColors.mutedForeground,
+                        ? context.appPalette.primary
+                        : context.appPalette.mutedForeground,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1519,8 +1519,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       action.tooltip ?? action.label,
                       style: typography.labelMD.copyWith(
                         color: action.enabled
-                            ? AppColors.primary
-                            : AppColors.mutedForeground,
+                            ? context.appPalette.primary
+                            : context.appPalette.mutedForeground,
                       ),
                     ),
                   ),
@@ -1530,10 +1530,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           )
           .toList(),
       child: _circleButtonShell(
-        const Icon(
+        Icon(
           LucideIcons.moreVertical,
           size: AppIconSizes.defaultSize,
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         ),
       ),
     );
@@ -1546,25 +1546,25 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.appPalette.surface,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.04),
+              color: context.appPalette.primary.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: action.loading
-            ? const Center(
+            ? Center(
                 child: SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
               )
@@ -1572,8 +1572,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 action.icon,
                 size: AppIconSizes.defaultSize,
                 color: action.enabled
-                    ? AppColors.primary
-                    : AppColors.mutedForeground,
+                    ? context.appPalette.primary
+                    : context.appPalette.mutedForeground,
               ),
       ),
     );
@@ -1589,12 +1589,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.04),
+            color: context.appPalette.primary.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1617,14 +1617,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.38),
+          color: context.appPalette.primary.withValues(alpha: 0.38),
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.surface.withValues(alpha: 0.14)),
+          border: Border.all(color: context.appPalette.surface.withValues(alpha: 0.14)),
         ),
         child: Icon(
           icon,
           size: AppIconSizes.defaultSize,
-          color: AppColors.surface,
+          color: context.appPalette.surface,
         ),
       ),
     );
@@ -1646,9 +1646,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             _isHeroExpanded ? 16 : 12,
           ),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.22),
+            color: context.appPalette.primary.withValues(alpha: 0.22),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.surface.withValues(alpha: 0.1)),
+            border: Border.all(color: context.appPalette.surface.withValues(alpha: 0.1)),
           ),
           child: AnimatedSize(
             duration: _heroAnimationDuration,
@@ -1689,13 +1689,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(
+                                        color: context.appPalette.primary.withValues(
                                           alpha: 0.62,
                                         ),
                                         borderRadius: BorderRadius.circular(50),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: AppColors.primary.withValues(
+                                            color: context.appPalette.primary.withValues(
                                               alpha: 0.2,
                                             ),
                                             blurRadius: 12,
@@ -1709,14 +1709,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           Icon(
                                             _statusIconForEvent(),
                                             size: 12,
-                                            color: AppColors.surface,
+                                            color: context.appPalette.surface,
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
                                             _heroStatusLabel,
                                             style: typography.overlineStrong
                                                 .copyWith(
-                                                  color: AppColors.surface,
+                                                  color: context.appPalette.surface,
                                                 ),
                                           ),
                                         ],
@@ -1750,7 +1750,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             (_isHeroExpanded
                                     ? typography.heading1
                                     : typography.titleLGStrong)
-                                .copyWith(color: AppColors.surface),
+                                .copyWith(color: context.appPalette.surface),
                       ),
                     ),
                     if (!_isHeroExpanded) ...[
@@ -1760,13 +1760,13 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           Icon(
                             _minimizedStatusIconForEvent(),
                             size: 16,
-                            color: AppColors.surface.withValues(alpha: 0.9),
+                            color: context.appPalette.surface.withValues(alpha: 0.9),
                           ),
                           const SizedBox(width: 10),
                           Icon(
                             Icons.verified_rounded,
                             size: 16,
-                            color: AppColors.surface.withValues(alpha: 0.9),
+                            color: context.appPalette.surface.withValues(alpha: 0.9),
                           ),
                           Padding(
                             padding: const EdgeInsets.only(left: 10),
@@ -1825,9 +1825,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                           width: 16,
                                           height: 16,
                                           shape: BoxShape.circle,
-                                          baseColor: AppColors.surface
+                                          baseColor: context.appPalette.surface
                                               .withValues(alpha: 0.15),
-                                          highlightColor: AppColors.surface
+                                          highlightColor: context.appPalette.surface
                                               .withValues(alpha: 0.4),
                                         ),
                                     ],
@@ -1889,7 +1889,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             child: Icon(
               icon,
               size: AppIconSizes.defaultSize,
-              color: AppColors.surface,
+              color: context.appPalette.surface,
             ),
           ),
         ),
@@ -1904,17 +1904,17 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         decoration: BoxDecoration(
-          color: AppColors.muted.withValues(alpha: 0.82),
+          color: context.appPalette.muted.withValues(alpha: 0.82),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.appPalette.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               LucideIcons.badgeCheck,
               size: AppIconSizes.s,
-              color: AppColors.primary,
+              color: context.appPalette.primary,
             ),
             const SizedBox(width: 6),
             Flexible(
@@ -1923,7 +1923,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: typography.bodyXSStrong.copyWith(
-                  color: AppColors.primary,
+                  color: context.appPalette.primary,
                 ),
               ),
             ),
@@ -1948,15 +1948,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           icon,
           size: AppIconSizes.s,
           color: isInteractive
-              ? AppColors.surface
-              : AppColors.surface.withValues(alpha: 0.82),
+              ? context.appPalette.surface
+              : context.appPalette.surface.withValues(alpha: 0.82),
         ),
         Text(
           text,
           style: typography.captionMD.copyWith(
             color: isInteractive
-                ? AppColors.surface
-                : AppColors.surface.withValues(alpha: 0.82),
+                ? context.appPalette.surface
+                : context.appPalette.surface.withValues(alpha: 0.82),
             decoration: isInteractive
                 ? TextDecoration.underline
                 : TextDecoration.none,
@@ -1971,12 +1971,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.12),
+        color: context.appPalette.surface.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(50),
-        border: Border.all(color: AppColors.surface.withValues(alpha: 0.14)),
+        border: Border.all(color: context.appPalette.surface.withValues(alpha: 0.14)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.appPalette.primary.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -1986,10 +1986,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         spacing: 8,
         children: [
-          Icon(icon, size: AppIconSizes.m, color: AppColors.surface),
+          Icon(icon, size: AppIconSizes.m, color: context.appPalette.surface),
           Text(
             text,
-            style: typography.bodySMStrong.copyWith(color: AppColors.surface),
+            style: typography.bodySMStrong.copyWith(color: context.appPalette.surface),
           ),
         ],
       ),

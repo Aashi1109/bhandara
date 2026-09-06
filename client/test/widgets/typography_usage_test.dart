@@ -8,7 +8,7 @@ void main() {
   Future<void> pumpTestApp(WidgetTester tester, Widget child) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.theme,
+        theme: AppTheme.buildTheme(lightPalette),
         home: Scaffold(body: child),
       ),
     );
@@ -23,8 +23,8 @@ void main() {
     final text = tester.widget<Text>(find.text('Continue'));
     final style = text.style!;
 
-    expect(style.fontSize, AppTheme.typography.labelMD.fontSize);
-    expect(style.fontWeight, AppTheme.typography.labelMD.fontWeight);
+    expect(style.fontSize, AppTheme.typographyFor(lightPalette).labelMD.fontSize);
+    expect(style.fontWeight, AppTheme.typographyFor(lightPalette).labelMD.fontWeight);
   });
 
   testWidgets('AppInput label and field use semantic typography', (
@@ -36,16 +36,16 @@ void main() {
     );
 
     final labelText = tester.widget<Text>(find.text('Email'));
-    expect(labelText.style!.fontSize, AppTheme.typography.labelMD.fontSize);
-    expect(labelText.style!.fontWeight, AppTheme.typography.labelMD.fontWeight);
+    expect(labelText.style!.fontSize, AppTheme.typographyFor(lightPalette).labelMD.fontSize);
+    expect(labelText.style!.fontWeight, AppTheme.typographyFor(lightPalette).labelMD.fontWeight);
 
     final textField = tester.widget<TextField>(find.byType(TextField));
-    expect(textField.style!.fontSize, AppTheme.typography.bodyMD.fontSize);
-    expect(textField.style!.fontWeight, AppTheme.typography.bodyMD.fontWeight);
+    expect(textField.style!.fontSize, AppTheme.typographyFor(lightPalette).bodyMD.fontSize);
+    expect(textField.style!.fontWeight, AppTheme.typographyFor(lightPalette).bodyMD.fontWeight);
   });
 
   test('expanded typography tokens preserve the migration scale', () {
-    final typography = AppTheme.typography;
+    final typography = AppTheme.typographyFor(lightPalette);
 
     expect(typography.headingXL.fontSize, 44);
     expect(typography.headingXL.fontWeight, FontWeight.w900);

@@ -150,7 +150,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
 
     final action = await showModalBottomSheet<_ComposerMediaSourceAction>(
       context: context,
-      backgroundColor: AppColors.transparent,
+      backgroundColor: context.appPalette.transparent,
       builder: (context) {
         return AppActionSheet(
           children: [
@@ -309,12 +309,12 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                       child: Container(
                         key: _emojiPickerKey,
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: context.appPalette.surface,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: context.appPalette.border),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.08),
+                              color: context.appPalette.primary.withValues(alpha: 0.08),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -325,7 +325,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(23),
                             child: Container(
-                              color: AppColors.surface,
+                              color: context.appPalette.surface,
                               child: EmojiPicker(
                                 onEmojiSelected: (_, emoji) {
                                   _insertEmoji(emoji.emoji);
@@ -333,32 +333,32 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                                 config: Config(
                                   height: 256,
                                   checkPlatformCompatibility: true,
-                                  emojiViewConfig: const EmojiViewConfig(
-                                    backgroundColor: AppColors.surface,
+                                  emojiViewConfig: EmojiViewConfig(
+                                    backgroundColor: context.appPalette.surface,
                                     columns: 8,
                                   ),
-                                  categoryViewConfig: const CategoryViewConfig(
+                                  categoryViewConfig: CategoryViewConfig(
                                     initCategory: Category.SMILEYS,
-                                    backgroundColor: AppColors.surface,
-                                    indicatorColor: AppColors.primary,
-                                    iconColorSelected: AppColors.primary,
-                                    iconColor: AppColors.mutedForeground,
-                                    dividerColor: AppColors.border,
+                                    backgroundColor: context.appPalette.surface,
+                                    indicatorColor: context.appPalette.primary,
+                                    iconColorSelected: context.appPalette.primary,
+                                    iconColor: context.appPalette.mutedForeground,
+                                    dividerColor: context.appPalette.border,
                                   ),
                                   searchViewConfig: SearchViewConfig(
-                                    backgroundColor: AppColors.surface,
-                                    buttonIconColor: AppColors.mutedForeground,
+                                    backgroundColor: context.appPalette.surface,
+                                    buttonIconColor: context.appPalette.mutedForeground,
                                     inputTextStyle: typography.bodyMDSemi
-                                        .copyWith(color: AppColors.primary),
+                                        .copyWith(color: context.appPalette.primary),
                                     hintTextStyle: typography.bodyMD.copyWith(
-                                      color: AppColors.mutedForeground,
+                                      color: context.appPalette.mutedForeground,
                                     ),
                                   ),
                                   bottomActionBarConfig:
-                                      const BottomActionBarConfig(
-                                        backgroundColor: AppColors.surface,
-                                        buttonColor: AppColors.muted,
-                                        buttonIconColor: AppColors.primary,
+                                      BottomActionBarConfig(
+                                        backgroundColor: context.appPalette.surface,
+                                        buttonColor: context.appPalette.muted,
+                                        buttonIconColor: context.appPalette.primary,
                                       ),
                                 ),
                               ),
@@ -376,12 +376,12 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                       vertical: isCompact ? 6 : 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.appPalette.surface,
                       borderRadius: BorderRadius.circular(50),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.appPalette.border),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.12),
+                          color: context.appPalette.primary.withValues(alpha: 0.12),
                           blurRadius: 30,
                           offset: const Offset(0, 8),
                         ),
@@ -395,14 +395,14 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                           child: Container(
                             width: actionSize,
                             height: actionSize,
-                            decoration: const BoxDecoration(
-                              color: AppColors.muted,
+                            decoration: BoxDecoration(
+                              color: context.appPalette.muted,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               LucideIcons.plus,
                               size: AppIconSizes.defaultSize,
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                           ),
                         ),
@@ -415,7 +415,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                             decoration: InputDecoration(
                               hintText: widget.placeholder,
                               hintStyle: typography.labelMD.copyWith(
-                                color: AppColors.mutedForeground.withValues(
+                                color: context.appPalette.mutedForeground.withValues(
                                   alpha: 0.6,
                                 ),
                               ),
@@ -426,7 +426,7 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                               ),
                             ),
                             style: typography.labelMD.copyWith(
-                              color: AppColors.primary,
+                              color: context.appPalette.primary,
                             ),
                             textInputAction: TextInputAction.send,
                           ),
@@ -437,11 +437,11 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                           child: SizedBox(
                             width: actionSize,
                             height: actionSize,
-                            child: const Center(
+                            child: Center(
                               child: Icon(
                                 LucideIcons.smile,
                                 size: AppIconSizes.defaultSize,
-                                color: AppColors.mutedForeground,
+                                color: context.appPalette.mutedForeground,
                               ),
                             ),
                           ),
@@ -453,14 +453,14 @@ class _FloatingMessageBarState extends State<FloatingMessageBar> {
                             child: Container(
                               width: actionSize,
                               height: actionSize,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.primary,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.send,
                                 size: AppIconSizes.s,
-                                color: AppColors.surface,
+                                color: context.appPalette.surface,
                               ),
                             ),
                           ),

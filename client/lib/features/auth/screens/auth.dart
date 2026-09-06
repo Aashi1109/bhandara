@@ -77,7 +77,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -85,7 +85,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               onBack: () => context.canPop() ? context.pop() : null,
               title: '',
               showBorder: false,
-              backgroundColor: AppColors.transparent,
+              backgroundColor: context.appPalette.transparent,
             ),
             Expanded(
               child: SingleChildScrollView(
@@ -105,7 +105,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: AppColors.muted,
+                        color: context.appPalette.muted,
                         borderRadius: BorderRadius.circular(40),
                       ),
                       child: Column(
@@ -138,8 +138,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 32),
                             child: Row(
                               children: [
-                                const Expanded(
-                                  child: Divider(color: AppColors.border),
+                                Expanded(
+                                  child: Divider(color: context.appPalette.border),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -150,8 +150,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                     style: typography.overline,
                                   ),
                                 ),
-                                const Expanded(
-                                  child: Divider(color: AppColors.border),
+                                Expanded(
+                                  child: Divider(color: context.appPalette.border),
                                 ),
                               ],
                             ),
@@ -196,7 +196,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           //     child: Icon(
                           //       LucideIcons.apple,
                           //       size: AppIconSizes.defaultSize,
-                          //       color: AppColors.primary,
+                          //       color: context.appPalette.primary,
                           //     ),
                           //   ),
                           // ),
@@ -209,7 +209,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppColors.muted,
+                        color: context.appPalette.muted,
                         borderRadius: BorderRadius.circular(32),
                       ),
                       child: AppCard(
@@ -220,14 +220,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             Container(
                               width: 40,
                               height: 40,
-                              decoration: const BoxDecoration(
-                                color: AppColors.muted,
+                              decoration: BoxDecoration(
+                                color: context.appPalette.muted,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.locateFixed,
                                 size: AppIconSizes.defaultSize,
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -254,8 +254,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 height: 24,
                                 decoration: BoxDecoration(
                                   color: nearMe
-                                      ? AppColors.primary
-                                      : AppColors.muted,
+                                      ? context.appPalette.primary
+                                      : context.appPalette.muted,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: AnimatedAlign(
@@ -267,8 +267,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                     margin: const EdgeInsets.all(4),
                                     width: 16,
                                     height: 16,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.surface,
+                                    decoration: BoxDecoration(
+                                      color: context.appPalette.surface,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -294,7 +294,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             TextSpan(
                               text: 'Terms',
                               style: typography.bodySM.copyWith(
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
@@ -302,7 +302,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             TextSpan(
                               text: 'Privacy Policy',
                               style: typography.bodySM.copyWith(
-                                color: AppColors.primary,
+                                color: context.appPalette.primary,
                                 decoration: TextDecoration.underline,
                               ),
                             ),

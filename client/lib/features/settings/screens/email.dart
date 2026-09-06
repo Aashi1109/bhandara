@@ -45,7 +45,7 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
     final isDirty = _emailController.text.trim() != _initialEmail.trim();
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -61,14 +61,14 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: AppColors.muted,
+                      decoration: BoxDecoration(
+                        color: context.appPalette.muted,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.mail,
                         size: AppIconSizes.xl,
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                     const SizedBox(height: 24),

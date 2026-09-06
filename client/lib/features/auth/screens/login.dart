@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           // Background Gradients (Simulated)
@@ -105,7 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.5),
+                color: context.appPalette.muted.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
             ),
@@ -117,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.4),
+                color: context.appPalette.muted.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -130,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onBack: () => context.pop(),
                   title: '',
                   showBorder: false,
-                  backgroundColor: AppColors.transparent,
+                  backgroundColor: context.appPalette.transparent,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -152,12 +152,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             width: constraints.maxWidth,
                             padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
+                              color: context.appPalette.surface,
                               borderRadius: BorderRadius.circular(50),
-                              border: Border.all(color: AppColors.border),
+                              border: Border.all(color: context.appPalette.border),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withValues(
+                                  color: context.appPalette.primary.withValues(
                                     alpha: 0.05,
                                   ),
                                   blurRadius: 10,
@@ -170,15 +170,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 Container(
                                   width: 32,
                                   height: 32,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
+                                  decoration: BoxDecoration(
+                                    color: context.appPalette.primary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       initial,
                                       style: typography.labelSM.copyWith(
-                                        color: AppColors.surface,
+                                        color: context.appPalette.surface,
                                       ),
                                     ),
                                   ),
@@ -193,10 +193,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Icon(
+                                Icon(
                                   LucideIcons.checkCircle2,
                                   size: AppIconSizes.m,
-                                  color: AppColors.accent,
+                                  color: context.appPalette.accent,
                                 ),
                               ],
                             ),
@@ -210,7 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           placeholder: 'Password',
                           controller: _passwordController,
                           obscureText: !_showPassword,
-                          backgroundColor: AppColors.muted,
+                          backgroundColor: context.appPalette.muted,
                           validations: InputValidations(
                             required: 'Password is required',
                             validate: (value) {
@@ -240,7 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               _showPassword
                                   ? LucideIcons.eyeOff
                                   : LucideIcons.eye,
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                               size: AppIconSizes.defaultSize,
                             ),
                             onPressed: () =>

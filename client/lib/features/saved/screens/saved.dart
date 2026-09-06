@@ -209,7 +209,7 @@ class _SavedScreenState extends State<SavedScreen> {
           Text(
             '${_results.length} ${_results.length == 1 ? 'item' : 'items'}',
             style: context.appTypography.captionMD.copyWith(
-              color: AppColors.mutedForeground,
+              color: context.appPalette.mutedForeground,
             ),
           ),
         ],
@@ -360,16 +360,16 @@ class _SavedScreenState extends State<SavedScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? AppColors.primary : AppColors.surface,
+        color: selected ? context.appPalette.primary : context.appPalette.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? context.appPalette.primary : context.appPalette.border,
         ),
       ),
       child: Text(
         text,
         style: context.appTypography.bodySMStrong.copyWith(
-          color: selected ? AppColors.surface : AppColors.mutedForeground,
+          color: selected ? context.appPalette.surface : context.appPalette.mutedForeground,
         ),
       ),
     );
@@ -378,7 +378,7 @@ class _SavedScreenState extends State<SavedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Column(
@@ -391,7 +391,7 @@ class _SavedScreenState extends State<SavedScreen> {
                     child: Text(
                       'Saved',
                       style: context.appTypography.heading3Strong.copyWith(
-                        color: AppColors.primary,
+                        color: context.appPalette.primary,
                       ),
                     ),
                   ),

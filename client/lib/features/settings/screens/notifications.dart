@@ -70,7 +70,7 @@ class _NotificationsSettingsScreenState
     _hydrate(user);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Column(
         children: [
           AppHeader(
@@ -165,12 +165,12 @@ class _NotificationsSettingsScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
+            color: context.appPalette.primary.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -182,14 +182,14 @@ class _NotificationsSettingsScreenState
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
-              color: AppColors.muted,
+            decoration: BoxDecoration(
+              color: context.appPalette.muted,
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
               size: AppIconSizes.defaultSize,
-              color: AppColors.primary,
+              color: context.appPalette.primary,
             ),
           ),
           Expanded(
@@ -198,13 +198,13 @@ class _NotificationsSettingsScreenState
               children: [
                 Text(
                   title,
-                  style: typography.labelMD.copyWith(color: AppColors.primary),
+                  style: typography.labelMD.copyWith(color: context.appPalette.primary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
                   style: typography.labelSM.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -217,7 +217,7 @@ class _NotificationsSettingsScreenState
               width: 44,
               height: 24,
               decoration: BoxDecoration(
-                color: value ? AppColors.primary : AppColors.muted,
+                color: value ? context.appPalette.primary : context.appPalette.muted,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AnimatedAlign(
@@ -227,8 +227,8 @@ class _NotificationsSettingsScreenState
                   margin: const EdgeInsets.all(4),
                   width: 16,
                   height: 16,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                  decoration: BoxDecoration(
+                    color: context.appPalette.surface,
                     shape: BoxShape.circle,
                   ),
                 ),

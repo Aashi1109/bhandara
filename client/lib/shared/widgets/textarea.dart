@@ -61,11 +61,11 @@ class AppTextArea extends StatelessWidget {
         Container(
           height: height,
           decoration: BoxDecoration(
-            color: backgroundColor ?? AppColors.surface,
+            color: backgroundColor ?? context.appPalette.surface,
             borderRadius: BorderRadius.circular(borderRadius),
             border: hasBorder
                 ? Border.all(
-                    color: error != null ? AppColors.error : AppColors.border,
+                    color: error != null ? context.appPalette.error : context.appPalette.border,
                   )
                 : null,
           ),
@@ -76,11 +76,11 @@ class AppTextArea extends StatelessWidget {
             onChanged: onChanged,
             minLines: minLines,
             maxLines: maxLines,
-            style: typography.bodyMD.copyWith(color: AppColors.primary),
+            style: typography.bodyMD.copyWith(color: context.appPalette.primary),
             decoration: InputDecoration(
               hintText: placeholder,
               hintStyle: typography.bodyMD.copyWith(
-                color: AppColors.mutedForeground.withValues(alpha: 0.5),
+                color: context.appPalette.mutedForeground.withValues(alpha: 0.5),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),

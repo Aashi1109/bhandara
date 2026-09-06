@@ -175,12 +175,12 @@ class _AnimatedTooltipState extends State<AnimatedTooltip>
                         _TooltipDefaults.borderRadius,
                       ),
                       border: Border.all(
-                        color: AppColors.surface.withValues(alpha: 0.2),
+                        color: context.appPalette.surface.withValues(alpha: 0.2),
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: context.appPalette.primary.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -195,12 +195,12 @@ class _AnimatedTooltipState extends State<AnimatedTooltip>
                         child: Container(
                           padding: _TooltipDefaults.messagePadding,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.8),
+                            color: context.appPalette.primary.withValues(alpha: 0.8),
                           ),
                           child: Text(
                             widget.message,
                             style: context.appTypography.bodySM.copyWith(
-                              color: AppColors.surface,
+                              color: context.appPalette.surface,
                             ),
                             textAlign: TextAlign.center,
                           ),

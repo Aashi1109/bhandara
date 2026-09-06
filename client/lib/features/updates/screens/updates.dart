@@ -212,14 +212,14 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
           body:
               update.payload['preview']?.toString() ??
               'Someone added a new message to a discussion.',
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         );
       case 'event.joined':
         return (
           icon: LucideIcons.users,
           title: 'Someone joined your event',
           body: 'A participant joined your event.',
-          color: AppColors.accent,
+          color: context.appPalette.accent,
         );
       case 'achievement.unlocked':
         return (
@@ -228,28 +228,28 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
           body:
               update.payload['title']?.toString() ??
               'You unlocked a new achievement.',
-          color: AppColors.warning,
+          color: context.appPalette.warning,
         );
       case 'event.created':
         return (
           icon: LucideIcons.mapPin,
           title: update.payload['eventName']?.toString() ?? 'New event',
           body: 'Your event is now live.',
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         );
       case 'event.verified':
         return (
           icon: LucideIcons.checkCircle2,
           title: 'Attendance verified',
           body: 'Your attendance has been confirmed.',
-          color: AppColors.accent,
+          color: context.appPalette.accent,
         );
       default:
         return (
           icon: LucideIcons.bell,
           title: update.type,
           body: 'You have a new update.',
-          color: AppColors.mutedForeground,
+          color: context.appPalette.mutedForeground,
         );
     }
   }
@@ -266,7 +266,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     return Text(
       text,
       style: context.appTypography.overline.copyWith(
-        color: AppColors.mutedForeground,
+        color: context.appPalette.mutedForeground,
         letterSpacing: 1,
       ),
     );
@@ -277,9 +277,9 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.12),
+        color: context.appPalette.accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appPalette.border),
       ),
       child: Row(
         spacing: 12,
@@ -287,14 +287,14 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
+            decoration: BoxDecoration(
+              color: context.appPalette.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               LucideIcons.bellRing,
               size: AppIconSizes.defaultSize,
-              color: AppColors.accent,
+              color: context.appPalette.accent,
             ),
           ),
           Expanded(
@@ -305,13 +305,13 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                 Text(
                   'You have $unreadCount new ${unreadCount == 1 ? 'update' : 'updates'}',
                   style: typography.titleXSStrong.copyWith(
-                    color: AppColors.primary,
+                    color: context.appPalette.primary,
                   ),
                 ),
                 Text(
                   'Here’s what happened while you were away',
                   style: typography.bodyXS.copyWith(
-                    color: AppColors.mutedForeground,
+                    color: context.appPalette.mutedForeground,
                   ),
                 ),
               ],
@@ -321,14 +321,14 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
             width: 36,
             height: 36,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
+            decoration: BoxDecoration(
+              color: context.appPalette.primary,
               shape: BoxShape.circle,
             ),
             child: Text(
               '$unreadCount',
               style: typography.bodySMExtraBold.copyWith(
-                color: AppColors.surface,
+                color: context.appPalette.surface,
               ),
             ),
           ),
@@ -345,8 +345,8 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
       onTap: () => _openUpdate(update),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.appPalette.border)),
         ),
         child: Row(
           spacing: 12,
@@ -356,15 +356,15 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                 width: 3,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: context.appPalette.accent,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.muted,
+              decoration: BoxDecoration(
+                color: context.appPalette.muted,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -387,14 +387,14 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: typography.labelMD.copyWith(
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                       ),
                       Text(
                         _timeAgo(update.createdAt),
                         style: typography.captionSMStrong.copyWith(
-                          color: AppColors.mutedForeground,
+                          color: context.appPalette.mutedForeground,
                         ),
                       ),
                     ],
@@ -404,7 +404,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: typography.bodySM.copyWith(
-                      color: AppColors.mutedForeground,
+                      color: context.appPalette.mutedForeground,
                       height: 1.3,
                     ),
                   ),
@@ -412,12 +412,12 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               ),
             ),
             if (update.isUnread)
-              const SizedBox(
+              SizedBox(
                 width: 7,
                 height: 7,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.accent,
+                    color: context.appPalette.accent,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -469,7 +469,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               child: Text(
                 'No updates yet.',
                 style: context.appTypography.bodyMD.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ),
@@ -486,7 +486,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               child: Text(
                 'You are all caught up.',
                 style: context.appTypography.bodySM.copyWith(
-                  color: AppColors.mutedForeground,
+                  color: context.appPalette.mutedForeground,
                 ),
               ),
             ),
@@ -504,7 +504,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
           height: 80,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.muted,
+            color: context.appPalette.muted,
             borderRadius: BorderRadius.circular(18),
           ),
           child: const Row(
@@ -534,13 +534,13 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   }
 
   Widget _buildUpdateSkeletonCard() {
-    return const SizedBox(
+    return SizedBox(
       height: 78,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.border)),
+          border: Border(bottom: BorderSide(color: context.appPalette.border)),
         ),
-        child: Row(
+        child: const Row(
           spacing: 12,
           children: [
             AppSkeleton(width: 44, height: 44, shape: BoxShape.circle),
@@ -568,7 +568,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     final showCaughtUpInHeader = _updates.isNotEmpty && unreadCount == 0;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Column(
@@ -589,8 +589,8 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                         LucideIcons.checkCheck,
                         size: AppIconSizes.s,
                         color: _updates.isEmpty || showCaughtUpInHeader
-                            ? AppColors.mutedForeground
-                            : AppColors.accent,
+                            ? context.appPalette.mutedForeground
+                            : context.appPalette.accent,
                       ),
                       Text(
                         _isMarkingAll
@@ -600,8 +600,8 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                             : 'Mark all read',
                         style: typography.bodySMStrong.copyWith(
                           color: _updates.isEmpty || showCaughtUpInHeader
-                              ? AppColors.mutedForeground
-                              : AppColors.accent,
+                              ? context.appPalette.mutedForeground
+                              : context.appPalette.accent,
                         ),
                       ),
                     ],

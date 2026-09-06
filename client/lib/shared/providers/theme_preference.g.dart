@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'user.dart';
+part of 'theme_preference.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,43 +9,43 @@ part of 'user.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(UserProfile)
-final userProfileProvider = UserProfileProvider._();
+@ProviderFor(ThemePreference)
+final themePreferenceProvider = ThemePreferenceProvider._();
 
-final class UserProfileProvider
-    extends $AsyncNotifierProvider<UserProfile, User?> {
-  UserProfileProvider._()
+final class ThemePreferenceProvider
+    extends $AsyncNotifierProvider<ThemePreference, String> {
+  ThemePreferenceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'userProfileProvider',
+        name: r'themePreferenceProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$userProfileHash();
+  String debugGetCreateSourceHash() => _$themePreferenceHash();
 
   @$internal
   @override
-  UserProfile create() => UserProfile();
+  ThemePreference create() => ThemePreference();
 }
 
-String _$userProfileHash() => r'9e6273dae3ce95f4e8086082235607e3f9cbf831';
+String _$themePreferenceHash() => r'df6247aabbff3d519100addffb143aea615d3290';
 
-abstract class _$UserProfile extends $AsyncNotifier<User?> {
-  FutureOr<User?> build();
+abstract class _$ThemePreference extends $AsyncNotifier<String> {
+  FutureOr<String> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<User?>, User?>;
+    final ref = this.ref as $Ref<AsyncValue<String>, String>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<User?>, User?>,
-              AsyncValue<User?>,
+              AnyNotifier<AsyncValue<String>, String>,
+              AsyncValue<String>,
               Object?,
               Object?
             >;

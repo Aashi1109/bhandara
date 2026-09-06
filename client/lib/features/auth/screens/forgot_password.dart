@@ -52,7 +52,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Positioned(
@@ -62,7 +62,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               width: 300,
               height: 300,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.5),
+                color: context.appPalette.muted.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
             ),
@@ -74,7 +74,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                color: AppColors.muted.withValues(alpha: 0.4),
+                color: context.appPalette.muted.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
             ),
@@ -86,7 +86,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onBack: () => context.pop(),
                   title: '',
                   showBorder: false,
-                  backgroundColor: AppColors.transparent,
+                  backgroundColor: context.appPalette.transparent,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -97,14 +97,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         Container(
                           width: 72,
                           height: 72,
-                          decoration: const BoxDecoration(
-                            color: AppColors.muted,
+                          decoration: BoxDecoration(
+                            color: context.appPalette.muted,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.lock,
                             size: AppIconSizes.xl,
-                            color: AppColors.primary,
+                            color: context.appPalette.primary,
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -116,7 +116,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             'Enter your email address and we\'ll send you a link to reset your password.',
                             textAlign: TextAlign.center,
                             style: typography.bodyLG.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                             ),
                           ),
                         ),
@@ -124,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppColors.muted,
+                            color: context.appPalette.muted,
                             borderRadius: BorderRadius.circular(40),
                           ),
                           child: Column(
@@ -162,7 +162,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           child: Text(
                             'Back to Login',
                             style: typography.bodyMD.copyWith(
-                              color: AppColors.mutedForeground,
+                              color: context.appPalette.mutedForeground,
                             ),
                           ),
                         ),

@@ -46,7 +46,7 @@ class AppRemoteSvg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = _fallback();
+    final fallback = _fallback(context);
     if (!enabled || url.isEmpty) return fallback;
 
     if (url.startsWith('assets/')) {
@@ -80,7 +80,7 @@ class AppRemoteSvg extends StatelessWidget {
         fit: BoxFit.contain,
         semanticLabel: semanticsLabel,
         loadingBuilder: (_, child, progress) =>
-            progress == null ? child : _placeholder(),
+            progress == null ? child : _placeholder(context),
         errorBuilder: (_, _, _) => fallback,
       );
     }
@@ -91,25 +91,25 @@ class AppRemoteSvg extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       semanticsLabel: semanticsLabel,
-      placeholderBuilder: (_) => _placeholder(),
+      placeholderBuilder: (_) => _placeholder(context),
       errorBuilder: (_, _, _) => fallback,
     );
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(BuildContext context) {
     return SizedBox(
       width: width,
       height: height,
-      child: const Center(
+      child: Center(
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          color: AppColors.primary,
+          color: context.appPalette.primary,
         ),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(BuildContext context) {
     return SizedBox(
       width: width,
       height: height,
@@ -117,7 +117,7 @@ class AppRemoteSvg extends StatelessWidget {
         child: Icon(
           fallbackIcon,
           size: AppIconSizes.xl,
-          color: AppColors.mutedForeground,
+          color: context.appPalette.mutedForeground,
         ),
       ),
     );

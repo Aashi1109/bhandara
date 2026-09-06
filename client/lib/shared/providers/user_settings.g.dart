@@ -33,7 +33,7 @@ final class UserSettingsProvider
   UserSettings create() => UserSettings();
 }
 
-String _$userSettingsHash() => r'c9bac77b366f819e0a11581bbce0706260ab08bc';
+String _$userSettingsHash() => r'7db55e76208cfc6fd95941d777d41719edf245ed';
 
 abstract class _$UserSettings
     extends $AsyncNotifier<user_models.UserSettings?> {

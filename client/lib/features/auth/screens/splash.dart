@@ -112,7 +112,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final typography = context.appTypography;
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.appPalette.surface,
       body: Stack(
         children: [
           Center(
@@ -157,12 +157,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: AnimatedOpacity(
                   opacity: _isCheckingSession ? 1 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: const SizedBox(
+                  child: SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.2,
-                      color: AppColors.primary,
+                      color: context.appPalette.primary,
                     ),
                   ),
                 ),

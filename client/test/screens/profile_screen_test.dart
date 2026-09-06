@@ -36,7 +36,7 @@ void main() {
             ).overrideWith((ref) => Completer<ProfileOverview>().future),
           ],
           child: MaterialApp.router(
-            theme: AppTheme.theme,
+            theme: AppTheme.buildTheme(lightPalette),
             routerConfig: router,
           ),
         ),
@@ -82,7 +82,7 @@ void main() {
             ),
           ],
           child: MaterialApp.router(
-            theme: AppTheme.theme,
+            theme: AppTheme.buildTheme(lightPalette),
             routerConfig: router,
           ),
         ),
@@ -154,7 +154,7 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp.router(theme: AppTheme.theme, routerConfig: router),
+        child: MaterialApp.router(theme: AppTheme.buildTheme(lightPalette), routerConfig: router),
       ),
     );
 

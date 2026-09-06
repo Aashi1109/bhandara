@@ -27,7 +27,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp.router(theme: AppTheme.theme, routerConfig: router),
+        child: MaterialApp.router(theme: AppTheme.buildTheme(lightPalette), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -55,7 +55,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp.router(
-            theme: AppTheme.theme,
+            theme: AppTheme.buildTheme(lightPalette),
             routerConfig: router,
           ),
         ),
