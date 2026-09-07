@@ -1,12 +1,8 @@
-import { validateThreadCreate, validateThreadUpdate } from "./validation";
-import { Thread } from "./model";
+import { validateThreadCreate, validateThreadUpdate } from './validation';
+import { Thread } from './model';
 
-import {
-  type IPaginationParams,
-  type IBaseThread,
-  IMessage,
-} from "@/definitions/types";
-import { findAllWithPagination } from "@/utils/dbUtils";
+import { type IPaginationParams, type IBaseThread, IMessage } from '@/common/definitions/types';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
 import {
   getThreadCache,
   setThreadCache,
@@ -15,21 +11,24 @@ import {
   canUserModifyLockedThread,
   lockThread,
   unlockThread,
-} from "./helpers";
-import { BadRequestError, ForbiddenError } from "@/exceptions";
+} from './helpers';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/exceptions';
 
-import MessageService from "@/features/messages/service";
+import MessageService from '@/features/messages/service';
+import EntityStatsService from '@/features/stats/service';
 
 class ThreadsService {
   private readonly getCache = getThreadCache;
   private readonly setCache = setThreadCache;
   private readonly deleteCache = deleteThreadCache;
   private readonly messageService: MessageService;
+  private readonly entityStatsService: EntityStatsService;
 
-  private readonly populateFields = ["messages"];
+  private readonly populateFields = ['messages'];
 
   constructor() {
     this.messageService = new MessageService();
+    this.entityStatsService = new EntityStatsService();
   }
 
   private async populateThread(thread: IBaseThread, fields: string[]) {
@@ -37,11 +36,8 @@ class ThreadsService {
 
     fields.forEach((field) => {
       switch (field) {
-        case "messages":
-          promises.messages = this.messageService.getAll(
-            { threadId: thread.id },
-            { limit: 10 }
-          );
+        case 'messages':
+          promises.messages = this.messageService.getAll({ threadId: thread.id }, { limit: 10 });
           break;
       }
     });
@@ -50,10 +46,10 @@ class ThreadsService {
     const resolved: Record<string, any> = {};
     Object.keys(promises).forEach((key, idx) => {
       const r = results[idx];
-      resolved[key] = r.status === "fulfilled" ? r.value : null;
+      resolved[key] = r.status === 'fulfilled' ? r.value : null;
     });
 
-    if (fields.includes("messages")) {
+    if (fields.includes('messages')) {
       thread.messages = resolved.messages?.items;
     }
 
@@ -65,28 +61,27 @@ class ThreadsService {
     return res as any;
   }
 
-  async create<U extends Partial<Omit<IBaseThread, "id" | "updatedAt">>>(
-    data: U,
-    populate?: boolean | string[]
-  ) {
+  private async assertValidParent(parentId: string): Promise<void> {
+    const parent = (await Thread.findByPk(parentId, {
+      attributes: ['id', 'parentId'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!parent) throw new BadRequestError('Parent thread not found');
+    if (parent.parentId) throw new BadRequestError('Nested threads beyond one level are not allowed');
+  }
+
+  async create<U extends Partial<Omit<IBaseThread, 'id' | 'updatedAt'>>>(data: U, populate?: boolean | string[]) {
     const created = await validateThreadCreate(data, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError("Parent thread not found");
-        if (parent.parentId)
-          throw new BadRequestError(
-            "Nested threads beyond one level are not allowed"
-          );
+        await this.assertValidParent(validData.parentId);
       }
       const row = await Thread.create(validData as any);
       return row.toJSON() as any;
     });
-    let thread =
-      (created as any)?.dataValues ||
-      (created as any)?.[0]?.dataValues ||
-      created;
+    let thread = (created as any)?.dataValues || (created as any)?.[0]?.dataValues || created;
     if (thread) {
       await this.setCache((thread as any).id, thread as any);
+      await this.entityStatsService.incrementEventStat((thread as IBaseThread).eventId, 'threadCount', 1);
     }
     if (populate && thread) {
       thread = await this.getById(thread.id);
@@ -96,29 +91,22 @@ class ThreadsService {
 
   async getById(id: string) {
     const cached = await this.getCache(id);
-    if (cached) return cached as any;
+    if (cached) {
+      return this.entityStatsService.hydrateThread(cached as IBaseThread);
+    }
 
     const res = await Thread.findByPk(id, { raw: true });
     if (res) await this.setCache(id, res as any);
-    return res as any;
+    return res ? this.entityStatsService.hydrateThread(res as IBaseThread) : (res as any);
   }
 
-  async update<U extends Partial<IBaseThread>>(
-    id: string,
-    data: U,
-    populate?: boolean | string[]
-  ) {
+  async update<U extends Partial<IBaseThread>>(id: string, data: U, populate?: boolean | string[]) {
     const updated = await validateThreadUpdate(data, async (validData) => {
       if (validData.parentId) {
-        const parent = await this.getById(validData.parentId);
-        if (!parent) throw new BadRequestError("Parent thread not found");
-        if (parent.parentId)
-          throw new BadRequestError(
-            "Nested threads beyond one level are not allowed"
-          );
+        await this.assertValidParent(validData.parentId);
       }
       const row = await Thread.findByPk(id);
-      if (!row) throw new Error("Thread not found");
+      if (!row) throw new NotFoundError('Thread not found');
       await row.update(validData as any);
       return row.toJSON() as any;
     });
@@ -130,12 +118,12 @@ class ThreadsService {
     return thread as any;
   }
 
-  async getAll(
-    where: Record<string, any> = {},
-    pagination?: Partial<IPaginationParams>,
-    select?: string
-  ) {
-    return findAllWithPagination(Thread, { where }, pagination, select);
+  async getAll(where: Record<string, any> = {}, pagination?: Partial<IPaginationParams>, select?: string) {
+    const data = await findAllWithPagination(Thread, { where }, pagination, select);
+    if (data.items?.length) {
+      await this.entityStatsService.hydrateThreads(data.items as IBaseThread[]);
+    }
+    return data;
   }
 
   async delete(id: string) {
@@ -143,7 +131,9 @@ class ThreadsService {
     if (!row) return null;
     await row.destroy();
     await this.deleteCache(id);
-    return row.toJSON() as any;
+    const deletedThread = row.toJSON() as IBaseThread;
+    await this.entityStatsService.incrementEventStat(deletedThread.eventId, 'threadCount', -1);
+    return deletedThread as any;
   }
 
   /**
@@ -153,27 +143,21 @@ class ThreadsService {
    * @returns Promise<IBaseThread> - The updated thread
    */
   async lockThread(threadId: string, userId: string): Promise<IBaseThread> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      throw new BadRequestError("Thread not found");
-    }
-
-    if (isThreadLocked(thread)) {
-      throw new BadRequestError("Thread is already locked");
-    }
-
-    // Only allow thread author to lock the thread
-    if (thread.createdBy !== userId) {
-      throw new ForbiddenError("Only the thread author can lock this thread");
-    }
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'createdBy', 'lockHistory'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) throw new BadRequestError('Thread not found');
+    if (isThreadLocked(thread)) throw new BadRequestError('Thread is already locked');
+    if (thread.createdBy !== userId) throw new ForbiddenError('Only the thread author can lock this thread');
 
     const lockedThread = lockThread(thread, userId);
-
-    const updated = await this.update(threadId, {
-      lockHistory: lockedThread.lockHistory,
+    const [, rows] = await Thread.update({ lockHistory: lockedThread.lockHistory } as any, {
+      where: { id: threadId },
+      returning: true,
     });
-
-    return updated;
+    await this.deleteCache(threadId);
+    return rows[0].toJSON() as IBaseThread;
   }
 
   /**
@@ -183,27 +167,21 @@ class ThreadsService {
    * @returns Promise<IBaseThread> - The updated thread
    */
   async unlockThread(threadId: string, userId: string): Promise<IBaseThread> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      throw new BadRequestError("Thread not found");
-    }
-
-    if (!isThreadLocked(thread)) {
-      throw new BadRequestError("Thread is not locked");
-    }
-
-    // Only allow thread author to unlock the thread
-    if (thread.createdBy !== userId) {
-      throw new ForbiddenError("Only the thread author can unlock this thread");
-    }
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'createdBy', 'lockHistory'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) throw new BadRequestError('Thread not found');
+    if (!isThreadLocked(thread)) throw new BadRequestError('Thread is not locked');
+    if (thread.createdBy !== userId) throw new ForbiddenError('Only the thread author can unlock this thread');
 
     const unlockedThread = unlockThread(thread);
-
-    const updated = await this.update(threadId, {
-      lockHistory: unlockedThread.lockHistory,
+    const [, rows] = await Thread.update({ lockHistory: unlockedThread.lockHistory } as any, {
+      where: { id: threadId },
+      returning: true,
     });
-
-    return updated;
+    await this.deleteCache(threadId);
+    return rows[0].toJSON() as IBaseThread;
   }
 
   /**
@@ -211,24 +189,14 @@ class ThreadsService {
    * @param threadId - The ID of the thread to check
    * @returns Promise<{isLocked: boolean, lockedThreadId?: string}> - Lock status and which thread is locked
    */
-  async isThreadChainLocked(
-    threadId: string
-  ): Promise<{ isLocked: boolean; lockedThreadId?: string }> {
-    const thread = await this.getById(threadId);
-    if (!thread) {
-      return { isLocked: false };
-    }
-
-    // Check if current thread is locked
-    if (isThreadLocked(thread)) {
-      return { isLocked: true, lockedThreadId: thread.id };
-    }
-
-    // Check if parent thread is locked (recursively)
-    if (thread.parentId) {
-      return await this.isThreadChainLocked(thread.parentId);
-    }
-
+  async isThreadChainLocked(threadId: string): Promise<{ isLocked: boolean; lockedThreadId?: string }> {
+    const thread = (await Thread.findByPk(threadId, {
+      attributes: ['id', 'lockHistory', 'parentId'],
+      raw: true,
+    })) as IBaseThread | null;
+    if (!thread) return { isLocked: false };
+    if (isThreadLocked(thread)) return { isLocked: true, lockedThreadId: thread.id };
+    if (thread.parentId) return this.isThreadChainLocked(thread.parentId);
     return { isLocked: false };
   }
 }

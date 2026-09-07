@@ -1,6 +1,6 @@
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
-import type { IBaseThread, ILockHistory } from "@/definitions/types";
-import { RedisCache } from "@/features/cache";
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import type { IBaseThread, ILockHistory } from '@/common/definitions/types';
+import { RedisCache } from '@/features/cache';
 
 const threadsCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Threads.namespace,
@@ -55,10 +55,7 @@ export const getThreadLockInfo = (thread: IBaseThread): ILockHistory | null => {
  * @param userId - The user ID to check permissions for
  * @returns boolean - true if the user can modify the thread, false otherwise
  */
-export const canUserModifyLockedThread = (
-  thread: IBaseThread,
-  userId: string
-): boolean => {
+export const canUserModifyLockedThread = (thread: IBaseThread, userId: string): boolean => {
   if (!isThreadLocked(thread)) {
     return true; // Not locked, anyone can modify
   }
@@ -78,10 +75,7 @@ export const canUserModifyLockedThread = (
  * @param userId - The user ID who is locking the thread
  * @returns IBaseThread - the updated thread object
  */
-export const lockThread = (
-  thread: IBaseThread,
-  userId: string
-): IBaseThread => {
+export const lockThread = (thread: IBaseThread, userId: string): IBaseThread => {
   const lockEntry: ILockHistory = {
     lockedBy: userId,
     lockedAt: new Date(),

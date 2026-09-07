@@ -1,1 +1,1 @@
-export const THREAD_TABLE_NAME = "Threads";
+export const THREAD_TABLE_NAME = 'Threads';

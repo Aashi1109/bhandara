@@ -1,17 +1,49 @@
 services:
+  server-mono:
+    profiles: ["mono"]
+    build:
+      context: ./server
+      dockerfile: Dockerfile.mono
+    platform: ${SERVER_MONO_PLATFORM:-linux/amd64}
+    container_name: zentry-mono-server
+    image: aashishpal09/zentry-mono-server:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_PORT=3000
+      - APP_PORT=3001
+      - REDIS_HOST=127.0.0.1
+      - REDIS_PORT=6379
+      - REDIS_TLS=false
+      - REDIS_COMMANDER_PORT=8081
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - zentry-network
+    volumes:
+      - video-temp:/app/tmp
+
   server:
     build:
       context: ./server
       dockerfile: Dockerfile
-    image: bhandara-server
-    container_name: bhandara-server
+    image: aashishpal09/zentry-server:latest
+    platform: linux/amd64
+    container_name: zentry-server
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
     env_file:
-      - ./server/src/.env.docker
+      - ./server/.env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -19,39 +51,52 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - bhandara-network
+      - zentry-network
 
   video-worker:
     build:
       context: ./server
       dockerfile: Dockerfile
-    image: bhandara-server
-    container_name: bhandara-video-worker
+    image: zentry-server
+    platform: linux/amd64
+    container_name: zentry-video-worker
     environment:
       - NODE_ENV=production
-      - WORKER_TYPE=video-processor
+      - APP_TYPE=worker
+      - APP_NAME=video-processor
     env_file:
-      - ./server/src/.env
+      - ./server/.env
     restart: unless-stopped
-    command: ["node", "workers/index.js"]
+    command: ["node", "index.js"]
+    healthcheck:
+      disable: true
     networks:
-      - bhandara-network
+      - zentry-network
     volumes:
       - video-temp:/app/tmp
-    depends_on:
-      - server
 
-  serverless-redis-http:
-    ports:
-      - "8079:80"
-    image: hiett/serverless-redis-http:latest
+  event-cleanup-worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: zentry-server
+    platform: linux/amd64
+    container_name: zentry-event-cleanup-worker
     environment:
-      SRH_MODE: env
-      SRH_TOKEN: example_token
-      SRH_CONNECTION_STRING: "redis://host.docker.internal:6379"
+      - NODE_ENV=production
+      - APP_TYPE=worker
+      - APP_NAME=event-cleanup
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    command: ["node", "index.js"]
+    healthcheck:
+      disable: true
+    networks:
+      - zentry-network
 
 networks:
-  bhandara-network:
+  zentry-network:
     driver: bridge
 
 volumes:

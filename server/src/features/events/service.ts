@@ -1,99 +1,341 @@
-import type { IBaseUser, IEvent, IPaginationParams } from "@/definitions/types";
-import ThreadsService from "../threads/service";
-import { findAllWithPagination } from "@/utils/dbUtils";
-import { Op } from "sequelize";
-import { EEventParticipantStatus, EEventStatus } from "@/definitions/enums";
-import TagService from "../tags/service";
-import MediaService from "../media/service";
-import UserService from "../users/service";
-import ReactionService from "../reactions/service";
-import { validateEventCreate, validateEventUpdate } from "./validation";
+import AddressService from '@/features/addresses/service';
+import {
+  EAccessLevel,
+  EAddressEntityType,
+  EEventParticipantStatus,
+  EEventStatus,
+  type EEventType,
+} from '@/common/definitions/enums';
+import type { IBaseThread, IBaseUser, IEvent, IPaginationParams, PaginatedResult } from '@/common/definitions/types';
+import ThreadsService from '../threads/service';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
+import { Op, QueryTypes, Sequelize, type WhereOptions } from 'sequelize';
+import TagService from '../tags/service';
+import MediaService from '../media/service';
+import UserService, { toUserMini } from '../users/service';
+import ReactionService from '../reactions/service';
+import { validateEventCreate, validateEventUpdate } from './validation';
 import {
   getEventCache,
-  getEventUsersCache,
+  getEventPreviewCache,
   setEventCache,
-  setEventUsersCache,
+  setEventPreviewCache,
   deleteEventCache,
-} from "./helpers";
-import { isEmpty } from "@/utils";
-import { BadRequestError, NotFoundError } from "@/exceptions";
-import { getDistanceInMeters } from "@/helpers";
-import { Event } from "./model";
-import MessageService from "@/features/messages/service";
+  getMarkerCache,
+  normalizeFlatMarkerViewport,
+  setMarkerCache,
+} from './helpers';
+import { isEmpty } from '@/common/utils';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { getDistanceInMeters } from '@/common/helpers';
+import { buildEventVisibilitySql, Event, EventParticipant, hasSeatAvailable } from './model';
+import MessageService from '@/features/messages/service';
+import EntityStatsService from '@/features/stats/service';
+import { buildActiveEventStatusPredicate, deriveEventStatus, resolvePersistedEventState } from './status';
+import ngeohash from 'ngeohash';
+
+export interface IEventListFilters {
+  /// Whose permissions the query runs under. Undefined = anonymous, which sees
+  /// public events only. Never populated from client input — always req.user.id.
+  viewerId?: string;
+  createdBy?: string;
+  statuses?: EEventStatus[];
+  tagIds?: string[];
+  types?: EEventType[];
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export type IEventSummary = Pick<
+  IEvent,
+  | 'id'
+  | 'name'
+  | 'status'
+  | 'type'
+  | 'createdBy'
+  | 'location'
+  | 'startTime'
+  | 'endTime'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'media'
+>;
+
+export function toEventSummary(event: IEvent): IEventSummary {
+  const status = deriveEventStatus(event);
+  return {
+    id: event.id,
+    name: event.name,
+    status,
+    type: event.type,
+    createdBy: event.createdBy,
+    location: event.location,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt,
+    media: event.media,
+  };
+}
 
 class EventService {
+  private readonly addressService: AddressService;
   private readonly threadService: ThreadsService;
   private readonly tagService: TagService;
   private readonly mediaService: MediaService;
   private readonly userService: UserService;
   private readonly reactionService: ReactionService;
   private readonly messageService: MessageService;
+  private readonly entityStatsService: EntityStatsService;
   private readonly getCache = getEventCache;
   private readonly setCache = setEventCache;
   private readonly deleteCache = deleteEventCache;
 
   constructor() {
+    this.addressService = new AddressService();
     this.threadService = new ThreadsService();
     this.tagService = new TagService();
     this.mediaService = new MediaService();
     this.userService = new UserService();
     this.reactionService = new ReactionService();
     this.messageService = new MessageService();
+    this.entityStatsService = new EntityStatsService();
   }
 
-  private readonly populateFields = [
-    "threads",
-    "tags",
-    "media",
-    "creator",
-    "participants",
-    "verifiers",
-    "reactions",
-  ];
+  private readonly populateFields = ['threads', 'tags', 'media', 'creator', 'participants', 'verifiers', 'reactions'];
 
-  private async populateEvent(
-    event: IEvent,
-    populate?: boolean | string[]
-  ): Promise<IEvent> {
+  private async hydrateEventLocations<T extends Pick<IEvent, 'id'> & Partial<IEvent>>(events: T[]): Promise<T[]> {
+    if (events.length === 0) {
+      return events;
+    }
+
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.Event,
+      events.map((event) => event.id),
+    );
+
+    return events.map((event) => ({
+      ...event,
+      location: this.addressService.toLocation(addressMap[event.id]) ?? {},
+    }));
+  }
+
+  private withResolvedStatus<T extends IEvent | null>(event: T): T {
+    if (!event) {
+      return event;
+    }
+
+    return {
+      ...event,
+      status: deriveEventStatus(event),
+    } as T;
+  }
+
+  private toEventSummary(event: IEvent): IEventSummary {
+    const resolved = this.withResolvedStatus(event) as IEvent;
+    return {
+      id: resolved.id,
+      name: resolved.name,
+      status: resolved.status,
+      type: resolved.type,
+      createdBy: resolved.createdBy,
+      location: resolved.location,
+      startTime: resolved.startTime,
+      endTime: resolved.endTime,
+      createdAt: resolved.createdAt,
+      updatedAt: resolved.updatedAt,
+      media: resolved.media,
+    };
+  }
+
+  private timestampColumnExpression(field: 'start' | 'end') {
+    return field === 'start' ? '"startTime"' : '"endTime"';
+  }
+
+  /// Raw SQL predicate for a derived status, over unqualified Event columns.
+  /// Single source of truth so the `findAll` and raw-query paths cannot drift.
+  private buildDerivedStatusSql(status: EEventStatus): string | null {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const now = escape(new Date().toISOString());
+    const startExpr = this.timestampColumnExpression('start');
+    const endExpr = this.timestampColumnExpression('end');
+    const activeStatuses = buildActiveEventStatusPredicate();
+
+    switch (status) {
+      case EEventStatus.Draft:
+        return '("isDraft" = TRUE AND "cancelledAt" IS NULL)';
+      case EEventStatus.Cancelled:
+        return '"cancelledAt" IS NOT NULL';
+      case EEventStatus.Upcoming:
+        return `(${activeStatuses} AND ${startExpr} > ${now})`;
+      case EEventStatus.Ongoing:
+        return `(${activeStatuses} AND ${startExpr} <= ${now} AND ${endExpr} > ${now})`;
+      case EEventStatus.Completed:
+        return `(${activeStatuses} AND ${endExpr} <= ${now})`;
+      default:
+        return null;
+    }
+  }
+
+  private buildDerivedStatusClause(status: EEventStatus) {
+    const sql = this.buildDerivedStatusSql(status);
+    return sql ? Sequelize.literal(sql) : null;
+  }
+
+  private buildWhere(filters: IEventListFilters = {}): WhereOptions {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const clauses: any[] = [Sequelize.literal(buildEventVisibilitySql(filters.viewerId, '"Event"."id"'))];
+
+    if (filters.createdBy) {
+      clauses.push({ createdBy: filters.createdBy });
+    }
+
+    if (filters.types?.length) {
+      clauses.push({ type: { [Op.in]: filters.types } });
+    }
+
+    if (filters.statuses?.length) {
+      const statusClauses = filters.statuses.map((status) => this.buildDerivedStatusClause(status)).filter(Boolean);
+      if (statusClauses.length) {
+        clauses.push({ [Op.or]: statusClauses });
+      }
+    }
+
+    if (filters.tagIds?.length) {
+      const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
+      clauses.push(Sequelize.literal(`(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`));
+    }
+
+    if (filters.startDate && filters.endDate) {
+      clauses.push(
+        Sequelize.literal(
+          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+        ),
+      );
+    }
+
+    if (
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0
+    ) {
+      clauses.push(
+        this.addressService.buildEntityDistanceClause({
+          entityType: EAddressEntityType.Event,
+          entityIdColumn: `"Event"."id"`,
+          latitude: filters.latitude!,
+          longitude: filters.longitude!,
+          radiusKm: filters.radiusKm!,
+        }),
+      );
+    }
+
+    return { [Op.and]: clauses };
+  }
+
+  /// Raw SQL predicate for the non-geo event filters, over unqualified Event
+  /// columns. Returns '' when no filter applies.
+  ///
+  /// Marker queries embed this as `IN (SELECT "id" FROM "Events" WHERE ...)`.
+  /// The previous version ran a separate `findAll`, pulled every matching id
+  /// into Node and inlined them into an `IN (...)` list — 100k parameters for a
+  /// broad filter.
+  private buildEventOnlyWhereSql(filters: IEventListFilters): string {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const clauses: string[] = [buildEventVisibilitySql(filters.viewerId)];
+
+    if (filters.types?.length) {
+      clauses.push(`"type" IN (${filters.types.map((type) => escape(type)).join(', ')})`);
+    }
+
+    if (filters.statuses?.length) {
+      const statusSql = filters.statuses
+        .map((status) => this.buildDerivedStatusSql(status))
+        .filter((sql): sql is string => Boolean(sql));
+      if (statusSql.length) {
+        clauses.push(`(${statusSql.join(' OR ')})`);
+      }
+    }
+
+    if (filters.tagIds?.length) {
+      const tagArray = filters.tagIds.map((tagId) => escape(tagId)).join(', ');
+      // jsonb_exists_any, not `?|`: a literal `?` in a raw query collides with
+      // Sequelize's replacement placeholder syntax.
+      clauses.push(`jsonb_exists_any(COALESCE("tags", '[]'::jsonb), ARRAY[${tagArray}])`);
+    }
+
+    if (filters.startDate && filters.endDate) {
+      const startExpr = this.timestampColumnExpression('start');
+      clauses.push(
+        `(${startExpr} >= ${escape(filters.startDate.toISOString())} AND ${startExpr} <= ${escape(filters.endDate.toISOString())})`,
+      );
+    }
+
+    return clauses.join(' AND ');
+  }
+
+  /// `AND a."entityId" IN (...)` fragment for the current event filters, or ''.
+  private buildMarkerEventIdFilter(filters: IEventListFilters): string {
+    const eventWhereSql = this.buildEventOnlyWhereSql(filters);
+    return eventWhereSql ? `AND a."entityId" IN (SELECT "id" FROM "Events" WHERE ${eventWhereSql})` : '';
+  }
+
+  /// Participation rows for an event, newest first. `participants` and
+  /// `verifiers` are two views over this one list — a verifier is a row with
+  /// `verifiedAt` set — so both are served by a single query.
+  private async getParticipantRows(eventId: string) {
+    return EventParticipant.findAll({
+      where: { eventId },
+      order: [['createdAt', 'ASC']],
+      raw: true,
+    });
+  }
+
+  private async populateEvent(event: IEvent, populate?: boolean | string[]): Promise<IEvent> {
     const promises: Record<string, Promise<any>> = {};
     let fields: string[] = [];
 
     if (populate) {
       fields =
-        populate === true
-          ? this.populateFields
-          : this.populateFields.filter((f) =>
-              (populate as string[]).includes(f)
-            );
+        populate === true ? this.populateFields : this.populateFields.filter((f) => (populate as string[]).includes(f));
     }
+
+    const participantRows =
+      fields.includes('participants') || fields.includes('verifiers') ? await this.getParticipantRows(event.id) : [];
 
     fields.forEach((field) => {
       switch (field) {
-        case "tags":
+        case 'tags':
           promises.tags = this.tagService.getAllEventTags(event);
           break;
-        case "media":
+        case 'media':
           promises.media = this.mediaService.getEventMedia(event);
           break;
-        case "creator":
-          promises.creator = this.userService.getById(event.createdBy);
+        case 'creator':
+          promises.creator = this.userService.getUserMini(event.createdBy);
           break;
-        case "participants":
+        case 'participants':
           promises.participants = this.userService.getAndPopulateUserProfiles({
-            data: event.participants,
-            searchKey: "user",
+            data: participantRows.map((row) => ({ user: row.userId, status: row.status })),
+            searchKey: 'user',
+            transformerFunction: toUserMini,
           });
           break;
-        case "verifiers":
+        case 'verifiers':
           promises.verifiers = this.userService.getAndPopulateUserProfiles({
-            data: event.verifiers,
-            searchKey: "user",
+            data: participantRows
+              .filter((row) => row.verifiedAt)
+              .map((row) => ({ user: row.userId, verifiedAt: row.verifiedAt as Date })),
+            searchKey: 'user',
+            transformerFunction: toUserMini,
           });
           break;
-        case "reactions":
-          promises.reactions = this.reactionService.getReactions(
-            `events/${event.id}`
-          );
+        case 'reactions':
+          promises.reactions = this.reactionService.getReactions(`events/${event.id}`);
           break;
       }
     });
@@ -102,47 +344,119 @@ class EventService {
     const resolved: Record<string, any> = {};
     Object.keys(promises).forEach((key, index) => {
       const res = results[index];
-      resolved[key] = res.status === "fulfilled" ? res.value : null;
+      resolved[key] = res.status === 'fulfilled' ? res.value : null;
     });
 
-    if (fields.includes("tags")) event.tags = resolved.tags || [];
-    if (fields.includes("media")) event.media = resolved.media || [];
-    if (fields.includes("creator")) event.creator = resolved.creator || null;
-    if (fields.includes("participants"))
-      event.participants = resolved.participants || [];
-    if (fields.includes("verifiers"))
-      event.verifiers = resolved.verifiers || [];
-    if (fields.includes("reactions"))
-      event.reactions = resolved.reactions || [];
+    if (fields.includes('tags')) event.tags = resolved.tags || [];
+    if (fields.includes('media')) event.media = resolved.media || [];
+    if (fields.includes('creator')) event.creator = resolved.creator || null;
+    if (fields.includes('participants')) event.participants = resolved.participants || [];
+    if (fields.includes('verifiers')) event.verifiers = resolved.verifiers || [];
+    if (fields.includes('reactions')) event.reactions = resolved.reactions || [];
 
-    return event;
+    return this.withResolvedStatus(event) as IEvent;
   }
 
   async getById(id: string) {
     const cached = await getEventCache(id);
-    if (cached) return cached;
+    if (cached) return this.withResolvedStatus(cached as IEvent);
 
-    const data = await Event.findByPk(id, { raw: true });
+    const data = (await Event.findByPk(id, { raw: true })) as unknown as IEvent | null;
     if (!data) return null;
 
-    await setEventCache(id, data as IEvent);
-    return data as IEvent;
+    const [hydrated] = await this.hydrateEventLocations([data as IEvent]);
+    await setEventCache(id, hydrated as IEvent);
+    return this.withResolvedStatus(hydrated as IEvent);
   }
 
-  async getEventData(id: string) {
+  /// Whether `viewerId` may see this event.
+  ///
+  /// Deliberately not a WHERE clause: `getById` serves from Redis before any
+  /// SQL runs, so a query-level predicate would be skipped on every cache hit.
+  async canView(event: Pick<IEvent, 'id' | 'visibility' | 'createdBy'>, viewerId?: string): Promise<boolean> {
+    if (event.visibility !== EAccessLevel.Private) return true;
+    if (!viewerId) return false;
+    if (event.createdBy === viewerId) return true;
+
+    const participation = await EventParticipant.count({
+      where: { eventId: event.id, userId: viewerId, status: { [Op.ne]: EEventParticipantStatus.Declined } },
+    });
+    return participation > 0;
+  }
+
+  async getEventData(id: string, viewerId?: string) {
     const event = await this.getById(id);
-    return this.populateEvent(event, true);
+    if (!event) return null;
+    // Same null as "no such event": confirming a private event exists to a
+    // stranger is itself a leak.
+    if (!(await this.canView(event, viewerId))) return null;
+    const populatedEvent = await this.populateEvent(event, true);
+    return populatedEvent ? this.entityStatsService.hydrateEvent(populatedEvent) : populatedEvent;
+  }
+
+  async getEventPreview(id: string, viewerId?: string) {
+    const cached = await getEventPreviewCache(id);
+    if (cached) {
+      return (await this.canView(cached as IEvent, viewerId)) ? this.withResolvedStatus(cached as IEvent) : null;
+    }
+
+    const event = (await Event.findByPk(id, {
+      raw: true,
+      attributes: [
+        'id',
+        'name',
+        'isDraft',
+        'cancelledAt',
+        'type',
+        'visibility',
+        'createdBy',
+        'startTime',
+        'endTime',
+        'media',
+        'tags',
+      ],
+    })) as unknown as IEvent | null;
+    if (!event) {
+      return null;
+    }
+
+    const [hydratedEvent] = await this.hydrateEventLocations([event]);
+    const preview = await this.populateEvent(hydratedEvent, ['media', 'tags']);
+    await this.entityStatsService.hydrateEvent(preview);
+
+    const result = this.withResolvedStatus(preview);
+    await setEventPreviewCache(id, result as IEvent);
+    return (await this.canView(result as IEvent, viewerId)) ? result : null;
+  }
+
+  /// The "participants" / "verifiers" JSONB columns still exist for rollback but
+  /// are no longer read. Strip them from any write payload so a stale client
+  /// can't set values nothing will ever look at.
+  private stripLegacyParticipantFields<T extends Record<string, any>>(data: T): T {
+    const clean = { ...data };
+    delete clean.participants;
+    delete clean.verifiers;
+    return clean;
   }
 
   async createEvent(body: Partial<IEvent>) {
-    if (!body.status) body.status = EEventStatus.Draft;
+    if (!body.startTime || !body.endTime) {
+      throw new BadRequestError('Event startTime and endTime are required');
+    }
     const result = await validateEventCreate(body, async (data) => {
-      const row = await Event.create(data as Partial<IEvent>);
-      return row.toJSON() as IEvent;
+      const { location, status, ...rest } = this.stripLegacyParticipantFields(data);
+      const persistedState = resolvePersistedEventState(status);
+      const row = await Event.sequelize!.transaction(async (transaction) => {
+        const created = await Event.create({ ...rest, ...persistedState } as any, { transaction });
+        await this.addressService.replaceAddress(EAddressEntityType.Event, created.id, location, transaction);
+        return created;
+      });
+      return (await this.getById(row.id)) as IEvent;
     });
-    const eventData = result as IEvent;
+    const eventData = this.withResolvedStatus(result as IEvent) as IEvent;
     if (eventData) {
       await setEventCache(eventData.id, eventData);
+      await this.entityStatsService.hydrateEvent(eventData);
     }
     return eventData;
   }
@@ -156,110 +470,314 @@ class EventService {
     data: U;
     populate?: boolean | string[];
   }) {
-    if (existing && existing.status === EEventStatus.Cancelled) {
-      throw new BadRequestError("Cannot update a cancelled event");
+    if (existing && existing.cancelledAt) {
+      throw new BadRequestError('Cannot update a cancelled event');
     }
+
     const result = await validateEventUpdate(data, async (d) => {
-      const row = await Event.findByPk(existing.id);
-      if (!row) throw new Error("Event not found");
-      await row.update(d as Partial<IEvent>);
-      return row.toJSON() as IEvent;
+      const { location, status, ...rest } = this.stripLegacyParticipantFields(d);
+      const persistedState = resolvePersistedEventState(status, existing);
+      await Event.sequelize!.transaction(async (transaction) => {
+        const row = await Event.findByPk(existing.id, { transaction });
+        if (!row) throw new NotFoundError('Event not found');
+        await row.update(
+          {
+            ...(rest as Partial<IEvent>),
+            ...persistedState,
+          } as Partial<IEvent>,
+          { transaction },
+        );
+        if (location !== undefined) {
+          await this.addressService.replaceAddress(EAddressEntityType.Event, existing.id, location, transaction);
+        }
+      });
+      await this.deleteCache(existing.id);
+      return (await this.getById(existing.id)) as IEvent;
     });
-    await this.deleteCache(existing.id);
-    let eventData = result as IEvent;
+    let eventData = this.withResolvedStatus(result as IEvent) as IEvent;
+    const shouldSyncDerivedStats = !!eventData && ('media' in data || 'tags' in data);
+
+    if (shouldSyncDerivedStats) {
+      await this.entityStatsService.syncEventRowStats(eventData);
+    }
+
     if (populate && eventData) {
       eventData = await this.populateEvent(eventData, populate);
+    }
+    if (eventData) {
+      await this.entityStatsService.hydrateEvent(eventData);
     }
     return eventData;
   }
 
+  private static readonly CLUSTER_ZOOM_THRESHOLD = 12;
+  private static readonly MARKERS_PER_TILE_LIMIT = 500;
+  private static readonly MAX_CLUSTERS = 200;
+  private static readonly FLAT_MARKER_LIMIT = 3000;
+
+  private static gridSizeFromZoom(zoom: number): number {
+    if (zoom <= 4) return 5.0;
+    if (zoom <= 6) return 2.0;
+    if (zoom <= 8) return 0.5;
+    if (zoom <= 10) return 0.1;
+    if (zoom <= 11) return 0.075;
+    return 0.05;
+  }
+
+  async getMarkers(filters: IEventListFilters = {}, options: { zoom?: number; tiles?: string[]; flat?: boolean } = {}) {
+    const { zoom = 0, tiles, flat = false } = options;
+    const mode = flat ? 'flat' : zoom < EventService.CLUSTER_ZOOM_THRESHOLD ? 'clusters' : 'tiles';
+    // Markers are public-only, for everyone. The marker cache is keyed by
+    // viewport + filters and shared across users, so a viewer-dependent result
+    // set here would serve one user's private pins to the next one. Private
+    // events stay reachable by direct link and through "my events".
+    const publicOnly: IEventListFilters = { ...filters, viewerId: undefined };
+    const effectiveFilters = flat ? normalizeFlatMarkerViewport(publicOnly) : publicOnly;
+
+    const cached = await getMarkerCache(mode, effectiveFilters, { zoom, tiles });
+    if (cached) return cached;
+
+    let result: Awaited<
+      ReturnType<typeof this.getFlatMarkers | typeof this.getClusterMarkers | typeof this.getTileMarkers>
+    >;
+
+    if (flat) {
+      result = await this.getFlatMarkers(effectiveFilters);
+    } else if (zoom < EventService.CLUSTER_ZOOM_THRESHOLD) {
+      result = await this.getClusterMarkers(effectiveFilters, zoom);
+    } else {
+      result = await this.getTileMarkers(effectiveFilters, tiles);
+    }
+
+    await setMarkerCache(mode, effectiveFilters, { zoom, tiles }, result);
+    return result;
+  }
+
+  private async getClusterMarkers(filters: IEventListFilters, zoom: number) {
+    const gridSize = EventService.gridSizeFromZoom(zoom);
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+
+    // Step 1: event-level filters (status, type, tags, dates) as a subquery
+    const idFilter = this.buildMarkerEventIdFilter(filters);
+
+    // Step 2: optional geo filter
+    let geoFilter = '';
+    if (
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0
+    ) {
+      geoFilter = `AND ST_DWithin(
+      ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326)::geography,
+      ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography,
+      ${escape(filters.radiusKm! * 1000)}
+    )`;
+    }
+
+    // Step 3: cluster entirely in the database
+    const sql = `
+    SELECT
+      COUNT(*)::int AS count,
+      AVG(a.latitude)  AS latitude,
+      AVG(a.longitude) AS longitude
+    FROM "Addresses" a
+    WHERE a."entityType" = 'event'
+      AND a.latitude  IS NOT NULL
+      AND a.longitude IS NOT NULL
+      ${idFilter}
+      ${geoFilter}
+    GROUP BY
+      ROUND(a.latitude  / ${escape(gridSize)}::numeric)::int,
+      ROUND(a.longitude / ${escape(gridSize)}::numeric)::int
+    ORDER BY count DESC
+  `;
+
+    const clusters = await Event.sequelize!.query<{ count: number; latitude: string; longitude: string }>(sql, {
+      type: QueryTypes.SELECT,
+    });
+
+    return {
+      mode: 'clusters' as const,
+      items: clusters.map((c) => ({
+        count: c.count,
+        latitude: parseFloat(c.latitude),
+        longitude: parseFloat(c.longitude),
+      })),
+    };
+  }
+
+  private async getTileMarkers(filters: IEventListFilters, tiles?: string[]) {
+    if (!tiles?.length) {
+      return { mode: 'tiles' as const, items: {} };
+    }
+
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+
+    // Step 1: event-level filters as a subquery
+    const idFilter = this.buildMarkerEventIdFilter(filters);
+
+    // Step 2: decode geohash tiles to bboxes
+    const tileBboxes = tiles.map((tile) => {
+      const [minLat, minLng, maxLat, maxLng] = ngeohash.decode_bbox(tile);
+      return { tile, minLat, minLng, maxLat, maxLng };
+    });
+
+    // Step 3: build SQL VALUES clause for tile bounds
+    const tileValues = tileBboxes
+      .map(
+        ({ tile, minLat, minLng, maxLat, maxLng }) =>
+          `(${escape(tile)}, ${escape(minLat)}, ${escape(minLng)}, ${escape(maxLat)}, ${escape(maxLng)})`,
+      )
+      .join(', ');
+
+    const sql = `
+    WITH tile_bounds(tile, min_lat, min_lng, max_lat, max_lng) AS (
+      VALUES ${tileValues}
+    ),
+    ranked AS (
+      SELECT
+        t.tile,
+        a."entityId" AS id,
+        a.latitude,
+        a.longitude,
+        ROW_NUMBER() OVER (PARTITION BY t.tile ORDER BY a."entityId") AS rn
+      FROM "Addresses" a
+      JOIN tile_bounds t ON (
+        a.latitude  BETWEEN t.min_lat AND t.max_lat AND
+        a.longitude BETWEEN t.min_lng AND t.max_lng
+      )
+      WHERE a."entityType" = 'event'
+        AND a.latitude  IS NOT NULL
+        AND a.longitude IS NOT NULL
+        ${idFilter}
+    )
+    SELECT tile, id, latitude, longitude
+    FROM ranked
+    WHERE rn <= ${EventService.MARKERS_PER_TILE_LIMIT}
+  `;
+
+    const rows = await Event.sequelize!.query<{
+      tile: string;
+      id: string;
+      latitude: number;
+      longitude: number;
+    }>(sql, { type: QueryTypes.SELECT });
+
+    const tileResults: Record<string, { id: string; latitude: number; longitude: number }[]> = {};
+    for (const tile of tiles) tileResults[tile] = [];
+    for (const row of rows) {
+      tileResults[row.tile]?.push({ id: row.id, latitude: row.latitude, longitude: row.longitude });
+    }
+
+    return { mode: 'tiles' as const, items: tileResults };
+  }
+
+  private async getFlatMarkers(filters: IEventListFilters) {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const limit = EventService.FLAT_MARKER_LIMIT;
+    const idFilter = this.buildMarkerEventIdFilter(filters);
+
+    const hasGeo =
+      Number.isFinite(filters.latitude) &&
+      Number.isFinite(filters.longitude) &&
+      Number.isFinite(filters.radiusKm) &&
+      (filters.radiusKm ?? 0) > 0;
+
+    let geoFilter = '';
+    // A deterministic ORDER BY is mandatory: with a bare LIMIT, Postgres may
+    // return any slice, so identical requests produced different marker sets
+    // and pins flickered in and out between refetches.
+    let orderBy = 'ORDER BY a."entityId"';
+
+    if (hasGeo) {
+      const origin = `ST_SetSRID(ST_MakePoint(${escape(filters.longitude!)}, ${escape(filters.latitude!)}), 4326)::geography`;
+      const rowPoint = 'ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326)::geography';
+      geoFilter = `AND ST_DWithin(${rowPoint}, ${origin}, ${escape(filters.radiusKm! * 1000)})`;
+      // Nearest first, so hitting the cap drops the least relevant pins.
+      orderBy = `ORDER BY ST_Distance(${rowPoint}, ${origin}), a."entityId"`;
+    }
+
+    const sql = `
+    SELECT a."entityId" AS id, e."name" AS name, a.latitude, a.longitude
+    FROM "Addresses" a
+    JOIN "Events" e ON e."id" = a."entityId"
+    WHERE a."entityType" = ${escape(EAddressEntityType.Event)}
+      AND a.latitude  IS NOT NULL
+      AND a.longitude IS NOT NULL
+      ${idFilter}
+      ${geoFilter}
+    ${orderBy}
+    LIMIT ${limit + 1}
+  `;
+
+    const rows = await Event.sequelize!.query<{
+      id: string;
+      name: string | null;
+      latitude: number;
+      longitude: number;
+    }>(sql, { type: QueryTypes.SELECT });
+
+    const truncated = rows.length > limit;
+
+    return {
+      mode: 'flat' as const,
+      items: (truncated ? rows.slice(0, limit) : rows).map((row) => ({
+        id: row.id,
+        name: row.name ?? '',
+        latitude: row.latitude,
+        longitude: row.longitude,
+      })),
+      // Echo what was actually queried: the caller clamps and grid-snaps, so
+      // the client must cache this region, not the one it asked for.
+      latitude: filters.latitude,
+      longitude: filters.longitude,
+      radiusKm: filters.radiusKm,
+      truncated,
+    };
+  }
+
   async getAll(
-    where: Record<string, any> = {},
-    pagination?: Partial<IPaginationParams>
-  ) {
-    if (Array.isArray(where.status)) {
-      where.status = { [Op.in]: where.status };
-    }
+    filters: IEventListFilters = {},
+    pagination?: Partial<IPaginationParams>,
+  ): Promise<PaginatedResult<IEventSummary>> {
+    const where = this.buildWhere(filters);
+    const data = (await findAllWithPagination(
+      Event,
+      { where },
+      pagination,
+      'id,name,isDraft,cancelledAt,type,createdBy,startTime,endTime,createdAt,updatedAt,media',
+    )) as unknown as PaginatedResult<IEvent>;
 
-    const data = await findAllWithPagination(Event, { where }, pagination);
-    if (data.items) {
-      await Promise.all(
-        data.items.map(async (event) => {
-          const mediaPromise = this.mediaService.getEventMedia(event, 3);
-          const tagsPromise = this.tagService.getAllEventTags(event);
-          const participantsPromise =
-            this.userService.getAndPopulateUserProfiles({
-              data: event.participants,
-              searchKey: "user",
-            });
-          const verifiersPromise = this.userService.getAndPopulateUserProfiles({
-            data: event.verifiers,
-            searchKey: "user",
-          });
-          const reactionsPromise = this.reactionService.getReactions(
-            `events/${event.id}`
-          );
-          const [media, tags, participants, verifiers, reactions] =
-            await Promise.all([
-              mediaPromise,
-              tagsPromise,
-              participantsPromise,
-              verifiersPromise,
-              reactionsPromise,
-            ]);
-          event.media = media || [];
-          event.tags = tags;
-          event.participants = participants || [];
-          event.verifiers = verifiers || [];
-          event.reactions = reactions;
-        })
-      );
+    const hydratedItems = await this.hydrateEventLocations(data.items ?? []);
 
-      data.items = await this.userService.getAndPopulateUserProfiles({
-        data: data.items,
-        searchKey: "createdBy",
-        populateKey: "creator",
-      });
-    }
-    return data;
+    return {
+      ...data,
+      items: hydratedItems.map((event) => this.toEventSummary(event as IEvent)),
+    };
   }
 
   async cancel(id: string): Promise<IEvent | null> {
     const row = await Event.findByPk(id);
     if (!row) return null;
-    await row.update({ status: EEventStatus.Cancelled } as Partial<IEvent>);
+    await row.update({ isDraft: false, cancelledAt: new Date() } as Partial<IEvent>);
     await this.deleteCache(id);
-    return row.toJSON() as IEvent;
+    return this.getById(id);
   }
 
   async delete(id: string): Promise<IEvent | null> {
+    const existing = await this.getById(id);
+    if (!existing) return null;
+
     const row = await Event.findByPk(id);
     if (!row) return null;
-    await row.destroy();
+
+    await Event.sequelize!.transaction(async (transaction) => {
+      await this.addressService.replaceAddress(EAddressEntityType.Event, id, null, transaction);
+      await row.destroy({ transaction });
+    });
     await this.deleteCache(id);
-    return row.toJSON() as IEvent;
-  }
-
-  async getEventUsers(
-    eventId: string,
-    type: "participants" | "verifiers",
-    userIds: string[]
-  ) {
-    const key = `${eventId}:${type}`;
-    const cached = await getEventUsersCache(key);
-    if (cached) return { users: cached, type, eventId };
-
-    const { items } = await this.userService.getAll(
-      { where: { id: userIds } },
-      { limit: 1000 },
-      "id,name,email,deletedAt"
-    );
-    const userMap = items?.reduce((acc, user) => {
-      acc[user.id] = user;
-      return acc;
-    }, {} as Record<string, IBaseUser>);
-    await setEventUsersCache(key, userMap);
-    return { users: userMap, type, eventId };
+    return existing;
   }
 
   async verifyEvent(
@@ -268,96 +786,104 @@ class EventService {
     currentCoordinates: {
       latitude: number;
       longitude: number;
-    }
+    },
   ) {
     const data = await this.getById(eventId);
+    if (!data || !(await this.canView(data, userId))) throw new NotFoundError('Event not found');
     const { latitude, longitude } = currentCoordinates;
-    const { latitude: eventLatitude, longitude: eventLongitude } =
-      data.location;
-    const distance = getDistanceInMeters(
-      latitude,
-      longitude,
-      eventLatitude,
-      eventLongitude
-    );
+    const { latitude: eventLatitude, longitude: eventLongitude } = data.location;
+    const distance = getDistanceInMeters(latitude, longitude, eventLatitude!, eventLongitude!);
     if (distance > 50) {
-      throw new BadRequestError(
-        `You are too far from the event. Current distance ${distance.toFixed(
-          2
-        )} meters`
-      );
-    }
-    const updateData = {
-      verifiers: [...data.verifiers],
-    };
-    const verifierIndex = updateData.verifiers.findIndex(
-      (verifier) => verifier.user === userId
-    );
-    if (verifierIndex === -1) {
-      updateData.verifiers.push({
-        user: userId,
-        verifiedAt: new Date().toISOString(),
-      });
-    } else {
-      throw new BadRequestError("You are already a verifier");
+      throw new BadRequestError(`You are too far from the event. Current distance ${distance.toFixed(2)} meters`);
     }
 
-    await this.update({ existing: data, data: updateData });
+    // Verifying implies participating, so a verifier with no participation row
+    // gets one. The unique (eventId, userId) index makes this safe under
+    // concurrent requests. Deliberately not capacity-checked: they are standing
+    // at the venue, and refusing to record that helps nobody.
+    await EventParticipant.findOrCreate({
+      where: { eventId, userId },
+      defaults: { eventId, userId, status: EEventParticipantStatus.Confirmed },
+    });
+
+    // Conditional update, not read-modify-write: `verifiedAt: null` in the WHERE
+    // clause means only one of two concurrent verifications can win, and a
+    // zero-row result *is* the "already verified" signal.
+    const [claimed] = await EventParticipant.update(
+      { verifiedAt: new Date(), verifiedLat: latitude, verifiedLng: longitude },
+      { where: { eventId, userId, verifiedAt: null } },
+    );
+    if (claimed === 0) throw new BadRequestError('You are already a verifier');
+
     await this.deleteCache(eventId);
+    await this.entityStatsService.syncEventRowStats(data, true);
     return true;
   }
 
-  async joinLeaveEvent(
-    userId: string,
-    eventId: string,
-    action: "join" | "leave"
-  ) {
-    const [event, user] = await Promise.all([
-      this.getById(eventId),
-      this.userService.getById(userId),
-    ]);
+  async joinLeaveEvent(userId: string, eventId: string, action: 'join' | 'leave') {
+    if (action !== 'join' && action !== 'leave') throw new BadRequestError('Invalid action');
 
-    if (!event || !user) throw new NotFoundError("Event or user not found");
+    const [event, user] = await Promise.all([this.getById(eventId), this.userService.getById(userId)]);
 
-    const eventData = event;
-    const userData = user;
+    if (!event || !user) throw new NotFoundError('Event or user not found');
+    if (!(await this.canView(event, userId))) throw new NotFoundError('Event or user not found');
 
-    if (eventData.status !== EEventStatus.Ongoing) {
-      throw new BadRequestError(`Event is ${eventData.status}`);
+    const resolvedEventStatus = deriveEventStatus(event);
+    if (resolvedEventStatus !== EEventStatus.Ongoing) {
+      throw new BadRequestError(`Event is ${resolvedEventStatus}`);
     }
 
-    const updateData = {
-      participants: [...eventData.participants],
-    };
+    if (action === 'join') {
+      await Event.sequelize!.transaction(async (transaction) => {
+        // Lock the event row first. Counting seats and then inserting is a
+        // phantom read at READ COMMITTED, so without this two simultaneous
+        // joins can both see the last seat and both take it. Joins for one
+        // event are rare enough that serialising them costs nothing.
+        const [locked] = (await Event.sequelize!.query(
+          'SELECT "capacity" FROM "Events" WHERE "id" = :eventId FOR UPDATE',
+          { replacements: { eventId }, type: QueryTypes.SELECT, transaction },
+        )) as { capacity: number | null }[];
 
-    if (action === "join") {
-      updateData.participants.push({
-        user: userData.id,
-        status: EEventParticipantStatus.Confirmed,
+        const existing = await EventParticipant.findOne({ where: { eventId, userId }, transaction });
+        if (existing && existing.status !== EEventParticipantStatus.Declined) {
+          throw new BadRequestError('User is already a participant');
+        }
+
+        const taken = await EventParticipant.count({
+          where: { eventId, status: { [Op.ne]: EEventParticipantStatus.Declined } },
+          transaction,
+        });
+        if (!hasSeatAvailable(locked?.capacity, taken)) {
+          throw new BadRequestError('Event is at capacity');
+        }
+
+        if (existing) {
+          await existing.update({ status: EEventParticipantStatus.Confirmed }, { transaction });
+        } else {
+          await EventParticipant.create(
+            { eventId, userId, status: EEventParticipantStatus.Confirmed },
+            { transaction },
+          );
+        }
       });
-    } else if (action === "leave") {
-      const participantIndex = updateData.participants.findIndex(
-        (participant) => participant.user === userData.id
-      );
-
-      if (participantIndex === -1) {
-        throw new BadRequestError("User is not a participant");
-      }
-
-      updateData.participants[participantIndex].status =
-        EEventParticipantStatus.Declined;
     } else {
-      throw new BadRequestError("Invalid action");
+      const [left] = await EventParticipant.update(
+        { status: EEventParticipantStatus.Declined },
+        { where: { eventId, userId } },
+      );
+      if (left === 0) throw new BadRequestError('User is not a participant');
     }
-    await this.update({ existing: event, data: updateData });
-    return `Successfully ${action === "join" ? "joined" : "left"} the event`;
+
+    await this.deleteCache(eventId);
+    await this.entityStatsService.syncEventRowStats(event, true);
+    return `Successfully ${action === 'join' ? 'joined' : 'left'} the event`;
   }
 
   async disassociateMediaFromEvent(eventId: string, mediaId: string) {
     const event = await this.getById(eventId);
-    if (!event) throw new NotFoundError("Event not found");
+    if (!event) throw new NotFoundError('Event not found');
     const media = new Set(event.media as string[]);
-    if (!media.has(mediaId)) throw new NotFoundError("Media not found");
+    if (!media.has(mediaId)) throw new NotFoundError('Media not found');
     media.delete(mediaId);
     await this.update({
       existing: event,
@@ -367,20 +893,19 @@ class EventService {
     return true;
   }
 
-  async getThreads(eventId: string, pagination: IPaginationParams) {
-    const { items, pagination: threadPagination } =
-      await this.threadService.getAll({ eventId }, pagination);
+  async getThreads(eventId: string, pagination: IPaginationParams, viewerId?: string) {
+    const event = await this.getById(eventId);
+    if (!event || !(await this.canView(event, viewerId))) throw new NotFoundError('Event not found');
+
+    const { items, pagination: threadPagination } = await this.threadService.getAll({ eventId }, pagination);
     const threads = items;
     if (!isEmpty(threads)) {
-      await Promise.all(
-        threads.map(async (t) => {
-          const messages = await this.messageService.getAll(
-            { threadId: t.id },
-            { limit: 1 }
-          );
-          t.messages = messages.items || [];
-        })
-      );
+      await this.entityStatsService.hydrateThreads(threads as IBaseThread[]);
+      const threadIds = (threads as IBaseThread[]).map((t) => t.id);
+      const messagesByThread = await this.messageService.getMessagesByThreadIds(threadIds, { limit: 1 });
+      (threads as IBaseThread[]).forEach((t) => {
+        t.messages = messagesByThread[t.id] ?? [];
+      });
     }
     return { items: threads, pagination: threadPagination };
   }

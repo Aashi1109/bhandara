@@ -1,26 +1,26 @@
-import { RedisCache } from "@/features/cache";
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
+import { RedisCache } from '@/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import { cacheKeys } from '@/features/cache/keys';
 
 const exploreCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Explore.namespace,
   defaultTTLSeconds: CACHE_NAMESPACE_CONFIG.Explore.ttl,
 });
 
-export const getExplorePage = (userId: string) =>
-  exploreCache.getItem<number>(userId);
+export const getExploreCursor = (userId: string) =>
+  exploreCache.getItem<string | null>(cacheKeys.exploreCursor(userId));
 
-export const setExplorePage = (userId: string, page: number) =>
-  exploreCache.setItem(userId, page);
+export const setExploreCursor = (userId: string, next: string | null) =>
+  exploreCache.setItem(cacheKeys.exploreCursor(userId), next);
 
-export const deleteExplorePage = (userId: string) =>
-  exploreCache.deleteItem(userId);
+export const deleteExploreCursor = (userId: string) => exploreCache.deleteItem(cacheKeys.exploreCursor(userId));
 
 export enum EExploreComponents {
-  TasteCalendar = "taste-calendar",
-  FoodieFeed = "foodie-feed",
-  Reels = "reels",
-  Collaborations = "collaborations",
-  Trending = "trending",
+  TasteCalendar = 'taste-calendar',
+  FoodieFeed = 'foodie-feed',
+  Reels = 'reels',
+  Collaborations = 'collaborations',
+  Trending = 'trending',
 }
 
 interface BasePayload {
@@ -47,35 +47,31 @@ export interface ExploreSection {
   payload: any;
 }
 
-export const componentMeta: Record<
-  EExploreComponents,
-  { title: string; subtitle: string }
-> = {
+export const componentMeta: Record<EExploreComponents, { title: string; subtitle: string }> = {
   [EExploreComponents.TasteCalendar]: {
-    title: "Taste Calendar",
-    subtitle: "Discover food events by time of day",
+    title: 'Taste Calendar',
+    subtitle: 'Discover food events by time of day',
   },
   [EExploreComponents.FoodieFeed]: {
-    title: "Foodie Feed",
-    subtitle: "Live events happening now",
+    title: 'Foodie Feed',
+    subtitle: 'Live events happening now',
   },
   [EExploreComponents.Reels]: {
-    title: "Food Reels",
-    subtitle: "Watch latest event highlights",
+    title: 'Food Reels',
+    subtitle: 'Watch latest event highlights',
   },
   [EExploreComponents.Collaborations]: {
-    title: "Collaborations",
-    subtitle: "Special events with chefs & influencers",
+    title: 'Collaborations',
+    subtitle: 'Special events with chefs & influencers',
   },
   [EExploreComponents.Trending]: {
-    title: "Trending",
-    subtitle: "Popular events in your area",
+    title: 'Trending',
+    subtitle: 'Popular events in your area',
   },
 };
 
 const toBasePayload = (ev: any): BasePayload => {
-  const firstMedia =
-    Array.isArray(ev.media) && ev.media.length ? ev.media[0] : null;
+  const firstMedia = Array.isArray(ev.media) && ev.media.length ? ev.media[0] : null;
   return {
     id: ev.id,
     title: ev.name,
@@ -85,10 +81,10 @@ const toBasePayload = (ev: any): BasePayload => {
           url: firstMedia.url,
           thumbnailUrl: firstMedia.thumbnail || firstMedia.url,
         }
-      : { type: "", url: "", thumbnailUrl: "" },
+      : { type: '', url: '', thumbnailUrl: '' },
     location: ev.location,
-    startTime: ev.timings?.start,
-    endTime: ev.timings?.end,
+    startTime: ev.startTime,
+    endTime: ev.endTime,
     tags: ev.tags || [],
     creator: ev.creator,
     createdAt: ev.createdAt,
@@ -99,9 +95,9 @@ const toBasePayload = (ev: any): BasePayload => {
 const getTimeOfDay = (date?: Date | string) => {
   const d = date ? new Date(date) : new Date();
   const h = d.getHours();
-  if (h >= 5 && h < 12) return "morning";
-  if (h >= 12 && h < 18) return "evening";
-  return "night";
+  if (h >= 5 && h < 12) return 'morning';
+  if (h >= 12 && h < 18) return 'evening';
+  return 'night';
 };
 
 export const buildExploreSections = (events: any[]): ExploreSection[] => {
@@ -109,18 +105,13 @@ export const buildExploreSections = (events: any[]): ExploreSection[] => {
 
   const tasteCalendarPayload = events.map((ev) => ({
     ...toBasePayload(ev),
-    filter: [getTimeOfDay(ev.timings?.start)],
+    filter: [getTimeOfDay(ev.startTime)],
   }));
 
-  const foodieFeedPayload = baseEvents.filter(
-    (ev) => ev.status === "ongoing" || ev.status === "upcoming"
-  );
+  const foodieFeedPayload = baseEvents.filter((ev) => ev.status === 'ongoing' || ev.status === 'upcoming');
 
   const reelsPayload = events
-    .filter(
-      (ev) =>
-        Array.isArray(ev.media) && ev.media.some((m) => m.type === "video")
-    )
+    .filter((ev) => Array.isArray(ev.media) && ev.media.some((m: any) => m.type === 'video'))
     .map((ev) => ({
       ...toBasePayload(ev),
       likes: (ev.reactions || []).length || 0,
@@ -132,8 +123,8 @@ export const buildExploreSections = (events: any[]): ExploreSection[] => {
     .filter((ev) => Array.isArray(ev.verifiers) && ev.verifiers.length)
     .map((ev) => ({
       ...toBasePayload(ev),
-      chef: ev.creator?.name || "",
-      time: ev.timings?.start,
+      chef: ev.creator?.name || '',
+      time: ev.startTime,
       going: Array.isArray(ev.participants) ? ev.participants.length : 0,
       verifiers: ev.verifiers,
     }));
@@ -142,7 +133,7 @@ export const buildExploreSections = (events: any[]): ExploreSection[] => {
     .sort(
       (a, b) =>
         (Array.isArray(b.participants) ? b.participants.length : 0) -
-        (Array.isArray(a.participants) ? a.participants.length : 0)
+        (Array.isArray(a.participants) ? a.participants.length : 0),
     )
     .map((ev) => ({
       ...toBasePayload(ev),

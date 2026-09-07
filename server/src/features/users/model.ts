@@ -1,33 +1,37 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { USER_TABLE_NAME } from "./constants";
-import type { IBaseUser } from "@/definitions/types";
+import { getDBConnection } from '@/common/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/common/helpers';
+import { USER_TABLE_NAME } from './constants';
+import type { IBaseUser } from '@/common/definitions/types';
+import { decryptRecordFields, encryptedTextAttribute } from '@/common/utils';
 
-const sequelize = getDBConnection();
-type UserAttributes = Omit<
-  IBaseUser,
-  "createdAt" | "updatedAt" | "deletedAt" | "media" | "profilePic"
-> & {
+const sequelize = getDBConnection()!;
+type UserAttributes = Omit<IBaseUser, 'createdAt' | 'updatedAt' | 'address' | 'media' | 'profilePic'> & {
+  emailLookupHash: string | null;
   profilePic: Record<string, any> | null;
-  media?: any;
 };
+
+export const USER_ENCRYPTED_FIELDS = ['email', '__sid'] as const;
+export const decryptUserRow = <T extends Record<string, any>>(row: T) =>
+  decryptRecordFields(row, USER_ENCRYPTED_FIELDS);
+export const decryptUserRows = <T extends Record<string, any>>(rows: T[]) => rows.map((row) => decryptUserRow(row));
 
 export class User extends Model<UserAttributes, UserAttributes> {
   declare id: string;
   declare name: string;
   declare email: string;
+  declare __sid: string | null;
+  declare emailLookupHash: string | null;
   declare gender: string;
-  declare address: Record<string, any> | null;
   declare isVerified: boolean;
   declare profilePic: Record<string, any> | null;
   declare mediaId: string | null;
+  declare bio: string | null;
   declare username?: string;
   declare password: string | null;
   declare meta: Record<string, any>;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare media?: any;
 }
 
@@ -39,9 +43,18 @@ User.init(
       defaultValue: () => getUUIDv7(),
     },
     name: { type: DataTypes.TEXT, allowNull: false },
-    email: { type: DataTypes.TEXT, allowNull: false, unique: true },
+    email: encryptedTextAttribute('email', {
+      allowNull: false,
+      lookupHashField: 'emailLookupHash',
+    }),
+    emailLookupHash: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    __sid: encryptedTextAttribute('__sid', {
+      allowNull: true,
+    }),
     gender: { type: DataTypes.TEXT, allowNull: false },
-    address: { type: DataTypes.JSONB },
     isVerified: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -50,32 +63,27 @@ User.init(
     profilePic: { type: DataTypes.JSONB },
     mediaId: {
       type: DataTypes.UUID,
-      references: { model: "Media", key: "id" },
     },
+    bio: { type: DataTypes.TEXT, allowNull: true },
     username: { type: DataTypes.TEXT },
     password: { type: DataTypes.TEXT },
     meta: { type: DataTypes.JSONB, defaultValue: {} },
   },
   {
-    modelName: "User",
+    modelName: 'User',
     tableName: USER_TABLE_NAME,
     sequelize,
     timestamps: true,
-    paranoid: true,
     indexes: [
       {
-        name: "users_address_gix",
-        using: "GIST",
-        fields: [
-          sequelize.literal(
-            `ST_SetSRID(ST_MakePoint(CAST("address"->'coordinates'->>'longitude' AS DOUBLE PRECISION), CAST("address"->'coordinates'->>'latitude' AS DOUBLE PRECISION)), 4326)`
-          ),
-        ],
+        name: 'users_emailLookupHash_key',
+        unique: true,
+        fields: ['emailLookupHash'],
+      },
+      {
+        name: 'users_updatedAt_idx',
+        fields: ['updatedAt'],
       },
     ],
-  }
+  },
 );
-
-(async () => {
-  await User.sync({ alter: false });
-})();

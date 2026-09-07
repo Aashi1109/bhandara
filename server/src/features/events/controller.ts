@@ -1,139 +1,380 @@
-import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
-import type { Response } from "express";
-import EventService from "./service";
-import { BadRequestError, NotFoundError } from "@/exceptions";
-import { isEmpty } from "@/utils";
-import TagService from "@/features/tags/service";
-import { emitSocketEvent } from "@/socket/emitter";
-import { PLATFORM_SOCKET_EVENTS } from "@/constants";
-import { EEventStatus } from "@/definitions/enums";
+import type { ICustomRequest, IEvent, IRequestPagination } from '@/common/definitions/types';
+import type { Response } from 'express';
+import EventService, { toEventSummary, type IEventListFilters } from './service';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/exceptions';
+import { hasMeaningfulChange, isEmpty } from '@/common/utils';
+import TagService from '@/features/tags/service';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS, REDIS_CONNECTION_NAMES } from '@/common/constants';
+import { getUserRoom } from '@/socket/rooms';
+import { EAccessLevel, EEventStatus, EEventType } from '@/common/definitions/enums';
+import { v4 as uuidv4 } from 'uuid';
+import { getRedisConnection } from '@/common/connections/redis';
+import { RESERVED_TID_KEY_PREFIX, RESERVED_TID_SET_KEY, RESERVED_TID_TTL_SECONDS } from '@/common/queues/cleanup';
+import ActivityService from '@/features/activity/service';
+import { EActivityEntityType, EActivityType, EActivityVisibility } from '@/features/activity/constants';
+import AchievementService from '@/features/achievements/service';
+import EntityEngagementService from '@/features/engagement/service';
+import MediaService from '@/features/media/service';
 
 const eventService = new EventService();
+const mediaService = new MediaService();
 const tagService = new TagService();
+const activityService = new ActivityService();
+const achievementService = new AchievementService();
+const entityEngagementService = new EntityEngagementService();
+const reservationRedis = getRedisConnection(REDIS_CONNECTION_NAMES.Cache);
 
-export const getEvents = async (
-  req: ICustomRequest & IRequestPagination,
-  res: Response
-) => {
-  const { createdBy, status } = req.query;
-  const where: Record<string, any> = {};
-  if (createdBy) where.createdBy = createdBy;
-  if (status) {
-    const statuses = (status as string)
-      .split(",")
-      .filter((s) => Object.values(EEventStatus).includes(s as EEventStatus));
-    if (statuses.length) where.status = statuses;
+export const reserveEventId = async (_req: ICustomRequest, res: Response) => {
+  const tid = uuidv4();
+  const expiresAt = Date.now() + RESERVED_TID_TTL_SECONDS * 1000;
+  await Promise.all([
+    reservationRedis.set(`${RESERVED_TID_KEY_PREFIX}${tid}`, '1', 'EX', RESERVED_TID_TTL_SECONDS),
+    reservationRedis.zadd(RESERVED_TID_SET_KEY, expiresAt, tid),
+  ]);
+  return res.status(200).json({ data: { tid } });
+};
+
+export const releaseEventReservation = async (req: ICustomRequest, res: Response) => {
+  const tid = req.params.tid as string;
+  await Promise.all([
+    reservationRedis.del(`${RESERVED_TID_KEY_PREFIX}${tid}`),
+    reservationRedis.zrem(RESERVED_TID_SET_KEY, tid),
+  ]);
+  return res.status(200).json({ data: null });
+};
+
+const getViewerIp = (req: ICustomRequest) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.length > 0) {
+    return forwardedFor.split(',')[0].trim();
   }
-  const events = await eventService.getAll(where, req.pagination);
-  return res.status(200).json({ data: events, error: null });
+
+  return req.socket.remoteAddress || null;
+};
+
+/// Event socket events are an unscoped broadcast to every connected client, so
+/// only public events may be announced. Private events reach their participants
+/// through the REST endpoints, which are viewer-scoped.
+function broadcastEventChange(
+  socketEvent: string,
+  event: Pick<IEvent, 'visibility'>,
+  payload: Record<string, unknown>,
+) {
+  if (event.visibility !== EAccessLevel.Public) return;
+  emitSocketEvent(socketEvent, payload);
+}
+
+function parseEventListFilters(req: ICustomRequest): IEventListFilters {
+  const { createdBy, status, type, latitude, longitude, radiusKm, tagIds, datePreset } = req.query;
+
+  let statuses: EEventStatus[] | undefined;
+  if (typeof status === 'string' && status.length > 0) {
+    statuses = status.split(',').map((item) => item.trim() as EEventStatus);
+    if (statuses.some((item) => !Object.values(EEventStatus).includes(item))) {
+      throw new BadRequestError('Invalid event status filter');
+    }
+  }
+
+  let types: EEventType[] | undefined;
+  if (typeof type === 'string' && type.length > 0) {
+    types = type.split(',').map((item) => item.trim() as EEventType);
+    if (types.some((item) => !Object.values(EEventType).includes(item))) {
+      throw new BadRequestError('Invalid event type filter');
+    }
+  }
+
+  const parsedLatitude = typeof latitude === 'string' && latitude.length > 0 ? Number(latitude) : undefined;
+  const parsedLongitude = typeof longitude === 'string' && longitude.length > 0 ? Number(longitude) : undefined;
+  const parsedRadiusKm = typeof radiusKm === 'string' && radiusKm.length > 0 ? Number(radiusKm) : undefined;
+
+  if (
+    (parsedLatitude !== undefined && !Number.isFinite(parsedLatitude)) ||
+    (parsedLongitude !== undefined && !Number.isFinite(parsedLongitude)) ||
+    (parsedRadiusKm !== undefined && (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0))
+  ) {
+    throw new BadRequestError('Invalid location filter');
+  }
+
+  let startDate: Date | undefined;
+  let endDate: Date | undefined;
+  const normalizedDatePreset = typeof datePreset === 'string' ? datePreset.trim().toLowerCase() : null;
+  if (normalizedDatePreset && normalizedDatePreset !== 'anytime') {
+    const now = new Date();
+    if (normalizedDatePreset === 'today') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, -1);
+    } else if (normalizedDatePreset === 'this_week') {
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+      startDate = startOfWeek;
+      endDate = new Date(startOfWeek);
+      endDate.setDate(endDate.getDate() + 7);
+      endDate.setMilliseconds(endDate.getMilliseconds() - 1);
+    } else if (normalizedDatePreset === 'this_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, -1);
+    } else {
+      throw new BadRequestError('Invalid date preset filter');
+    }
+  }
+
+  return {
+    // Session-derived, never client-supplied: this is the permission subject.
+    viewerId: req.user?.id,
+    createdBy: typeof createdBy === 'string' && createdBy.length > 0 ? createdBy : undefined,
+    statuses,
+    types,
+    latitude: Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) ? parsedLatitude : undefined,
+    longitude: Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) ? parsedLongitude : undefined,
+    radiusKm:
+      Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude) && Number.isFinite(parsedRadiusKm)
+        ? parsedRadiusKm
+        : undefined,
+    tagIds:
+      typeof tagIds === 'string' && tagIds.length > 0
+        ? tagIds
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : undefined,
+    startDate,
+    endDate,
+  };
+}
+
+export const getEvents = async (req: ICustomRequest & IRequestPagination, res: Response) => {
+  const filters = parseEventListFilters(req);
+  const events = await eventService.getAll(filters, req.pagination);
+  return res.status(200).json({ data: events });
+};
+
+export const getEventMarkers = async (req: ICustomRequest, res: Response) => {
+  const filters = parseEventListFilters(req);
+  const { zoom, tiles, flat } = req.query;
+
+  const parsedZoom = typeof zoom === 'string' && zoom.length > 0 ? Number(zoom) : undefined;
+  if (parsedZoom !== undefined && (!Number.isFinite(parsedZoom) || parsedZoom < 0 || parsedZoom > 22)) {
+    throw new BadRequestError('Invalid zoom level (must be 0–22)');
+  }
+
+  const flatMarkers =
+    (typeof flat === 'string' && (flat === 'true' || flat === '1')) ||
+    (Array.isArray(flat) && flat.some((value) => value === 'true' || value === '1'));
+
+  const parsedTiles =
+    typeof tiles === 'string' && tiles.length > 0
+      ? tiles
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : undefined;
+
+  if (parsedTiles && parsedTiles.length > 100) {
+    throw new BadRequestError('Too many tiles requested (max 100)');
+  }
+
+  if (
+    flatMarkers &&
+    (!Number.isFinite(filters.latitude) ||
+      !Number.isFinite(filters.longitude) ||
+      !Number.isFinite(filters.radiusKm) ||
+      (filters.radiusKm ?? 0) <= 0)
+  ) {
+    throw new BadRequestError('latitude, longitude and radiusKm are required for flat marker requests');
+  }
+
+  const result = await eventService.getMarkers(filters, {
+    zoom: parsedZoom,
+    tiles: parsedTiles,
+    flat: flatMarkers,
+  });
+  return res.status(200).json({ data: result });
 };
 
 export const getEventById = async (req: ICustomRequest, res: Response) => {
   const { eventId } = req.params;
+  const { view } = req.query;
 
-  const event = await eventService.getEventData(eventId);
+  const event =
+    view === 'preview'
+      ? await eventService.getEventPreview(eventId as string, req.user.id)
+      : await eventService.getEventData(eventId as string, req.user.id);
 
-  if (isEmpty(event)) throw new NotFoundError("Event not found");
+  if (isEmpty(event)) throw new NotFoundError('Event not found');
 
-  return res.status(200).json({ data: event, error: null });
+  if (view !== 'preview') {
+    await entityEngagementService.trackView('events', eventId as string, {
+      userId: req.user.id,
+      ip: getViewerIp(req),
+      userAgent: req.headers['user-agent'] || null,
+    });
+  }
+
+  return res.status(200).json({ data: event });
 };
 
 export const createEvent = async (req: ICustomRequest, res: Response) => {
   const event = await eventService.createEvent(req.body);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_CREATED, { data: event });
-  return res.status(201).json({ data: event, error: null });
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      type: EActivityType.EventCreated,
+      entityType: EActivityEntityType.Event,
+      entityId: event.id,
+      payload: {
+        eventId: event.id,
+        eventName: event.name,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, EActivityType.EventCreated),
+  ]);
+  broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_CREATE, event, { data: toEventSummary(event) });
+  return res.status(201).json({ data: event });
 };
 
 export const updateEvent = async (req: ICustomRequest, res: Response) => {
-  const event = await eventService.getById(req.params.eventId);
+  const eventId = req.params.eventId as string;
+  const event = await eventService.getById(eventId);
+  if (!event) throw new NotFoundError('Event not found');
+  if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only update your own events');
+  const existingEventData = await eventService.getEventData(eventId, req.user.id);
   const updatedEvent = await eventService.update({
     existing: event,
     data: req.body,
     populate: true,
   });
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_UPDATED, {
-    data: { id: req.params.id, ...updatedEvent },
-    error: null,
-  });
-  return res.status(200).json({ data: event, error: null });
+
+  if (hasMeaningfulChange(existingEventData, updatedEvent)) {
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
+      data: toEventSummary({ ...updatedEvent, id: eventId }),
+    });
+  }
+
+  return res.status(200).json({ data: updatedEvent });
 };
 
 export const deleteEvent = async (req: ICustomRequest, res: Response) => {
-  const event = await eventService.delete(req.params.id);
+  const event = await eventService.getById(req.params.eventId as string);
+  if (!event) throw new NotFoundError('Event not found');
+  if (event.createdBy !== req.user.id) throw new ForbiddenError('You can only delete your own events');
 
-  if (isEmpty(event)) throw new NotFoundError("Event not found");
+  await eventService.delete(req.params.eventId as string);
 
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.EVENT_DELETED, {
-    data: { id: req.params.id },
-    error: null,
+  broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_DELETE, event, {
+    data: { id: req.params.eventId },
   });
 
-  return res.status(200).json({ data: event, error: null });
+  return res.status(200).json({ data: event });
 };
 
 export const createEventTag = async (req: ICustomRequest, res: Response) => {
   const { eventId, tagId } = req.params;
 
-  const tag = await tagService.dissociateTag(eventId, tagId);
-  return res.status(201).json({ data: tag, error: null });
+  const tag = await tagService.associateTag(eventId as string, tagId as string);
+  return res.status(201).json({ data: tag });
 };
 
 export const deleteEventTag = async (req: ICustomRequest, res: Response) => {
   const { eventId, tagId } = req.params;
 
-  const tag = await tagService.dissociateTag(eventId, tagId);
-  return res.status(200).json({ data: tag, error: null });
+  const tag = await tagService.dissociateTag(eventId as string, tagId as string);
+  return res.status(200).json({ data: tag });
 };
 
-export const eventJoinLeaveHandler = async (
-  req: ICustomRequest,
-  res: Response
-) => {
-  const event = await eventService.joinLeaveEvent(
-    req.user.id,
-    req.params.eventId,
-    req.params.action as "join" | "leave"
-  );
-  return res.status(200).json({ data: event, error: null });
+export const eventJoinLeaveHandler = async (req: ICustomRequest, res: Response) => {
+  const eventId = req.params.eventId as string;
+  const action = req.params.action as 'join' | 'leave';
+  const eventData = await eventService.getById(eventId);
+  const previousEvent = await eventService.getEventData(eventId, req.user.id);
+  await eventService.joinLeaveEvent(req.user.id, eventId, action);
+  const updatedEvent = await eventService.getEventData(eventId, req.user.id);
+
+  const activityType = action === 'join' ? EActivityType.EventJoined : EActivityType.EventLeft;
+
+  const [joinActivity] = await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      recipientId: eventData && eventData.createdBy !== req.user.id ? eventData.createdBy : null,
+      type: activityType,
+      entityType: EActivityEntityType.Event,
+      entityId: eventId,
+      payload: {
+        eventId,
+        action,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, activityType),
+  ]);
+  if (joinActivity.recipientId) {
+    emitSocketEvent(
+      PLATFORM_SOCKET_EVENTS.ACTIVITY_NEW,
+      { data: joinActivity },
+      { room: getUserRoom(joinActivity.recipientId) },
+    );
+  }
+
+  if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
+      data: toEventSummary(updatedEvent),
+    });
+  }
+
+  return res.status(200).json({ data: updatedEvent });
 };
 
 export const verifyEvent = async (req: ICustomRequest, res: Response) => {
   const { currentCoordinates } = req.body;
 
-  if (isEmpty(currentCoordinates))
-    throw new BadRequestError("Current coordinates are required");
+  if (isEmpty(currentCoordinates)) throw new BadRequestError('Current coordinates are required');
 
-  const event = await eventService.verifyEvent(
-    req.user.id,
-    req.params.eventId,
-    currentCoordinates
-  );
-  return res.status(200).json({ data: event, error: null });
+  const previousEvent = await eventService.getEventData(req.params.eventId as string, req.user.id);
+  await eventService.verifyEvent(req.user.id, req.params.eventId as string, currentCoordinates);
+  const updatedEvent = await eventService.getEventData(req.params.eventId as string, req.user.id);
+
+  await Promise.all([
+    activityService.create({
+      actorId: req.user.id,
+      type: EActivityType.EventVerified,
+      entityType: EActivityEntityType.Event,
+      entityId: req.params.eventId as string,
+      payload: {
+        eventId: req.params.eventId as string,
+      },
+      visibility: EActivityVisibility.Public,
+    }),
+    achievementService.trackActivity(req.user.id, EActivityType.EventVerified),
+  ]);
+
+  if (updatedEvent && hasMeaningfulChange(previousEvent, updatedEvent)) {
+    broadcastEventChange(PLATFORM_SOCKET_EVENTS.EVENT_UPDATE, updatedEvent, {
+      data: toEventSummary(updatedEvent),
+    });
+  }
+
+  return res.status(200).json({ data: updatedEvent });
 };
 
-export const disassociateMediaFromEvent = async (
-  req: ICustomRequest,
-  res: Response
-) => {
+export const disassociateMediaFromEvent = async (req: ICustomRequest, res: Response) => {
   const { eventId, mediaId } = req.params;
 
-  const event = await eventService.disassociateMediaFromEvent(eventId, mediaId);
-  return res.status(200).json({ data: event, error: null });
+  const event = await eventService.disassociateMediaFromEvent(eventId as string, mediaId as string);
+  return res.status(200).json({ data: event });
 };
 
 export const deleteEventMedia = async (req: ICustomRequest, res: Response) => {
   const { eventId, mediaId } = req.params;
 
-  const event = await eventService.disassociateMediaFromEvent(eventId, mediaId);
-  return res.status(200).json({ data: event, error: null });
+  await eventService.disassociateMediaFromEvent(eventId as string, mediaId as string);
+  await mediaService.delete(mediaId as string);
+  return res.status(200).json({ data: { id: mediaId, deleted: true } });
 };
 
-export const getEventThreads = async (
-  req: ICustomRequest & IRequestPagination,
-  res: Response
-) => {
+export const getEventThreads = async (req: ICustomRequest & IRequestPagination, res: Response) => {
   const { eventId } = req.params;
-  const threads = await eventService.getThreads(eventId, req.pagination);
+  const threads = await eventService.getThreads(eventId as string, req.pagination, req.user.id);
 
-  return res.status(200).json({ data: threads, error: null });
+  return res.status(200).json({ data: threads });
 };

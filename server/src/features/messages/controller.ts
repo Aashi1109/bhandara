@@ -1,146 +1,176 @@
-import type { Response } from "express";
-import MessageService from "./service";
-import type { ICustomRequest, IRequestPagination } from "@/definitions/types";
-import { cleanQueryObject, isEmpty, pick } from "@/utils";
-import { NotFoundError, ForbiddenError } from "@/exceptions";
-import { emitSocketEvent } from "@/socket/emitter";
-import { PLATFORM_SOCKET_EVENTS } from "@/constants";
-import ThreadsService from "@/features/threads/service";
+import type { Response } from 'express';
+import MessageService from './service';
+import type { ICustomRequest, IRequestPagination } from '@/common/definitions/types';
+import { cleanQueryObject, hasMeaningfulChange, isEmpty, pick } from '@/common/utils';
+import { NotFoundError, ForbiddenError } from '@/common/exceptions';
+import { emitSocketEvent } from '@/socket/emitter';
+import { PLATFORM_SOCKET_EVENTS } from '@/common/constants';
+import ThreadsService from '@/features/threads/service';
+import ActivityService from '@/features/activity/service';
+import { EActivityType } from '@/features/activity/constants';
+import AchievementService from '@/features/achievements/service';
+import EntityEngagementService from '@/features/engagement/service';
+import { buildMessageActivities } from '@/features/activity/chat';
+import { getThreadRoom } from '@/socket/rooms';
 
 const messagesService = new MessageService();
 const threadsService = new ThreadsService();
+const activityService = new ActivityService();
+const achievementService = new AchievementService();
+const entityEngagementService = new EntityEngagementService();
+const asString = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+const getViewerIp = (req: ICustomRequest) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.length > 0) {
+    return forwardedFor.split(',')[0].trim();
+  }
 
-export const getMessages = async (
-  req: ICustomRequest & IRequestPagination,
-  res: Response
-) => {
+  return req.socket.remoteAddress || null;
+};
+
+export const getMessages = async (req: ICustomRequest & IRequestPagination, res: Response) => {
   const { threadId } = req.params;
   const { userId, parentId } = req.query;
 
   const _queryObject = { userId, parentId, threadId };
 
-  const messages = await messagesService.getAll(
-    cleanQueryObject(_queryObject),
-    req.pagination
-  );
+  const messages = await messagesService.getAll(cleanQueryObject(_queryObject), req.pagination);
   return res.status(200).json({
     data: messages,
-    error: null,
   });
 };
 
 export const createMessage = async (req: ICustomRequest, res: Response) => {
-  const { threadId } = req.params;
+  const threadId = asString(req.params.threadId);
+  if (!threadId) throw new NotFoundError('Thread not found');
 
-  // Check if the thread (or its parent chain) is locked before creating a message
-  const lockStatus = await threadsService.isThreadChainLocked(threadId);
+  const [thread, lockStatus] = await Promise.all([
+    threadsService.getById(threadId),
+    threadsService.isThreadChainLocked(threadId),
+  ]);
+  if (!thread) throw new NotFoundError('Thread not found');
+
   if (lockStatus.isLocked) {
-    throw new ForbiddenError(
-      "Cannot add messages to a locked thread or its children"
-    );
+    throw new ForbiddenError('Cannot add messages to a locked thread or its children');
   }
 
   const message = await messagesService.create(
-    pick({ ...req.body, threadId, isEdited: true }, [
-      "userId",
-      "content",
-      "parentId",
-      "threadId",
-      "isEdited",
+    pick({ ...req.body, userId: req.user.id, threadId, isEdited: false }, [
+      'userId',
+      'content',
+      'parentId',
+      'threadId',
+      'isEdited',
     ]),
-    true
+    true,
   );
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_CREATED, {
-    data: message,
-    error: null,
-  });
+  await Promise.all([
+    ...buildMessageActivities({
+      actorId: req.user.id,
+      message,
+      threadOwnerId: thread.createdBy,
+    }).map((activity) => activityService.create(activity)),
+    achievementService.trackActivity(req.user.id, EActivityType.MessageCreated),
+  ]);
+  emitSocketEvent(
+    PLATFORM_SOCKET_EVENTS.MESSAGE_CREATE,
+    {
+      data: message,
+    },
+    { room: getThreadRoom(threadId) },
+  );
   return res.status(200).json({
     data: message,
-    error: null,
   });
 };
 
 export const updateMessage = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError('Message not found');
 
-  // Get the message to check its thread
-  const existingMessage = await messagesService.getById(messageId);
-  if (existingMessage && existingMessage.threadId) {
-    const lockStatus = await threadsService.isThreadChainLocked(
-      existingMessage.threadId
-    );
-    if (lockStatus.isLocked) {
-      throw new ForbiddenError(
-        "Cannot edit messages in a locked thread or its children"
-      );
-    }
+  const existingMessage = await messagesService.getById(messageId, true);
+  if (!existingMessage) throw new NotFoundError('Message not found');
+  if (existingMessage.userId !== req.user.id) {
+    throw new ForbiddenError('You can only edit your own messages');
+  }
+
+  const lockStatus = await threadsService.isThreadChainLocked(existingMessage.threadId);
+  if (lockStatus.isLocked) {
+    throw new ForbiddenError('Cannot edit messages in a locked thread or its children');
   }
 
   const message = await messagesService.update(
     messageId,
-    pick({ ...req.body, isEdited: true }, ["content", "isEdited"]),
-    true
+    pick({ ...req.body, isEdited: true }, ['content', 'isEdited']),
+    true,
   );
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATED, {
-    data: { id: messageId, ...req.body },
-    error: null,
-  });
+
+  if (hasMeaningfulChange(existingMessage, message)) {
+    emitSocketEvent(
+      PLATFORM_SOCKET_EVENTS.MESSAGE_UPDATE,
+      {
+        data: message,
+      },
+      { room: getThreadRoom(existingMessage.threadId) },
+    );
+  }
+
   return res.status(200).json({
     data: message,
-    error: null,
   });
 };
 
 export const deleteMessage = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError('Message not found');
 
-  // Get the message to check its thread
   const existingMessage = await messagesService.getById(messageId);
-  if (existingMessage && existingMessage.threadId) {
-    const lockStatus = await threadsService.isThreadChainLocked(
-      existingMessage.threadId
-    );
-    if (lockStatus.isLocked) {
-      throw new ForbiddenError(
-        "Cannot delete messages in a locked thread or its children"
-      );
-    }
+  if (!existingMessage) throw new NotFoundError('Message not found');
+  if (existingMessage.userId !== req.user.id) {
+    throw new ForbiddenError('You can only delete your own messages');
+  }
+
+  const lockStatus = await threadsService.isThreadChainLocked(existingMessage.threadId);
+  if (lockStatus.isLocked) {
+    throw new ForbiddenError('Cannot delete messages in a locked thread or its children');
   }
 
   const message = await messagesService.delete(messageId);
-  emitSocketEvent(PLATFORM_SOCKET_EVENTS.MESSAGE_DELETED, {
-    data: { id: messageId },
-    error: null,
-  });
+  emitSocketEvent(
+    PLATFORM_SOCKET_EVENTS.MESSAGE_DELETE,
+    {
+      data: { id: messageId, threadId: existingMessage.threadId },
+    },
+    { room: getThreadRoom(existingMessage.threadId) },
+  );
   return res.status(200).json({
     data: message,
-    error: null,
   });
 };
 
 export const getMessageById = async (req: ICustomRequest, res: Response) => {
-  const { messageId } = req.params;
+  const messageId = asString(req.params.messageId);
+  if (!messageId) throw new NotFoundError('Message not found');
   const message = await messagesService.getById(messageId, true);
-  if (isEmpty(message)) throw new NotFoundError("Message not found");
+  if (isEmpty(message)) throw new NotFoundError('Message not found');
+
+  await entityEngagementService.trackView('messages', messageId, {
+    userId: req.user.id,
+    ip: getViewerIp(req),
+    userAgent: req.headers['user-agent'] || null,
+  });
 
   return res.status(200).json({
     data: message,
-    error: null,
   });
 };
 
-export const getChildMessages = async (
-  req: ICustomRequest & IRequestPagination,
-  res: Response
-) => {
-  const { parentId, threadId } = req.params;
-  const messages = await messagesService.getChildren(
-    threadId,
-    parentId,
-    req.pagination
-  );
+export const getChildMessages = async (req: ICustomRequest & IRequestPagination, res: Response) => {
+  const parentId = asString(req.params.parentId);
+  const threadId = asString(req.params.threadId);
+  if (!parentId || !threadId) throw new NotFoundError('Message not found');
+  const messages = await messagesService.getChildren(threadId, parentId, req.pagination);
   return res.status(200).json({
     data: messages,
-    error: null,
   });
 };

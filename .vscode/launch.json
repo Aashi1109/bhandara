@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (dev env)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=.env.dev.json", "--debug"]
+    },
+    {
+      "name": "Flutter (prod env)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=.env.prod.json", "--debug"]
+    },
+    {
+      "name": "Flutter (local forwarded env)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=.env.devf.json", "--debug"]
+    }
+  ]
+}

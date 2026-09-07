@@ -1,23 +1,20 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { MESSAGE_TABLE_NAME } from "./constants";
-import type { IMessage } from "@/definitions/types";
-type MessageAttributes = Omit<
-  IMessage,
-  "createdAt" | "updatedAt" | "deletedAt" | "user" | "reactions"
->;
+import { getDBConnection } from '@/common/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/common/helpers';
+import { MESSAGE_TABLE_NAME } from './constants';
+import type { IMessage, IMessageStats } from '@/common/definitions/types';
+type MessageAttributes = Omit<IMessage, 'createdAt' | 'updatedAt' | 'user' | 'reactions'>;
 
 export class Message extends Model<MessageAttributes, MessageAttributes> {
   declare id: string;
   declare userId: string;
   declare parentId: string | null;
-  declare content: IMessage["content"];
+  declare content: IMessage['content'];
   declare isEdited: boolean;
   declare threadId: string;
+  declare stats: IMessageStats;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
   declare user?: any;
   declare reactions?: any[];
 }
@@ -32,11 +29,13 @@ Message.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
     parentId: {
       type: DataTypes.UUID,
-      references: { model: "Messages", key: "id" },
+      references: { model: 'Messages', key: 'id' },
+      onDelete: 'CASCADE',
     },
     content: { type: DataTypes.JSONB, allowNull: false },
     isEdited: {
@@ -44,21 +43,23 @@ Message.init(
       allowNull: false,
       defaultValue: false,
     },
+    stats: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+    },
     threadId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Threads", key: "id" },
+      references: { model: 'Threads', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {
-    modelName: "Message",
+    modelName: 'Message',
     tableName: MESSAGE_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-  }
+    indexes: [{ name: 'messages_updatedAt_idx', fields: ['updatedAt'] }],
+  },
 );
-
-(async () => {
-  await Message.sync({ alter: false });
-})();

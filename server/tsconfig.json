@@ -1,18 +1,22 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "CommonJS",
     "esModuleInterop": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"],
+      "@app/*": ["./app/*"]
     },
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
-  "include": ["types.d.ts", "src/**/*.ts"],
+  "include": ["types.d.ts", "**/*.ts", "**/*.tsx", "test/**/*.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

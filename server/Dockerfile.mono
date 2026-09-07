@@ -1,0 +1,75 @@
+ARG TARGETPLATFORM=linux/amd64
+
+# Base stage
+FROM --platform=$TARGETPLATFORM node:24-alpine AS base
+
+# Install dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm install --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Build application
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN \
+  if [ -f yarn.lock ]; then yarn run build; \
+  elif [ -f package-lock.json ]; then npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Production dependencies only
+FROM base AS prod-deps
+WORKDIR /app
+
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn install --frozen-lockfile --production=true; \
+  elif [ -f package-lock.json ]; then npm ci --only=production; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm install --frozen-lockfile --prod; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Final mono image
+FROM base AS mono-runner
+WORKDIR /app
+
+RUN apk add --no-cache bash curl ffmpeg redis nginx gettext
+RUN npm install -g redis-commander
+
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist/ ./
+COPY src/migrations ./src/migrations
+COPY scripts/docker-mono-entrypoint.sh /usr/local/bin/docker-mono-entrypoint.sh
+COPY scripts/nginx-mono.conf.template /etc/nginx/nginx.conf.template
+
+RUN chmod +x /usr/local/bin/docker-mono-entrypoint.sh && \
+  mkdir -p /app/logs /app/tmp /app/redis-data /app/release-tmp
+
+ENV NODE_ENV=production
+ENV PUBLIC_PORT=3000
+ENV APP_PORT=3001
+ENV REDIS_HOST=127.0.0.1
+ENV REDIS_PORT=6379
+ENV REDIS_PASSWORD=
+ENV REDIS_TLS=false
+ENV REDIS_COMMANDER_PORT=8081
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:3000/ >/dev/null || exit 1
+
+CMD ["/usr/local/bin/docker-mono-entrypoint.sh"]

@@ -1,8 +1,7 @@
-import type { IEvent, IPaginationParams, ITag } from "@/definitions/types";
-import { findAllWithPagination } from "@/utils/dbUtils";
-import { validateTagCreate, validateTagUpdate } from "./validation";
-import { Tag } from "./model";
-import { Event } from "../events/model";
+import type { IEvent, IPaginationParams, ITag } from '@/common/definitions/types';
+import { findAllWithPagination, findByPkOrThrow } from '@/common/utils/dbUtils';
+import { Tag } from './model';
+import { Event } from '../events/model';
 import {
   getTagCache,
   setTagCache,
@@ -13,16 +12,20 @@ import {
   getSubTagsCache,
   setSubTagsCache,
   deleteSubTagsCache,
-} from "./helpers";
-import { NotFoundError } from "@/exceptions";
-import type { FindOptions } from "sequelize";
+} from './helpers';
+import { NotFoundError } from '@/common/exceptions';
+import type { FindOptions } from 'sequelize';
+import EntityStatsService from '@/features/stats/service';
 
 class TagService {
   private readonly getCache = getTagCache;
   private readonly setCache = setTagCache;
   private readonly deleteCache = deleteTagCache;
+  private readonly entityStatsService: EntityStatsService;
 
-  constructor() {}
+  constructor() {
+    this.entityStatsService = new EntityStatsService();
+  }
 
   async getById(id: string): Promise<ITag | null> {
     const cached = await this.getCache(id);
@@ -32,11 +35,7 @@ class TagService {
     return res;
   }
 
-  async getAll(
-    options: FindOptions<ITag> = {},
-    pagination?: Partial<IPaginationParams>,
-    select?: string
-  ) {
+  async getAll(options: FindOptions<ITag> = {}, pagination?: Partial<IPaginationParams>, select?: string) {
     return findAllWithPagination(Tag, options, pagination, select);
   }
 
@@ -47,10 +46,10 @@ class TagService {
 
   async getRootTags() {
     const [results] = await Tag.sequelize!.query(
-      `SELECT t.*, COUNT(c.id) > 0 AS "hasChildren" FROM "Tags" t
-       LEFT JOIN "Tags" c ON c."parentId" = t."id" AND c."deletedAt" IS NULL
-       WHERE t."deletedAt" IS NULL AND t."parentId" IS NULL
-       GROUP BY t."id";`
+      `SELECT t.id, t.name, t.value, t.description, t.icon, t.color, t."parentId", COUNT(c.id) > 0 AS "hasChildren" FROM "Tags" t
+       LEFT JOIN "Tags" c ON c."parentId" = t."id"
+       WHERE t."parentId" IS NULL
+       GROUP BY t."id";`,
     );
     return results as ITag[];
   }
@@ -68,37 +67,30 @@ class TagService {
     const data = await findAllWithPagination(
       Tag,
       { where: { id: tagIds } },
-      { limit: tagIds.length }
+      { limit: tagIds.length },
+      'id,name,value,description,icon,color,parentId',
     );
 
-    const {items} = data;
+    const { items } = data;
     if (cacheKey && items) {
       await setEventTagsCache(cacheKey, items);
     }
     return items;
   }
 
-  async create<U extends Partial<Omit<ITag, "id" | "updatedAt">>>(data: U) {
-    const res = await validateTagCreate(data, async (validatedData: U) => {
-      const row = await Tag.create(validatedData as Partial<ITag>);
-      return row.toJSON() as ITag;
-    });
-    const created = res as ITag;
-    if (created) {
-      await this.setCache(created.id, created);
-    }
-    return res;
+  async create<U extends Partial<Omit<ITag, 'id' | 'updatedAt'>>>(data: U) {
+    const row = await Tag.create(data as any);
+    const created = row.toJSON() as ITag;
+    await this.setCache(created.id, created);
+    return created;
   }
 
   async update<U extends Partial<ITag>>(id: string, data: U): Promise<ITag> {
-    const res = await validateTagUpdate(data, async (validatedData: U) => {
-      const row = await Tag.findByPk(id);
-      if (!row) throw new Error("Tag not found");
-      await row.update(validatedData as Partial<ITag>);
-      return row.toJSON() as ITag;
-    });
+    const row = await findByPkOrThrow(Tag, id, 'Tag');
+    await row.update(data as Partial<ITag>);
+    const updated = row.toJSON() as ITag;
     await this.deleteCache(id);
-    return res as ITag;
+    return updated;
   }
 
   async delete(id: string): Promise<ITag | null> {
@@ -111,14 +103,31 @@ class TagService {
 
   async dissociateTag(eventId: string, tagId: string) {
     const event = await Event.findByPk(eventId);
-    if (!event) throw new NotFoundError("Event not found");
+    if (!event) throw new NotFoundError('Event not found');
     const tags = new Set((event.tags || []) as string[]);
 
-    if (!tags.has(tagId)) throw new NotFoundError("Tag not found");
+    if (!tags.has(tagId)) throw new NotFoundError('Tag not found');
     tags.delete(tagId);
 
     await event.update({ tags: Array.from(tags) });
     await deleteEventTagsCache(eventId);
+    await this.entityStatsService.syncEventRowStats(event.toJSON() as IEvent);
+    return true;
+  }
+
+  async associateTag(eventId: string, tagId: string) {
+    const event = await Event.findByPk(eventId);
+    if (!event) throw new NotFoundError('Event not found');
+    const tags = new Set((event.tags || []) as string[]);
+
+    if (tags.has(tagId)) {
+      return true;
+    }
+
+    tags.add(tagId);
+    await event.update({ tags: Array.from(tags) });
+    await deleteEventTagsCache(eventId);
+    await this.entityStatsService.syncEventRowStats(event.toJSON() as IEvent);
     return true;
   }
 
@@ -128,7 +137,8 @@ class TagService {
     const res = await findAllWithPagination(
       Tag,
       { where: { parentId: tagId } },
-      limit ? { limit } : {}
+      limit ? { limit } : {},
+      'id,name,value,description,icon,color,parentId',
     );
     if (res.items) await setSubTagsCache(tagId, res.items as ITag[]);
     return res;

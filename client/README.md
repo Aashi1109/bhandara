@@ -1,50 +1,99 @@
-# Welcome to your Expo app 👋
+# foody_mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A new Flutter project.
 
-## Get started
+## Getting Started
 
-1. Install dependencies
+This project is a starting point for a Flutter application.
 
-   ```bash
-   npm install
-   ```
+A few resources to get you started if this is your first Flutter project:
 
-2. Start the app
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-   ```bash
-    npx expo start
-   ```
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
 
-In the output, you'll find options to open the app in a
+## Google Maps Setup
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+1. Install dependencies:
 
 ```bash
-npm run reset-project
+flutter pub get
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Create env file from template:
 
-## Learn more
+```bash
+cp env.dev.example.json .env.dev.json
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+3. Fill values in `.env.dev.json`.
+   Add backend host values for your current runtime:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Android emulator: `"API_HOST": "10.0.2.2"`
+- Physical device: `"API_HOST": "<your-laptop-lan-ip>"`
+- Optional: `"API_PORT": "3000"`, `"API_SCHEME": "http"`
 
-## Join the community
+4. Run with dart define file:
 
-Join our community of developers creating universal apps.
+```bash
+flutter run --dart-define-from-file=.env.dev.json
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+5. Build with same env file:
+
+```bash
+flutter build apk --dart-define-from-file=.env.dev.json
+flutter build ios --dart-define-from-file=.env.dev.json
+```
+
+6. Enable billing and APIs in Google Cloud Console:
+
+- Maps SDK for Android
+- Maps SDK for iOS
+- Street View Static API (for coordinate-based preview images in Explore)
+
+## Map Provider Switch (Factory Pattern)
+
+Map integrations now live under `lib/services/maps/` with provider-specific services and a manager:
+
+- `google_maps_service.dart`
+- `mapbox_maps_service.dart`
+- `map_manager.dart`
+
+Instantiate manager once with provider type, then call methods on that manager:
+
+```dart
+final mapManager = MapManager(type: MapProviderType.google);
+final place = await mapManager.getAddressFromCoordinates(
+  latitude: 21.1702,
+  longitude: 79.6527,
+);
+```
+
+```dart
+final mapManager = MapManager(type: MapProviderType.mapbox);
+final results = await mapManager.searchPlaces(
+  query: 'Nagpur',
+);
+```
+
+Provider keys are read inside each service from env:
+
+- Google: `GOOGLE_MAPS_API_KEY`
+- Google web cloud styling: `GOOGLE_MAPS_WEB_MAP_ID` (optional, preferred on web)
+- Google Android cloud styling: `GOOGLE_MAPS_ANDROID_MAP_ID` (optional, preferred on Android)
+- Google iOS cloud styling: `GOOGLE_MAPS_IOS_MAP_ID` (optional, preferred on iOS)
+- Mapbox: `MAPBOX_ACCESS_TOKEN` (`MAPBOX_STYLE_ID` optional)
+- Backend: `API_HOST` (`API_PORT` and `API_SCHEME` optional)
+
+This app supports two Google Maps styling paths:
+
+- Preferred: set the platform map ID (`GOOGLE_MAPS_WEB_MAP_ID`, `GOOGLE_MAPS_ANDROID_MAP_ID`, `GOOGLE_MAPS_IOS_MAP_ID`) and manage the style in Google Cloud
+- Fallback: omit the platform map ID and the app will use the local legacy JSON style
+
+Do not use both on the same platform map. When a platform `mapId` is present,
+the app intentionally skips local JSON styling and lets cloud styling own the
+map appearance.

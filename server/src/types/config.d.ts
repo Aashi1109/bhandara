@@ -1,44 +1,42 @@
-export interface GrafanaCloudConfig {
-  prometheusRemoteWriteUrl: string;
-  prometheusUsername: string;
-  prometheusPassword: string;
-}
-
-export interface ServiceabilityConfig {
-  loki: {
-    url: string;
-    batchSize: number;
-    flushInterval: number;
-  };
-}
-
 export interface InfrastructureConfig {
   appName: string;
   serviceName: string;
 }
 
+export interface RedisConnectionConfig {
+  host: string;
+  port: number;
+  password?: string;
+  db?: number;
+  tls?: Record<string, never>;
+}
+
 export interface AppConfig {
   baseUrl: string;
   port: string | number;
+  encryption: {
+    dataKey: string;
+    hashKey: string;
+  };
   jwt: {
-    secret: string;
+    secret: string | undefined;
     expiresIn: string;
   };
   cloudinary: {
-    cloudName: string;
-    apiKey: string;
-    apiSecret: string;
+    cloudName: string | undefined;
+    apiKey: string | undefined;
+    apiSecret: string | undefined;
     secure: boolean;
-    folderPath: string;
-    uploadPreset: string;
+    folderPath: string | undefined;
+    uploadPreset: string | undefined;
   };
-  dbUrl: string;
+  dbUrl: string | undefined;
   saltRounds: number;
   express: {
     fileSizeLimit: string;
   };
   corsOptions: {
-    origin: string[];
+    origin: Array<string | RegExp>;
     optionsSuccessStatus: number;
     credentials: boolean;
   };
@@ -51,13 +49,7 @@ export interface AppConfig {
     key: string;
   };
   redis: {
-    [key: string]: {
-      url: string;
-      token: string;
-    };
-  };
-  ip2location: {
-    apiKey: string;
+    [key: string]: RedisConnectionConfig;
   };
   sessionCookie: {
     keyName: string;
@@ -70,22 +62,31 @@ export interface AppConfig {
     iosClientId: string;
   };
   db: {
-    [key: string]: string;
+    [key: string]: string | undefined;
   };
   infrastructure: InfrastructureConfig;
-  serviceability: ServiceabilityConfig;
-  grafanaCloud: GrafanaCloudConfig;
   sentry: SentryConfig;
   otel: OTelConfig;
+  resend: {
+    apiKey: string | undefined;
+    fromEmail: string;
+    fromName: string;
+  };
+  supabaseServiceRole: string | undefined;
+  appType: 'server' | 'worker';
+  appName: string;
 }
 
 export interface SentryConfig {
-  dsn: string;
+  dsn: string | undefined;
   environment: string;
   release: string;
 }
 
 export interface OTelConfig {
   url: string;
-  headers: Record<string, string>;
+  apiKey: string;
+  enableDbClientSpans: boolean;
+  enableRedisClientSpans: boolean;
+  enableMetrics: boolean;
 }

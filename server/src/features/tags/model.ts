@@ -1,9 +1,9 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { TAG_TABLE_NAME } from "./constants";
-import type { ITag } from "@/definitions/types";
-type TagAttributes = Omit<ITag, "createdAt" | "updatedAt" | "deletedAt">;
+import { getDBConnection } from '@/common/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/common/helpers';
+import { TAG_TABLE_NAME } from './constants';
+import type { ITag } from '@/common/definitions/types';
+type TagAttributes = Omit<ITag, 'createdAt' | 'updatedAt'>;
 
 export class Tag extends Model<TagAttributes, TagAttributes> {
   declare id: string;
@@ -17,7 +17,6 @@ export class Tag extends Model<TagAttributes, TagAttributes> {
   declare eventId?: string | null;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
 }
 
 Tag.init(
@@ -34,22 +33,20 @@ Tag.init(
     color: { type: DataTypes.TEXT },
     parentId: {
       type: DataTypes.UUID,
-      references: { model: "Tags", key: "id" },
+      references: { model: 'Tags', key: 'id' },
+      onDelete: 'CASCADE',
     },
     createdBy: {
       type: DataTypes.UUID,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {
-    modelName: "Tag",
+    modelName: 'Tag',
     tableName: TAG_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-  }
+    indexes: [{ name: 'tags_updatedAt_idx', fields: ['updatedAt'] }],
+  },
 );
-
-(async () => {
-  await Tag.sync({ alter: false });
-})();

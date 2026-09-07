@@ -1,0 +1,86 @@
+import 'dart:async';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_android/shared_preferences_android.dart';
+
+class LocalStorage {
+  LocalStorage({this.namespace});
+
+  final String? namespace;
+  static SharedPreferencesWithCache? _prefs;
+  static Completer<SharedPreferencesWithCache>? _initCompleter;
+  static const SharedPreferencesOptions _preferencesOptions =
+      SharedPreferencesAsyncAndroidOptions(
+        backend: SharedPreferencesAndroidBackendLibrary.SharedPreferences,
+      );
+
+  static Future<void> init() async {
+    if (_prefs != null) return;
+    if (_initCompleter != null) return _initCompleter!.future.then((_) {});
+
+    _initCompleter = Completer<SharedPreferencesWithCache>();
+    try {
+      final instance = await SharedPreferencesWithCache.create(
+        sharedPreferencesOptions: _preferencesOptions,
+        cacheOptions: const SharedPreferencesWithCacheOptions(),
+      );
+      _prefs = instance;
+      _initCompleter!.complete(instance);
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+      rethrow;
+    }
+  }
+
+  Future<SharedPreferencesWithCache> get _instance async {
+    if (_prefs != null) return _prefs!;
+    await init();
+    return _prefs!;
+  }
+
+  String _buildKey(String key) => namespace != null ? '$namespace:$key' : key;
+
+  Future<void> set(String key, dynamic value) async {
+    final k = _buildKey(key);
+    final prefs = await _instance;
+    if (value is String) {
+      await prefs.setString(k, value);
+    } else if (value is bool) {
+      await prefs.setBool(k, value);
+    } else if (value is int) {
+      await prefs.setInt(k, value);
+    } else if (value is double) {
+      await prefs.setDouble(k, value);
+    } else if (value is List<String>) {
+      await prefs.setStringList(k, value);
+    }
+  }
+
+  Future<T?> get<T>(String key) async {
+    final prefs = await _instance;
+    final value = prefs.get(_buildKey(key));
+    return value as T?;
+  }
+
+  Future<void> remove(String key) async {
+    final prefs = await _instance;
+    await prefs.remove(_buildKey(key));
+  }
+
+  Future<void> clear() async {
+    final prefs = await _instance;
+    if (namespace == null) {
+      await prefs.clear();
+    } else {
+      final keys = prefs.keys.toList();
+      for (final key in keys) {
+        if (key.startsWith('$namespace:')) {
+          await prefs.remove(key);
+        }
+      }
+    }
+  }
+}
+
+final localStorage = LocalStorage();

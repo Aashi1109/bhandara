@@ -1,18 +1,15 @@
-import type {
-  IBaseUser,
-  IMedia,
-  IPaginationParams,
-  ITag,
-} from "@/definitions/types";
-import { type PaginatedResult, findAllWithPagination } from "@/utils/dbUtils";
-import { validateUserCreate, validateUserUpdate } from "./validation";
-import { User } from "./model";
+import { EAddressEntityType } from '@/common/definitions/enums';
+import type { IBaseUser, IMedia, IPaginationParams, PaginatedResult, ITag } from '@/common/definitions/types';
+import AddressService from '@/features/addresses/service';
+import { findAllWithPagination } from '@/common/utils/dbUtils';
+import { validateUserCreate } from './validation';
+import { decryptUserRows, User } from './model';
+import UserSettingsService from './settings.service';
 import {
   bulkGetUserCache,
   bulkSetUserCache,
   deleteAllUserCache,
   deleteUserCache,
-  deleteUserInterestsCache,
   getSafeUser,
   getUserCache,
   getUserCacheByEmail,
@@ -22,46 +19,109 @@ import {
   setUserCacheByEmail,
   setUserCacheByUsername,
   setUserInterestsCache,
-} from "./helpers";
-import { BadRequestError, NotFoundError } from "@/exceptions";
-import { isEmpty } from "@/utils";
-import TagService from "@/features/tags/service";
-import MediaService from "@/features/media/service";
-import type { FindOptions } from "sequelize";
+} from './helpers';
+import { BadRequestError, NotFoundError } from '@/common/exceptions';
+import { hashForLookup, isEmpty } from '@/common/utils';
+import TagService from '@/features/tags/service';
+import MediaService from '@/features/media/service';
+import type { FindOptions } from 'sequelize';
+
+export interface IUserMini {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export const toUserMini = (user: IBaseUser): IUserMini => {
+  const media = user.media as IMedia | undefined;
+  return {
+    id: user.id,
+    name: user.name,
+    avatarUrl: media?.publicUrl ?? media?.url ?? null,
+  };
+};
 
 class UserService {
+  private readonly addressService: AddressService;
   private readonly getCache = getUserCache;
   private readonly setCache = setUserCache;
   private readonly deleteCache = deleteUserCache;
 
   private readonly tagService: TagService;
   private readonly mediaService: MediaService;
+  private readonly settingsService: UserSettingsService;
 
   constructor() {
+    this.addressService = new AddressService();
     this.tagService = new TagService();
     this.mediaService = new MediaService();
+    this.settingsService = new UserSettingsService();
+  }
+
+  private decryptUsers<T extends Record<string, any>>(users: T[]) {
+    return decryptUserRows(users);
+  }
+
+  private async hydrateUsers<T extends Pick<IBaseUser, 'id'> & Partial<IBaseUser>>(users: T[]): Promise<T[]> {
+    if (users.length === 0) {
+      return users;
+    }
+
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.User,
+      users.map((user) => user.id),
+    );
+
+    return users.map((user) => ({
+      ...user,
+      address: this.addressService.toLocation(addressMap[user.id]),
+    }));
   }
 
   async _getByIdNoCache(id: string): Promise<IBaseUser | null> {
-    const res = await User.findByPk(id, { raw: true });
-    return res as IBaseUser | null;
+    const res = (await User.findByPk(id, { raw: true })) as unknown as IBaseUser | null;
+    if (!res) {
+      return null;
+    }
+
+    const [hydrated] = await this.hydrateUsers(this.decryptUsers([res as IBaseUser]));
+    return hydrated;
   }
 
   async getAll(
     options: FindOptions = {},
     pagination?: Partial<IPaginationParams>,
-    select?: string
-  ) {
-    return findAllWithPagination(User, options, pagination, select);
+    select?: string,
+  ): Promise<PaginatedResult<IBaseUser>> {
+    const result = (await findAllWithPagination(
+      User,
+      options,
+      pagination,
+      select,
+    )) as unknown as PaginatedResult<IBaseUser>;
+    result.items = await this.hydrateUsers(this.decryptUsers(result.items as IBaseUser[]));
+    return result;
   }
 
   async create(data: Partial<IBaseUser>): Promise<IBaseUser | null> {
     const res = await validateUserCreate(data, async (d) => {
-      const row = await User.create({
-        ...d,
-        mediaId: d.mediaId as string,
-      } as Partial<IBaseUser>);
-      return row.toJSON() as IBaseUser;
+      const { address, __sid, ...rest } = d as IBaseUser;
+      const row = await User.sequelize!.transaction(async (transaction) => {
+        const created = await User.create(
+          {
+            ...rest,
+            __sid,
+            mediaId: d.mediaId as string,
+          } as any,
+          { transaction },
+        );
+        await Promise.all([
+          this.addressService.replaceAddress(EAddressEntityType.User, created.id, address, transaction),
+          this.settingsService.updateSettings(created.id, {}, transaction),
+        ]);
+        return created;
+      });
+      return (await this._getByIdNoCache(row.id)) as IBaseUser;
     });
     const created = res as IBaseUser;
     if (created) {
@@ -70,88 +130,59 @@ class UserService {
     return res;
   }
 
-  async update(
-    id: string,
-    data: Partial<
-      IBaseUser & {
-        interests: { added: string[]; deleted: string[] };
-        hasOnboarded: boolean;
+  async setSupabaseSid(id: string, sid: string): Promise<IBaseUser | null> {
+    const [count] = await User.update({ __sid: sid } as Partial<IBaseUser>, { where: { id } });
+    if (count === 0) return null;
+    await deleteUserCache(id);
+    return this._getByIdNoCache(id);
+  }
+
+  async update(id: string, data: Partial<IBaseUser>) {
+    const userData = await this._getByIdNoCache(id);
+    if (!userData) throw new NotFoundError('User not found');
+
+    const { username, address, ...rest } = data;
+    const newMeta = { ...userData.meta };
+    const isUsernameChanged = username && username !== userData.username;
+    if (isUsernameChanged) {
+      const usernameData = await this.getUserByUsername(username);
+      if (!isEmpty(usernameData.items)) throw new BadRequestError('Username already exists');
+    }
+
+    await User.sequelize!.transaction(async (transaction) => {
+      const row = await User.findByPk(id, { transaction });
+      if (!row) throw new NotFoundError('User not found');
+      await row.update(
+        {
+          ...rest,
+          meta: newMeta,
+          username: isUsernameChanged ? username : row.username,
+          mediaId: rest.mediaId ?? row.mediaId,
+        } as Partial<IBaseUser>,
+        { transaction },
+      );
+
+      if (address !== undefined) {
+        await this.addressService.replaceAddress(EAddressEntityType.User, id, address, transaction);
       }
-    >
-  ) {
-    const updated = await validateUserUpdate(data, async (validData) => {
-      const userData = await this._getByIdNoCache(id);
-
-      if (!userData) throw new NotFoundError("User not found");
-
-      const { interests, hasOnboarded, username, ...rest } = validData;
-
-      const newInterests = [...(interests?.added || [])] as string[];
-      const deletedInterests = [...(interests?.deleted || [])] as string[];
-
-      const newInterestsSet = new Set(newInterests);
-      const deletedInterestsSet = new Set(deletedInterests);
-
-      const previousInterests = new Set([...(userData.meta?.interests || [])]);
-
-      deletedInterestsSet.forEach((interest) => {
-        newInterestsSet.delete(interest);
-        previousInterests.delete(interest);
-      });
-
-      const newMeta = {
-        ...userData.meta,
-        hasOnboarded: hasOnboarded ?? userData.meta?.hasOnboarded,
-        interests: [
-          ...Array.from(newInterestsSet),
-          ...Array.from(previousInterests),
-        ],
-      };
-
-      const hasInterestsChanged =
-        newInterests.length > 0 || deletedInterests.length > 0;
-
-      if (hasInterestsChanged) {
-        await deleteUserInterestsCache(id);
-      }
-
-      const isUsernameChanged = username && username !== userData.username;
-      if (isUsernameChanged) {
-        const usernameData = await this.getUserByUsername(username);
-        if (!isEmpty(usernameData.items))
-          throw new BadRequestError("Username already exists");
-      }
-
-      const row = await User.findByPk(id);
-      if (!row) throw new NotFoundError("User not found");
-      await row.update({
-        ...rest,
-        meta: newMeta,
-        username,
-        mediaId: rest.mediaId as string,
-      } as Partial<IBaseUser>);
-
-      const updatedUser = row.toJSON() as IBaseUser;
-      if (rest.mediaId) {
-        updatedUser.media = await this.mediaService.getById(
-          rest.mediaId as string
-        );
-      }
-
-      await this.deleteCache(id);
-      return updatedUser;
     });
-    return updated;
+
+    const updatedUser = (await this._getByIdNoCache(id)) as IBaseUser;
+    if (rest.mediaId) {
+      updatedUser.media = (await this.mediaService.getById(rest.mediaId as string)) ?? undefined;
+    }
+
+    await this.deleteCache(id);
+    return updatedUser;
   }
 
   async getById(id: string): Promise<IBaseUser | null> {
     let _user = await this.getCache(id);
-    if (!_user)
-      _user = (await User.findByPk(id, { raw: true })) as IBaseUser | null;
+    if (!_user) _user = await this._getByIdNoCache(id);
     if (!_user) return null;
     if (_user.mediaId) {
       const media = await this.mediaService.getById(_user.mediaId as string);
-      (_user as IBaseUser).media = media as IMedia;
+      (_user as IBaseUser).media = media ?? undefined;
     }
 
     await this.setCache(id, _user as IBaseUser);
@@ -161,13 +192,13 @@ class UserService {
   async getUserByEmail(email: string) {
     const cached = await getUserCacheByEmail(email);
     if (cached) return cached;
-    const data = await findAllWithPagination(
+    const data = (await findAllWithPagination(
       User,
-      { where: { email } },
-      { limit: 1 }
-    );
+      { where: { emailLookupHash: hashForLookup(email) } },
+      { limit: 1 },
+    )) as unknown as PaginatedResult<IBaseUser>;
     if (data.items.length === 0) return null;
-    const user = data.items[0];
+    const [user] = await this.hydrateUsers(this.decryptUsers(data.items as IBaseUser[]));
     if (user.mediaId) {
       const media = await this.mediaService.getById(user.mediaId as string);
       user.media = media as IMedia;
@@ -176,41 +207,72 @@ class UserService {
     return user;
   }
 
-  async getUserByUsername(
-    username: string
-  ): Promise<PaginatedResult<IBaseUser>> {
+  async getUserByUsername(username: string): Promise<PaginatedResult<IBaseUser>> {
     const cached = await getUserCacheByUsername(username);
     if (cached)
       return {
         items: [cached],
         pagination: null,
-      } as PaginatedResult<IBaseUser>;
-    const data = await findAllWithPagination(
+      } as unknown as PaginatedResult<IBaseUser>;
+    const data = (await findAllWithPagination(
       User,
       { where: { username } },
-      { limit: 1 }
-    );
+      { limit: 1 },
+    )) as unknown as PaginatedResult<IBaseUser>;
     if (!isEmpty(data.items)) {
-      await setUserCacheByUsername(username, data.items[0]);
+      const [user] = await this.hydrateUsers(this.decryptUsers(data.items as IBaseUser[]));
+      data.items = [user] as typeof data.items;
+      await setUserCacheByUsername(username, user);
     }
     return data;
   }
 
   async delete(id: string): Promise<IBaseUser | null> {
+    const existing = await this._getByIdNoCache(id);
+    if (!existing) return null;
+
     const row = await User.findByPk(id);
     if (!row) return null;
-    await row.destroy();
-    await deleteAllUserCache(id);
-    return row.toJSON() as IBaseUser;
+    await User.sequelize!.transaction(async (transaction) => {
+      await this.addressService.replaceAddress(EAddressEntityType.User, id, null, transaction);
+      await row.destroy({ transaction });
+    });
+    await deleteAllUserCache(id, existing);
+    return existing;
+  }
+
+  async updateMeta(id: string, metaUpdate: Record<string, any>): Promise<void> {
+    const row = await User.findByPk(id);
+    if (!row) return;
+    const currentMeta = (row.meta as Record<string, any>) || {};
+    await row.update({ meta: { ...currentMeta, ...metaUpdate } });
+    await deleteUserCache(id);
+  }
+
+  async getUserMini(id: string): Promise<IUserMini | null> {
+    const row = (await User.findByPk(id, {
+      attributes: ['id', 'name', 'mediaId'],
+      raw: true,
+    })) as unknown as Pick<IBaseUser, 'id' | 'name' | 'mediaId'> | null;
+    if (!row) return null;
+
+    let avatarUrl: string | null = null;
+    if (row.mediaId) {
+      const media = await this.mediaService.getById(row.mediaId as string);
+      if (media) {
+        avatarUrl = media.publicUrl ?? media.url ?? null;
+      }
+    }
+
+    return { id: row.id, name: row.name, avatarUrl };
   }
 
   async getUserInterests(id: string) {
     const cached = await getUserInterestsCache(id);
     if (cached) return cached;
-    const user = await this.getById(id);
-    if (!user) throw new NotFoundError("User not found");
 
-    const { interests } = user.meta;
+    const settings = await this.settingsService.ensureExists(id);
+    const interests = settings.interests;
 
     if (isEmpty(interests)) return [];
 
@@ -221,7 +283,7 @@ class UserService {
 
   async getUserProfiles(
     ids: string[],
-    transformerFunction?: (user: IBaseUser) => Record<string, any>
+    transformerFunction?: (user: IBaseUser) => Record<string, any>,
   ): Promise<Record<string, IBaseUser>> {
     let fetchedUsers = await bulkGetUserCache(ids);
 
@@ -234,10 +296,7 @@ class UserService {
 
       const toFetchIds = Array.from(usersToFetch);
 
-      const { items: users } = await this.getAll(
-        { where: { id: toFetchIds } },
-        { limit: toFetchIds.length }
-      );
+      const { items: users } = await this.getAll({ where: { id: toFetchIds } }, { limit: toFetchIds.length });
       await bulkSetUserCache(users);
       fetchedUsers = [...fetchedUsers, ...users];
     }
@@ -249,18 +308,21 @@ class UserService {
 
     const mediaData = await this.mediaService.getMediaByIds(mediaIds);
 
-    const safeUsers = fetchedUsers.reduce((acc, user) => {
-      acc[user.id] = getSafeUser(
-        transformerFunction
-          ? (transformerFunction({
-              ...user,
-              media: mediaData[user.mediaId as string],
-            }) as IBaseUser)
-          : user
-      );
+    const safeUsers = fetchedUsers.reduce(
+      (acc, user) => {
+        if (transformerFunction) {
+          acc[user.id] = transformerFunction({
+            ...user,
+            media: mediaData[user.mediaId as string],
+          }) as IBaseUser;
+        } else {
+          acc[user.id] = getSafeUser(user);
+        }
 
-      return acc;
-    }, {} as Record<string, IBaseUser>);
+        return acc;
+      },
+      {} as Record<string, IBaseUser>,
+    );
 
     return safeUsers;
   }

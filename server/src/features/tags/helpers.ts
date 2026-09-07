@@ -1,8 +1,8 @@
-import type { ITag } from "@/definitions/types";
-import { RedisCache } from "@/features/cache";
-import { CACHE_NAMESPACE_CONFIG } from "@/constants";
-import logger from "@/logger";
-import { jnstringify } from "@/utils";
+import type { ITag } from '@/common/definitions/types';
+import { RedisCache } from '@/features/cache';
+import { CACHE_NAMESPACE_CONFIG } from '@/common/constants';
+import logger from '@/common/logger';
+import { jnparse, jnstringify } from '@/common/utils';
 
 const tagCache = new RedisCache({
   namespace: CACHE_NAMESPACE_CONFIG.Tags.namespace,
@@ -16,15 +16,11 @@ const eventTagsCache = new RedisCache({
 
 export const getTagCache = (tagId: string) => tagCache.getItem<ITag>(tagId);
 
-export const setTagCache = (tagId: string, tag: ITag) =>
-  tagCache.setItem(tagId, tag);
+export const setTagCache = (tagId: string, tag: ITag) => tagCache.setItem(tagId, tag);
 
 export const deleteTagCache = (tagId: string) => tagCache.deleteItem(tagId);
 
-export const setEventTagsCache = async (
-  eventId: string,
-  tags: ITag[]
-): Promise<"OK"> => {
+export const setEventTagsCache = async (eventId: string, tags: ITag[]): Promise<'OK'> => {
   const pipeline = eventTagsCache.getPipeline();
   const eventTagsKey = `${CACHE_NAMESPACE_CONFIG.Events.namespace}:${eventId}:tags`;
   tags.forEach((tag) => {
@@ -34,28 +30,19 @@ export const setEventTagsCache = async (
   });
   pipeline.expire(eventTagsKey, eventTagsCache.defaultTTLMs);
   const res = await pipeline.exec();
-  logger.debug(
-    `Result set event tags cache for event ${eventId}: ${jnstringify(res)}`
-  );
-  return "OK";
+  logger.debug(`Result set event tags cache for event ${eventId}: ${jnstringify(res)}`);
+  return 'OK';
 };
 
 export const getEventTagsCache = async (eventId: string) => {
-  const tags = (await eventTagsCache.getHKeys(`${eventId}:tags`)) as Record<
-    string,
-    ITag
-  >;
-  return Object.values(tags || {});
+  const tags = (await eventTagsCache.getHKeys(`${eventId}:tags`)) as Record<string, string>;
+  return Object.values(tags || {}).map((tag) => jnparse(tag) as ITag);
 };
 
-export const deleteEventTagsCache = (eventId: string) =>
-  eventTagsCache.deleteItem(`${eventId}:tags`);
+export const deleteEventTagsCache = (eventId: string) => eventTagsCache.deleteItem(`${eventId}:tags`);
 
-export const getSubTagsCache = (tagId: string) =>
-  tagCache.getItem<ITag[]>(`${tagId}:sub-tags`);
+export const getSubTagsCache = (tagId: string) => tagCache.getItem<ITag[]>(`${tagId}:sub-tags`);
 
-export const setSubTagsCache = (tagId: string, tags: ITag[]) =>
-  tagCache.setItem(`${tagId}:sub-tags`, tags, 3600);
+export const setSubTagsCache = (tagId: string, tags: ITag[]) => tagCache.setItem(`${tagId}:sub-tags`, tags, 3600);
 
-export const deleteSubTagsCache = (tagId: string) =>
-  tagCache.deleteItem(`${tagId}:sub-tags`);
+export const deleteSubTagsCache = (tagId: string) => tagCache.deleteItem(`${tagId}:sub-tags`);

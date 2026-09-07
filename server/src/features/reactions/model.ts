@@ -1,12 +1,9 @@
-import { getDBConnection } from "@/connections/db";
-import { DataTypes, Model } from "sequelize";
-import { getUUIDv7 } from "@/helpers";
-import { REACTION_TABLE_NAME } from "./constants";
-import type { IBaseUser, IReaction } from "@/definitions/types";
-type ReactionAttributes = Omit<
-  IReaction,
-  "createdAt" | "updatedAt" | "deletedAt"
->;
+import { getDBConnection } from '@/common/connections/db';
+import { DataTypes, Model } from 'sequelize';
+import { getUUIDv7 } from '@/common/helpers';
+import { REACTION_TABLE_NAME } from './constants';
+import type { IBaseUser, IReaction } from '@/common/definitions/types';
+type ReactionAttributes = Omit<IReaction, 'createdAt' | 'updatedAt'>;
 
 export class Reaction extends Model<ReactionAttributes, ReactionAttributes> {
   declare id: string;
@@ -15,8 +12,6 @@ export class Reaction extends Model<ReactionAttributes, ReactionAttributes> {
   declare userId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
-  declare deletedAt?: Date;
-
   declare user?: IBaseUser;
 }
 
@@ -32,19 +27,15 @@ Reaction.init(
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
-      references: { model: "Users", key: "id" },
+      references: { model: 'Users', key: 'id' },
+      onDelete: 'CASCADE',
     },
   },
   {
-    modelName: "Reaction",
+    modelName: 'Reaction',
     tableName: REACTION_TABLE_NAME,
-    sequelize: getDBConnection(),
+    sequelize: getDBConnection()!,
     timestamps: true,
-    paranoid: true,
-    indexes: [{ fields: ["contentId"] }],
-  }
+    indexes: [{ fields: ['contentId'] }],
+  },
 );
-
-(async () => {
-  await Reaction.sync({ alter: false });
-})();

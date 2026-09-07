@@ -1,29 +1,18 @@
-import Joi from "joi";
-import { EEventStatus, EEventType } from "@/definitions/enums";
+import Joi from 'joi';
+import type { NextFunction, Request, Response } from 'express';
+import { BadRequestError } from '@/common/exceptions';
 
 export const searchQuerySchema = Joi.object({
   query: Joi.string().min(2).max(100).required(),
-  page: Joi.number().integer().min(1).default(1),
+  next: Joi.string().allow(null, '').optional(),
   limit: Joi.number().integer().min(1).max(100).default(20),
-  filters: Joi.object({
-    types: Joi.array().items(Joi.string().valid("event", "user", "tag")),
-    eventStatus: Joi.array().items(
-      Joi.string().valid(...Object.values(EEventStatus))
-    ),
-    eventType: Joi.array().items(
-      Joi.string().valid(...Object.values(EEventType))
-    ),
-    dateRange: Joi.object({
-      start: Joi.string().isoDate().required(),
-      end: Joi.string().isoDate().required(),
-    }),
-    location: Joi.object({
-      latitude: Joi.number().min(-90).max(90).required(),
-      longitude: Joi.number().min(-180).max(180).required(),
-      radius: Joi.number().positive().max(1000).required(), // max 1000km
-    }),
-    tags: Joi.array().items(Joi.string()),
-  }),
+  status: Joi.string().optional(),
+  type: Joi.string().optional(),
+  datePreset: Joi.string().valid('anytime', 'today', 'this_week', 'this_month').optional(),
+  latitude: Joi.number().min(-90).max(90).optional(),
+  longitude: Joi.number().min(-180).max(180).optional(),
+  radiusKm: Joi.number().positive().max(1000).optional(),
+  tagIds: Joi.string().optional(),
 });
 
 export const suggestionsQuerySchema = Joi.object({
@@ -31,10 +20,21 @@ export const suggestionsQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(20).default(5),
 });
 
-export const validateSearchRequest = (data: any) => {
-  return searchQuerySchema.validate(data, { abortEarly: false });
+export const validateSearchRequest = (data: any) => searchQuerySchema.validate(data, { abortEarly: false });
+
+const validateQuery = (schema: Joi.ObjectSchema) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(req.query, { abortEarly: false });
+
+    if (error) {
+      const errorMessage = error.details.map((detail) => detail.message).join(', ');
+      throw new BadRequestError(`Validation error: ${errorMessage}`);
+    }
+
+    req.query = value as Request['query'];
+    next();
+  };
 };
 
-export const validateSuggestionsRequest = (data: any) => {
-  return suggestionsQuerySchema.validate(data, { abortEarly: false });
-};
+export const validateSearchQuery = validateQuery(searchQuerySchema);
+export const validateSuggestionsQuery = validateQuery(suggestionsQuerySchema);

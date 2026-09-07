@@ -1,17 +1,11 @@
-import { supabase } from "@/connections";
-import { RequestContext } from "@/contexts";
-import { EAuthProvider } from "@/definitions/enums";
-import type { IBaseUser } from "@/definitions/types";
-import {
-  getSafeUser,
-  setUserCache,
-  setUserSessionCache,
-} from "@/features/users/helpers";
-import UserService from "@/features/users/service";
-import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from "@/helpers";
-import type { AuthResponse } from "@supabase/supabase-js";
-import type { Request } from "express";
-import { UAParser } from "ua-parser-js";
+import { supabase } from '@/common/connections';
+import { RequestContext, EAuthProvider, type IBaseUser } from '@/common';
+import { getSafeUser, setUserCache, setUserSessionCache } from '@/features/users/helpers';
+import UserService from '@/features/users/service';
+import { getAlphaNumericId, getGeoLocationData, getUUIDv7 } from '@/common/helpers';
+import type { AuthResponse } from '@supabase/supabase-js';
+import type { Request } from 'express';
+import { UAParser } from 'ua-parser-js';
 
 class Auth {
   private userService: UserService;
@@ -19,7 +13,7 @@ class Auth {
     this.userService = new UserService();
   }
 
-  performOAuth = async (provider: "github" | "google", redirectTo: string) => {
+  performOAuth = async (provider: 'github' | 'google', redirectTo: string) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -41,11 +35,7 @@ class Auth {
     if (error) throw error;
   };
 
-  signUpNewUser = async (
-    email: string,
-    password: string,
-    redirectTo: string
-  ) => {
+  signUpNewUser = async (email: string, password: string, redirectTo: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -78,8 +68,8 @@ class Auth {
     if (error) throw error;
   };
 
-  signOut = async (scope: "global" | "local" | "others") => {
-    if (scope === "global") {
+  signOut = async (scope: 'global' | 'local' | 'others') => {
+    if (scope === 'global') {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } else {
@@ -110,21 +100,23 @@ class Auth {
 
     const { user, session } = data;
 
-    RequestContext.setContextValue("session", {
-      accessToken: session?.access_token,
-      refreshToken: session?.refresh_token,
+    RequestContext.setContextValue('session', {
+      accessToken: session?.access_token ?? '',
+      refreshToken: session?.refresh_token ?? '',
     });
 
     if (!existingUser) {
-      const userData = await this.userService.getUserByEmail(user.email);
-      existingUser = userData;
+      const userData = await this.userService.getUserByEmail(user!.email!);
+      existingUser = userData ?? undefined;
+    }
+
+    if (existingUser && existingUser.__sid !== user!.id) {
+      existingUser = (await this.userService.setSupabaseSid(existingUser.id, user!.id)) ?? existingUser;
     }
 
     // Extract IP and location info
-    const ip =
-      (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-      req.socket.remoteAddress;
-    const rawUserAgent = req.headers["user-agent"] as string;
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || '';
+    const rawUserAgent = req.headers['user-agent'] as string;
 
     const geoLocationData = await getGeoLocationData(ip);
 
@@ -132,30 +124,28 @@ class Auth {
       // create new user
       let profilePic = null;
 
-      const authProvider = user.app_metadata.provider;
+      const authProvider = user!.app_metadata.provider;
 
       if (authProvider === EAuthProvider.Google) {
         profilePic = {
-          url: user.user_metadata.avatar_url,
+          url: user!.user_metadata.avatar_url,
           provider: authProvider,
         };
       }
 
       const newUserData = {
         id: getUUIDv7(),
-        __sid: user.id, // supabase user id
-        email: user.email,
-        name: user.user_metadata.full_name,
-        gender: "-", // will be updated later
+        __sid: user!.id, // supabase user id
+        email: user!.email,
+        name: user!.user_metadata.full_name,
+        gender: user!.user_metadata.gender || '-',
         address: geoLocationData,
-        isVerified: Object.values(EAuthProvider).includes(
-          authProvider as EAuthProvider
-        ),
+        isVerified: Object.values(EAuthProvider).includes(authProvider as EAuthProvider),
         profilePic,
-        mediaId: user.user_metadata?.mediaId,
+        mediaId: user!.user_metadata?.mediaId,
         meta: {
           auth: {
-            authProvider: user.app_metadata.provider,
+            provider: user!.app_metadata.provider,
           },
           hasOnboarded: false,
         },
@@ -164,8 +154,9 @@ class Auth {
       const newUser = await this.userService.create(newUserData);
       existingUser = (newUser as any)?.[0] ?? newUser;
     }
-    existingUser = getSafeUser(existingUser);
-    await setUserCache(existingUser.id, existingUser);
+    const cachedUser = existingUser!;
+    const safeUser = getSafeUser(cachedUser);
+    await setUserCache(cachedUser.id, cachedUser);
 
     // Extract device metadata
     const parser = new UAParser();
@@ -173,41 +164,39 @@ class Auth {
 
     const finalUserAgent = {
       device: {
-        model: deviceInfo.device.model,
-        vendor: deviceInfo.device.vendor,
+        model: deviceInfo.device.model ?? '',
+        vendor: deviceInfo.device.vendor ?? '',
       },
       os: {
-        name: deviceInfo.os.name,
-        version: deviceInfo.os.version,
+        name: deviceInfo.os.name ?? '',
+        version: deviceInfo.os.version ?? '',
       },
       browser: {
-        name: deviceInfo.browser.name,
-        version: deviceInfo.browser.major,
+        name: deviceInfo.browser.name ?? '',
+        version: deviceInfo.browser.major ?? '',
       },
       ua: deviceInfo.ua,
     };
 
     const sessionDataToSave = {
-      accessToken: session?.access_token,
-      refreshToken: session?.refresh_token,
+      accessToken: session!.access_token,
+      refreshToken: session!.refresh_token,
       userAgent: finalUserAgent,
-      location: geoLocationData,
-      expiresAt: new Date(
-        new Date(0).setUTCSeconds(session.expires_at)
-      ).toISOString(),
-      expiresIn: session.expires_in,
-      user: { id: existingUser.id },
+      location: geoLocationData ?? {},
+      expiresAt: new Date(new Date(0).setUTCSeconds(session!.expires_at ?? 0)).toISOString(),
+      expiresIn: session!.expires_in,
+      user: { id: cachedUser.id },
     };
 
     const sessionId = getAlphaNumericId();
 
     await setUserSessionCache({
-      userId: existingUser.id,
+      userId: cachedUser.id,
       sessionId,
       data: sessionDataToSave,
     });
 
-    return { sessionId, user: existingUser };
+    return { sessionId, user: safeUser };
   };
 }
 

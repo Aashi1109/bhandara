@@ -1,107 +1,82 @@
-import { validateSchema } from "@/helpers";
-import { EAccessLevel, EThreadType } from "@/definitions/enums";
-import { THREAD_TABLE_NAME } from "./constants";
-export const threadSchema = {
-  type: "object",
+import { validateSchema } from '@/common/helpers';
+import { EAccessLevel } from '@/common/definitions/enums';
+import { THREAD_TABLE_NAME } from './constants';
+
+const lockHistoryItemSchema = {
+  type: 'object',
   properties: {
-    type: {
-      type: "string",
-      enum: Object.values(EThreadType),
-      errorMessage: `Type must be either ${Object.values(EThreadType).join(
-        ","
-      )}`,
+    lockedBy: {
+      type: 'string',
+      format: 'uuid',
+      errorMessage: 'LockedBy must be a valid UUID',
     },
+    lockedAt: {
+      type: 'string',
+      format: 'date-time',
+      errorMessage: 'LockedAt must be a valid date-time',
+    },
+  },
+  required: ['lockedBy', 'lockedAt'],
+  additionalProperties: false,
+};
+
+const threadSchema = {
+  type: 'object',
+  properties: {
     createdBy: {
-      type: "string",
-      format: "uuid",
-      errorMessage: "Creator is required",
+      type: 'string',
+      format: 'uuid',
+      errorMessage: 'Creator is required',
     },
     eventId: {
-      type: "string",
-      format: "uuid",
-      errorMessage: "Event ID is required",
+      type: 'string',
+      format: 'uuid',
+      errorMessage: 'Event ID is required',
     },
     visibility: {
-      type: "string",
+      type: 'string',
       enum: Object.values(EAccessLevel),
-      errorMessage: `Visibility must be one of ${Object.values(
-        EAccessLevel
-      ).join(",")}`,
+      errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
+      default: EAccessLevel.Public,
     },
     lockHistory: {
-      type: "object",
-      properties: {
-        lockedBy: {
-          type: "string",
-          format: "uuid",
-          errorMessage: "LockedBy must be a valid UUID",
-        },
-        lockedAt: {
-          type: "string",
-          format: "date-time",
-          errorMessage: "LockedAt must be a valid date-time",
-        },
-      },
-      required: ["lockedBy", "lockedAt"],
-      additionalProperties: false,
-      errorMessage: "Each lock event must have 'lockedBy' and 'lockedAt'",
+      type: 'array',
+      items: lockHistoryItemSchema,
+      errorMessage: 'Lock history must be an array of lock entries',
     },
   },
-  required: ["type", "createdBy", "visibility"],
+  required: ['createdBy', 'visibility'],
   additionalProperties: false,
   errorMessage: {
-    type: "Thread data must be an object",
+    type: 'Thread data must be an object',
     required: {
-      type: "Type is required",
-      status: "Status is required",
-      visibility: "Visibility is required",
+      createdBy: 'Creator is required',
+      visibility: 'Visibility is required',
     },
   },
 };
 
-export const updateSchema = {
-  type: "object",
+const updateSchema = {
+  type: 'object',
   properties: {
     visibility: {
-      type: "string",
+      type: 'string',
       enum: Object.values(EAccessLevel),
-      errorMessage: `Visibility must be one of ${Object.values(
-        EAccessLevel
-      ).join(",")}`,
+      errorMessage: `Visibility must be one of ${Object.values(EAccessLevel).join(',')}`,
     },
     lockHistory: {
-      type: ["object", "null"],
-      properties: {
-        lockedBy: {
-          type: "string",
-          format: "uuid",
-          errorMessage: "LockedBy must be a valid UUID",
-        },
-        lockedAt: {
-          type: "string",
-          format: "date-time",
-          errorMessage: "LockedAt must be a valid date-time",
-        },
-      },
-      required: ["lockedBy", "lockedAt"],
-      additionalProperties: false,
-      errorMessage: "Each lock event must have 'lockedBy' and 'lockedAt'",
+      oneOf: [{ type: 'array', items: lockHistoryItemSchema }, { type: 'null' }],
+      errorMessage: 'Lock history must be an array or null',
     },
   },
   additionalProperties: false,
   errorMessage: {
-    type: "Thread data must be an object",
+    type: 'Thread data must be an object',
   },
 };
 
-const validateThreadCreate = validateSchema(
-  `${THREAD_TABLE_NAME}_CREATE`,
-  threadSchema
-);
+const validateThreadCreate = validateSchema(`${THREAD_TABLE_NAME}_CREATE`, threadSchema);
 
-const validateThreadUpdate = validateSchema(
-  `${THREAD_TABLE_NAME}_UPDATE`,
-  updateSchema
-);
+const validateThreadUpdate = validateSchema(`${THREAD_TABLE_NAME}_UPDATE`, updateSchema);
 
-export { validateThreadCreate, validateThreadUpdate };
+export { validateThreadCreate, validateThreadUpdate, threadSchema, updateSchema as threadUpdateSchema };

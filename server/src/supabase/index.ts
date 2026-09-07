@@ -1,17 +1,13 @@
 // Deprecated: Supabase service retained for legacy support
 // Postgrest types kept for backwards compatibility with old DB service
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { PostgrestError } from '@supabase/supabase-js';
 
-import { decode } from "base64-arraybuffer";
-import { supabase } from "../connections";
-import { SupabaseCustomError } from "@/exceptions";
+import { decode } from 'base64-arraybuffer';
+import { supabase } from '../common/connections';
+import { SupabaseCustomError } from '@/common';
 
 const throwSupabaseError = (res: any) => {
-  throw new SupabaseCustomError(
-    res.message || res.error?.message,
-    res?.status,
-    res.name || res?.statusText
-  );
+  throw new SupabaseCustomError(res.message || res.error?.message, res?.status, res.name || res?.statusText);
 };
 
 export type SupabaseClient = typeof supabase;
@@ -44,14 +40,12 @@ class SupabaseService {
     options?: Record<string, any>;
     base64FileData: string;
   }) {
-    const res = await this.supabaseClient.storage
-      .from(bucket)
-      .upload(path, decode(base64FileData), {
-        contentType: mimeType,
-        cacheControl: "3600",
-        upsert: true,
-        ...options,
-      });
+    const res = await this.supabaseClient.storage.from(bucket).upload(path, decode(base64FileData), {
+      contentType: mimeType,
+      cacheControl: '3600',
+      upsert: true,
+      ...options,
+    });
 
     if (res.error) throwSupabaseError(res);
 
@@ -103,11 +97,7 @@ class SupabaseService {
     };
     const res = await this.supabaseClient.storage
       .from(bucket)
-      .createSignedUrl(
-        path,
-        _options?.expiresIn,
-        _options?.transformations || {}
-      );
+      .createSignedUrl(path, _options?.expiresIn, _options?.transformations || {});
 
     if (res.error) throwSupabaseError(res);
 
@@ -141,17 +131,17 @@ class SupabaseService {
    *
    */
   async transaction<T>(
-    callback: (client: typeof this.supabaseClient) => Promise<T>
+    callback: (client: typeof this.supabaseClient) => Promise<T>,
   ): Promise<{ data: T | null; error: PostgrestError | null }> {
     try {
       // Begin transaction
-      await this.supabaseClient.rpc("begin");
+      await this.supabaseClient.rpc('begin');
 
       // Execute the callback with transaction
       const result = await callback(this.supabaseClient);
 
       // Commit transaction
-      await this.supabaseClient.rpc("commit");
+      await this.supabaseClient.rpc('commit');
 
       return result as {
         data: T | null;
@@ -159,8 +149,9 @@ class SupabaseService {
       };
     } catch (error) {
       // Rollback transaction on error
-      const res = await this.supabaseClient.rpc("rollback");
+      const res = await this.supabaseClient.rpc('rollback');
       throwSupabaseError(error);
+      return { data: null, error: error as any };
     }
   }
 
@@ -175,12 +166,10 @@ class SupabaseService {
       upsert?: boolean;
     };
   }) {
-    const res = await this.supabaseClient.storage
-      .from(bucket)
-      .createSignedUploadUrl(path, {
-        upsert: true,
-        ...options,
-      });
+    const res = await this.supabaseClient.storage.from(bucket).createSignedUploadUrl(path, {
+      upsert: true,
+      ...options,
+    });
 
     if (res.error) throwSupabaseError(res);
 
@@ -200,12 +189,10 @@ class SupabaseService {
     mimeType: string;
     token: string;
   }) {
-    const res = await this.supabaseClient.storage
-      .from(bucket)
-      .uploadToSignedUrl(path, token, decode(base64FileData), {
-        contentType: mimeType,
-        upsert: true,
-      });
+    const res = await this.supabaseClient.storage.from(bucket).uploadToSignedUrl(path, token, decode(base64FileData), {
+      contentType: mimeType,
+      upsert: true,
+    });
 
     if (res.error) throwSupabaseError(res);
 
@@ -226,9 +213,7 @@ class SupabaseService {
       download?: boolean;
     };
   }) {
-    const res = await this.supabaseClient.storage
-      .from(bucket)
-      .createSignedUrl(path, expiresIn, options);
+    const res = await this.supabaseClient.storage.from(bucket).createSignedUrl(path, expiresIn, options);
 
     if (res.error) throwSupabaseError(res);
 
@@ -248,9 +233,7 @@ class SupabaseService {
       download: boolean;
     };
   }) {
-    const res = await this.supabaseClient.storage
-      .from(bucket)
-      .createSignedUrls(paths, expiresIn, options);
+    const res = await this.supabaseClient.storage.from(bucket).createSignedUrls(paths, expiresIn, options);
 
     if (res.error) throwSupabaseError(res);
 
@@ -259,7 +242,7 @@ class SupabaseService {
 
   async executeRpc<T>(
     name: string,
-    params: Record<string, any>
+    params: Record<string, any>,
   ): Promise<{ data: T | null; error: PostgrestError | null }> {
     const res = await this.supabaseClient.rpc(name, params);
     if (res.error) throwSupabaseError(res);

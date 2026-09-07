@@ -1,0 +1,1 @@
+enum MapProviderType { google, mapbox }

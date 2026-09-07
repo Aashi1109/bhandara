@@ -1,0 +1,236 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../theme/theme.dart';
+import '../../globals.dart';
+
+enum SnackBarType { info, error, warning, success }
+
+class AppSnackBar {
+  static OverlayEntry? _currentEntry;
+
+  static void show(
+    BuildContext context, {
+    required String message,
+    SnackBarType type = SnackBarType.info,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    final overlay = Overlay.of(context);
+    Color backgroundColor;
+    IconData icon;
+
+    switch (type) {
+      case SnackBarType.error:
+        backgroundColor = context.appPalette.error;
+        icon = LucideIcons.alertCircle;
+        break;
+      case SnackBarType.warning:
+        backgroundColor = context.appPalette.warning;
+        icon = LucideIcons.alertTriangle;
+        break;
+      case SnackBarType.success:
+        backgroundColor = context.appPalette.success;
+        icon = LucideIcons.checkCircle;
+        break;
+      case SnackBarType.info:
+        backgroundColor = context.appPalette.primary;
+        icon = LucideIcons.info;
+        break;
+    }
+
+    _currentEntry = OverlayEntry(
+      builder: (context) => _TopSnackBar(
+        message: message,
+        backgroundColor: backgroundColor,
+        icon: icon,
+        duration: duration,
+        onDismiss: () {
+          _currentEntry?.remove();
+          _currentEntry = null;
+        },
+      ),
+    );
+
+    overlay.insert(_currentEntry!);
+  }
+
+  static void success(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.success);
+  }
+
+  static void error(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.error);
+  }
+
+  static void warning(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.warning);
+  }
+
+  static void info(BuildContext context, String message) {
+    show(context, message: message, type: SnackBarType.info);
+  }
+
+  /// Show snackbar without a BuildContext — inserts directly into the root navigator's overlay.
+  static void showGlobal({
+    required String message,
+    SnackBarType type = SnackBarType.error,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    final overlay = rootNavigatorKey.currentState?.overlay;
+    if (overlay == null) return;
+    final context = rootNavigatorKey.currentContext;
+    if (context == null) return;
+
+    _currentEntry?.remove();
+    _currentEntry = null;
+
+    Color backgroundColor;
+    IconData icon;
+
+    switch (type) {
+      case SnackBarType.error:
+        backgroundColor = context.appPalette.error;
+        icon = LucideIcons.alertCircle;
+        break;
+      case SnackBarType.warning:
+        backgroundColor = context.appPalette.warning;
+        icon = LucideIcons.alertTriangle;
+        break;
+      case SnackBarType.success:
+        backgroundColor = context.appPalette.success;
+        icon = LucideIcons.checkCircle;
+        break;
+      case SnackBarType.info:
+        backgroundColor = context.appPalette.primary;
+        icon = LucideIcons.info;
+        break;
+    }
+
+    _currentEntry = OverlayEntry(
+      builder: (context) => _TopSnackBar(
+        message: message,
+        backgroundColor: backgroundColor,
+        icon: icon,
+        duration: duration,
+        onDismiss: () {
+          _currentEntry?.remove();
+          _currentEntry = null;
+        },
+      ),
+    );
+
+    overlay.insert(_currentEntry!);
+  }
+}
+
+class _TopSnackBar extends StatefulWidget {
+  const _TopSnackBar({
+    required this.message,
+    required this.backgroundColor,
+    required this.icon,
+    required this.duration,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final Color backgroundColor;
+  final IconData icon;
+  final Duration duration;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_TopSnackBar> createState() => _TopSnackBarState();
+}
+
+class _TopSnackBarState extends State<_TopSnackBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    _controller.forward();
+
+    Future.delayed(widget.duration, () {
+      if (mounted) {
+        _controller.reverse().then((_) => widget.onDismiss());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final typography = context.appTypography;
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 16,
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: SlideTransition(
+          position: _offsetAnimation,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: widget.backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              spacing: 12,
+              children: [
+                Icon(
+                  widget.icon,
+                  color: context.appPalette.surface,
+                  size: AppIconSizes.defaultSize,
+                ),
+                Expanded(
+                  child: Text(
+                    widget.message,
+                    style: typography.bodyMD.copyWith(
+                      color: context.appPalette.surface,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () =>
+                      _controller.reverse().then((_) => widget.onDismiss()),
+                  child: Icon(
+                    LucideIcons.x,
+                    color: context.appPalette.surface,
+                    size: AppIconSizes.m,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

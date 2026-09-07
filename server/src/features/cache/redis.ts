@@ -1,9 +1,11 @@
-import type { Redis } from "@upstash/redis"; // TODO: Uncomment on prod
-import { jnparse, jnstringify } from "@/utils";
-import { getRedisConnection } from "@/connections";
+import type IORedis from 'ioredis';
+import { jnstringify, safeJsonParse } from '@/common/utils';
+import { getRedisConnection } from '@/common/connections';
+import { REDIS_CONNECTION_NAMES } from '@/common/constants';
 
 interface RedisCacheConfig {
-  redisClient?: Redis;
+  redisClient?: IORedis;
+  connectionName?: REDIS_CONNECTION_NAMES;
   namespace: string;
   defaultTTLSeconds?: number;
 }
@@ -16,12 +18,12 @@ interface MethodCacheOptions {
 }
 
 class RedisCache {
-  private readonly redisClient: Redis;
+  private readonly redisClient: IORedis;
   private readonly cacheNamespace: string;
   private readonly defaultTTLSeconds: number;
 
   constructor(config: RedisCacheConfig) {
-    this.redisClient = getRedisConnection();
+    this.redisClient = config.redisClient || getRedisConnection(config.connectionName || REDIS_CONNECTION_NAMES.Cache);
     this.cacheNamespace = config.namespace;
     this.defaultTTLSeconds = config.defaultTTLSeconds || 3600;
   }
@@ -43,17 +45,13 @@ class RedisCache {
    * }
    *
    */
-  withCache(methodOptions: MethodCacheOptions = {}): (...args: unknown[]) => unknown {
+  withCache(methodOptions: MethodCacheOptions = {}): any {
     // Capture redis instance variables in closure
-    const {redisClient} = this;
-    const {cacheNamespace} = this;
+    const { redisClient } = this;
+    const { cacheNamespace } = this;
     const defaultTTL = this.defaultTTLSeconds;
 
-    return function (
-      target: any,
-      methodName: string,
-      descriptor: PropertyDescriptor
-    ) {
+    return function (target: any, methodName: string, descriptor: PropertyDescriptor) {
       const originalMethod = descriptor.value;
       const _options: MethodCacheOptions = {
         timeToLiveSeconds: defaultTTL,
@@ -81,16 +79,8 @@ class RedisCache {
           const databaseResult = await originalMethod.apply(this, methodArgs);
 
           // Cache the result if successful
-          if (
-            !methodOptions.skipCacheSet &&
-            databaseResult &&
-            !databaseResult.error
-          )
-            await redisClient.setex(
-              cacheKey,
-              _options.timeToLiveSeconds!,
-              JSON.stringify(databaseResult)
-            );
+          if (!methodOptions.skipCacheSet && databaseResult && !databaseResult.error)
+            await redisClient.set(cacheKey, JSON.stringify(databaseResult), 'EX', _options.timeToLiveSeconds!);
 
           return databaseResult;
         } catch (error) {
@@ -106,35 +96,49 @@ class RedisCache {
   async invalidateCache(pattern: string): Promise<void> {
     try {
       const fullPattern = `${this.cacheNamespace}:${pattern}`;
-      const matchingKeys = await this.redisClient.keys(fullPattern);
-      if (matchingKeys.length > 0) {
-        await this.redisClient.del(...matchingKeys);
+      const keys: string[] = [];
+      let cursor = '0';
+
+      do {
+        const [nextCursor, batch] = await this.redisClient.scan(cursor, 'MATCH', fullPattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
+      if (keys.length > 0) {
+        await this.redisClient.del(...keys);
       }
     } catch (error) {
-      console.error("Redis cache invalidation failed:", error);
+      console.error('Redis cache invalidation failed:', error);
     }
   }
 
   setItem(key: string, value: any, ttl?: number) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
-    // return this.redisClient.set(namespacedKey, jnstringify(value), {
-    //   ex: ttl || this.defaultTTLSeconds,
-    // }); // TODO: Uncomment on prod
-    return this.redisClient.set(namespacedKey, jnstringify(value), {
-      ex: ttl || this.defaultTTLSeconds,
-    });
+    return this.redisClient.set(namespacedKey, jnstringify(value), 'EX', ttl || this.defaultTTLSeconds);
   }
 
   async getItem<T>(key: string): Promise<T | null> {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
     const result = await this.redisClient.get(namespacedKey);
-    return result === "string" ? jnparse(result) : (result as T | null);
+    return typeof result === 'string' ? safeJsonParse(result) : (result as T | null);
   }
 
   setHKey(key: string, field: string, value: any, ttl?: number) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
     const pipeLine = this.redisClient.pipeline();
     pipeLine.hset(namespacedKey, { [field]: jnstringify(value) });
+    if (ttl) pipeLine.expire(namespacedKey, ttl);
+    return pipeLine.exec();
+  }
+
+  setHKeys(key: string, values: Record<string, any>, ttl?: number) {
+    const namespacedKey = `${this.cacheNamespace}:${key}`;
+    const pipeLine = this.redisClient.pipeline();
+    pipeLine.hset(
+      namespacedKey,
+      Object.fromEntries(Object.entries(values).map(([field, value]) => [field, jnstringify(value)])),
+    );
     if (ttl) pipeLine.expire(namespacedKey, ttl);
     return pipeLine.exec();
   }
@@ -169,6 +173,14 @@ class RedisCache {
     return this.redisClient.hdel(namespacedKey, field);
   }
 
+  incrementHKey(key: string, field: string, by: number = 1, ttl?: number) {
+    const namespacedKey = `${this.cacheNamespace}:${key}`;
+    const pipeLine = this.redisClient.pipeline();
+    pipeLine.hincrby(namespacedKey, field, by);
+    if (ttl) pipeLine.expire(namespacedKey, ttl);
+    return pipeLine.exec();
+  }
+
   getPipeline() {
     return this.redisClient.pipeline();
   }
@@ -181,25 +193,23 @@ class RedisCache {
    */
   cacheWrapper<T extends (...args: any[]) => Promise<any>>(
     fn: T,
-    options: MethodCacheOptions = {}
+    options: MethodCacheOptions = {},
   ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
     // const redisClient = this.redisClient;
     // const cacheNamespace = this.cacheNamespace;
     // const defaultTTL = this.defaultTTLSeconds;
 
-    // eslint-disable-next-line no-invalid-this
     return async function (this: any, ...args: Parameters<T>): Promise<ReturnType<T>> {
       const keyPart = options.customKeyGenerator
         ? options.customKeyGenerator(args)
         : `${fn.name}:${JSON.stringify(args)}`;
-      // eslint-disable-next-line no-invalid-this
+
       const cacheKey = `${this.cacheNamespace}:${keyPart}`;
-      // eslint-disable-next-line no-invalid-this
+
       const ttl = options.timeToLiveSeconds || this.defaultTTLSeconds;
 
       try {
         if (!options.skipCacheGet) {
-          // eslint-disable-next-line no-invalid-this
           const cachedResult = await this.getItem(cacheKey);
           if (cachedResult) return cachedResult;
         }
@@ -207,7 +217,6 @@ class RedisCache {
         const result = await fn(...args);
 
         if (!options.skipCacheSet && result && !result.error) {
-          // eslint-disable-next-line no-invalid-this
           await this.setItem(cacheKey, result, ttl);
         }
 
@@ -220,9 +229,7 @@ class RedisCache {
 
   updateValue(key: string, newValue: any) {
     const namespacedKey = `${this.cacheNamespace}:${key}`;
-    return this.redisClient.set(namespacedKey, jnstringify(newValue), {
-      keepTtl: true,
-    });
+    return this.redisClient.set(namespacedKey, jnstringify(newValue), 'KEEPTTL');
   }
 
   getTTL(key: string) {

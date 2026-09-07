@@ -1,0 +1,907 @@
+asyncapi: '3.1.0'
+id: 'urn:zentry:socket:platform'
+info:
+  title: Zentry Platform Socket API
+  version: '1.0.0'
+  description: |
+    AsyncAPI description of the Socket.IO contract currently implemented by the
+    Zentry backend on the `/platform` namespace.
+
+    This document is based on the live implementation in the server and client.
+    It documents the current contract, including partial events whose handlers
+    exist but are not fully implemented.
+  contact:
+    name: Zentry
+defaultContentType: application/json
+servers:
+  production:
+    host: localhost:3000
+    pathname: /socket.io/
+    protocol: ws
+    description: |
+      Socket.IO WebSocket transport endpoint. Clients connect here and then join
+      the `/platform` namespace.
+channels:
+  platform:
+    address: /platform
+    title: Platform namespace
+    description: |
+      Main Socket.IO namespace used by the mobile client for events, threads,
+      messages, reactions, and explore streaming.
+    messages:
+      joinRoomRequest:
+        $ref: '#/components/messages/joinRoomRequest'
+      leaveRoomRequest:
+        $ref: '#/components/messages/leaveRoomRequest'
+      messageCreatedRequest:
+        $ref: '#/components/messages/messageCreatedRequest'
+      messageUpdatedRequest:
+        $ref: '#/components/messages/messageUpdatedRequest'
+      messageDeletedRequest:
+        $ref: '#/components/messages/messageDeletedRequest'
+      reactionCreatedRequest:
+        $ref: '#/components/messages/reactionCreatedRequest'
+      reactionUpdatedRequest:
+        $ref: '#/components/messages/reactionUpdatedRequest'
+      reactionDeletedRequest:
+        $ref: '#/components/messages/reactionDeletedRequest'
+      threadCreatedRequest:
+        $ref: '#/components/messages/threadCreatedRequest'
+      exploreRequest:
+        $ref: '#/components/messages/exploreRequest'
+      roomAck:
+        $ref: '#/components/messages/roomAck'
+      booleanAck:
+        $ref: '#/components/messages/booleanAck'
+      messageAck:
+        $ref: '#/components/messages/messageAck'
+      errorAck:
+        $ref: '#/components/messages/errorAck'
+      eventCreatedBroadcast:
+        $ref: '#/components/messages/eventCreatedBroadcast'
+      eventUpdatedBroadcast:
+        $ref: '#/components/messages/eventUpdatedBroadcast'
+      eventDeletedBroadcast:
+        $ref: '#/components/messages/eventDeletedBroadcast'
+      threadCreatedBroadcast:
+        $ref: '#/components/messages/threadCreatedBroadcast'
+      threadUpdatedBroadcast:
+        $ref: '#/components/messages/threadUpdatedBroadcast'
+      threadDeletedBroadcast:
+        $ref: '#/components/messages/threadDeletedBroadcast'
+      threadLockedBroadcast:
+        $ref: '#/components/messages/threadLockedBroadcast'
+      threadUnlockedBroadcast:
+        $ref: '#/components/messages/threadUnlockedBroadcast'
+      messageCreatedBroadcast:
+        $ref: '#/components/messages/messageCreatedBroadcast'
+      messageUpdatedBroadcast:
+        $ref: '#/components/messages/messageUpdatedBroadcast'
+      messageDeletedBroadcast:
+        $ref: '#/components/messages/messageDeletedBroadcast'
+      reactionCreatedBroadcast:
+        $ref: '#/components/messages/reactionCreatedBroadcast'
+      reactionUpdatedBroadcast:
+        $ref: '#/components/messages/reactionUpdatedBroadcast'
+      reactionDeletedBroadcast:
+        $ref: '#/components/messages/reactionDeletedBroadcast'
+      exploreBroadcast:
+        $ref: '#/components/messages/exploreBroadcast'
+    bindings:
+      ws:
+        query:
+          type: object
+          description: |
+            Mobile/native clients authenticate by passing a session token in the
+            WebSocket query string. Socket.IO engine parameters are also present.
+          required:
+            - EIO
+            - transport
+          properties:
+            EIO:
+              type: string
+              const: '4'
+            transport:
+              type: string
+              const: websocket
+            token:
+              type: string
+              description: Session token used by mobile/native clients.
+    x-socketio:
+      namespace: /platform
+      transportPath: /socket.io/
+      auth:
+        queryToken: true
+        sessionCookie: true
+operations:
+  receiveJoinRoom:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Join room
+    summary: Client joins a room, typically `thread:{threadId}`.
+    messages:
+      - $ref: '#/channels/platform/messages/joinRoomRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/roomAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-status: implemented
+  receiveLeaveRoom:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Leave room
+    summary: Client leaves a previously joined room.
+    messages:
+      - $ref: '#/channels/platform/messages/leaveRoomRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/roomAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-status: implemented
+  receiveMessageCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Create message
+    summary: Client creates a new message in a thread.
+    messages:
+      - $ref: '#/channels/platform/messages/messageCreatedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/messageAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/messageCreatedBroadcast'
+    x-status: implemented
+  receiveMessageUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Update message
+    summary: Client updates an existing message.
+    messages:
+      - $ref: '#/channels/platform/messages/messageUpdatedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/messageAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/messageUpdatedBroadcast'
+    x-status: implemented
+  receiveMessageDeleted:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Delete message
+    summary: Client deletes an existing message.
+    messages:
+      - $ref: '#/channels/platform/messages/messageDeletedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/messageDeletedBroadcast'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/messageDeletedBroadcast'
+    x-status: implemented
+  receiveReactionCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Create reaction
+    summary: Client creates a reaction for a message, thread, or event.
+    messages:
+      - $ref: '#/channels/platform/messages/reactionCreatedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/booleanAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/reactionCreatedBroadcast'
+    x-status: implemented
+  receiveReactionUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Update reaction
+    summary: Client updates an existing reaction.
+    messages:
+      - $ref: '#/channels/platform/messages/reactionUpdatedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/booleanAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/reactionUpdatedBroadcast'
+    x-status: implemented
+  receiveReactionDeleted:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Delete reaction
+    summary: Client removes an existing reaction.
+    messages:
+      - $ref: '#/channels/platform/messages/reactionDeletedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/booleanAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/reactionDeletedBroadcast'
+    x-status: implemented
+  receiveThreadCreated:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Create thread
+    summary: Client creates a thread and its first message.
+    messages:
+      - $ref: '#/channels/platform/messages/threadCreatedRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/booleanAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/threadCreatedBroadcast'
+    x-status: implemented
+  receiveExplore:
+    action: receive
+    channel:
+      $ref: '#/channels/platform'
+    title: Explore stream request
+    summary: Client requests an explore stream centered on a location.
+    messages:
+      - $ref: '#/channels/platform/messages/exploreRequest'
+    x-ackMessages:
+      success:
+        $ref: '#/channels/platform/messages/booleanAck'
+      error:
+        $ref: '#/channels/platform/messages/errorAck'
+    x-broadcasts:
+      - $ref: '#/channels/platform/messages/exploreBroadcast'
+    x-status: implemented
+  sendEventCreated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Event created broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/eventCreatedBroadcast'
+    x-status: implemented
+  sendEventUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Event updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/eventUpdatedBroadcast'
+    x-status: implemented
+  sendEventDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Event deleted broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/eventDeletedBroadcast'
+    x-status: implemented
+  sendThreadCreated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Thread created broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/threadCreatedBroadcast'
+    x-status: implemented
+  sendThreadUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Thread updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/threadUpdatedBroadcast'
+    x-status: implemented
+  sendThreadDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Thread deleted broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/threadDeletedBroadcast'
+    x-status: implemented
+  sendThreadLocked:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Thread locked broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/threadLockedBroadcast'
+    x-status: implemented
+    x-roomScoped: true
+  sendThreadUnlocked:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Thread unlocked broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/threadUnlockedBroadcast'
+    x-status: implemented
+    x-roomScoped: true
+  sendMessageCreated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Message created broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/messageCreatedBroadcast'
+    x-status: implemented
+    x-roomScoped: true
+  sendMessageUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Message updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/messageUpdatedBroadcast'
+    x-status: implemented
+    x-roomScoped: true
+  sendMessageDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Message deleted broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/messageDeletedBroadcast'
+    x-status: implemented
+    x-roomScoped: true
+  sendReactionCreated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Reaction created broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/reactionCreatedBroadcast'
+    x-status: implemented
+  sendReactionUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Reaction updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/reactionUpdatedBroadcast'
+    x-status: implemented
+  sendReactionDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Reaction deleted broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/reactionDeletedBroadcast'
+    x-status: implemented
+  sendExplore:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: Explore broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/exploreBroadcast'
+    x-status: implemented
+  sendUserUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/platform'
+    title: User updated broadcast
+    messages:
+      - $ref: '#/channels/platform/messages/userUpdatedBroadcast'
+    x-status: implemented
+components:
+  messages:
+    joinRoomRequest:
+      name: join:room
+      title: Join room request
+      payload:
+        $ref: '#/components/schemas/JoinLeaveRoomRequest'
+    leaveRoomRequest:
+      name: leave:room
+      title: Leave room request
+      payload:
+        $ref: '#/components/schemas/JoinLeaveRoomRequest'
+    messageCreatedRequest:
+      name: message:create
+      title: Message create request
+      payload:
+        $ref: '#/components/schemas/MessageCreatedRequest'
+    messageUpdatedRequest:
+      name: message:update
+      title: Message update request
+      payload:
+        $ref: '#/components/schemas/MessageUpdatedRequest'
+    messageDeletedRequest:
+      name: message:delete
+      title: Message delete request
+      payload:
+        $ref: '#/components/schemas/MessageDeletedRequest'
+    reactionCreatedRequest:
+      name: reaction:create
+      title: Reaction create request
+      payload:
+        $ref: '#/components/schemas/ReactionMutationRequest'
+    reactionUpdatedRequest:
+      name: reaction:update
+      title: Reaction update request
+      payload:
+        $ref: '#/components/schemas/ReactionMutationRequest'
+    reactionDeletedRequest:
+      name: reaction:delete
+      title: Reaction delete request
+      payload:
+        $ref: '#/components/schemas/ReactionDeleteRequest'
+    threadCreatedRequest:
+      name: thread:create
+      title: Thread create request
+      payload:
+        $ref: '#/components/schemas/ThreadCreatedRequest'
+    exploreRequest:
+      name: explore
+      title: Explore request
+      payload:
+        $ref: '#/components/schemas/ExploreRequest'
+    roomAck:
+      name: ack:room
+      title: Room acknowledgement
+      payload:
+        $ref: '#/components/schemas/BooleanAck'
+    booleanAck:
+      name: ack:boolean
+      title: Boolean acknowledgement
+      payload:
+        $ref: '#/components/schemas/BooleanAck'
+    messageAck:
+      name: ack:message
+      title: Message acknowledgement
+      payload:
+        $ref: '#/components/schemas/MessageAck'
+    errorAck:
+      name: ack:error
+      title: Error acknowledgement
+      payload:
+        $ref: '#/components/schemas/ErrorAck'
+    eventCreatedBroadcast:
+      name: event:create
+      title: Event created broadcast
+      payload:
+        $ref: '#/components/schemas/EventEnvelope'
+    eventUpdatedBroadcast:
+      name: event:update
+      title: Event updated broadcast
+      payload:
+        $ref: '#/components/schemas/EventEnvelope'
+    eventDeletedBroadcast:
+      name: event:delete
+      title: Event deleted broadcast
+      payload:
+        $ref: '#/components/schemas/EntityDeletedEnvelope'
+    threadCreatedBroadcast:
+      name: thread:create
+      title: Thread created broadcast
+      payload:
+        $ref: '#/components/schemas/ThreadEnvelope'
+    threadUpdatedBroadcast:
+      name: thread:update
+      title: Thread updated broadcast
+      payload:
+        $ref: '#/components/schemas/ThreadPatchedEnvelope'
+    threadDeletedBroadcast:
+      name: thread:delete
+      title: Thread deleted broadcast
+      payload:
+        $ref: '#/components/schemas/EntityDeletedEnvelope'
+    threadLockedBroadcast:
+      name: thread:lock
+      title: Thread locked broadcast
+      payload:
+        $ref: '#/components/schemas/ThreadLockEnvelope'
+    threadUnlockedBroadcast:
+      name: thread:unlock
+      title: Thread unlocked broadcast
+      payload:
+        $ref: '#/components/schemas/ThreadUnlockEnvelope'
+    messageCreatedBroadcast:
+      name: message:create
+      title: Message created broadcast
+      payload:
+        $ref: '#/components/schemas/MessageEnvelope'
+    messageUpdatedBroadcast:
+      name: message:update
+      title: Message updated broadcast
+      payload:
+        $ref: '#/components/schemas/MessageEnvelope'
+    messageDeletedBroadcast:
+      name: message:delete
+      title: Message deleted broadcast
+      payload:
+        $ref: '#/components/schemas/MessageDeletedEnvelope'
+    reactionCreatedBroadcast:
+      name: reaction:create
+      title: Reaction created broadcast
+      payload:
+        $ref: '#/components/schemas/ReactionEnvelope'
+    reactionUpdatedBroadcast:
+      name: reaction:update
+      title: Reaction updated broadcast
+      payload:
+        $ref: '#/components/schemas/ReactionEnvelope'
+    reactionDeletedBroadcast:
+      name: reaction:delete
+      title: Reaction deleted broadcast
+      payload:
+        $ref: '#/components/schemas/ReactionEnvelope'
+    exploreBroadcast:
+      name: explore
+      title: Explore broadcast
+      payload:
+        $ref: '#/components/schemas/ExploreEnvelope'
+    userUpdatedBroadcast:
+      name: user:update
+      title: User updated broadcast
+      payload:
+        $ref: '#/components/schemas/UserEnvelope'
+  schemas:
+    JoinLeaveRoomRequest:
+      type: object
+      required:
+        - room
+      properties:
+        room:
+          type: string
+          description: Room identifier. Thread rooms use `thread:{threadId}`.
+          examples:
+            - thread:abc123
+    MessageCreatedRequest:
+      type: object
+      required:
+        - threadId
+        - content
+      properties:
+        threadId:
+          type: string
+        content:
+          $ref: '#/components/schemas/MessageContent'
+        parentId:
+          type:
+            - string
+            - 'null'
+    MessageUpdatedRequest:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        content:
+          $ref: '#/components/schemas/MessageContent'
+    MessageDeletedRequest:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    ThreadCreatedRequest:
+      type: object
+      required:
+        - eventId
+      properties:
+        eventId:
+          type: string
+        content:
+          $ref: '#/components/schemas/MessageContent'
+        parentId:
+          type:
+            - string
+            - 'null'
+    ReactionMutationRequest:
+      type: object
+      required:
+        - contentId
+        - contentPath
+        - reaction
+      properties:
+        contentId:
+          type: string
+        contentPath:
+          $ref: '#/components/schemas/ReactionContentPath'
+        reaction:
+          type: string
+        parentId:
+          type:
+            - string
+            - 'null'
+    ReactionDeleteRequest:
+      allOf:
+        - $ref: '#/components/schemas/ReactionMutationRequest'
+        - type: object
+          properties:
+            id:
+              type:
+                - string
+                - 'null'
+    ExploreRequest:
+      type: object
+      properties:
+        filter:
+          type: object
+          properties:
+            location:
+              $ref: '#/components/schemas/GeoLocation'
+      required:
+        - filter
+    GeoLocation:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+    BooleanAck:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: boolean
+          const: true
+    ErrorAck:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    MessageAck:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Message'
+    EventEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Event'
+    ThreadEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Thread'
+    ThreadPatchedEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+          additionalProperties: true
+    ThreadLockEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - lockedBy
+          properties:
+            id:
+              type: string
+            lockHistory:
+              type:
+                - array
+                - object
+                - 'null'
+            lockedBy:
+              type: string
+          additionalProperties: true
+    ThreadUnlockEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - unlockedBy
+          properties:
+            id:
+              type: string
+            lockHistory:
+              type:
+                - array
+                - object
+                - 'null'
+            unlockedBy:
+              type: string
+          additionalProperties: true
+    MessageEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/Message'
+    MessageDeletedEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - threadId
+          properties:
+            id:
+              type: string
+            threadId:
+              type: string
+    ReactionEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - contentPath
+            - reaction
+          properties:
+            id:
+              type: string
+            contentPath:
+              $ref: '#/components/schemas/ReactionContentPath'
+            reaction:
+              $ref: '#/components/schemas/Reaction'
+            parentId:
+              type:
+                - string
+                - 'null'
+            threadId:
+              type:
+                - string
+                - 'null'
+    ExploreEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/ExploreSection'
+    UserEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+    EntityDeletedEnvelope:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+    ReactionContentPath:
+      type: string
+      enum:
+        - messages
+        - events
+        - threads
+    MessageContent:
+      oneOf:
+        - type: string
+        - type: object
+          properties:
+            text:
+              type: string
+            media:
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+    Event:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+      additionalProperties: true
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+      additionalProperties: true
+    Thread:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        event:
+          $ref: '#/components/schemas/Event'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+      additionalProperties: true
+    Message:
+      type: object
+      required:
+        - id
+        - threadId
+      properties:
+        id:
+          type: string
+        threadId:
+          type: string
+        parentId:
+          type:
+            - string
+            - 'null'
+        content:
+          oneOf:
+            - type: string
+            - type: object
+      additionalProperties: true
+    Reaction:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        emoji:
+          type: string
+        userId:
+          type: string
+        contentId:
+          type: string
+      additionalProperties: true
+    ExploreSection:
+      type: object
+      description: Explore stream section emitted by `buildExploreSections(...)`.
+      additionalProperties: true

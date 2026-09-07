@@ -1,519 +1,300 @@
-import { Op, Sequelize } from "sequelize";
-import { Event } from "../events/model";
-import { User } from "../users/model";
-import { Tag } from "../tags/model";
-import type { IPaginationParams } from "@/definitions/types";
-import type { EEventStatus, EEventType } from "@/definitions/enums";
-import { getDBConnection } from "@/connections/db";
+import { Op, Sequelize, type WhereOptions } from 'sequelize';
 
-const sequelize = getDBConnection();
+import { EAddressEntityType, type EEventStatus, type EEventType } from '@/common/definitions/enums';
+import type { IPaginationParams, PaginatedResult } from '@/common/definitions/types';
+
+import AddressService from '../addresses/service';
+import { buildEventVisibilitySql, Event } from '../events/model';
+import { buildActiveEventStatusPredicate, deriveEventStatus } from '../events/status';
 
 export interface ISearchFilters {
-  types?: ("event" | "user" | "tag")[];
+  /// Session-derived permission subject. Never populated from client input.
+  viewerId?: string;
   eventStatus?: EEventStatus[];
   eventType?: EEventType[];
-  dateRange?: {
-    start: Date;
-    end: Date;
-  };
   location?: {
     latitude: number;
     longitude: number;
-    radius: number; // in kilometers
+    radius: number;
   };
   tags?: string[];
+  startDate?: Date;
+  endDate?: Date;
   limit?: number;
-  offset?: number;
+  next?: string | null;
 }
 
 export interface ISearchResult {
   id: string;
-  type: "event" | "user" | "tag";
+  type: 'event';
   title: string;
   description?: string;
   imageUrl?: string;
   metadata: Record<string, any>;
   relevanceScore: number;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 class SearchService {
-  /**
-   * Perform a comprehensive search across events, users, and tags
-   */
+  private readonly addressService: AddressService;
+
+  constructor() {
+    this.addressService = new AddressService();
+  }
+
+  private escapeForLike(value: string): string {
+    return value.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+  }
+
+  private encodeCursor(index: number): string {
+    return Buffer.from(String(index), 'utf8').toString('base64url');
+  }
+
+  private decodeCursor(cursor: string): number {
+    const decoded = Number.parseInt(Buffer.from(cursor, 'base64url').toString('utf8'), 10);
+    return Number.isFinite(decoded) && decoded >= 0 ? decoded : 0;
+  }
+
+  private timestampColumnExpression(field: 'start' | 'end') {
+    return field === 'start' ? '"startTime"' : '"endTime"';
+  }
+
+  private buildDerivedStatusClause(status: EEventStatus) {
+    const escape = Event.sequelize!.escape.bind(Event.sequelize);
+    const now = escape(new Date().toISOString());
+    const startExpr = this.timestampColumnExpression('start');
+    const endExpr = this.timestampColumnExpression('end');
+    const activeStatuses = buildActiveEventStatusPredicate();
+
+    switch (status) {
+      case 'draft':
+        return { isDraft: true, cancelledAt: null };
+      case 'cancelled':
+        return Sequelize.literal('"cancelledAt" IS NOT NULL');
+      case 'upcoming':
+        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} > ${now})`);
+      case 'ongoing':
+        return Sequelize.literal(`(${activeStatuses} AND ${startExpr} <= ${now} AND ${endExpr} > ${now})`);
+      case 'completed':
+        return Sequelize.literal(`(${activeStatuses} AND ${endExpr} <= ${now})`);
+      default:
+        return null;
+    }
+  }
+
+  private buildWhere(query: string, filters: ISearchFilters): WhereOptions {
+    const clauses: any[] = [
+      Sequelize.literal(buildEventVisibilitySql(filters.viewerId, '"Event"."id"')),
+      {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${query}%` } },
+          { description: { [Op.iLike]: `%${query}%` } },
+          Sequelize.literal(`CAST(COALESCE("tags", '[]'::jsonb) AS TEXT) ILIKE '%${this.escapeForLike(query)}%'`),
+        ],
+      },
+    ];
+
+    if (filters.eventType?.length) {
+      clauses.push({ type: { [Op.in]: filters.eventType } });
+    }
+
+    if (filters.eventStatus?.length) {
+      const statusClauses = filters.eventStatus.map((status) => this.buildDerivedStatusClause(status)).filter(Boolean);
+      if (statusClauses.length) {
+        clauses.push({ [Op.or]: statusClauses });
+      }
+    }
+
+    if (filters.tags?.length) {
+      const escape = Event.sequelize!.escape.bind(Event.sequelize);
+      const tagArray = filters.tags.map((tagId) => escape(tagId)).join(', ');
+      clauses.push(Sequelize.literal(`(COALESCE("tags", '[]'::jsonb) ?| ARRAY[${tagArray}])`));
+    }
+
+    if (filters.startDate && filters.endDate) {
+      const escape = Event.sequelize!.escape.bind(Event.sequelize);
+      clauses.push(
+        Sequelize.literal(
+          `(${this.timestampColumnExpression('start')} >= ${escape(filters.startDate.toISOString())} AND ${this.timestampColumnExpression('start')} <= ${escape(filters.endDate.toISOString())})`,
+        ),
+      );
+    }
+
+    if (
+      Number.isFinite(filters.location?.latitude) &&
+      Number.isFinite(filters.location?.longitude) &&
+      Number.isFinite(filters.location?.radius)
+    ) {
+      clauses.push(
+        this.addressService.buildEntityDistanceClause({
+          entityType: EAddressEntityType.Event,
+          entityIdColumn: `"Event"."id"`,
+          latitude: filters.location!.latitude,
+          longitude: filters.location!.longitude,
+          radiusKm: filters.location!.radius,
+        }),
+      );
+    }
+
+    return { [Op.and]: clauses };
+  }
+
   async search(
     query: string,
     filters: ISearchFilters = {},
-    pagination: Partial<IPaginationParams> = {}
-  ): Promise<{
-    data: ISearchResult[];
-    pagination: {
-      total: number;
-      page: number;
-      limit: number;
-      hasNext: boolean;
-    };
-  }> {
+    pagination: Partial<IPaginationParams> = {},
+  ): Promise<PaginatedResult<ISearchResult>> {
     const limit = filters.limit || pagination.limit || 20;
-    const offset = filters.offset || ((pagination.page || 1) - 1) * limit;
+    const nextCursor = filters.next || pagination.next || null;
+    const startIndex = nextCursor ? this.decodeCursor(nextCursor) : 0;
+    const fetchLimit = startIndex + limit;
 
-    const results: ISearchResult[] = [];
-    let totalCount = 0;
-
-    // Search events
-    if (!filters.types || filters.types.includes("event")) {
-      const eventResults = await this.searchEvents(
-        query,
-        filters,
-        limit,
-        offset
-      );
-      results.push(...eventResults.data);
-      totalCount += eventResults.total;
-    }
-
-    // Search users
-    if (!filters.types || filters.types.includes("user")) {
-      const userResults = await this.searchUsers(query, filters, limit, offset);
-      results.push(...userResults.data);
-      totalCount += userResults.total;
-    }
-
-    // Search tags
-    if (!filters.types || filters.types.includes("tag")) {
-      const tagResults = await this.searchTags(query, filters, limit, offset);
-      results.push(...tagResults.data);
-      totalCount += tagResults.total;
-    }
-
-    // Sort by relevance score and recency
-    results.sort((a, b) => {
-      if (Math.abs(a.relevanceScore - b.relevanceScore) < 0.1) {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-      }
-      return b.relevanceScore - a.relevanceScore;
-    });
+    const eventResults = await this.searchEvents(query, filters, fetchLimit);
+    const items = eventResults.data.slice(startIndex, startIndex + limit);
+    const nextIndex = startIndex + items.length;
+    const hasNext = nextIndex < eventResults.data.length;
 
     return {
-      data: results.slice(0, limit),
+      items,
       pagination: {
-        total: totalCount,
-        page: Math.floor(offset / limit) + 1,
+        total: eventResults.total,
         limit,
-        hasNext: results.length > limit,
+        hasNext,
+        next: hasNext ? this.encodeCursor(nextIndex) : null,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
       },
     };
   }
 
-  /**
-   * Search events with advanced filtering
-   */
   private async searchEvents(
     query: string,
     filters: ISearchFilters,
     limit: number,
-    offset: number
   ): Promise<{ data: ISearchResult[]; total: number }> {
-    const whereClause: any = {
-      [Op.or]: [
-        {
-          name: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-        {
-          description: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-        {
-          tags: {
-            [Op.overlap]: [query],
-          },
-        },
+    const where = this.buildWhere(query, filters);
+    const safeQuery = this.escapeForLike(query);
+    const count = await Event.count({ where });
+    const rows = await Event.findAll({
+      attributes: [
+        'id',
+        'name',
+        'type',
+        'isDraft',
+        'cancelledAt',
+        'startTime',
+        'endTime',
+        'media',
+        'tags',
+        'description',
+        'createdAt',
+        'updatedAt',
       ],
-    };
-
-    // Apply filters
-    if (filters.eventStatus?.length) {
-      whereClause.status = { [Op.in]: filters.eventStatus };
-    }
-
-    if (filters.eventType?.length) {
-      whereClause.type = { [Op.in]: filters.eventType };
-    }
-
-    if (filters.dateRange) {
-      whereClause["timings.startDate"] = {
-        [Op.between]: [filters.dateRange.start, filters.dateRange.end],
-      };
-    }
-
-    if (filters.location) {
-      // Add location-based filtering using PostGIS or similar
-      // This is a simplified version - you might want to use proper geospatial queries
-      whereClause["location.latitude"] = {
-        [Op.between]: [
-          filters.location.latitude - filters.location.radius / 111,
-          filters.location.latitude + filters.location.radius / 111,
-        ],
-      };
-      whereClause["location.longitude"] = {
-        [Op.between]: [
-          filters.location.longitude -
-            filters.location.radius /
-              (111 * Math.cos((filters.location.latitude * Math.PI) / 180)),
-          filters.location.longitude +
-            filters.location.radius /
-              (111 * Math.cos((filters.location.latitude * Math.PI) / 180)),
-        ],
-      };
-    }
-
-    const { count, rows } = await Event.findAndCountAll({
-      where: whereClause,
+      where,
       limit,
-      offset,
       order: [
         [
-          Sequelize.literal(`CASE 
-          WHEN name ILIKE '${query}%' THEN 1
-          WHEN name ILIKE '%${query}%' THEN 2
-          WHEN description ILIKE '%${query}%' THEN 3
-          ELSE 4
-        END`),
-          "ASC",
+          Sequelize.literal(`CASE
+            WHEN name ILIKE '${safeQuery}%' THEN 1
+            WHEN name ILIKE '%${safeQuery}%' THEN 2
+            WHEN description ILIKE '%${safeQuery}%' THEN 3
+            ELSE 4
+          END`),
+          'ASC',
         ],
-        ["createdAt", "DESC"],
-      ],
-      include: [
-        {
-          model: sequelize.models.User,
-          as: "creator",
-          attributes: ["id", "username", "avatar"],
-        },
+        ['createdAt', 'DESC'],
+        ['id', 'DESC'],
       ],
     });
+    const addressMap = await this.addressService.getByEntities(
+      EAddressEntityType.Event,
+      rows.map((event) => event.id),
+    );
 
-    const results: ISearchResult[] = rows.map((event) => {
-      const relevanceScore = this.calculateEventRelevance(event, query);
-      const previewImage = event.media?.find(
-        (m: any) => m.type === "image"
-      )?.publicUrl;
+    const results = rows.map((event) => {
+      const previewImage =
+        event.media?.find((item: any) => item.type === 'image')?.publicUrl ||
+        event.media?.find((item: any) => item.type === 'image')?.url ||
+        null;
+      const resolvedStatus = deriveEventStatus(event as any);
+      const location = this.addressService.toLocation(addressMap[event.id]);
 
       return {
         id: event.id,
-        type: "event" as const,
+        type: 'event' as const,
         title: event.name,
-        description: event.description,
-        imageUrl: previewImage,
+        description:
+          event.description && event.description.length > 200
+            ? `${event.description.slice(0, 200)}...`
+            : event.description,
+        imageUrl: previewImage ?? undefined,
         metadata: {
-          status: event.status,
+          status: resolvedStatus,
           type: event.type,
-          location: event.location,
-          timings: event.timings,
-          capacity: event.capacity,
-          participants: event.participants?.length || 0,
-          creator: event.creator,
+          location,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          createdAt: event.createdAt.toISOString(),
         },
-        relevanceScore,
+        relevanceScore: this.calculateEventRelevance(event, query),
         createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
       };
+    });
+
+    results.sort((a, b) => {
+      if (Math.abs(a.relevanceScore - b.relevanceScore) < 0.1) {
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      }
+      return b.relevanceScore - a.relevanceScore;
     });
 
     return { data: results, total: count };
   }
 
-  /**
-   * Search users
-   */
-  private async searchUsers(
-    query: string,
-    filters: ISearchFilters,
-    limit: number,
-    offset: number
-  ): Promise<{ data: ISearchResult[]; total: number }> {
-    const whereClause = {
-      [Op.or]: [
-        {
-          username: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-        {
-          fullName: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-        {
-          bio: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-      ],
-    };
-
-    const { count, rows } = await User.findAndCountAll({
-      where: whereClause,
-      limit,
-      offset,
-      order: [
-        [
-          Sequelize.literal(`CASE 
-          WHEN username ILIKE '${query}%' THEN 1
-          WHEN username ILIKE '%${query}%' THEN 2
-          WHEN full_name ILIKE '%${query}%' THEN 3
-          ELSE 4
-        END`),
-          "ASC",
-        ],
-        ["createdAt", "DESC"],
-      ],
-    });
-
-    const results: ISearchResult[] = rows.map((user) => {
-      const relevanceScore = this.calculateUserRelevance(user, query);
-
-      return {
-        id: user.id,
-        type: "user" as const,
-        title: user.username || user.name,
-        description: user.meta?.bio || "",
-        imageUrl: user.profilePic?.url || null,
-        metadata: {
-          fullName: user.name,
-          email: user.email,
-          isVerified: user.isVerified,
-          followers: 0, // TODO: Implement followers/following system
-          following: 0,
-        },
-        relevanceScore,
-        createdAt: user.createdAt,
-      };
-    });
-
-    return { data: results, total: count };
-  }
-
-  /**
-   * Search tags
-   */
-  private async searchTags(
-    query: string,
-    filters: ISearchFilters,
-    limit: number,
-    offset: number
-  ): Promise<{ data: ISearchResult[]; total: number }> {
-    const whereClause = {
-      [Op.or]: [
-        {
-          name: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-        {
-          description: {
-            [Op.iLike]: `%${query}%`,
-          },
-        },
-      ],
-    };
-
-    const { count, rows } = await Tag.findAndCountAll({
-      where: whereClause,
-      limit,
-      offset,
-      order: [
-        [
-          Sequelize.literal(`CASE 
-          WHEN name ILIKE '${query}%' THEN 1
-          WHEN name ILIKE '%${query}%' THEN 2
-          ELSE 3
-        END`),
-          "ASC",
-        ],
-        ["createdAt", "DESC"],
-      ],
-    });
-
-    const results: ISearchResult[] = rows.map((tag) => {
-      const relevanceScore = this.calculateTagRelevance(tag, query);
-
-      return {
-        id: tag.id,
-        type: "tag" as const,
-        title: tag.name,
-        description: tag.description,
-        imageUrl: tag.icon,
-        metadata: {
-          color: tag.color,
-          usageCount: 0, // TODO: Implement usage count tracking
-        },
-        relevanceScore,
-        createdAt: tag.createdAt,
-      };
-    });
-
-    return { data: results, total: count };
-  }
-
-  /**
-   * Calculate relevance score for events
-   */
   private calculateEventRelevance(event: any, query: string): number {
     let score = 0;
-    const queryLower = query.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
 
-    // Exact name match
-    if (event.name.toLowerCase() === queryLower) {
+    if (event.name.toLowerCase() === normalizedQuery) {
       score += 10;
-    }
-    // Name starts with query
-    else if (event.name.toLowerCase().startsWith(queryLower)) {
+    } else if (event.name.toLowerCase().startsWith(normalizedQuery)) {
       score += 8;
-    }
-    // Name contains query
-    else if (event.name.toLowerCase().includes(queryLower)) {
+    } else if (event.name.toLowerCase().includes(normalizedQuery)) {
       score += 6;
     }
 
-    // Description contains query
-    if (event.description?.toLowerCase().includes(queryLower)) {
+    if (event.description?.toLowerCase().includes(normalizedQuery)) {
       score += 3;
     }
 
-    // Tag match
-    if (
-      event.tags?.some((tag: string) => tag.toLowerCase().includes(queryLower))
-    ) {
-      score += 4;
-    }
-
-    // Recency bonus
-    const daysSinceCreation =
-      (Date.now() - new Date(event.createdAt).getTime()) /
-      (1000 * 60 * 60 * 24);
-    if (daysSinceCreation < 7) score += 2;
-    else if (daysSinceCreation < 30) score += 1;
-
-    // Popularity bonus
-    if (event.participants?.length > 10) score += 1;
-    if (event.participants?.length > 50) score += 1;
-
-    return score;
-  }
-
-  /**
-   * Calculate relevance score for users
-   */
-  private calculateUserRelevance(user: any, query: string): number {
-    let score = 0;
-    const queryLower = query.toLowerCase();
-
-    // Exact username match
-    if (user.username.toLowerCase() === queryLower) {
-      score += 10;
-    }
-    // Username starts with query
-    else if (user.username.toLowerCase().startsWith(queryLower)) {
-      score += 8;
-    }
-    // Username contains query
-    else if (user.username.toLowerCase().includes(queryLower)) {
-      score += 6;
-    }
-
-    // Full name contains query
-    if (user.fullName?.toLowerCase().includes(queryLower)) {
-      score += 4;
-    }
-
-    // Bio contains query
-    if (user.bio?.toLowerCase().includes(queryLower)) {
+    const tagsText = JSON.stringify(event.tags ?? []).toLowerCase();
+    if (tagsText.includes(normalizedQuery)) {
       score += 2;
     }
 
-    // Verification bonus
-    if (user.isVerified) score += 1;
-
-    // Popularity bonus
-    if (user.followers?.length > 100) score += 1;
-    if (user.followers?.length > 1000) score += 1;
+    const daysSinceCreation = (Date.now() - new Date(event.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceCreation < 7) score += 2;
+    else if (daysSinceCreation < 30) score += 1;
 
     return score;
   }
 
-  /**
-   * Calculate relevance score for tags
-   */
-  private calculateTagRelevance(tag: any, query: string): number {
-    let score = 0;
-    const queryLower = query.toLowerCase();
-
-    // Exact name match
-    if (tag.name.toLowerCase() === queryLower) {
-      score += 10;
-    }
-    // Name starts with query
-    else if (tag.name.toLowerCase().startsWith(queryLower)) {
-      score += 8;
-    }
-    // Name contains query
-    else if (tag.name.toLowerCase().includes(queryLower)) {
-      score += 6;
-    }
-
-    // Description contains query
-    if (tag.description?.toLowerCase().includes(queryLower)) {
-      score += 3;
-    }
-
-    // Usage bonus
-    if (tag.usageCount > 10) score += 1;
-    if (tag.usageCount > 100) score += 1;
-
-    return score;
-  }
-
-  /**
-   * Get search suggestions based on recent searches and popular items
-   */
-  async getSuggestions(query: string, limit: number = 5): Promise<string[]> {
-    const suggestions: string[] = [];
-
-    // Get popular event names
-    const popularEvents = await Event.findAll({
-      attributes: ["name"],
-      order: [["createdAt", "DESC"]],
-      limit: Math.ceil(limit / 2),
+  async getSuggestions(query: string, limit: number = 5, viewerId?: string): Promise<string[]> {
+    const rows = await Event.findAll({
+      attributes: ['name'],
+      where: {
+        [Op.and]: [
+          Sequelize.literal(buildEventVisibilitySql(viewerId, '"Event"."id"')),
+          { name: { [Op.iLike]: `%${query}%` } },
+        ],
+      },
+      order: [['createdAt', 'DESC']],
+      limit,
     });
 
-    // Get popular usernames
-    const popularUsers = await User.findAll({
-      attributes: ["username"],
-      order: [["createdAt", "DESC"]],
-      limit: Math.ceil(limit / 2),
-    });
-
-    // Get popular tags
-    const popularTags = await Tag.findAll({
-      attributes: ["name"],
-      order: [["usageCount", "DESC"]],
-      limit: Math.ceil(limit / 2),
-    });
-
-    suggestions.push(...popularEvents.map((e) => e.name));
-    suggestions.push(...popularUsers.map((u) => u.username));
-    suggestions.push(...popularTags.map((t) => t.name));
-
-    // Filter and return unique suggestions that match the query
-    return [...new Set(suggestions)]
-      .filter((suggestion) =>
-        suggestion.toLowerCase().includes(query.toLowerCase())
-      )
-      .slice(0, limit);
+    return [...new Set(rows.map((event) => event.name))].slice(0, limit);
   }
 }
 
